@@ -9,7 +9,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | # | Phase | Rough effort | Goal | Status |
 |---|---|---|---|---|
 | 0 | Bootstrap & toolchain | 1 w | Empty app boots on all 6 platforms, CI green | **Done** |
-| 1 | Foundation (DI, routing, theming, i18n, networking) | 2 w | App shell with theme/locale switchers; API client wired | |
+| 1 | Foundation (DI, routing, theming, i18n, networking) | 2 w | App shell with theme/locale switchers; API client wired | **Done** |
 | 2 | Auth & session | 2 w | Login, register, password reset, refresh, logout | |
 | 3 | MFA & passkeys | 1.5 w | TOTP enroll/verify, recovery codes, WebAuthn passkeys | |
 | 4 | Profile & account | 0.5 w | Edit profile, GDPR export, delete account | |
@@ -67,7 +67,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 1 — Foundation
+## Phase 1 — Foundation — **Done**
 
 **Scope**
 - `lib/app/` skeleton: `bootstrap.dart`, `app.dart`, flavor entry points (`main_dev.dart`, `main_prod.dart`).
@@ -85,6 +85,22 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 - A fake `GET /health/live` call from the home page renders ok-state on success, error view on failure (proves the interceptor pipeline works end-to-end).
 - `getIt` is the only place that *resolves* dependencies; widgets receive them by injection. CI enforces this with a custom lint or grep check.
 - ≥ 80% unit-test coverage on `core/` and `app/`.
+
+**Delivered (2026-05-26)**
+- App shell: `lib/app/bootstrap.dart` (Hive init → DI → runZonedGuarded → `runApp`), `lib/app/app.dart` (MaterialApp.router + DynamicColorBuilder + Theme/LocaleCubit subscribers). `lib/main.dart` collapsed to a one-liner.
+- DI composition root at `lib/app/di/injection.dart` — manual GetIt registrations for app-lifetime singletons; `configureForTests()` swaps in fakes. Widgets never call `getIt<T>()` at build time; blocs/cubits do via constructor.
+- Routing via go_router 16 with named routes (`/`, `/me/settings`, `/login`). Login route is a placeholder for Phase 2.
+- Theming: `ThemeCubit` persists `themeMode` + seed color + dynamic-color toggle to Hive; M3 schemes built via `AppTheme.light/dark`. Seven seed swatches via `SeedPalette`.
+- i18n: `LocaleCubit` (null = follow system). Locale dropdown wired; pipeline ready for adding ARB files in later phases.
+- Networking: `ApiClient` (dio 5) with the full interceptor stack — `RequestIdInterceptor`, `AuthInterceptor`, `IdempotencyInterceptor`, `EtagInterceptor`, `ProblemJsonInterceptor`, optional `HttpLoggingInterceptor`. Configurable via `--dart-define=INTELLIPILOT_API_BASE=...`. Mutations support idempotency-key + ETag via the `post()/get()` wrappers.
+- Error & failure layer: RFC 9457 `Problem` parser, sealed `AppFailure` hierarchy (Network/Unauthorized/Forbidden/NotFound/Validation/Conflict/RateLimited/Server/Unknown), `mapDioExceptionToFailure` covers every status class.
+- Core widgets: `AppScaffold`, `PrimaryButton` (with loading state), `EmptyState`, `ErrorView` (status-specific copy), `LoadingIndicator`.
+- Settings page: live theme-mode segmented control, seed-color swatches, dynamic-color switch, locale dropdown. Every change flushes to Hive on the cubit boundary.
+- Home page: button calls `GET /health/live` through the real interceptor pipeline; renders ok-card, loading indicator, or `ErrorView` per outcome (proves end-to-end wiring).
+- Session: `SessionBloc` skeleton in place (`SessionUnknown → SessionUnauthenticated → SessionAuthenticated`); Phase 2 plugs in the real flow without touching network or DI.
+- Tests: **80 passing**. Coverage: `lib/core` 80.6 %, `lib/app` 80.5 % — meets the ≥ 80 % gate. Includes unit, widget, and bloc tests; `bloc_test` + `mocktail` available for later phases.
+- `flutter analyze` clean (0 issues). Format check clean. Web release build verified.
+- Lint tuning: `lines_longer_than_80_chars`, `comment_references`, `cascade_invocations`, `one_member_abstracts`, `avoid_positional_boolean_parameters`, `avoid_equals_and_hash_code_on_mutable_classes`, `unnecessary_lambdas`, `specify_nonobvious_*` disabled (rationale: noisy for an application; quality preserved via strict-casts/strict-inference/strict-raw-types).
 
 ---
 

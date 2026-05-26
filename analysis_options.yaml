@@ -18,8 +18,7 @@ analyzer:
 
 linter:
   rules:
-    public_member_api_docs: false
-    avoid_redundant_argument_values: false
+    # very_good_analysis defaults we keep
     prefer_const_constructors: true
     prefer_const_constructors_in_immutables: true
     prefer_const_declarations: true
@@ -27,3 +26,16 @@ linter:
     require_trailing_commas: true
     unawaited_futures: true
     use_super_parameters: true
+
+    # Disabled — too noisy for an application (vs a library):
+    public_member_api_docs: false
+    avoid_redundant_argument_values: false
+    lines_longer_than_80_chars: false
+    comment_references: false
+    cascade_invocations: false
+    one_member_abstracts: false
+    avoid_positional_boolean_parameters: false
+    avoid_equals_and_hash_code_on_mutable_classes: false
+    unnecessary_lambdas: false
+    specify_nonobvious_property_types: false
+    specify_nonobvious_local_variable_types: false

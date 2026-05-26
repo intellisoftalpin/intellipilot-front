@@ -1,15 +1,79 @@
 {
   "@@locale": "en",
+
   "appTitle": "IntelliPilot",
   "@appTitle": {
     "description": "The application name shown in the title bar and home screen."
   },
+
   "homeWelcomeTitle": "Welcome to IntelliPilot",
   "@homeWelcomeTitle": {
     "description": "Headline shown on the placeholder home screen before authentication is wired up."
   },
+
   "homeWelcomeBody": "Frontend scaffolding is in place. Authentication and project workflows arrive in upcoming phases.",
   "@homeWelcomeBody": {
     "description": "Subtitle shown on the placeholder home screen."
+  },
+
+  "homeHealthCheckSection": "Backend connection",
+  "@homeHealthCheckSection": {
+    "description": "Section header on the home page that introduces the health-check demo button."
+  },
+
+  "homePingButton": "Ping backend",
+  "@homePingButton": {
+    "description": "Label for the button that calls GET /health/live."
+  },
+
+  "homePingHint": "Tap to verify the API client wiring against the configured backend.",
+  "@homePingHint": {
+    "description": "Hint shown next to the ping button before any call has been made."
+  },
+
+  "homePingOk": "Backend reachable (HTTP {code}).",
+  "@homePingOk": {
+    "description": "Success message shown after a successful health-check round-trip.",
+    "placeholders": {
+      "code": { "type": "int", "example": "200" }
+    }
+  },
+
+  "settingsTitle": "Settings",
+  "@settingsTitle": { "description": "Title of the settings page." },
+
+  "settingsAppearance": "Appearance",
+  "@settingsAppearance": {
+    "description": "Section title for theme controls."
+  },
+
+  "settingsLanguage": "Language",
+  "@settingsLanguage": {
+    "description": "Section title for locale controls."
+  },
+
+  "themeLight":  "Light",
+  "@themeLight":  { "description": "Theme mode label." },
+  "themeDark":   "Dark",
+  "@themeDark":   { "description": "Theme mode label." },
+  "themeSystem": "System",
+  "@themeSystem": { "description": "Theme mode label — follow OS preference." },
+
+  "themeSeedColor": "Accent color",
+  "@themeSeedColor": {
+    "description": "Label above the seed-color swatches."
+  },
+
+  "themeUseDynamic": "Use system colors when available",
+  "@themeUseDynamic": {
+    "description": "Toggle that asks the OS for a dynamic Material You color scheme (Android 12+)."
+  },
+
+  "themeUseDynamicHint": "Falls back to the accent color above on platforms without dynamic color support.",
+  "@themeUseDynamicHint": { "description": "Sub-text for the dynamic-color toggle." },
+
+  "localeSystem": "System default",
+  "@localeSystem": {
+    "description": "Locale option that defers to the OS locale."
   }
 }

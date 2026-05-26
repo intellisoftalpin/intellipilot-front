@@ -11,21 +11,34 @@ environment:
 # adds the bloc / DI / routing / dio / hive / freezed stack. The dev section
 # below already wires up codegen tooling so Phase 1 can hit the ground running.
 dependencies:
+  bloc: ^9.0.0
+  collection: ^1.18.0
+  dio: ^5.7.0
+  dynamic_color: ^1.7.0
+  equatable: ^2.0.5
   flutter:
     sdk: flutter
+  flutter_bloc: ^9.0.0
   flutter_localizations:
     sdk: flutter
+  freezed_annotation: ^3.0.0
+  get_it: ^8.0.0
+  go_router: ^16.0.0
+  hive_ce: ^2.0.0
+  hive_ce_flutter: ^2.0.0
   intl: any
+  json_annotation: ^4.9.0
+  logger: ^2.4.0
+  uuid: ^4.5.0
 
 dev_dependencies:
+  bloc_test: ^10.0.0
   build_runner: ^2.4.0
   flutter_test:
     sdk: flutter
-  # Codegen tooling — actual generated types come in later phases.
   freezed: ^3.0.0
-  freezed_annotation: ^3.0.0
-  json_annotation: ^4.9.0
   json_serializable: ^6.8.0
+  mocktail: ^1.0.4
   very_good_analysis: ^8.0.0
 
 flutter:

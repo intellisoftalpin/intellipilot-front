@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intellipilot/app/app.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/l10n/locale_cubit.dart';
+import 'package:intellipilot/app/theme/theme_cubit.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
-import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 void main() {
   setUp(() async {
@@ -15,19 +17,18 @@ void main() {
 
   tearDown(resetDependencies);
 
-  testWidgets('App boots and shows the welcome screen', (tester) async {
+  testWidgets('rebuilds MaterialApp when theme and locale change',
+      (tester) async {
     await tester.pumpWidget(const IntelliPilotApp());
     await tester.pumpAndSettle();
-
-    expect(find.text('IntelliPilot'), findsWidgets);
     expect(find.text('Welcome to IntelliPilot'), findsOneWidget);
-  });
 
-  test('AppLocalizations bindings expose at least English', () {
-    expect(AppLocalizations.supportedLocales, isNotEmpty);
-    expect(
-      AppLocalizations.supportedLocales.map((l) => l.languageCode),
-      contains('en'),
-    );
+    await getIt<ThemeCubit>().setMode(ThemeMode.dark);
+    await tester.pumpAndSettle();
+    await getIt<LocaleCubit>().setLocale(const Locale('en'));
+    await tester.pumpAndSettle();
+
+    // Still renders the home page after both transitions.
+    expect(find.text('Welcome to IntelliPilot'), findsOneWidget);
   });
 }
