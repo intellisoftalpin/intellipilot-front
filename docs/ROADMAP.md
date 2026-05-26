@@ -6,35 +6,35 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 
 ## Phase index
 
-| # | Phase | Rough effort | Goal |
-|---|---|---|---|
-| 0 | Bootstrap & toolchain | 1 w | Empty app boots on all 6 platforms, CI green |
-| 1 | Foundation (DI, routing, theming, i18n, networking) | 2 w | App shell with theme/locale switchers; API client wired |
-| 2 | Auth & session | 2 w | Login, register, password reset, refresh, logout |
-| 3 | MFA & passkeys | 1.5 w | TOTP enroll/verify, recovery codes, WebAuthn passkeys |
-| 4 | Profile & account | 0.5 w | Edit profile, GDPR export, delete account |
-| 5 | Projects, members, roles, invitations | 2 w | Full project admin |
-| 6 | Taxonomy, labels, components | 1 w | Per-project catalog editors |
-| 7 | Backlog — epics & user stories | 2 w | Backlog list, detail, CRUD, reorder |
-| 8 | Backlog — tasks & issues | 1.5 w | Task/issue CRUD, link to user story / epic |
-| 9 | Comments, history, attachments | 1.5 w | Polymorphic comment widget, file upload, activity stream |
-| 10 | Board (Kanban) | 2 w | Drag-drop board, swimlanes, filters, saved views |
-| 11 | Milestones / sprints | 1.5 w | List, sprint board, burndown, close sprint |
-| 12 | Wiki | 1.5 w | Page tree, editor, revisions, diff, restore |
-| 13 | Command palette, keyboard shortcuts, polish | 1 w | Cmd-K, hotkeys, empty states, micro-animations |
-| 14 | Permissions UI hardening | 0.5 w | Every action gated, "request access" CTAs |
-| 15 | Accessibility & l10n audit | 1 w | Screen reader pass, contrast, key flows in EN; pipeline for adding languages |
-| 16 | Desktop & mobile polish | 1.5 w | Responsive breakpoints, native menus, file pickers, deep links |
-| 17 | Test hardening & golden suite | 1 w | Coverage targets met, golden suite stable |
-| 18 | Release engineering | 1 w | Flavors, signing, store metadata, autoupdate research |
-| 19 | (Backend-blocked) realtime, notifications | TBD | Pending backend SSE/WS + notification endpoints |
-| 20 | (Optional) offline-first cache | 2 w | If/when product wants it |
+| # | Phase | Rough effort | Goal | Status |
+|---|---|---|---|---|
+| 0 | Bootstrap & toolchain | 1 w | Empty app boots on all 6 platforms, CI green | **Done** |
+| 1 | Foundation (DI, routing, theming, i18n, networking) | 2 w | App shell with theme/locale switchers; API client wired | |
+| 2 | Auth & session | 2 w | Login, register, password reset, refresh, logout | |
+| 3 | MFA & passkeys | 1.5 w | TOTP enroll/verify, recovery codes, WebAuthn passkeys | |
+| 4 | Profile & account | 0.5 w | Edit profile, GDPR export, delete account | |
+| 5 | Projects, members, roles, invitations | 2 w | Full project admin | |
+| 6 | Taxonomy, labels, components | 1 w | Per-project catalog editors | |
+| 7 | Backlog — epics & user stories | 2 w | Backlog list, detail, CRUD, reorder | |
+| 8 | Backlog — tasks & issues | 1.5 w | Task/issue CRUD, link to user story / epic | |
+| 9 | Comments, history, attachments | 1.5 w | Polymorphic comment widget, file upload, activity stream | |
+| 10 | Board (Kanban) | 2 w | Drag-drop board, swimlanes, filters, saved views | |
+| 11 | Milestones / sprints | 1.5 w | List, sprint board, burndown, close sprint | |
+| 12 | Wiki | 1.5 w | Page tree, editor, revisions, diff, restore | |
+| 13 | Command palette, keyboard shortcuts, polish | 1 w | Cmd-K, hotkeys, empty states, micro-animations | |
+| 14 | Permissions UI hardening | 0.5 w | Every action gated, "request access" CTAs | |
+| 15 | Accessibility & l10n audit | 1 w | Screen reader pass, contrast, key flows in EN; pipeline for adding languages | |
+| 16 | Desktop & mobile polish | 1.5 w | Responsive breakpoints, native menus, file pickers, deep links | |
+| 17 | Test hardening & golden suite | 1 w | Coverage targets met, golden suite stable | |
+| 18 | Release engineering | 1 w | Flavors, signing, store metadata, autoupdate research | |
+| 19 | (Backend-blocked) realtime, notifications | TBD | Pending backend SSE/WS + notification endpoints | |
+| 20 | (Optional) offline-first cache | 2 w | If/when product wants it | |
 
 Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 0 — Bootstrap & toolchain
+## Phase 0 — Bootstrap & toolchain — **Done**
 
 **Scope**
 - `flutter create intellipilot-front --platforms=web,linux,macos,windows,android,ios --org ch.alpeinsoft` over the existing git repo (preserve `.git`, only add scaffolding).
@@ -51,6 +51,19 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 - `melos run test` passes (only smoke tests exist).
 - `flutter build web`, `flutter build apk --debug`, `flutter build ios --no-codesign`, `flutter build linux`, `flutter build macos`, `flutter build windows` (on appropriate hosts) all succeed.
 - App boots to a placeholder `HomePage` with the app name in the AppBar.
+
+**Delivered (2026-05-26)**
+- Flutter 3.44.0 stable pinned via `fvm` (`.fvmrc`); `fvm` installed at `~/fvm/bin`.
+- Project scaffolded for all 6 platforms via `flutter create --org ch.alpeinsoft --platforms=web,linux,macos,windows,android,ios --empty`.
+- `analysis_options.yaml` extends `very_good_analysis` ^8.0.0; strict-casts / strict-inference / strict-raw-types enabled; codegen artifacts excluded.
+- `melos.yaml` with scripts: `analyze`, `format`, `format:fix`, `test`, `test:fast`, `gen`, `gen:watch`, `l10n`, `clean`, `ci`.
+- `pubspec.yaml` baseline: `flutter`, `flutter_localizations`, `intl`. Dev: `build_runner`, `freezed`, `freezed_annotation`, `json_serializable`, `json_annotation`, `very_good_analysis`.
+- `l10n.yaml` + `assets/l10n/intl_en.arb`; bindings generated to `lib/l10n/generated/`.
+- `lib/main.dart` renders an M3 `HomePage` with seed-color theme, light + dark, system mode default; AppBar title from ARB.
+- Smoke widget test + locales test (`test/widget_test.dart`): 2/2 pass.
+- `.github/workflows/ci.yml` runs format check, analyze, tests, web build on PR + main.
+- Verified: `flutter analyze` → 0 issues; `flutter test` → 2 passed; `flutter build web --release` → succeeded.
+- Deferred to a later phase: `flutter_launcher_icons` and the placeholder logo asset (no source artwork yet).
 
 ---
 

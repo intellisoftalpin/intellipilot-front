@@ -1,0 +1,29 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.config.dart"
+    - "**/*.gen.dart"
+    - "lib/l10n/generated/**"
+  errors:
+    missing_required_param: error
+    missing_return: error
+    todo: info
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+linter:
+  rules:
+    public_member_api_docs: false
+    avoid_redundant_argument_values: false
+    prefer_const_constructors: true
+    prefer_const_constructors_in_immutables: true
+    prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+    require_trailing_commas: true
+    unawaited_futures: true
+    use_super_parameters: true

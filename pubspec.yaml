@@ -1,0 +1,36 @@
+name: intellipilot
+description: "IntelliPilot frontend client (Jira-grade project management)."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.44.0"
+
+# Phase 0 deliberately keeps runtime dependencies minimal. Phase 1 (foundation)
+# adds the bloc / DI / routing / dio / hive / freezed stack. The dev section
+# below already wires up codegen tooling so Phase 1 can hit the ground running.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
+dev_dependencies:
+  build_runner: ^2.4.0
+  flutter_test:
+    sdk: flutter
+  # Codegen tooling — actual generated types come in later phases.
+  freezed: ^3.0.0
+  freezed_annotation: ^3.0.0
+  json_annotation: ^4.9.0
+  json_serializable: ^6.8.0
+  very_good_analysis: ^8.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/icons/
+    - assets/images/

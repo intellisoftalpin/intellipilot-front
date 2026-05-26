@@ -1,0 +1,15 @@
+{
+  "@@locale": "en",
+  "appTitle": "IntelliPilot",
+  "@appTitle": {
+    "description": "The application name shown in the title bar and home screen."
+  },
+  "homeWelcomeTitle": "Welcome to IntelliPilot",
+  "@homeWelcomeTitle": {
+    "description": "Headline shown on the placeholder home screen before authentication is wired up."
+  },
+  "homeWelcomeBody": "Frontend scaffolding is in place. Authentication and project workflows arrive in upcoming phases.",
+  "@homeWelcomeBody": {
+    "description": "Subtitle shown on the placeholder home screen."
+  }
+}

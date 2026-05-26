@@ -1,0 +1,56 @@
+name: intellipilot-front
+
+# Single-package workspace. Melos is used purely as a script runner so the
+# command surface stays consistent if the project later grows into multiple
+# packages (e.g. extracting a shared API SDK).
+packages:
+  - .
+
+ide:
+  intellij: false
+
+scripts:
+  analyze:
+    run: fvm flutter analyze --no-fatal-infos
+    description: Static analysis (very_good_analysis rules)
+
+  format:
+    run: fvm dart format --set-exit-if-changed lib test integration_test
+    description: Verify formatting (fails if any file would be reformatted)
+
+  format:fix:
+    run: fvm dart format lib test integration_test
+    description: Apply formatting
+
+  test:
+    run: fvm flutter test --coverage
+    description: Run all unit and widget tests with coverage
+
+  test:fast:
+    run: fvm flutter test
+    description: Run tests without coverage (faster local loop)
+
+  gen:
+    run: fvm dart run build_runner build --delete-conflicting-outputs
+    description: Run codegen (freezed, json_serializable, injectable)
+
+  gen:watch:
+    run: fvm dart run build_runner watch --delete-conflicting-outputs
+    description: Codegen watch mode
+
+  l10n:
+    run: fvm flutter gen-l10n
+    description: Regenerate localization bindings from .arb files
+
+  clean:
+    run: fvm flutter clean && fvm flutter pub get
+    description: Clean build artifacts and re-resolve dependencies
+
+  ci:
+    run: |
+      melos run format && \
+      melos run gen && \
+      melos run l10n && \
+      melos run analyze && \
+      melos run test
+    description: Full CI pipeline (format, codegen, l10n, analyze, test)
