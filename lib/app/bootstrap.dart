@@ -28,8 +28,10 @@ Future<void> bootstrap() async {
         );
       };
 
-      // Kick the session state machine. Phase 2 will wire real restoration.
-      getIt<SessionBloc>().add(const SessionRestored());
+      // Try restoring a session from the persisted refresh cookie. The bloc
+      // settles into SessionAuthenticated on success or SessionUnauthenticated
+      // on failure — the router guard reacts on the next stream tick.
+      getIt<SessionBloc>().add(const SessionStartupRequested());
 
       runApp(const IntelliPilotApp());
     },

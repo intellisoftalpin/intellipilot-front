@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
@@ -16,7 +17,7 @@ class IntelliPilotApp extends StatefulWidget {
 }
 
 class _IntelliPilotAppState extends State<IntelliPilotApp> {
-  late final _router = buildRouter();
+  late final _router = buildRouter(session: getIt<SessionBloc>());
 
   @override
   Widget build(BuildContext context) {

@@ -4,8 +4,11 @@ import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
 import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/network/api_config.dart';
+import 'package:intellipilot/core/network/cookie_setup.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
+import 'package:intellipilot/features/auth/data/auth_repository_impl.dart';
+import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:logger/logger.dart';
 
 /// Global service locator. Composition is intentionally manual at this stage
@@ -17,31 +20,40 @@ final GetIt getIt = GetIt.instance;
 /// before `runApp`.
 ///
 /// Tests can call [configureForTests] instead to substitute fakes.
-Future<void> configureDependencies({ApiConfig? overrideConfig}) async {
+Future<void> configureDependencies({
+  ApiConfig? overrideConfig,
+  CookieSetup? overrideCookies,
+  KeyValueStorage Function(String boxName)? storageFactory,
+}) async {
   if (getIt.isRegistered<ApiClient>()) return;
 
   // --- Boxes (already opened in bootstrap before this runs). -----------
+  // Tests can pass [storageFactory] to bypass Hive bootstrap.
+  final makeStorage = storageFactory ?? HiveKeyValueStorage.new;
   getIt
     ..registerLazySingleton<KeyValueStorage>(
-      () => HiveKeyValueStorage(HiveBoxes.settings),
+      () => makeStorage(HiveBoxes.settings),
       instanceName: HiveBoxes.settings,
     )
     ..registerLazySingleton<KeyValueStorage>(
-      () => HiveKeyValueStorage(HiveBoxes.ui),
+      () => makeStorage(HiveBoxes.ui),
       instanceName: HiveBoxes.ui,
     );
 
   // --- Primitives ------------------------------------------------------
+  final cookies = overrideCookies ?? await CookieSetup.create();
   getIt
     ..registerLazySingleton<UuidGen>(DefaultUuidGen.new)
     ..registerLazySingleton<Logger>(Logger.new)
     ..registerLazySingleton<ApiConfig>(
       () => overrideConfig ?? ApiConfig.fromEnvironment(),
-    );
+    )
+    ..registerSingleton<CookieSetup>(cookies);
 
-  // --- App-scoped blocs/cubits ----------------------------------------
+  // --- App-scoped blocs/cubits (SessionBloc needs the repository, so we
+  //     register the repository first against a not-yet-built ApiClient via
+  //     a late binding pattern). ------------------------------------------
   getIt
-    ..registerLazySingleton<SessionBloc>(SessionBloc.new)
     ..registerLazySingleton<ThemeCubit>(
       () =>
           ThemeCubit(getIt<KeyValueStorage>(instanceName: HiveBoxes.settings)),
@@ -51,22 +63,34 @@ Future<void> configureDependencies({ApiConfig? overrideConfig}) async {
           LocaleCubit(getIt<KeyValueStorage>(instanceName: HiveBoxes.settings)),
     );
 
-  // --- HTTP client (depends on SessionBloc + UuidGen) -----------------
+  // ApiClient → AuthRepository → SessionBloc → (ApiClient via refresh hook).
+  // We break the cycle by capturing the SessionBloc lookups as closures,
+  // so the bloc is only resolved on first invocation — by which point
+  // construction has completed.
   getIt.registerLazySingleton<ApiClient>(() {
-    final session = getIt<SessionBloc>();
+    final cookies = getIt<CookieSetup>();
     return ApiClient(
       config: getIt<ApiConfig>(),
       uuidGen: getIt<UuidGen>(),
-      tokenProvider: () => session.currentAccessToken,
+      tokenProvider: () => getIt<SessionBloc>().currentAccessToken,
       logger: getIt<Logger>(),
+      cookieManager: cookies.manager,
+      refreshHook: () => getIt<SessionBloc>().refreshHook(),
     );
   });
+  getIt.registerLazySingleton<AuthRepository>(
+    () => AuthRepositoryImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<SessionBloc>(
+    () => SessionBloc(repository: getIt<AuthRepository>()),
+  );
 }
 
 /// Configure DI with in-memory implementations for tests.
 Future<void> configureForTests({
   required KeyValueStorage settingsStorage,
   required KeyValueStorage uiStorage,
+  required AuthRepository authRepository,
   ApiConfig? apiConfig,
 }) async {
   getIt
@@ -81,7 +105,9 @@ Future<void> configureForTests({
     ..registerSingleton<ApiConfig>(
       apiConfig ?? const ApiConfig(baseUrl: 'http://localhost:8080'),
     )
-    ..registerSingleton<SessionBloc>(SessionBloc())
+    ..registerSingleton<CookieSetup>(CookieSetup.inMemory())
+    ..registerSingleton<AuthRepository>(authRepository)
+    ..registerSingleton<SessionBloc>(SessionBloc(repository: authRepository))
     ..registerSingleton<ThemeCubit>(ThemeCubit(settingsStorage))
     ..registerSingleton<LocaleCubit>(LocaleCubit(settingsStorage));
 

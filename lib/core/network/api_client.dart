@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/error/failure_mapper.dart';
 import 'package:intellipilot/core/network/api_config.dart';
@@ -7,6 +8,7 @@ import 'package:intellipilot/core/network/interceptors/etag_interceptor.dart';
 import 'package:intellipilot/core/network/interceptors/idempotency_interceptor.dart';
 import 'package:intellipilot/core/network/interceptors/logging_interceptor.dart';
 import 'package:intellipilot/core/network/interceptors/problem_json_interceptor.dart';
+import 'package:intellipilot/core/network/interceptors/refresh_interceptor.dart';
 import 'package:intellipilot/core/network/interceptors/request_id_interceptor.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
@@ -21,6 +23,8 @@ class ApiClient {
     required AccessTokenProvider tokenProvider,
     Logger? logger,
     Dio? dio,
+    CookieManager? cookieManager,
+    RefreshHook? refreshHook,
   }) : _config = config,
        _dio = dio ?? Dio() {
     _dio
@@ -29,17 +33,24 @@ class ApiClient {
       ..options.receiveTimeout = config.receiveTimeout
       ..options.sendTimeout = config.sendTimeout
       ..options.responseType = ResponseType.json
+      ..options.extra['withCredentials'] = config.withCredentials
       ..options.headers.addAll({
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       });
 
+    if (cookieManager != null) {
+      _dio.interceptors.add(cookieManager);
+    }
     _dio.interceptors
       ..add(RequestIdInterceptor(uuidGen))
       ..add(AuthInterceptor(tokenProvider))
       ..add(IdempotencyInterceptor(uuidGen))
-      ..add(const EtagInterceptor())
-      ..add(const ProblemJsonInterceptor());
+      ..add(const EtagInterceptor());
+    if (refreshHook != null) {
+      _dio.interceptors.add(RefreshInterceptor(refreshHook, dio: _dio));
+    }
+    _dio.interceptors.add(const ProblemJsonInterceptor());
 
     if (config.enableRequestLogging) {
       _dio.interceptors.add(HttpLoggingInterceptor(logger ?? Logger()));
