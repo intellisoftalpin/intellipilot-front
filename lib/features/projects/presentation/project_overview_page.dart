@@ -183,6 +183,17 @@ class _Overview extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
+            Row(
+              children: [
+                FilledButton.icon(
+                  icon: const Icon(Icons.list_alt),
+                  onPressed: () =>
+                      context.go(Routes.projectBacklogFor(project.id)),
+                  label: Text(t.actionOpenBacklog),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
             Text(
               t.projectPhase5Notice,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(

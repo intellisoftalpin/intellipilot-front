@@ -10,6 +10,8 @@ import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
 import 'package:intellipilot/features/auth/data/auth_repository_impl.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
+import 'package:intellipilot/features/backlog/data/backlog_repository_impl.dart';
+import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/catalog/data/catalog_repository_impl.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/mfa/data/mfa_repository_impl.dart';
@@ -103,6 +105,9 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<CatalogRepository>(
     () => CatalogRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<BacklogRepository>(
+    () => BacklogRepositoryImpl(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
   getIt.registerLazySingleton<FileDownloader>(FileDownloader.new);
   getIt.registerLazySingleton<SessionBloc>(
@@ -120,6 +125,7 @@ Future<void> configureForTests({
   ProfileRepository? profileRepository,
   ProjectsRepository? projectsRepository,
   CatalogRepository? catalogRepository,
+  BacklogRepository? backlogRepository,
   FileDownloader? fileDownloader,
   ApiConfig? apiConfig,
 }) async {
@@ -151,6 +157,9 @@ Future<void> configureForTests({
     )
     ..registerSingleton<CatalogRepository>(
       catalogRepository ?? _NoopCatalogRepository(),
+    )
+    ..registerSingleton<BacklogRepository>(
+      backlogRepository ?? _NoopBacklogRepository(),
     )
     ..registerSingleton<FileDownloader>(
       fileDownloader ?? const _InMemoryDownloader(),
@@ -217,6 +226,14 @@ class _NoopCatalogRepository implements CatalogRepository {
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError(
         '_NoopCatalogRepository.${invocation.memberName}',
+      );
+}
+
+class _NoopBacklogRepository implements BacklogRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(
+        '_NoopBacklogRepository.${invocation.memberName}',
       );
 }
 

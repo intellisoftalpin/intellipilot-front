@@ -17,7 +17,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 4 | Profile & account | 0.5 w | Edit profile, GDPR export, delete account | **Done** |
 | 5 | Projects, members, roles, invitations | 2 w | Full project admin | **Done** |
 | 6 | Taxonomy, labels, components | 1 w | Per-project catalog editors | **Done** |
-| 7 | Backlog — epics & user stories | 2 w | Backlog list, detail, CRUD, reorder | |
+| 7 | Backlog — epics & user stories | 2 w | Backlog list, detail, CRUD, reorder | **Done** |
 | 8 | Backlog — tasks & issues | 1.5 w | Task/issue CRUD, link to user story / epic | |
 | 9 | Comments, history, attachments | 1.5 w | Polymorphic comment widget, file upload, activity stream | |
 | 10 | Board (Kanban) | 2 w | Drag-drop board, swimlanes, filters, saved views | |
@@ -260,7 +260,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 7 — Backlog: epics & user stories
+## Phase 7 — Backlog: epics & user stories — **Done**
 
 **Scope**
 - `/projects/:id/backlog`: grouped list. Default grouping: by epic (collapsible groups). Filter chips: assignee, status, milestone, label, search.
@@ -273,6 +273,17 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 - Backlog of 1000 user stories scrolls smoothly (virtualized list, e.g. `SliverList` + viewport-aware fetching with cursors).
 - Reorder works across epics (drag a US under a different epic group).
 - Bulk create (`POST /userstories/bulk`) is wired for "paste multiple titles, one per line" UX.
+
+**Delivered (2026-05-27)**
+- New `features/backlog/` slice — `Epic`, `UserStory`, `CreateEpicRequest`, `UpdateEpicRequest`, `CreateUserStoryRequest`, `UpdateUserStoryRequest`, `ReorderRequest`, `BulkCreateUserStoryItem`/`BulkCreateUserStoriesRequest` DTOs. Updates use a sentinel `_Absent` marker so we can distinguish "leave alone" from "clear the FK" — backend uses `serde_with::rust::double_option`.
+- `BacklogRepository` (single repo) covers every Phase-7 endpoint: epic CRUD + `/move`, user-story CRUD + `/move` + `/bulk`. Mutating calls round-trip `If-Match` through the existing `EtagInterceptor` by reading the `etag` header off GET responses; the DTOs carry it as an optional `etag` field.
+- `BacklogCubit` holds `{epics, userStories, statuses, points}` for a project — joins us_status + point taxonomy items from the catalog repo on load. Computed `grouped` getter buckets user stories by `epicId` (null bucket for "no epic"). Optimistic reorder dispatches a single `/move` with neighbour anchors; on 409/412 the cubit flips `staleData: true`, calls `load()` to reconcile, and the UI shows a "data has changed" banner. Same flow for status-change and full updates.
+- `BacklogPage` at `/projects/:id/backlog`: search field, status FilterChip row (all + per-status), "New epic" + "Bulk add" buttons, FAB for "New user story". Grouped `ExpansionTile` per epic (collapsible) with a "No epic" group at the bottom. Each row shows `US-{ref} · {status} · {points}` with a popup status menu, edit + delete icons. All edit affordances gated by `Permission.epicCreate/modify` and `Permission.usCreate/modify` via the surrounding `ProjectDetailCubit`.
+- Three reusable dialogs: `EpicEditDialog` (subject / description / colour swatch), `UserStoryEditDialog` (subject / description / epic / status / points dropdowns), `BulkPasteDialog` (newline-separated subjects + optional epic — fans out to `/userstories/bulk`).
+- Routing: `/projects/:id/backlog` added; `ProjectOverviewPage` gets an "Open backlog" CTA. `Routes.projectBacklogFor(id)` helper.
+- DI: `BacklogRepository` registered lazily with a `_NoopBacklogRepository` test default. ARB extended with 30 strings (page title, fields, filter labels, dialog copy, delete confirmations, bulk-paste copy, stale-data banner).
+- **198 tests pass** (`flutter analyze` clean, web release build green). New `BacklogRepositoryImpl` wire-format smoke covers `{epics: [...]}`/`{user_stories: [...]}` envelope unwrap, ETag round-trip header capture + `If-Match` send on PATCH, `/move` envelope, and the `{items: [...]}` bulk-create shape.
+- Deferred: full-screen detail pages (user-story + epic side-sheets with the comments / history / attachments tabs) intentionally pushed to Phase 9, which wires those endpoints. Filter chips for assignee/milestone/label/component need member + milestone enrichment that ships in Phase 8 (issues) / Phase 11 (milestones); for Phase 7 we expose status + free-text search only.
 
 ---
 
