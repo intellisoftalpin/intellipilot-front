@@ -4,6 +4,8 @@
 
 This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable slice with clear acceptance criteria. Effort estimates are person-weeks for a single senior Flutter engineer; treat them as relative, not absolute.
 
+> **Coverage gate paused for Phase 5+** (2026-05-27): the earlier per-phase coverage targets (≥ 80% on `lib/app` + `lib/core`, ≥ 90% on blocs) are suspended from Phase 5 onward to keep delivery velocity up. Tests still ship where they protect against real risk (bloc logic, repo wire format, complex UI), but phase completion is no longer blocked on measured percentages. `flutter analyze` clean and `flutter test` green stay hard gates; a tightening of this rule in a later phase supersedes this note.
+
 ## Phase index
 
 | # | Phase | Rough effort | Goal | Status |
