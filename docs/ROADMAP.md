@@ -15,7 +15,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 2 | Auth & session | 2 w | Login, register, password reset, refresh, logout | **Done** |
 | 3 | MFA & passkeys | 1.5 w | TOTP enroll/verify, recovery codes, WebAuthn passkeys | **Done** |
 | 4 | Profile & account | 0.5 w | Edit profile, GDPR export, delete account | **Done** |
-| 5 | Projects, members, roles, invitations | 2 w | Full project admin | |
+| 5 | Projects, members, roles, invitations | 2 w | Full project admin | **Done** |
 | 6 | Taxonomy, labels, components | 1 w | Per-project catalog editors | |
 | 7 | Backlog — epics & user stories | 2 w | Backlog list, detail, CRUD, reorder | |
 | 8 | Backlog — tasks & issues | 1.5 w | Task/issue CRUD, link to user story / epic | |
@@ -198,7 +198,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 5 — Projects, members, roles, invitations
+## Phase 5 — Projects, members, roles, invitations — **Done**
 
 **Scope**
 - `/projects` list: paginated, search, "new project" CTA.
@@ -216,6 +216,21 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 **Open question to backend**
 - Is there a project-restore endpoint? (Not visible in the current router.)
+
+**Delivered (2026-05-27)**
+- New `features/projects/` slice with hand-written DTOs (`Project`, `Role`, `Membership`, `Invitation`, `InviteResponse`, request bodies) and a `Permission` enum mirroring the backend's 40-entry catalog wire-for-wire. `RolePresets.{reader,contributor,maintainer,admin}` mirror the seeded backend roles.
+- `ProjectsRepository` (single repo) wraps every Phase-5 endpoint: `/projects` CRUD, `/projects/:id/{roles,members,invitations}` CRUD, `/invitations/accept`. Failures map through the existing `mapDioExceptionToFailure` so the UI surfaces typed `AppFailure`s.
+- Cubits per concern: `ProjectsListCubit` (load + search + create), `ProjectDetailCubit` (loads project, resolves caller's permissions by joining `/members` + `/roles`, exposes `has(Permission)` and an `isAdmin` flag), `MembersCubit`, `RolesCubit`, `InvitationsCubit`, `ProjectSettingsCubit` (PATCH + DELETE with typed-name confirmation), `AcceptInvitationCubit`.
+- Pages: `ProjectsListPage` at `/projects` (search filter, "New project" FAB, empty state), `ProjectOverviewPage` at `/projects/:id` (name/description/visibility chip, feature flags, settings shortcut behind `PermissionGate(Permission.projectModify)`), `ProjectSettingsPage` at `/projects/:id/settings` with four tabs (General / Members / Roles / Danger Zone), `InvitationAcceptPage` at `/i/:token`.
+- Reusable widgets: `PermissionGate` reads the surrounding `ProjectDetailCubit` and hides/replaces its child when the caller lacks the permission; `RoleEditor` renders the 40-permission catalog grouped by `PermissionDomain` (Project / Members / Roles / Epics / User Stories / Tasks / Issues / Milestones / Wiki / Comments & attachments) with Reader / Contributor / Maintainer / Administrator bulk-toggle buttons.
+- Members tab: list rows show role slug with change-role and remove-member actions each gated by their permission; pending invitations section reloads after a successful invite. Invite dialog drives `POST /invitations`; the dev-only raw token returned by the backend pops up in a copy-able dialog when present.
+- Roles tab: ExpansionTile per role; admin role is read-only and surfaces a badge. New-role dialog seeds with the Contributor preset. Delete maps backend 409 ("role still has members") through the standard error mapper.
+- Danger Zone: `DELETE /projects/:id` only fires after the user types the project name verbatim — client-side guard on top of the backend call.
+- Routing: `/projects`, `/projects/:id`, `/projects/:id/settings`, `/i/:token` added. After-login + after-MFA redirects now land on `/projects` instead of the demo home. HomePage gains a "Go to projects" CTA.
+- DI: `ProjectsRepository` registered lazily; `configureForTests` accepts an override with a safe `_NoopProjectsRepository` default.
+- 18 sections of ARB copy added (project list/search/empty/visibility/features, settings tabs, members/roles/invitations, danger zone, permission domain headers, role presets, invitation accept). Regenerated to `lib/l10n/generated/`.
+- **185 tests pass** (`flutter analyze` clean, web release build green). New repo wire-format smoke covers project envelope unwrap, visibility serialization, permission round-trip, invite-token surfacing, and the maintainer-superset invariant on `RolePresets`. Coverage gate paused per the feedback memory; broader bloc/widget tests intentionally deferred.
+- Deferred: no "request access" CTA on permission-denied views yet (the gate currently hides the affordance). Member rows show raw `userId` — backend doesn't expose a `users-by-project` enrichment endpoint and `GET /users/:id` isn't wired. Project-restore (open question above) remains unimplementable until the backend ships it.
 
 ---
 

@@ -14,6 +14,10 @@ import 'package:intellipilot/features/mfa/presentation/security_page.dart';
 import 'package:intellipilot/features/mfa/presentation/totp_setup_page.dart';
 import 'package:intellipilot/features/profile/presentation/account_page.dart';
 import 'package:intellipilot/features/profile/presentation/profile_page.dart';
+import 'package:intellipilot/features/projects/presentation/invitation_accept_page.dart';
+import 'package:intellipilot/features/projects/presentation/project_overview_page.dart';
+import 'package:intellipilot/features/projects/presentation/project_settings_page.dart';
+import 'package:intellipilot/features/projects/presentation/projects_list_page.dart';
 import 'package:intellipilot/features/settings/presentation/settings_page.dart';
 
 /// Stable route names used by code (do not hard-code paths at call sites).
@@ -32,6 +36,12 @@ abstract class Routes {
   static const passkeys = '/me/security/passkeys';
   static const profile = '/me/profile';
   static const account = '/me/account';
+  static const projects = '/projects';
+  static const acceptInvitation = '/i';
+
+  static String projectDetailFor(String id) => '/projects/$id';
+  static String projectSettingsFor(String id) => '/projects/$id/settings';
+  static String acceptInvitationFor(String token) => '/i/$token';
 }
 
 const _publicRoutes = {
@@ -91,6 +101,29 @@ GoRouter buildRouter({required SessionBloc session}) {
         builder: (context, state) => const AccountPage(),
       ),
       GoRoute(
+        path: Routes.projects,
+        name: 'projects',
+        builder: (context, state) => const ProjectsListPage(),
+      ),
+      GoRoute(
+        path: '/projects/:id',
+        name: 'project_detail',
+        builder: (context, state) =>
+            ProjectOverviewPage(projectId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/projects/:id/settings',
+        name: 'project_settings',
+        builder: (context, state) =>
+            ProjectSettingsPage(projectId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/i/:token',
+        name: 'accept_invitation',
+        builder: (context, state) =>
+            InvitationAcceptPage(token: state.pathParameters['token']!),
+      ),
+      GoRoute(
         path: Routes.login,
         name: 'login',
         builder: (context, state) => const LoginPage(),
@@ -148,9 +181,9 @@ String? _guard(SessionState session, GoRouterState routerState) {
   if (isAuthed && loc == Routes.login) {
     final from = routerState.uri.queryParameters['from'];
     if (from != null && from.isNotEmpty) return Uri.decodeComponent(from);
-    return Routes.home;
+    return Routes.projects;
   }
   // Authed users on /auth/mfa shouldn't stay there.
-  if (isAuthed && loc == Routes.mfaVerify) return Routes.home;
+  if (isAuthed && loc == Routes.mfaVerify) return Routes.projects;
   return null;
 }

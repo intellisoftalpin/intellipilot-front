@@ -45,6 +45,12 @@ class _HomePageState extends State<HomePage> {
             Text(l10n.homeWelcomeTitle, style: theme.textTheme.headlineMedium),
             const SizedBox(height: 12),
             Text(l10n.homeWelcomeBody, style: theme.textTheme.bodyLarge),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              icon: const Icon(Icons.folder_outlined),
+              onPressed: () => context.go(Routes.projects),
+              label: Text(l10n.actionGoToProjects),
+            ),
             const SizedBox(height: 24),
             Text(
               l10n.homeHealthCheckSection,

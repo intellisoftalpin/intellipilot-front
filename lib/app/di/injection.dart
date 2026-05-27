@@ -15,6 +15,8 @@ import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
 import 'package:intellipilot/features/profile/data/profile_repository_impl.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
+import 'package:intellipilot/features/projects/data/projects_repository_impl.dart';
+import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:logger/logger.dart';
 
 /// Global service locator. Composition is intentionally manual at this stage
@@ -93,6 +95,9 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<ProfileRepository>(
     () => ProfileRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<ProjectsRepository>(
+    () => ProjectsRepositoryImpl(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
   getIt.registerLazySingleton<FileDownloader>(FileDownloader.new);
   getIt.registerLazySingleton<SessionBloc>(
@@ -108,6 +113,7 @@ Future<void> configureForTests({
   MfaRepository? mfaRepository,
   PasskeyService? passkeyService,
   ProfileRepository? profileRepository,
+  ProjectsRepository? projectsRepository,
   FileDownloader? fileDownloader,
   ApiConfig? apiConfig,
 }) async {
@@ -133,6 +139,9 @@ Future<void> configureForTests({
     )
     ..registerSingleton<ProfileRepository>(
       profileRepository ?? _NoopProfileRepository(),
+    )
+    ..registerSingleton<ProjectsRepository>(
+      projectsRepository ?? _NoopProjectsRepository(),
     )
     ..registerSingleton<FileDownloader>(
       fileDownloader ?? const _InMemoryDownloader(),
@@ -183,6 +192,14 @@ class _NoopProfileRepository implements ProfileRepository {
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError(
         '_NoopProfileRepository.${invocation.memberName}',
+      );
+}
+
+class _NoopProjectsRepository implements ProjectsRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(
+        '_NoopProjectsRepository.${invocation.memberName}',
       );
 }
 
