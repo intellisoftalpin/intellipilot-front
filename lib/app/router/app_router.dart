@@ -6,6 +6,7 @@ import 'package:intellipilot/features/auth/presentation/login_page.dart';
 import 'package:intellipilot/features/auth/presentation/register_page.dart';
 import 'package:intellipilot/features/auth/presentation/reset_password_page.dart';
 import 'package:intellipilot/features/backlog/presentation/backlog_page.dart';
+import 'package:intellipilot/features/backlog/presentation/issues_page.dart';
 import 'package:intellipilot/features/home/presentation/home_page.dart';
 import 'package:intellipilot/features/mfa/presentation/mfa_verify_page.dart';
 import 'package:intellipilot/features/mfa/presentation/passkey_signin_page.dart';
@@ -43,6 +44,7 @@ abstract class Routes {
   static String projectDetailFor(String id) => '/projects/$id';
   static String projectSettingsFor(String id) => '/projects/$id/settings';
   static String projectBacklogFor(String id) => '/projects/$id/backlog';
+  static String projectIssuesFor(String id) => '/projects/$id/issues';
   static String acceptInvitationFor(String token) => '/i/$token';
 }
 
@@ -124,6 +126,12 @@ GoRouter buildRouter({required SessionBloc session}) {
         name: 'project_backlog',
         builder: (context, state) =>
             BacklogPage(projectId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/projects/:id/issues',
+        name: 'project_issues',
+        builder: (context, state) =>
+            IssuesPage(projectId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/i/:token',

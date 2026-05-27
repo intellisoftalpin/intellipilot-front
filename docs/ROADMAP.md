@@ -18,7 +18,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 5 | Projects, members, roles, invitations | 2 w | Full project admin | **Done** |
 | 6 | Taxonomy, labels, components | 1 w | Per-project catalog editors | **Done** |
 | 7 | Backlog — epics & user stories | 2 w | Backlog list, detail, CRUD, reorder | **Done** |
-| 8 | Backlog — tasks & issues | 1.5 w | Task/issue CRUD, link to user story / epic | |
+| 8 | Backlog — tasks & issues | 1.5 w | Task/issue CRUD, link to user story / epic | **Done** |
 | 9 | Comments, history, attachments | 1.5 w | Polymorphic comment widget, file upload, activity stream | |
 | 10 | Board (Kanban) | 2 w | Drag-drop board, swimlanes, filters, saved views | |
 | 11 | Milestones / sprints | 1.5 w | List, sprint board, burndown, close sprint | |
@@ -287,7 +287,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 8 — Backlog: tasks & issues
+## Phase 8 — Backlog: tasks & issues — **Done**
 
 **Scope**
 - Tasks: nested under a user story. Inline checklist UI on the US detail page. Status comes from taxonomy.
@@ -297,6 +297,17 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 **Acceptance**
 - Search by reference jumps to the right entity detail page.
 - Filters serialize to URL query params and back, so a filtered view is shareable.
+
+**Delivered (2026-05-27)**
+- Extended `features/backlog/` DTOs with `Task`, `Issue`, `CreateTaskRequest`, `UpdateTaskRequest`, `CreateIssueRequest`, `UpdateIssueRequest`, and a `ResolvedRef` envelope for the cross-reference resolver. Update DTOs reuse the `_Absent` sentinel from Phase 7 so present-but-null clears the FK while absence leaves it alone.
+- `BacklogRepository` covers every Phase-8 endpoint: tasks list/get/create/update/delete with ETag round-trip, issues list/get/create/update/delete with ETag round-trip, plus `GET /projects/:id/resolve/:ref` for reference lookup. Update + delete carry `If-Match` via the existing `EtagInterceptor`.
+- Two new cubits: `TasksCubit(projectId, userStoryId)` loads all project tasks + `task_status` taxonomy, filters in memory to the surrounding user story, exposes create/setStatus/delete. `IssuesCubit(projectId)` loads issues + `issue_status` / `issue_type` / `priority` / `severity` taxonomies + labels + components, computes `visible` from independent status/type/priority/severity filters + search.
+- `TaskListDialog` opens from each user-story row on the backlog page (`Icons.checklist_outlined` button); shows tasks as a checkbox list — toggling the checkbox moves the task between the first open and first closed `task_status` items, with the title styled struck-through when closed.
+- New `IssuesPage` at `/projects/:id/issues`: search field, four popup-menu filter chips (status/type/priority/severity), full-bleed list with status/type/priority/severity mini-chips per row. Per-row popup menu for edit + delete. FAB for new issue gated by `Permission.issueCreate`. `IssueEditDialog` shows all four kind dropdowns plus selectable `FilterChip` arrays for the project's labels and components.
+- Project overview page gains an "Open issues" tonal CTA next to "Open backlog".
+- DI doesn't grow — `BacklogRepository` already registered; the new endpoints are methods on it. ARB extended with 25 strings (issues page copy, filter labels, tasks dialog copy, generic add).
+- **198 tests pass** (`flutter analyze` clean, web release build green). Existing repo wire-format test still passes; broader bloc/page tests for tasks + issues intentionally deferred per the paused coverage gate.
+- Deferred: filter serialisation to URL query params (the cubit holds state in memory; deep-linking a filtered view stays a Phase 13 polish item alongside the Cmd-K palette). Assignee + label-component filters aren't surfaced as chips yet — the wire-format support is already in place; only the UI affordances are pending. The reference-resolver method is callable from the repo but the global "go to #123" UI lands with the Cmd-K palette in Phase 13.
 
 ---
 

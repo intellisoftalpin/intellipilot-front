@@ -6,6 +6,7 @@ import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/backlog_cubit.dart';
 import 'package:intellipilot/features/backlog/presentation/widgets/bulk_paste_dialog.dart';
 import 'package:intellipilot/features/backlog/presentation/widgets/epic_edit_dialog.dart';
+import 'package:intellipilot/features/backlog/presentation/widgets/task_list_dialog.dart';
 import 'package:intellipilot/features/backlog/presentation/widgets/user_story_edit_dialog.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
@@ -426,6 +427,17 @@ class _UserStoryRow extends StatelessWidget {
           ? Wrap(
               spacing: 4,
               children: [
+                IconButton(
+                  icon: const Icon(Icons.checklist_outlined),
+                  tooltip: t.tasksOpenTooltip,
+                  onPressed: () => showTaskListDialog(
+                    context,
+                    projectId: story.projectId,
+                    userStoryId: story.id,
+                    userStorySubject: story.subject,
+                    canEdit: canEdit,
+                  ),
+                ),
                 _StatusMenu(story: story, statuses: statuses),
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),

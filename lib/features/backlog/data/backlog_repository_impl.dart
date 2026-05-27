@@ -263,4 +263,208 @@ class BacklogRepositoryImpl implements BacklogRepository {
       err: Err.new,
     );
   }
+
+  // ---- tasks ----
+
+  @override
+  Future<Result<List<Task>, AppFailure>> listTasks(String projectId) async {
+    final res = await _api.get('$_base/$projectId/tasks');
+    return res.when(
+      ok: (r) {
+        final body = r.data as Map<String, dynamic>;
+        final raw = body['tasks'] as List<dynamic>? ?? const [];
+        return Ok(
+          raw.map((e) => Task.fromJson(e as Map<String, dynamic>)).toList(),
+        );
+      },
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<Task, AppFailure>> getTask(
+    String projectId,
+    String id,
+  ) async {
+    final res = await _api.get('$_base/$projectId/tasks/$id');
+    return res.when(
+      ok: (r) => Ok(
+        Task.fromJson(r.data as Map<String, dynamic>, etag: _etag(r)),
+      ),
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<Task, AppFailure>> createTask(
+    String projectId,
+    CreateTaskRequest body,
+  ) async {
+    final res = await _api.post(
+      '$_base/$projectId/tasks',
+      body: body.toJson(),
+    );
+    return res.when(
+      ok: (r) => Ok(
+        Task.fromJson(r.data as Map<String, dynamic>, etag: _etag(r)),
+      ),
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<Task, AppFailure>> updateTask(
+    String projectId,
+    String id, {
+    required UpdateTaskRequest body,
+    required String etag,
+  }) async {
+    try {
+      final response = await _api.dio.patch<dynamic>(
+        '$_base/$projectId/tasks/$id',
+        data: body.toJson(),
+        options: Options(
+          extra: <String, dynamic>{EtagInterceptor.etagExtra: etag},
+        ),
+      );
+      return Ok(
+        Task.fromJson(
+          response.data as Map<String, dynamic>,
+          etag: _etag(response),
+        ),
+      );
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteTask(
+    String projectId,
+    String id, {
+    required String etag,
+  }) async {
+    try {
+      await _api.dio.delete<dynamic>(
+        '$_base/$projectId/tasks/$id',
+        options: Options(
+          extra: <String, dynamic>{EtagInterceptor.etagExtra: etag},
+        ),
+      );
+      return const Ok<Unit, AppFailure>(Unit.instance);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 204) {
+        return const Ok<Unit, AppFailure>(Unit.instance);
+      }
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  // ---- issues ----
+
+  @override
+  Future<Result<List<Issue>, AppFailure>> listIssues(String projectId) async {
+    final res = await _api.get('$_base/$projectId/issues');
+    return res.when(
+      ok: (r) {
+        final body = r.data as Map<String, dynamic>;
+        final raw = body['issues'] as List<dynamic>? ?? const [];
+        return Ok(
+          raw.map((e) => Issue.fromJson(e as Map<String, dynamic>)).toList(),
+        );
+      },
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<Issue, AppFailure>> getIssue(
+    String projectId,
+    String id,
+  ) async {
+    final res = await _api.get('$_base/$projectId/issues/$id');
+    return res.when(
+      ok: (r) => Ok(
+        Issue.fromJson(r.data as Map<String, dynamic>, etag: _etag(r)),
+      ),
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<Issue, AppFailure>> createIssue(
+    String projectId,
+    CreateIssueRequest body,
+  ) async {
+    final res = await _api.post(
+      '$_base/$projectId/issues',
+      body: body.toJson(),
+    );
+    return res.when(
+      ok: (r) => Ok(
+        Issue.fromJson(r.data as Map<String, dynamic>, etag: _etag(r)),
+      ),
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<Issue, AppFailure>> updateIssue(
+    String projectId,
+    String id, {
+    required UpdateIssueRequest body,
+    required String etag,
+  }) async {
+    try {
+      final response = await _api.dio.patch<dynamic>(
+        '$_base/$projectId/issues/$id',
+        data: body.toJson(),
+        options: Options(
+          extra: <String, dynamic>{EtagInterceptor.etagExtra: etag},
+        ),
+      );
+      return Ok(
+        Issue.fromJson(
+          response.data as Map<String, dynamic>,
+          etag: _etag(response),
+        ),
+      );
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteIssue(
+    String projectId,
+    String id, {
+    required String etag,
+  }) async {
+    try {
+      await _api.dio.delete<dynamic>(
+        '$_base/$projectId/issues/$id',
+        options: Options(
+          extra: <String, dynamic>{EtagInterceptor.etagExtra: etag},
+        ),
+      );
+      return const Ok<Unit, AppFailure>(Unit.instance);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 204) {
+        return const Ok<Unit, AppFailure>(Unit.instance);
+      }
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<ResolvedRef, AppFailure>> resolveRef(
+    String projectId,
+    int reference,
+  ) async {
+    final res = await _api.get('$_base/$projectId/resolve/$reference');
+    return res.when(
+      ok: (r) => Ok(ResolvedRef.fromJson(r.data as Map<String, dynamic>)),
+      err: Err.new,
+    );
+  }
 }

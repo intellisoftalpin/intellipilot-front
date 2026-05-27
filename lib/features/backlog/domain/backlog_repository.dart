@@ -57,4 +57,48 @@ abstract interface class BacklogRepository {
     String projectId,
     BulkCreateUserStoriesRequest body,
   );
+
+  // ---- tasks ----
+  Future<Result<List<Task>, AppFailure>> listTasks(String projectId);
+  Future<Result<Task, AppFailure>> getTask(String projectId, String id);
+  Future<Result<Task, AppFailure>> createTask(
+    String projectId,
+    CreateTaskRequest body,
+  );
+  Future<Result<Task, AppFailure>> updateTask(
+    String projectId,
+    String id, {
+    required UpdateTaskRequest body,
+    required String etag,
+  });
+  Future<Result<Unit, AppFailure>> deleteTask(
+    String projectId,
+    String id, {
+    required String etag,
+  });
+
+  // ---- issues ----
+  Future<Result<List<Issue>, AppFailure>> listIssues(String projectId);
+  Future<Result<Issue, AppFailure>> getIssue(String projectId, String id);
+  Future<Result<Issue, AppFailure>> createIssue(
+    String projectId,
+    CreateIssueRequest body,
+  );
+  Future<Result<Issue, AppFailure>> updateIssue(
+    String projectId,
+    String id, {
+    required UpdateIssueRequest body,
+    required String etag,
+  });
+  Future<Result<Unit, AppFailure>> deleteIssue(
+    String projectId,
+    String id, {
+    required String etag,
+  });
+
+  /// Resolve a numeric reference within a project to its entity kind + id.
+  Future<Result<ResolvedRef, AppFailure>> resolveRef(
+    String projectId,
+    int reference,
+  );
 }

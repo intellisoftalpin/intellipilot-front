@@ -183,13 +183,21 @@ class _Overview extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            Row(
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 FilledButton.icon(
                   icon: const Icon(Icons.list_alt),
                   onPressed: () =>
                       context.go(Routes.projectBacklogFor(project.id)),
                   label: Text(t.actionOpenBacklog),
+                ),
+                FilledButton.tonalIcon(
+                  icon: const Icon(Icons.bug_report_outlined),
+                  onPressed: () =>
+                      context.go(Routes.projectIssuesFor(project.id)),
+                  label: Text(t.actionOpenIssues),
                 ),
               ],
             ),
