@@ -57,9 +57,9 @@ const _epicJson =
 
 const _usJson =
     '{"id":"u1","project_id":"p1","ref":42,"subject":"Sign in","description":"",'
-    '"status_id":"s1","epic_id":"e1","milestone_id":null,"points_id":null,'
-    '"owner_id":null,"assigned_to":null,"order":2.5,"version":1,'
-    '"created_at":"2026-05-27T00:00:00Z","modified_at":"2026-05-27T00:00:00Z"}';
+    ' "status_id":"s1","epic_id":"e1","milestone_id":null,"points_id":null,'
+    ' "owner_id":null,"assigned_to":null,"order":2.5,"version":1,'
+    ' "created_at":"2026-05-27T00:00:00Z","modified_at":"2026-05-27T00:00:00Z"}';
 
 void main() {
   group('BacklogRepositoryImpl', () {
