@@ -157,6 +157,12 @@ class _LoginViewState extends State<_LoginView> {
                       },
                     ),
                     const SizedBox(height: 16),
+                    TextButton.icon(
+                      icon: const Icon(Icons.fingerprint, size: 18),
+                      onPressed: () => context.goNamed('passkey_sign_in'),
+                      label: Text(t.linkSignInWithPasskey),
+                    ),
+                    const SizedBox(height: 4),
                     TextButton(
                       onPressed: () => context.goNamed('register'),
                       child: Text(t.linkCreateAccount),

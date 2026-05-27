@@ -6,6 +6,12 @@ import 'package:intellipilot/features/auth/presentation/login_page.dart';
 import 'package:intellipilot/features/auth/presentation/register_page.dart';
 import 'package:intellipilot/features/auth/presentation/reset_password_page.dart';
 import 'package:intellipilot/features/home/presentation/home_page.dart';
+import 'package:intellipilot/features/mfa/presentation/mfa_verify_page.dart';
+import 'package:intellipilot/features/mfa/presentation/passkey_signin_page.dart';
+import 'package:intellipilot/features/mfa/presentation/passkeys_page.dart';
+import 'package:intellipilot/features/mfa/presentation/recovery_codes_page.dart';
+import 'package:intellipilot/features/mfa/presentation/security_page.dart';
+import 'package:intellipilot/features/mfa/presentation/totp_setup_page.dart';
 import 'package:intellipilot/features/settings/presentation/settings_page.dart';
 
 /// Stable route names used by code (do not hard-code paths at call sites).
@@ -16,6 +22,12 @@ abstract class Routes {
   static const register = '/register';
   static const forgotPassword = '/forgot-password';
   static const resetPassword = '/reset-password';
+  static const mfaVerify = '/auth/mfa';
+  static const passkeySignIn = '/passkeys/sign-in';
+  static const security = '/me/security';
+  static const totpSetup = '/me/security/totp';
+  static const recoveryCodes = '/me/security/recovery';
+  static const passkeys = '/me/security/passkeys';
 }
 
 const _publicRoutes = {
@@ -23,6 +35,7 @@ const _publicRoutes = {
   Routes.register,
   Routes.forgotPassword,
   Routes.resetPassword,
+  Routes.passkeySignIn,
 };
 
 /// Build the app router. [session] drives the redirect guard so authentication
@@ -42,6 +55,26 @@ GoRouter buildRouter({required SessionBloc session}) {
         path: Routes.settings,
         name: 'settings',
         builder: (context, state) => const SettingsPage(),
+      ),
+      GoRoute(
+        path: Routes.security,
+        name: 'security',
+        builder: (context, state) => const SecurityPage(),
+      ),
+      GoRoute(
+        path: Routes.totpSetup,
+        name: 'totp_setup',
+        builder: (context, state) => const TotpSetupPage(),
+      ),
+      GoRoute(
+        path: Routes.recoveryCodes,
+        name: 'recovery_codes',
+        builder: (context, state) => const RecoveryCodesPage(),
+      ),
+      GoRoute(
+        path: Routes.passkeys,
+        name: 'passkeys',
+        builder: (context, state) => const PasskeysPage(),
       ),
       GoRoute(
         path: Routes.login,
@@ -64,6 +97,16 @@ GoRouter buildRouter({required SessionBloc session}) {
         builder: (context, state) =>
             ResetPasswordPage(initialToken: state.uri.queryParameters['token']),
       ),
+      GoRoute(
+        path: Routes.mfaVerify,
+        name: 'mfa_verify',
+        builder: (context, state) => const MfaVerifyPage(),
+      ),
+      GoRoute(
+        path: Routes.passkeySignIn,
+        name: 'passkey_sign_in',
+        builder: (context, state) => const PasskeySignInPage(),
+      ),
     ],
   );
 }
@@ -72,10 +115,14 @@ String? _guard(SessionState session, GoRouterState routerState) {
   final loc = routerState.matchedLocation;
   final isPublic = _publicRoutes.contains(loc);
 
-  // Don't redirect while we haven't resolved cold-start session restoration.
-  if (session is SessionUnknown) {
-    return null;
+  // MFA challenge in-flight: corner the user on the verify page until they
+  // complete it (or cancel — that dispatches a logout via the page UI).
+  if (session is SessionMfaRequired) {
+    return loc == Routes.mfaVerify ? null : Routes.mfaVerify;
   }
+
+  // Don't redirect while cold-start session restoration is still pending.
+  if (session is SessionUnknown) return null;
 
   final isAuthed =
       session is SessionAuthenticated || session is SessionRefreshing;
@@ -89,5 +136,7 @@ String? _guard(SessionState session, GoRouterState routerState) {
     if (from != null && from.isNotEmpty) return Uri.decodeComponent(from);
     return Routes.home;
   }
+  // Authed users on /auth/mfa shouldn't stay there.
+  if (isAuthed && loc == Routes.mfaVerify) return Routes.home;
   return null;
 }

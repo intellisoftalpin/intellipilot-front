@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
+import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
 import 'package:intellipilot/core/widgets/app_scaffold.dart';
@@ -20,6 +22,8 @@ class SettingsPage extends StatelessWidget {
           _ThemeSection(),
           SizedBox(height: 16),
           _LocaleSection(),
+          SizedBox(height: 16),
+          _SecuritySection(),
         ],
       ),
     );
@@ -140,6 +144,24 @@ class _SeedSwatch extends StatelessWidget {
               ? const Icon(Icons.check, color: Colors.white, size: 20)
               : null,
         ),
+      ),
+    );
+  }
+}
+
+class _SecuritySection extends StatelessWidget {
+  const _SecuritySection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.shield_outlined),
+        title: Text(l10n.settingsSecurityTitle),
+        subtitle: Text(l10n.settingsSecuritySubtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.go(Routes.security),
       ),
     );
   }

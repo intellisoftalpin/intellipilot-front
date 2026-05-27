@@ -9,6 +9,9 @@ import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
 import 'package:intellipilot/features/auth/data/auth_repository_impl.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
+import 'package:intellipilot/features/mfa/data/mfa_repository_impl.dart';
+import 'package:intellipilot/features/mfa/data/passkey_service.dart';
+import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
 import 'package:logger/logger.dart';
 
 /// Global service locator. Composition is intentionally manual at this stage
@@ -81,6 +84,10 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<MfaRepository>(
+    () => MfaRepositoryImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
   getIt.registerLazySingleton<SessionBloc>(
     () => SessionBloc(repository: getIt<AuthRepository>()),
   );
@@ -91,6 +98,8 @@ Future<void> configureForTests({
   required KeyValueStorage settingsStorage,
   required KeyValueStorage uiStorage,
   required AuthRepository authRepository,
+  MfaRepository? mfaRepository,
+  PasskeyService? passkeyService,
   ApiConfig? apiConfig,
 }) async {
   getIt
@@ -107,6 +116,12 @@ Future<void> configureForTests({
     )
     ..registerSingleton<CookieSetup>(CookieSetup.inMemory())
     ..registerSingleton<AuthRepository>(authRepository)
+    ..registerSingleton<MfaRepository>(
+      mfaRepository ?? _NoopMfaRepository(),
+    )
+    ..registerSingleton<PasskeyService>(
+      passkeyService ?? const _StubPasskeyService(),
+    )
     ..registerSingleton<SessionBloc>(SessionBloc(repository: authRepository))
     ..registerSingleton<ThemeCubit>(ThemeCubit(settingsStorage))
     ..registerSingleton<LocaleCubit>(LocaleCubit(settingsStorage));
@@ -122,3 +137,28 @@ Future<void> configureForTests({
 }
 
 Future<void> resetDependencies() async => getIt.reset();
+
+// Defaults used by [configureForTests] when callers don't pass explicit
+// fakes. Keeping them in this file (not the test tree) means widget tests
+// using the production DI helper still resolve the type without crashing.
+
+class _NoopMfaRepository implements MfaRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('_NoopMfaRepository.${invocation.memberName}');
+}
+
+class _StubPasskeyService implements PasskeyService {
+  const _StubPasskeyService();
+
+  @override
+  bool get isSupported => false;
+
+  @override
+  Future<Map<String, dynamic>> register(Map<String, dynamic> _) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<Map<String, dynamic>> authenticate(Map<String, dynamic> _) async =>
+      throw UnimplementedError();
+}

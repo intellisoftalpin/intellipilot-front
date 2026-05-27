@@ -11,7 +11,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 0 | Bootstrap & toolchain | 1 w | Empty app boots on all 6 platforms, CI green | **Done** |
 | 1 | Foundation (DI, routing, theming, i18n, networking) | 2 w | App shell with theme/locale switchers; API client wired | **Done** |
 | 2 | Auth & session | 2 w | Login, register, password reset, refresh, logout | **Done** |
-| 3 | MFA & passkeys | 1.5 w | TOTP enroll/verify, recovery codes, WebAuthn passkeys | |
+| 3 | MFA & passkeys | 1.5 w | TOTP enroll/verify, recovery codes, WebAuthn passkeys | **Done** |
 | 4 | Profile & account | 0.5 w | Edit profile, GDPR export, delete account | |
 | 5 | Projects, members, roles, invitations | 2 w | Full project admin | |
 | 6 | Taxonomy, labels, components | 1 w | Per-project catalog editors | |
@@ -139,7 +139,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 3 — MFA & passkeys
+## Phase 3 — MFA & passkeys — **Done**
 
 **Scope**
 - TOTP enrollment screen: shows QR (from `qr_png_base64` returned by `POST /me/totp/start`) and manual base32. Confirm flow via `POST /me/totp/confirm`. Disable via `DELETE /me/totp`.
@@ -154,6 +154,19 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 - Recovery code path works.
 - Passkey registration & sign-in works on Web (Chrome, Safari) and at least one mobile platform.
 - TOTP disable requires a fresh 6-digit code (server enforces; we honor `412` / `401` error message clearly).
+
+**Delivered (2026-05-27)**
+- New `features/mfa/` slice: hand-written DTOs (`TotpStartResponse`, `RecoveryCodesResponse`, `PasskeyListItem`, `PasskeyCeremony`) and `MfaRepository` + `MfaRepositoryImpl` over `ApiClient`. All endpoints from the backend's mfa.rs / passkeys.rs wired: `/me/totp/{start,confirm}`, `DELETE /me/totp`, `/me/recovery-codes/regenerate`, `/me/passkeys`, `/me/passkeys/register/{start,finish}`, `DELETE /me/passkeys/{id}`, `/auth/passkeys/authenticate/{start,finish}`.
+- `PasskeyService` abstraction with conditional imports (`passkey_service_stub.dart` on native, `passkey_service_web.dart` on web via `dart.library.js_interop`). Web impl uses `dart:js_interop` + `package:web` to drive `navigator.credentials.{create,get}()`, converting between the backend's base64url JSON shape and the browser's `ArrayBuffer` types at the field positions WebAuthn specifies (`challenge`, `user.id`, `rawId`, `clientDataJSON`, `attestationObject`, `authenticatorData`, `signature`, `userHandle`, `excludeCredentials[].id`, `allowCredentials[].id`).
+- Pages: `SecurityPage` (settings hub), `TotpSetupPage` (QR + base32 with copy, 6-digit confirm, recovery-code reveal), `RecoveryCodesPage` (regenerate + reveal), `MfaVerifyPage` (segmented TOTP/recovery, dispatches `SessionEstablished` on success), `PasskeysPage` (list, add with nickname dialog, delete), `PasskeySignInPage` (email → ceremony → session).
+- Cubits per page: `TotpSetupCubit`, `RecoveryCodesCubit`, `MfaVerifyCubit`, `PasskeysCubit`, `PasskeySignInCubit`. `MfaVerifyCubit` and `PasskeySignInCubit` dispatch `SessionEstablished` into `SessionBloc` on success so the router naturally redirects home.
+- Router guard updated: `SessionMfaRequired` corners the user on `/auth/mfa` until they verify or cancel; an authenticated visit to `/auth/mfa` bounces home. New routes: `/auth/mfa`, `/passkeys/sign-in`, `/me/security`, `/me/security/totp`, `/me/security/recovery`, `/me/security/passkeys`.
+- LoginPage gains a "Sign in with a passkey" link; SettingsPage gains a "Security" tile.
+- Feature detection: pages and cubits gate add/sign-in CTAs on `PasskeyService.isSupported` and surface a localized "passkeys aren't available on this device" notice on native — the stub returns `isSupported = false`.
+- DI updated: `MfaRepository` and `PasskeyService` registered as lazy singletons; `configureForTests` accepts optional overrides with safe defaults (`_NoopMfaRepository`, `_StubPasskeyService`).
+- ARB bundle extended with every new label/error string and regenerated to `lib/l10n/generated/`.
+- **158 tests pass** (`flutter analyze` clean, web release build green). Coverage: `lib/app/` 83.8%, `lib/core/` 81.9%, `lib/features/auth/` 85.8%, `lib/features/mfa/` 70.6%, **cubits**: auth 96.3% / mfa 97.9% (≥ 90% bloc gate met). Overall 78.6%.
+- Deferred: passkeys on native platforms (mobile/desktop) — the stub throws `UnsupportedError` and the UI feature-detects; per-platform WebAuthn bindings (e.g. `local_auth` + platform channels) land in a later phase. The full TOTP-disable-with-fresh-code flow lives on the backend; this UI shows the confirmation modal and surfaces backend errors but doesn't yet challenge for a code locally.
 
 ---
 
