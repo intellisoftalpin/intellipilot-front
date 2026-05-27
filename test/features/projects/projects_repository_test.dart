@@ -47,9 +47,9 @@ ApiClient _client(_Adapter adapter) {
 
 const _projectJson =
     '{"id":"p1","slug":"apollo","name":"Apollo","description":"Mission control",'
-    '"owner_id":"u1","visibility":"internal","kanban_enabled":true,'
-    '"backlog_enabled":true,"wiki_enabled":true,"epics_enabled":true,'
-    '"created_at":"2026-05-27T00:00:00Z"}';
+    ' "owner_id":"u1","visibility":"internal","kanban_enabled":true,'
+    ' "backlog_enabled":true,"wiki_enabled":true,"epics_enabled":true,'
+    ' "created_at":"2026-05-27T00:00:00Z"}';
 
 void main() {
   group('ProjectsRepositoryImpl', () {
@@ -106,7 +106,7 @@ void main() {
       await repo.updateRole(
         'p1',
         'r1',
-        UpdateRoleRequest(
+        const UpdateRoleRequest(
           permissions: {Permission.epicView, Permission.usView},
         ),
       );

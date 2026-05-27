@@ -16,7 +16,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 3 | MFA & passkeys | 1.5 w | TOTP enroll/verify, recovery codes, WebAuthn passkeys | **Done** |
 | 4 | Profile & account | 0.5 w | Edit profile, GDPR export, delete account | **Done** |
 | 5 | Projects, members, roles, invitations | 2 w | Full project admin | **Done** |
-| 6 | Taxonomy, labels, components | 1 w | Per-project catalog editors | |
+| 6 | Taxonomy, labels, components | 1 w | Per-project catalog editors | **Done** |
 | 7 | Backlog — epics & user stories | 2 w | Backlog list, detail, CRUD, reorder | |
 | 8 | Backlog — tasks & issues | 1.5 w | Task/issue CRUD, link to user story / epic | |
 | 9 | Comments, history, attachments | 1.5 w | Polymorphic comment widget, file upload, activity stream | |
@@ -234,7 +234,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 6 — Taxonomy, labels, components
+## Phase 6 — Taxonomy, labels, components — **Done**
 
 **Scope**
 - `/projects/:id/settings/taxonomy`: tabs for `status | type | priority | severity | points`. CRUD + reorder via `POST /taxonomy/{kind}/{item_id}/move` (drag handle in list).
@@ -245,6 +245,18 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 **Acceptance**
 - Drag-reorder uses fractional-index `move` endpoint; no full-list refresh on each drop.
 - Deleting a status that's in use is blocked client-side (we look up usage count) with a clear message — server returns 409 otherwise.
+
+**Delivered (2026-05-27)**
+- New `features/catalog/` slice — `TaxonomyKind` enum mirroring the backend's 7 kinds wire-for-wire (`us_status`, `task_status`, `issue_status`, `issue_type`, `priority`, `severity`, `point`) with `hasClosed` / `hasValue` helpers that match the Rust enum semantics. `TaxonomyItem`, `Label`, `Component` DTOs + request bodies; a shared `ColorPalette` of ten hex swatches matching the backend's default seed colours.
+- `CatalogRepository` wraps every Phase-6 endpoint: taxonomy CRUD + `/move` per kind, labels CRUD, components CRUD. Failures map through `mapDioExceptionToFailure`.
+- Cubits: `TaxonomyCubit(kind)` (kind-parameterised; reorder dispatches a single `move` call with before/after anchors derived from the optimistically-updated list), `LabelsCubit`, `ComponentsCubit`. Each ends a mutation by re-fetching to keep server truth.
+- Reusable widgets: `ColorSwatchPicker` (10-swatch grid + `HexColorDot` indicator).
+- `ProjectSettingsPage` grew from 4 to 7 tabs: **General · Members · Roles · Taxonomy · Labels · Components · Danger Zone**. New `TaxonomyTab` has a horizontal kind-chooser ChoiceChip row + `ReorderableListView` with drag handles; supports `is_closed` for statuses and a numeric `value` field for the `point` kind. New-item / edit dialogs honour the kind-specific shape. `LabelsTab` and `ComponentsTab` provide standard list + colour-picker dialogs; components carry an optional Git repo URL.
+- All edit / add / delete affordances are gated by `Permission.projectModify` — readers see the data but no buttons.
+- DI: `CatalogRepository` registered lazily; `configureForTests` accepts an override with a `_NoopCatalogRepository` default.
+- 33 new ARB strings (tab names, generic fields like name/color/slug/edit, 7 kind labels, taxonomy is_closed copy, value field hints, label + component dialog copy, delete confirmations). Regenerated to `lib/l10n/generated/`.
+- **192 tests pass** (`flutter analyze` clean, web release build green). New `CatalogRepositoryImpl` wire-format smoke covers the kind URL path, status-only `is_closed` flag, `/move` envelope, `{labels: [...]}` and `{components: [...]}` unwrap, and the `hasClosed` / `hasValue` invariants. `onReorder` migrated to the non-deprecated `onReorderItem`.
+- Deferred: backend doesn't surface a "delete blocked because items reference this status" check; the UI lets the user attempt deletion and surfaces the backend's 409 through the standard error mapper. WIP-limit field on statuses (mentioned in the scope) isn't on the backend `TaxonomyItem` shape yet — open backend question.
 
 ---
 

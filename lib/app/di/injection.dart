@@ -10,6 +10,8 @@ import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
 import 'package:intellipilot/features/auth/data/auth_repository_impl.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
+import 'package:intellipilot/features/catalog/data/catalog_repository_impl.dart';
+import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/mfa/data/mfa_repository_impl.dart';
 import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
@@ -98,6 +100,9 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<ProjectsRepository>(
     () => ProjectsRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<CatalogRepository>(
+    () => CatalogRepositoryImpl(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
   getIt.registerLazySingleton<FileDownloader>(FileDownloader.new);
   getIt.registerLazySingleton<SessionBloc>(
@@ -114,6 +119,7 @@ Future<void> configureForTests({
   PasskeyService? passkeyService,
   ProfileRepository? profileRepository,
   ProjectsRepository? projectsRepository,
+  CatalogRepository? catalogRepository,
   FileDownloader? fileDownloader,
   ApiConfig? apiConfig,
 }) async {
@@ -142,6 +148,9 @@ Future<void> configureForTests({
     )
     ..registerSingleton<ProjectsRepository>(
       projectsRepository ?? _NoopProjectsRepository(),
+    )
+    ..registerSingleton<CatalogRepository>(
+      catalogRepository ?? _NoopCatalogRepository(),
     )
     ..registerSingleton<FileDownloader>(
       fileDownloader ?? const _InMemoryDownloader(),
@@ -200,6 +209,14 @@ class _NoopProjectsRepository implements ProjectsRepository {
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError(
         '_NoopProjectsRepository.${invocation.memberName}',
+      );
+}
+
+class _NoopCatalogRepository implements CatalogRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(
+        '_NoopCatalogRepository.${invocation.memberName}',
       );
 }
 

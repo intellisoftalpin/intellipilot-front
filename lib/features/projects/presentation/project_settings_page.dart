@@ -4,6 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/components_tab.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/labels_tab.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/taxonomy_tab.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
@@ -85,7 +88,7 @@ class _SettingsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return DefaultTabController(
-      length: 4,
+      length: 7,
       child: Scaffold(
         appBar: AppBar(
           title: BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
@@ -101,6 +104,9 @@ class _SettingsView extends StatelessWidget {
               Tab(text: t.tabGeneral),
               Tab(text: t.tabMembers),
               Tab(text: t.tabRoles),
+              Tab(text: t.tabTaxonomy),
+              Tab(text: t.tabLabels),
+              Tab(text: t.tabComponents),
               Tab(text: t.tabDangerZone),
             ],
           ),
@@ -121,6 +127,9 @@ class _SettingsView extends StatelessWidget {
                   _GeneralTab(state: state),
                   _MembersTab(state: state),
                   _RolesTab(state: state),
+                  TaxonomyTab(projectId: projectId),
+                  LabelsTab(projectId: projectId),
+                  ComponentsTab(projectId: projectId),
                   _DangerZoneTab(state: state),
                 ],
               );
