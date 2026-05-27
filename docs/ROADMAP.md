@@ -12,7 +12,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 1 | Foundation (DI, routing, theming, i18n, networking) | 2 w | App shell with theme/locale switchers; API client wired | **Done** |
 | 2 | Auth & session | 2 w | Login, register, password reset, refresh, logout | **Done** |
 | 3 | MFA & passkeys | 1.5 w | TOTP enroll/verify, recovery codes, WebAuthn passkeys | **Done** |
-| 4 | Profile & account | 0.5 w | Edit profile, GDPR export, delete account | |
+| 4 | Profile & account | 0.5 w | Edit profile, GDPR export, delete account | **Done** |
 | 5 | Projects, members, roles, invitations | 2 w | Full project admin | |
 | 6 | Taxonomy, labels, components | 1 w | Per-project catalog editors | |
 | 7 | Backlog — epics & user stories | 2 w | Backlog list, detail, CRUD, reorder | |
@@ -170,7 +170,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 4 — Profile & account
+## Phase 4 — Profile & account — **Done**
 
 **Scope**
 - `/me` page: view + edit `full_name`, `lang`, `timezone`. Patch via `PATCH /me`.
@@ -181,6 +181,18 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 **Acceptance**
 - Profile updates reflect immediately, both locally and on next backend fetch.
 - Delete confirmation requires typing the username; cannot be triggered accidentally.
+
+**Delivered (2026-05-27)**
+- New `features/profile/` slice with `UserProfile` / `ProfileUpdateRequest` / `AccountErasureResponse` DTOs. `ProfileRepository` interface + impl over `ApiClient` covers all four endpoints (`GET /me`, `PATCH /me`, `DELETE /me`, `GET /me/export`).
+- `ProfileCubit`: `load()` on init, `save()` posts a partial `PATCH /me`. When `lang` changes, the cubit also dispatches `LocaleCubit.setLocale` so the UI flips locale live, no app restart needed.
+- `AccountDeletionCubit`: requires the user-typed `expectedUsername` to match exactly before calling the backend (client-side anti-fat-finger guard on top of the backend's soft-delete grace). On success, dispatches `SessionLogoutRequested(callBackend: false)` so the router kicks the user back to `/login`.
+- `GdprExportCubit`: pulls `GET /me/export`, then writes the JSON via a platform-conditional `FileDownloader`. Web uses `dart:js_interop` + `package:web` to trigger a real `Blob` download (`<a download>` + `revokeObjectURL`); native falls back to a clipboard copy with the same JSON body. The UI surface adapts copy + icon based on `canDownload`.
+- Pages: `ProfilePage` at `/me/profile` (text fields for name, language dropdown, timezone; live save snack), `AccountPage` at `/me/account` (GDPR export tile + danger-zone card with "type-your-username" confirmation modal).
+- SettingsPage gains Profile and Account tiles in addition to the existing Theme / Locale / Security sections.
+- DI registers `ProfileRepository` and `FileDownloader` as lazy singletons; `configureForTests` accepts optional fakes (`_NoopProfileRepository`, `_InMemoryDownloader`).
+- ARB strings extended (10 new sections of copy: profile fields, account danger zone, GDPR export, all snacks). Regenerated to `lib/l10n/generated/`.
+- **178 tests pass** (`flutter analyze` clean, web release build green). Coverage: `lib/app/` 82.1%, `lib/core/` 81.2%, `lib/features/profile/` 75.1%, cubits 96.3% (profile) / 97.9% (mfa) / 96.3% (auth) — ≥ 90% bloc gate met across all features. Overall 77.8%.
+- Deferred / out of scope: the backend's `User` payload doesn't expose `deleted_grace_until` on `GET /me`, so the "scheduled for deletion" banner on later sign-ins is not implementable client-side until a backend change. `share_plus` integration for native file save (currently clipboard) — TBD in a later phase.
 
 ---
 

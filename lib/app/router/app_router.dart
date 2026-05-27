@@ -12,6 +12,8 @@ import 'package:intellipilot/features/mfa/presentation/passkeys_page.dart';
 import 'package:intellipilot/features/mfa/presentation/recovery_codes_page.dart';
 import 'package:intellipilot/features/mfa/presentation/security_page.dart';
 import 'package:intellipilot/features/mfa/presentation/totp_setup_page.dart';
+import 'package:intellipilot/features/profile/presentation/account_page.dart';
+import 'package:intellipilot/features/profile/presentation/profile_page.dart';
 import 'package:intellipilot/features/settings/presentation/settings_page.dart';
 
 /// Stable route names used by code (do not hard-code paths at call sites).
@@ -28,6 +30,8 @@ abstract class Routes {
   static const totpSetup = '/me/security/totp';
   static const recoveryCodes = '/me/security/recovery';
   static const passkeys = '/me/security/passkeys';
+  static const profile = '/me/profile';
+  static const account = '/me/account';
 }
 
 const _publicRoutes = {
@@ -75,6 +79,16 @@ GoRouter buildRouter({required SessionBloc session}) {
         path: Routes.passkeys,
         name: 'passkeys',
         builder: (context, state) => const PasskeysPage(),
+      ),
+      GoRoute(
+        path: Routes.profile,
+        name: 'profile',
+        builder: (context, state) => const ProfilePage(),
+      ),
+      GoRoute(
+        path: Routes.account,
+        name: 'account',
+        builder: (context, state) => const AccountPage(),
       ),
       GoRoute(
         path: Routes.login,

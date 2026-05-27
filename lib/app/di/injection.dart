@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
+import 'package:intellipilot/core/io/file_downloader.dart';
 import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/network/api_config.dart';
 import 'package:intellipilot/core/network/cookie_setup.dart';
@@ -12,6 +13,8 @@ import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:intellipilot/features/mfa/data/mfa_repository_impl.dart';
 import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
+import 'package:intellipilot/features/profile/data/profile_repository_impl.dart';
+import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:logger/logger.dart';
 
 /// Global service locator. Composition is intentionally manual at this stage
@@ -87,7 +90,11 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<MfaRepository>(
     () => MfaRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<ProfileRepository>(
+    () => ProfileRepositoryImpl(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
+  getIt.registerLazySingleton<FileDownloader>(FileDownloader.new);
   getIt.registerLazySingleton<SessionBloc>(
     () => SessionBloc(repository: getIt<AuthRepository>()),
   );
@@ -100,6 +107,8 @@ Future<void> configureForTests({
   required AuthRepository authRepository,
   MfaRepository? mfaRepository,
   PasskeyService? passkeyService,
+  ProfileRepository? profileRepository,
+  FileDownloader? fileDownloader,
   ApiConfig? apiConfig,
 }) async {
   getIt
@@ -121,6 +130,12 @@ Future<void> configureForTests({
     )
     ..registerSingleton<PasskeyService>(
       passkeyService ?? const _StubPasskeyService(),
+    )
+    ..registerSingleton<ProfileRepository>(
+      profileRepository ?? _NoopProfileRepository(),
+    )
+    ..registerSingleton<FileDownloader>(
+      fileDownloader ?? const _InMemoryDownloader(),
     )
     ..registerSingleton<SessionBloc>(SessionBloc(repository: authRepository))
     ..registerSingleton<ThemeCubit>(ThemeCubit(settingsStorage))
@@ -161,4 +176,26 @@ class _StubPasskeyService implements PasskeyService {
   @override
   Future<Map<String, dynamic>> authenticate(Map<String, dynamic> _) async =>
       throw UnimplementedError();
+}
+
+class _NoopProfileRepository implements ProfileRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(
+        '_NoopProfileRepository.${invocation.memberName}',
+      );
+}
+
+class _InMemoryDownloader implements FileDownloader {
+  const _InMemoryDownloader();
+
+  @override
+  bool get canDownload => false;
+
+  @override
+  Future<bool> download({
+    required String filename,
+    required String mimeType,
+    required String contents,
+  }) async => true;
 }
