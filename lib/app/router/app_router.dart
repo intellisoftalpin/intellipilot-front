@@ -17,6 +17,8 @@ import 'package:intellipilot/features/mfa/presentation/passkeys_page.dart';
 import 'package:intellipilot/features/mfa/presentation/recovery_codes_page.dart';
 import 'package:intellipilot/features/mfa/presentation/security_page.dart';
 import 'package:intellipilot/features/mfa/presentation/totp_setup_page.dart';
+import 'package:intellipilot/features/milestones/presentation/milestone_detail_page.dart';
+import 'package:intellipilot/features/milestones/presentation/milestones_list_page.dart';
 import 'package:intellipilot/features/profile/presentation/account_page.dart';
 import 'package:intellipilot/features/profile/presentation/profile_page.dart';
 import 'package:intellipilot/features/projects/presentation/invitation_accept_page.dart';
@@ -49,6 +51,9 @@ abstract class Routes {
   static String projectBacklogFor(String id) => '/projects/$id/backlog';
   static String projectIssuesFor(String id) => '/projects/$id/issues';
   static String projectBoardFor(String id) => '/projects/$id/board';
+  static String projectMilestonesFor(String id) => '/projects/$id/milestones';
+  static String milestoneDetailFor(String projectId, String milestoneId) =>
+      '/projects/$projectId/milestones/$milestoneId';
   static String entityDetailFor(
     String projectId,
     EntityKind kind,
@@ -148,6 +153,20 @@ GoRouter buildRouter({required SessionBloc session}) {
         name: 'project_board',
         builder: (context, state) =>
             BoardPage(projectId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/projects/:id/milestones',
+        name: 'project_milestones',
+        builder: (context, state) =>
+            MilestonesListPage(projectId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/projects/:projectId/milestones/:milestoneId',
+        name: 'milestone_detail',
+        builder: (context, state) => MilestoneDetailPage(
+          projectId: state.pathParameters['projectId']!,
+          milestoneId: state.pathParameters['milestoneId']!,
+        ),
       ),
       GoRoute(
         path: '/projects/:projectId/items/:kind/:entityId',

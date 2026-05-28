@@ -21,7 +21,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 8 | Backlog — tasks & issues | 1.5 w | Task/issue CRUD, link to user story / epic | **Done** |
 | 9 | Comments, history, attachments | 1.5 w | Polymorphic comment widget, file upload, activity stream | **Done** |
 | 10 | Board (Kanban) | 2 w | Drag-drop board, swimlanes, filters, saved views | **Done** |
-| 11 | Milestones / sprints | 1.5 w | List, sprint board, burndown, close sprint | |
+| 11 | Milestones / sprints | 1.5 w | List, sprint board, burndown, close sprint | **Done** |
 | 12 | Wiki | 1.5 w | Page tree, editor, revisions, diff, restore | |
 | 13 | Command palette, keyboard shortcuts, polish | 1 w | Cmd-K, hotkeys, empty states, micro-animations | |
 | 14 | Permissions UI hardening | 0.5 w | Every action gated, "request access" CTAs | |
@@ -370,7 +370,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 11 — Milestones / sprints
+## Phase 11 — Milestones / sprints — **Done**
 
 **Scope**
 - `/projects/:id/milestones`: list of milestones with status (open / closed), date range, scope summary (counts, points), progress bar.
@@ -384,6 +384,24 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 **Acceptance**
 - Burndown chart renders correctly for an empty sprint, in-progress sprint, and closed sprint.
 - Closing a sprint with unfinished items prompts disposition before the close call lands.
+
+**Delivered (2026-05-28)**
+- Extended `MilestonesRepository` with full CRUD: list (already shipped in Phase 10) + get + create + update + delete + close + stats. The update DTO uses the `_Absent` sentinel so present-but-null clears a date while absence leaves it alone (mirroring `serde_with::rust::double_option`). Dates serialise as `YYYY-MM-DD` strings to match the backend's `serde_date::option` codec.
+- `MilestonesListCubit` owns the list view: load + create + update + delete, with open milestones sorted by `order` ahead of closed milestones (newest-first).
+- `MilestoneDetailCubit` loads {milestone, stats, scope, backlog}, exposes rename, add-to-scope, remove-from-scope, and a `closeSprint(moveUnfinishedToBacklog: bool)` that walks open user stories and clears their `milestone_id` before the close call lands.
+- `MilestonesListPage` at `/projects/:id/milestones`: card list with status icon, date range, edit + delete affordances behind the matching permissions, and a `MilestoneEditDialog` shared by create + edit.
+- `MilestoneDetailPage` at `/projects/:projectId/milestones/:milestoneId` with three tabs:
+  - **Stats** — two stat cards (story points, tasks) each with a `LinearProgressIndicator`; numeric for v1.
+  - **Scope** — two-column planning view (backlog ↔ sprint scope) with explicit add/remove buttons.
+  - **Board** — read-only sprint-scoped board reusing the existing `/milestones/:id/board` endpoint.
+- Close-sprint action shows the unfinished count and offers "move unfinished to backlog" before calling `/close`.
+- Project overview gains a tonal "Open milestones" CTA. Routes + helpers added: `Routes.projectMilestonesFor(id)` and `Routes.milestoneDetailFor(projectId, milestoneId)`.
+- Wire-format tests for create (ISO date serialisation), update (null-vs-absent date clearing), close, and stats. `flutter analyze` clean; **211 tests pass**; web release build green.
+- Deferred:
+  - **Burndown chart** — Phase 11 ships numeric stats only; introducing a chart library (fl_chart or similar) is parked for Phase 17 (test hardening / polish) to keep dep churn down.
+  - **Velocity over last N sprints** — needs a project-level aggregation endpoint that doesn't exist on the backend yet.
+  - **Drag-drop scope planning** — v1 uses explicit add/remove buttons instead. Drag-drop on the scope tab can land alongside the Phase 13 polish pass.
+  - **"Move unfinished to next sprint"** — the dialog supports "leave in closed sprint" or "move to backlog"; picking a target sprint would need a milestone picker we'll add when the backlog flow asks for it.
 
 ---
 

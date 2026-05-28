@@ -1,0 +1,193 @@
+// `_repo` fields are intentionally kept as private fields for clarity.
+// ignore_for_file: prefer_initializing_formals
+
+import 'package:bloc/bloc.dart';
+import 'package:equatable/equatable.dart';
+import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
+import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
+import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
+import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
+
+sealed class MilestoneDetailState extends Equatable {
+  const MilestoneDetailState();
+  @override
+  List<Object?> get props => [];
+}
+
+class MilestoneDetailLoading extends MilestoneDetailState {
+  const MilestoneDetailLoading();
+}
+
+class MilestoneDetailFailed extends MilestoneDetailState {
+  const MilestoneDetailFailed();
+}
+
+class MilestoneDetailLoaded extends MilestoneDetailState {
+  const MilestoneDetailLoaded({
+    required this.milestone,
+    required this.stats,
+    required this.scope,
+    required this.backlog,
+    this.busy = false,
+  });
+
+  final Milestone milestone;
+  final MilestoneStats stats;
+
+  /// User stories already assigned to this milestone.
+  final List<UserStory> scope;
+
+  /// User stories from the project backlog not assigned to any milestone
+  /// (candidates for adding to this sprint's scope).
+  final List<UserStory> backlog;
+
+  final bool busy;
+
+  MilestoneDetailLoaded copyWith({
+    Milestone? milestone,
+    MilestoneStats? stats,
+    List<UserStory>? scope,
+    List<UserStory>? backlog,
+    bool? busy,
+  }) => MilestoneDetailLoaded(
+    milestone: milestone ?? this.milestone,
+    stats: stats ?? this.stats,
+    scope: scope ?? this.scope,
+    backlog: backlog ?? this.backlog,
+    busy: busy ?? this.busy,
+  );
+
+  /// Open stories in scope — used by the close-sprint disposition flow.
+  List<UserStory> get openInScope => scope
+      .where((s) => s.statusId == null) // best-effort: no status = open
+      .toList();
+
+  @override
+  List<Object?> get props => [milestone, stats, scope, backlog, busy];
+}
+
+class MilestoneDetailCubit extends Cubit<MilestoneDetailState> {
+  MilestoneDetailCubit({
+    required MilestonesRepository milestones,
+    required BacklogRepository backlog,
+    required this.projectId,
+    required this.milestoneId,
+  }) : _milestones = milestones,
+       _backlog = backlog,
+       super(const MilestoneDetailLoading());
+
+  final MilestonesRepository _milestones;
+  final BacklogRepository _backlog;
+  final String projectId;
+  final String milestoneId;
+
+  Future<void> load() async {
+    if (!isClosed) emit(const MilestoneDetailLoading());
+    final ms = await _milestones.get(projectId, milestoneId);
+    final st = await _milestones.stats(projectId, milestoneId);
+    final us = await _backlog.listUserStories(projectId);
+    final m = ms.valueOrNull;
+    final s = st.valueOrNull;
+    final stories = us.valueOrNull;
+    if (m == null || s == null || stories == null) {
+      if (!isClosed) emit(const MilestoneDetailFailed());
+      return;
+    }
+    final scope = stories.where((u) => u.milestoneId == milestoneId).toList();
+    final backlog = stories.where((u) => u.milestoneId == null).toList();
+    if (!isClosed) {
+      emit(
+        MilestoneDetailLoaded(
+          milestone: m,
+          stats: s,
+          scope: scope,
+          backlog: backlog,
+        ),
+      );
+    }
+  }
+
+  Future<bool> rename(String name) async {
+    final s = state;
+    if (s is! MilestoneDetailLoaded) return false;
+    final res = await _milestones.update(
+      projectId,
+      milestoneId,
+      body: UpdateMilestoneRequest(name: name),
+    );
+    final m = res.valueOrNull;
+    if (m == null) return false;
+    if (!isClosed) emit(s.copyWith(milestone: m));
+    return true;
+  }
+
+  /// Adds a story to the sprint (sets `milestone_id`). The PATCH carries
+  /// the story's current ETag.
+  Future<bool> addToScope(String storyId) async {
+    final s = state;
+    if (s is! MilestoneDetailLoaded) return false;
+    final fresh = await _backlog.getUserStory(projectId, storyId);
+    final us = fresh.valueOrNull;
+    if (us?.etag == null) return false;
+    final res = await _backlog.updateUserStory(
+      projectId,
+      storyId,
+      body: UpdateUserStoryRequest(milestoneId: milestoneId),
+      etag: us!.etag!,
+    );
+    if (res.valueOrNull == null) return false;
+    await load();
+    return true;
+  }
+
+  /// Removes a story from the sprint by clearing its `milestone_id`.
+  Future<bool> removeFromScope(String storyId) async {
+    final s = state;
+    if (s is! MilestoneDetailLoaded) return false;
+    final fresh = await _backlog.getUserStory(projectId, storyId);
+    final us = fresh.valueOrNull;
+    if (us?.etag == null) return false;
+    final res = await _backlog.updateUserStory(
+      projectId,
+      storyId,
+      body: const UpdateUserStoryRequest(milestoneId: null),
+      etag: us!.etag!,
+    );
+    if (res.valueOrNull == null) return false;
+    await load();
+    return true;
+  }
+
+  /// Closes the sprint. Optional [moveUnfinishedToBacklog] clears the
+  /// `milestone_id` on each open story before the close call lands so
+  /// they're back in the backlog rather than buried inside the closed
+  /// sprint.
+  Future<bool> closeSprint({
+    required bool moveUnfinishedToBacklog,
+  }) async {
+    final s = state;
+    if (s is! MilestoneDetailLoaded) return false;
+    emit(s.copyWith(busy: true));
+    if (moveUnfinishedToBacklog) {
+      for (final story in s.openInScope) {
+        final fresh =
+            await _backlog.getUserStory(projectId, story.id);
+        final us = fresh.valueOrNull;
+        if (us?.etag == null) continue;
+        await _backlog.updateUserStory(
+          projectId,
+          story.id,
+          body: const UpdateUserStoryRequest(milestoneId: null),
+          etag: us!.etag!,
+        );
+      }
+    }
+    final res = await _milestones.close(projectId, milestoneId);
+    if (res.valueOrNull == null) {
+      if (!isClosed) emit(s.copyWith(busy: false));
+      return false;
+    }
+    await load();
+    return true;
+  }
+}
