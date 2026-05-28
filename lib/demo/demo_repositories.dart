@@ -1,0 +1,1936 @@
+// Demo-mode in-memory implementations of every repository. Backed by a
+// shared [DemoStore]. The behaviour aims for "good enough to click through" —
+// shape mirrors the real wire DTOs but skips niceties like server-side
+// validation.
+//
+// Update requests that mirror the backend's `_Absent` sentinel are processed
+// by inspecting `body.toJson()` keys, so absent-vs-null distinctions stay
+// faithful without touching the DTO internals.
+
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
+import 'package:intellipilot/core/error/app_failure.dart';
+import 'package:intellipilot/core/result/result.dart';
+import 'package:intellipilot/demo/demo_store.dart';
+import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
+import 'package:intellipilot/features/activity/domain/activity_repository.dart';
+import 'package:intellipilot/features/auth/data/dtos/auth_dtos.dart';
+import 'package:intellipilot/features/auth/domain/auth_repository.dart';
+import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
+import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
+import 'package:intellipilot/features/board/data/dtos/board_dtos.dart';
+import 'package:intellipilot/features/board/domain/board_repository.dart';
+import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
+import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/mfa/data/passkey_service.dart';
+import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
+import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
+import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
+import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
+import 'package:intellipilot/features/profile/domain/profile_repository.dart';
+import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
+import 'package:intellipilot/features/projects/domain/permission.dart';
+import 'package:intellipilot/features/projects/domain/projects_repository.dart';
+import 'package:intellipilot/features/wiki/data/dtos/wiki_dtos.dart';
+import 'package:intellipilot/features/wiki/domain/wiki_repository.dart';
+
+/// Demo data uses a tiny synthetic latency to keep loading spinners
+/// honest. Bumping this exercises the staleness banners.
+const _kLatency = Duration(milliseconds: 80);
+
+Future<void> _tick() => Future<void>.delayed(_kLatency);
+
+// ---------------------------------------------------------------------------
+// Auth + profile
+// ---------------------------------------------------------------------------
+
+class DemoAuthRepository implements AuthRepository {
+  DemoAuthRepository(DemoStore _);
+
+  TokenResponse _tokens() => const TokenResponse(
+    accessToken: 'demo-access-token',
+    tokenType: 'Bearer',
+    expiresIn: 60 * 60,
+    refreshToken: 'demo-refresh-token',
+  );
+
+  @override
+  Future<Result<LoginResult, AppFailure>> login({
+    required String email,
+    required String password,
+  }) async {
+    await _tick();
+    return Ok(LoginTokens(_tokens()));
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> register({
+    required String email,
+    required String username,
+    required String password,
+    required String fullName,
+  }) async {
+    await _tick();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<TokenResponse, AppFailure>> refresh() async {
+    await _tick();
+    return Ok(_tokens());
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> logout() async {
+    await _tick();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<PasswordResetRequestResponse, AppFailure>>
+      requestPasswordReset(String email) async {
+    await _tick();
+    return const Ok(PasswordResetRequestResponse(
+      status: 'ok',
+      resetToken: 'demo-reset-token',
+    ));
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> confirmPasswordReset({
+    required String token,
+    required String newPassword,
+  }) async {
+    await _tick();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<TokenResponse, AppFailure>> verifyMfa({
+    required String mfaToken,
+    required String method,
+    required String code,
+  }) async {
+    await _tick();
+    return Ok(_tokens());
+  }
+}
+
+class DemoProfileRepository implements ProfileRepository {
+  DemoProfileRepository(this._s);
+  final DemoStore _s;
+
+  @override
+  Future<Result<UserProfile, AppFailure>> getProfile() async {
+    await _tick();
+    return Ok(_s.currentUser);
+  }
+
+  @override
+  Future<Result<UserProfile, AppFailure>> updateProfile(
+    ProfileUpdateRequest patch,
+  ) async {
+    await _tick();
+    _s.currentUser = _s.currentUser.copyWith(
+      fullName: patch.fullName,
+      lang: patch.lang,
+      timezone: patch.timezone,
+    );
+    return Ok(_s.currentUser);
+  }
+
+  @override
+  Future<Result<AccountErasureResponse, AppFailure>> deleteAccount() async {
+    await _tick();
+    return Ok(AccountErasureResponse(
+      status: 'scheduled_for_erasure',
+      graceUntil: DateTime.now().add(const Duration(days: 30)),
+    ));
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>, AppFailure>> exportData() async {
+    await _tick();
+    return Ok({
+      'profile': {
+        'id': _s.currentUser.id,
+        'email': _s.currentUser.email,
+        'username': _s.currentUser.username,
+        'full_name': _s.currentUser.fullName,
+      },
+      'projects': [
+        for (final p in _s.projects)
+          {'id': p.id, 'slug': p.slug, 'name': p.name},
+      ],
+    });
+  }
+}
+
+class DemoMfaRepository implements MfaRepository {
+  DemoMfaRepository(DemoStore _);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(
+        'DemoMfaRepository.${invocation.memberName} '
+        '(MFA flows are no-op in demo mode)',
+      );
+}
+
+class DemoPasskeyService implements PasskeyService {
+  const DemoPasskeyService();
+
+  @override
+  bool get isSupported => false;
+
+  @override
+  Future<Map<String, dynamic>> register(Map<String, dynamic> _) async =>
+      throw UnsupportedError('Passkeys are not supported in demo mode.');
+
+  @override
+  Future<Map<String, dynamic>> authenticate(Map<String, dynamic> _) async =>
+      throw UnsupportedError('Passkeys are not supported in demo mode.');
+}
+
+// ---------------------------------------------------------------------------
+// Projects + members + roles + invitations
+// ---------------------------------------------------------------------------
+
+class DemoProjectsRepository implements ProjectsRepository {
+  DemoProjectsRepository(this._s);
+  final DemoStore _s;
+
+  @override
+  Future<Result<List<Project>, AppFailure>> listProjects() async {
+    await _tick();
+    return Ok(List.unmodifiable(_s.projects));
+  }
+
+  @override
+  Future<Result<Project, AppFailure>> getProject(String id) async {
+    await _tick();
+    final p = _s.projects.where((p) => p.id == id).firstOrNull;
+    if (p == null) return const Err(NotFoundFailure());
+    return Ok(p);
+  }
+
+  @override
+  Future<Result<Project, AppFailure>> createProject(
+    CreateProjectRequest body,
+  ) async {
+    await _tick();
+    final id = _s.nextId('prj');
+    final project = Project(
+      id: id,
+      slug: body.slug ?? body.name.toLowerCase().replaceAll(' ', '-'),
+      name: body.name,
+      description: body.description,
+      ownerId: _s.currentUser.id,
+      visibility: body.visibility ?? ProjectVisibility.private,
+      kanbanEnabled: true,
+      backlogEnabled: true,
+      wikiEnabled: true,
+      epicsEnabled: true,
+      createdAt: DateTime.now().toUtc(),
+    );
+    _s.projects.add(project);
+    _s.permissionsByProject[id] = Permission.values.toSet();
+    _s.taxonomyByProject[id] = const [];
+    _s.labelsByProject[id] = const [];
+    _s.componentsByProject[id] = const [];
+    _s.rolesByProject[id] = const [];
+    _s.membersByProject[id] = const [];
+    _s.invitationsByProject[id] = const [];
+    return Ok(project);
+  }
+
+  @override
+  Future<Result<Project, AppFailure>> updateProject(
+    String id,
+    UpdateProjectRequest body,
+  ) async {
+    await _tick();
+    final patch = body.toJson();
+    final i = _s.projects.indexWhere((p) => p.id == id);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _s.projects[i];
+    final updated = Project(
+      id: cur.id,
+      slug: cur.slug,
+      name: (patch['name'] as String?) ?? cur.name,
+      description: (patch['description'] as String?) ?? cur.description,
+      ownerId: cur.ownerId,
+      visibility: patch.containsKey('visibility')
+          ? ProjectVisibility.fromWire(patch['visibility'] as String)
+          : cur.visibility,
+      kanbanEnabled:
+          (patch['kanban_enabled'] as bool?) ?? cur.kanbanEnabled,
+      backlogEnabled:
+          (patch['backlog_enabled'] as bool?) ?? cur.backlogEnabled,
+      wikiEnabled: (patch['wiki_enabled'] as bool?) ?? cur.wikiEnabled,
+      epicsEnabled: (patch['epics_enabled'] as bool?) ?? cur.epicsEnabled,
+      createdAt: cur.createdAt,
+    );
+    _s.projects[i] = updated;
+    return Ok(updated);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteProject(String id) async {
+    await _tick();
+    _s.projects.removeWhere((p) => p.id == id);
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<Role>, AppFailure>> listRoles(String projectId) async {
+    await _tick();
+    return Ok(List.unmodifiable(_s.rolesByProject[projectId] ?? const []));
+  }
+
+  @override
+  Future<Result<Role, AppFailure>> createRole(
+    String projectId,
+    CreateRoleRequest body,
+  ) async {
+    await _tick();
+    final id = _s.nextId('role');
+    final json = body.toJson();
+    final perms = (json['permissions'] as List<dynamic>? ?? const [])
+        .map((w) => Permission.fromWire(w as String))
+        .whereType<Permission>()
+        .toSet();
+    final role = Role(
+      id: id,
+      projectId: projectId,
+      slug: (json['slug'] as String?) ?? body.name.toLowerCase(),
+      name: body.name,
+      order: (json['order'] as num?)?.toInt() ?? 100,
+      isAdmin: (json['is_admin'] as bool?) ?? false,
+      permissions: perms,
+    );
+    _s.rolesByProject.putIfAbsent(projectId, () => []);
+    _s.rolesByProject[projectId] = [..._s.rolesByProject[projectId]!, role];
+    return Ok(role);
+  }
+
+  @override
+  Future<Result<Role, AppFailure>> updateRole(
+    String projectId,
+    String roleId,
+    UpdateRoleRequest body,
+  ) async {
+    await _tick();
+    final roles = _s.rolesByProject[projectId] ?? const <Role>[];
+    final i = roles.indexWhere((r) => r.id == roleId);
+    if (i < 0) return const Err(NotFoundFailure());
+    final json = body.toJson();
+    final cur = roles[i];
+    final perms = json.containsKey('permissions')
+        ? ((json['permissions'] as List<dynamic>)
+              .map((w) => Permission.fromWire(w as String))
+              .whereType<Permission>()
+              .toSet())
+        : cur.permissions;
+    final updated = Role(
+      id: cur.id,
+      projectId: cur.projectId,
+      slug: cur.slug,
+      name: (json['name'] as String?) ?? cur.name,
+      order: (json['order'] as num?)?.toInt() ?? cur.order,
+      isAdmin: (json['is_admin'] as bool?) ?? cur.isAdmin,
+      permissions: perms,
+    );
+    final next = [...roles];
+    next[i] = updated;
+    _s.rolesByProject[projectId] = next;
+    return Ok(updated);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteRole(
+    String projectId,
+    String roleId,
+  ) async {
+    await _tick();
+    final roles = _s.rolesByProject[projectId] ?? const <Role>[];
+    _s.rolesByProject[projectId] =
+        roles.where((r) => r.id != roleId).toList();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<Membership>, AppFailure>> listMembers(
+    String projectId,
+  ) async {
+    await _tick();
+    return Ok(List.unmodifiable(
+      _s.membersByProject[projectId] ?? const <Membership>[],
+    ));
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> changeMemberRole(
+    String projectId,
+    String userId,
+    String roleSlug,
+  ) async {
+    await _tick();
+    final members = _s.membersByProject[projectId] ?? const <Membership>[];
+    final i = members.indexWhere((m) => m.userId == userId);
+    if (i < 0) return const Err(NotFoundFailure());
+    final role = (_s.rolesByProject[projectId] ?? const <Role>[])
+        .where((r) => r.slug == roleSlug)
+        .firstOrNull;
+    if (role == null) return const Err(NotFoundFailure());
+    final cur = members[i];
+    final updated = Membership(
+      id: cur.id,
+      projectId: cur.projectId,
+      userId: cur.userId,
+      roleId: role.id,
+      roleSlug: role.slug,
+      createdAt: cur.createdAt,
+    );
+    final next = [...members];
+    next[i] = updated;
+    _s.membersByProject[projectId] = next;
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> removeMember(
+    String projectId,
+    String userId,
+  ) async {
+    await _tick();
+    final members = _s.membersByProject[projectId] ?? const <Membership>[];
+    _s.membersByProject[projectId] =
+        members.where((m) => m.userId != userId).toList();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<Invitation>, AppFailure>> listInvitations(
+    String projectId,
+  ) async {
+    await _tick();
+    return Ok(List.unmodifiable(
+      _s.invitationsByProject[projectId] ?? const <Invitation>[],
+    ));
+  }
+
+  @override
+  Future<Result<InviteResponse, AppFailure>> invite(
+    String projectId,
+    InviteRequest body,
+  ) async {
+    await _tick();
+    final id = _s.nextId('inv');
+    final json = body.toJson();
+    final inv = Invitation(
+      id: id,
+      projectId: projectId,
+      email: json['email'] as String,
+      roleId: (json['role_id'] as String?) ?? 'role-reader',
+      createdAt: DateTime.now().toUtc(),
+    );
+    _s.invitationsByProject.putIfAbsent(projectId, () => []);
+    _s.invitationsByProject[projectId] = [
+      ..._s.invitationsByProject[projectId]!,
+      inv,
+    ];
+    return Ok(
+      InviteResponse(invitationId: id, inviteToken: 'demo-token-$id'),
+    );
+  }
+
+  @override
+  Future<Result<String, AppFailure>> acceptInvitation(String token) async {
+    await _tick();
+    // Pretend the invite points at the seeded demo project.
+    return Ok(_s.projects.first.id);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Catalog
+// ---------------------------------------------------------------------------
+
+class DemoCatalogRepository implements CatalogRepository {
+  DemoCatalogRepository(this._s);
+  final DemoStore _s;
+
+  @override
+  Future<Result<List<TaxonomyItem>, AppFailure>> listTaxonomy(
+    String projectId,
+    TaxonomyKind kind,
+  ) async {
+    await _tick();
+    final items = (_s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[])
+        .where((i) => i.kind == kind)
+        .toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    return Ok(items);
+  }
+
+  @override
+  Future<Result<TaxonomyItem, AppFailure>> createTaxonomyItem(
+    String projectId,
+    TaxonomyKind kind,
+    CreateTaxonomyItemRequest body,
+  ) async {
+    await _tick();
+    final id = _s.nextId('tx');
+    final orderMax = (_s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[])
+        .where((i) => i.kind == kind)
+        .fold<double>(0, (m, i) => i.order > m ? i.order : m);
+    final item = TaxonomyItem(
+      id: id,
+      projectId: projectId,
+      kind: kind,
+      name: body.name,
+      slug: body.slug,
+      color: body.color,
+      order: orderMax + 1,
+      isClosed: body.isClosed,
+      value: body.value,
+      createdAt: DateTime.now().toUtc(),
+    );
+    _s.taxonomyByProject.putIfAbsent(projectId, () => []);
+    _s.taxonomyByProject[projectId] = [
+      ..._s.taxonomyByProject[projectId]!,
+      item,
+    ];
+    return Ok(item);
+  }
+
+  @override
+  Future<Result<TaxonomyItem, AppFailure>> updateTaxonomyItem(
+    String projectId,
+    TaxonomyKind kind,
+    String itemId,
+    UpdateTaxonomyItemRequest body,
+  ) async {
+    await _tick();
+    final patch = body.toJson();
+    final list = _s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[];
+    final i = list.indexWhere((x) => x.id == itemId);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = list[i];
+    final updated = TaxonomyItem(
+      id: cur.id,
+      projectId: cur.projectId,
+      kind: cur.kind,
+      name: (patch['name'] as String?) ?? cur.name,
+      slug: cur.slug,
+      color: (patch['color'] as String?) ?? cur.color,
+      order: cur.order,
+      isClosed: patch.containsKey('is_closed')
+          ? patch['is_closed'] as bool?
+          : cur.isClosed,
+      value: patch.containsKey('value')
+          ? (patch['value'] as num?)?.toDouble()
+          : cur.value,
+      createdAt: cur.createdAt,
+    );
+    final next = [...list];
+    next[i] = updated;
+    _s.taxonomyByProject[projectId] = next;
+    return Ok(updated);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteTaxonomyItem(
+    String projectId,
+    TaxonomyKind kind,
+    String itemId,
+  ) async {
+    await _tick();
+    final list = _s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[];
+    _s.taxonomyByProject[projectId] =
+        list.where((x) => x.id != itemId).toList();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> moveTaxonomyItem(
+    String projectId,
+    TaxonomyKind kind,
+    String itemId,
+    MoveTaxonomyItemRequest body,
+  ) async {
+    await _tick();
+    // Recompute order by placing the moved item between before/after siblings.
+    final all = [..._s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[]];
+    final moved = all.firstWhere((x) => x.id == itemId, orElse: () => all[0]);
+    final sameKind = all.where((x) => x.kind == kind).toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    sameKind.removeWhere((x) => x.id == itemId);
+    final beforeIdx = body.beforeId == null
+        ? -1
+        : sameKind.indexWhere((x) => x.id == body.beforeId);
+    final afterIdx = body.afterId == null
+        ? sameKind.length
+        : sameKind.indexWhere((x) => x.id == body.afterId);
+    final insertAt =
+        body.beforeId != null ? beforeIdx + 1 : afterIdx;
+    sameKind.insert(insertAt.clamp(0, sameKind.length), moved);
+    for (var idx = 0; idx < sameKind.length; idx++) {
+      final reordered = sameKind[idx];
+      final j = all.indexWhere((x) => x.id == reordered.id);
+      all[j] = TaxonomyItem(
+        id: reordered.id,
+        projectId: reordered.projectId,
+        kind: reordered.kind,
+        name: reordered.name,
+        slug: reordered.slug,
+        color: reordered.color,
+        order: (idx + 1).toDouble(),
+        isClosed: reordered.isClosed,
+        value: reordered.value,
+        createdAt: reordered.createdAt,
+      );
+    }
+    _s.taxonomyByProject[projectId] = all;
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<Label>, AppFailure>> listLabels(String projectId) async {
+    await _tick();
+    return Ok(List.unmodifiable(_s.labelsByProject[projectId] ?? const []));
+  }
+
+  @override
+  Future<Result<Label, AppFailure>> createLabel(
+    String projectId,
+    CreateLabelRequest body,
+  ) async {
+    await _tick();
+    final label = Label(
+      id: _s.nextId('lbl'),
+      projectId: projectId,
+      name: body.name,
+      color: body.color,
+      createdAt: DateTime.now().toUtc(),
+    );
+    _s.labelsByProject.putIfAbsent(projectId, () => []);
+    _s.labelsByProject[projectId] = [
+      ..._s.labelsByProject[projectId]!,
+      label,
+    ];
+    return Ok(label);
+  }
+
+  @override
+  Future<Result<Label, AppFailure>> updateLabel(
+    String projectId,
+    String labelId,
+    UpdateLabelRequest body,
+  ) async {
+    await _tick();
+    final list = _s.labelsByProject[projectId] ?? const <Label>[];
+    final i = list.indexWhere((l) => l.id == labelId);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = list[i];
+    final next = [...list];
+    next[i] = Label(
+      id: cur.id,
+      projectId: cur.projectId,
+      name: body.name ?? cur.name,
+      color: body.color ?? cur.color,
+      createdAt: cur.createdAt,
+    );
+    _s.labelsByProject[projectId] = next;
+    return Ok(next[i]);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteLabel(
+    String projectId,
+    String labelId,
+  ) async {
+    await _tick();
+    final list = _s.labelsByProject[projectId] ?? const <Label>[];
+    _s.labelsByProject[projectId] =
+        list.where((l) => l.id != labelId).toList();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<Component>, AppFailure>> listComponents(
+    String projectId,
+  ) async {
+    await _tick();
+    return Ok(List.unmodifiable(
+      _s.componentsByProject[projectId] ?? const <Component>[],
+    ));
+  }
+
+  @override
+  Future<Result<Component, AppFailure>> createComponent(
+    String projectId,
+    CreateComponentRequest body,
+  ) async {
+    await _tick();
+    final c = Component(
+      id: _s.nextId('cmp'),
+      projectId: projectId,
+      name: body.name,
+      color: body.color,
+      gitRepository: body.gitRepository,
+      createdAt: DateTime.now().toUtc(),
+    );
+    _s.componentsByProject.putIfAbsent(projectId, () => []);
+    _s.componentsByProject[projectId] = [
+      ..._s.componentsByProject[projectId]!,
+      c,
+    ];
+    return Ok(c);
+  }
+
+  @override
+  Future<Result<Component, AppFailure>> updateComponent(
+    String projectId,
+    String componentId,
+    UpdateComponentRequest body,
+  ) async {
+    await _tick();
+    final patch = body.toJson();
+    final list =
+        _s.componentsByProject[projectId] ?? const <Component>[];
+    final i = list.indexWhere((c) => c.id == componentId);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = list[i];
+    final next = [...list];
+    next[i] = Component(
+      id: cur.id,
+      projectId: cur.projectId,
+      name: (patch['name'] as String?) ?? cur.name,
+      color: (patch['color'] as String?) ?? cur.color,
+      gitRepository: patch.containsKey('git_repository')
+          ? patch['git_repository'] as String?
+          : cur.gitRepository,
+      createdAt: cur.createdAt,
+    );
+    _s.componentsByProject[projectId] = next;
+    return Ok(next[i]);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteComponent(
+    String projectId,
+    String componentId,
+  ) async {
+    await _tick();
+    final list = _s.componentsByProject[projectId] ?? const <Component>[];
+    _s.componentsByProject[projectId] =
+        list.where((c) => c.id != componentId).toList();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Backlog
+// ---------------------------------------------------------------------------
+
+class DemoBacklogRepository implements BacklogRepository {
+  DemoBacklogRepository(this._s);
+  final DemoStore _s;
+
+  // Internal helpers for ETag round-tripping.
+  Epic _bumpEpic(Epic e, {required Epic next}) {
+    final v = e.version + 1;
+    return Epic(
+      id: next.id,
+      projectId: next.projectId,
+      reference: next.reference,
+      subject: next.subject,
+      description: next.description,
+      statusId: next.statusId,
+      color: next.color,
+      ownerId: next.ownerId,
+      assignedTo: next.assignedTo,
+      order: next.order,
+      version: v,
+      createdAt: next.createdAt,
+      modifiedAt: DateTime.now().toUtc(),
+      etag: _s.etagOf(next.id, v),
+    );
+  }
+
+  UserStory _bumpUs(UserStory cur, {required UserStory next}) {
+    final v = cur.version + 1;
+    return UserStory(
+      id: next.id,
+      projectId: next.projectId,
+      reference: next.reference,
+      subject: next.subject,
+      description: next.description,
+      statusId: next.statusId,
+      epicId: next.epicId,
+      milestoneId: next.milestoneId,
+      pointsId: next.pointsId,
+      ownerId: next.ownerId,
+      assignedTo: next.assignedTo,
+      order: next.order,
+      version: v,
+      createdAt: next.createdAt,
+      modifiedAt: DateTime.now().toUtc(),
+      etag: _s.etagOf(next.id, v),
+    );
+  }
+
+  Task _bumpTask(Task cur, {required Task next}) {
+    final v = cur.version + 1;
+    return Task(
+      id: next.id,
+      projectId: next.projectId,
+      reference: next.reference,
+      subject: next.subject,
+      description: next.description,
+      statusId: next.statusId,
+      userStoryId: next.userStoryId,
+      ownerId: next.ownerId,
+      assignedTo: next.assignedTo,
+      order: next.order,
+      version: v,
+      createdAt: next.createdAt,
+      modifiedAt: DateTime.now().toUtc(),
+      etag: _s.etagOf(next.id, v),
+    );
+  }
+
+  Issue _bumpIssue(Issue cur, {required Issue next}) {
+    final v = cur.version + 1;
+    return Issue(
+      id: next.id,
+      projectId: next.projectId,
+      reference: next.reference,
+      subject: next.subject,
+      description: next.description,
+      statusId: next.statusId,
+      typeId: next.typeId,
+      priorityId: next.priorityId,
+      severityId: next.severityId,
+      ownerId: next.ownerId,
+      assignedTo: next.assignedTo,
+      labels: next.labels,
+      components: next.components,
+      version: v,
+      createdAt: next.createdAt,
+      modifiedAt: DateTime.now().toUtc(),
+      etag: _s.etagOf(next.id, v),
+    );
+  }
+
+  // ---- epics ----
+
+  @override
+  Future<Result<List<Epic>, AppFailure>> listEpics(String projectId) async {
+    await _tick();
+    final list = _s.epics.where((e) => e.projectId == projectId).toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    return Ok(list);
+  }
+
+  @override
+  Future<Result<Epic, AppFailure>> getEpic(String projectId, String id) async {
+    await _tick();
+    final e = _s.epics
+        .where((e) => e.id == id && e.projectId == projectId)
+        .firstOrNull;
+    if (e == null) return const Err(NotFoundFailure());
+    return Ok(e);
+  }
+
+  @override
+  Future<Result<Epic, AppFailure>> createEpic(
+    String projectId,
+    CreateEpicRequest body,
+  ) async {
+    await _tick();
+    final id = _s.nextId('ep');
+    final maxRef = _s.epics
+        .where((e) => e.projectId == projectId)
+        .fold<int>(0, (m, e) => e.reference > m ? e.reference : m);
+    final maxOrder = _s.epics
+        .where((e) => e.projectId == projectId)
+        .fold<double>(0, (m, e) => e.order > m ? e.order : m);
+    final created = Epic(
+      id: id,
+      projectId: projectId,
+      reference: maxRef + 1,
+      subject: body.subject,
+      description: body.description,
+      statusId: body.statusId,
+      color: body.color,
+      assignedTo: body.assignedTo,
+      order: maxOrder + 1,
+      version: 1,
+      createdAt: DateTime.now().toUtc(),
+      modifiedAt: DateTime.now().toUtc(),
+      etag: _s.etagOf(id, 1),
+    );
+    _s.epics.add(created);
+    return Ok(created);
+  }
+
+  @override
+  Future<Result<Epic, AppFailure>> updateEpic(
+    String projectId,
+    String id, {
+    required UpdateEpicRequest body,
+    required String etag,
+  }) async {
+    await _tick();
+    final i = _s.epics.indexWhere(
+      (e) => e.id == id && e.projectId == projectId,
+    );
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _s.epics[i];
+    if (cur.etag != etag) return const Err(ConflictFailure());
+    final patch = body.toJson();
+    final next = Epic(
+      id: cur.id,
+      projectId: cur.projectId,
+      reference: cur.reference,
+      subject: (patch['subject'] as String?) ?? cur.subject,
+      description: (patch['description'] as String?) ?? cur.description,
+      statusId: patch.containsKey('status_id')
+          ? patch['status_id'] as String?
+          : cur.statusId,
+      color: (patch['color'] as String?) ?? cur.color,
+      ownerId: cur.ownerId,
+      assignedTo: patch.containsKey('assigned_to')
+          ? patch['assigned_to'] as String?
+          : cur.assignedTo,
+      order: cur.order,
+      version: cur.version,
+      createdAt: cur.createdAt,
+      modifiedAt: cur.modifiedAt,
+    );
+    final bumped = _bumpEpic(cur, next: next);
+    _s.epics[i] = bumped;
+    return Ok(bumped);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteEpic(
+    String projectId,
+    String id, {
+    required String etag,
+  }) async {
+    await _tick();
+    _s.epics.removeWhere(
+      (e) => e.id == id && e.projectId == projectId,
+    );
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> moveEpic(
+    String projectId,
+    String id,
+    ReorderRequest body,
+  ) async {
+    await _tick();
+    // Order is recomputed naively — good enough for the demo.
+    final ep = _s.epics.where((e) => e.id == id).firstOrNull;
+    if (ep == null) return const Err(NotFoundFailure());
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  // ---- user stories ----
+
+  @override
+  Future<Result<List<UserStory>, AppFailure>> listUserStories(
+    String projectId,
+  ) async {
+    await _tick();
+    final list = _s.userStories
+        .where((u) => u.projectId == projectId)
+        .toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    return Ok(list);
+  }
+
+  @override
+  Future<Result<UserStory, AppFailure>> getUserStory(
+    String projectId,
+    String id,
+  ) async {
+    await _tick();
+    final us = _s.userStories
+        .where((u) => u.id == id && u.projectId == projectId)
+        .firstOrNull;
+    if (us == null) return const Err(NotFoundFailure());
+    return Ok(us);
+  }
+
+  @override
+  Future<Result<UserStory, AppFailure>> createUserStory(
+    String projectId,
+    CreateUserStoryRequest body,
+  ) async {
+    await _tick();
+    final id = _s.nextId('us');
+    final maxRef = _s.userStories
+        .where((u) => u.projectId == projectId)
+        .fold<int>(10, (m, u) => u.reference > m ? u.reference : m);
+    final maxOrder = _s.userStories
+        .where((u) => u.projectId == projectId)
+        .fold<double>(0, (m, u) => u.order > m ? u.order : m);
+    final us = UserStory(
+      id: id,
+      projectId: projectId,
+      reference: maxRef + 1,
+      subject: body.subject,
+      description: body.description,
+      statusId: body.statusId,
+      epicId: body.epicId,
+      milestoneId: body.milestoneId,
+      pointsId: body.pointsId,
+      assignedTo: body.assignedTo,
+      order: maxOrder + 1,
+      version: 1,
+      createdAt: DateTime.now().toUtc(),
+      modifiedAt: DateTime.now().toUtc(),
+      etag: _s.etagOf(id, 1),
+    );
+    _s.userStories.add(us);
+    return Ok(us);
+  }
+
+  @override
+  Future<Result<UserStory, AppFailure>> updateUserStory(
+    String projectId,
+    String id, {
+    required UpdateUserStoryRequest body,
+    required String etag,
+  }) async {
+    await _tick();
+    final i = _s.userStories.indexWhere(
+      (u) => u.id == id && u.projectId == projectId,
+    );
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _s.userStories[i];
+    if (cur.etag != etag) return const Err(ConflictFailure());
+    final patch = body.toJson();
+    final next = UserStory(
+      id: cur.id,
+      projectId: cur.projectId,
+      reference: cur.reference,
+      subject: (patch['subject'] as String?) ?? cur.subject,
+      description: (patch['description'] as String?) ?? cur.description,
+      statusId: patch.containsKey('status_id')
+          ? patch['status_id'] as String?
+          : cur.statusId,
+      epicId: patch.containsKey('epic_id')
+          ? patch['epic_id'] as String?
+          : cur.epicId,
+      milestoneId: patch.containsKey('milestone_id')
+          ? patch['milestone_id'] as String?
+          : cur.milestoneId,
+      pointsId: patch.containsKey('points_id')
+          ? patch['points_id'] as String?
+          : cur.pointsId,
+      ownerId: cur.ownerId,
+      assignedTo: patch.containsKey('assigned_to')
+          ? patch['assigned_to'] as String?
+          : cur.assignedTo,
+      order: cur.order,
+      version: cur.version,
+      createdAt: cur.createdAt,
+      modifiedAt: cur.modifiedAt,
+    );
+    final bumped = _bumpUs(cur, next: next);
+    _s.userStories[i] = bumped;
+    return Ok(bumped);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteUserStory(
+    String projectId,
+    String id, {
+    required String etag,
+  }) async {
+    await _tick();
+    _s.userStories.removeWhere(
+      (u) => u.id == id && u.projectId == projectId,
+    );
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> moveUserStory(
+    String projectId,
+    String id,
+    ReorderRequest body,
+  ) async {
+    await _tick();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<UserStory>, AppFailure>> bulkCreateUserStories(
+    String projectId,
+    BulkCreateUserStoriesRequest body,
+  ) async {
+    final out = <UserStory>[];
+    for (final item in body.items) {
+      final r = await createUserStory(
+        projectId,
+        CreateUserStoryRequest(
+          subject: item.subject,
+          epicId: item.epicId,
+          milestoneId: item.milestoneId,
+        ),
+      );
+      final v = r.valueOrNull;
+      if (v != null) out.add(v);
+    }
+    return Ok(out);
+  }
+
+  // ---- tasks ----
+
+  @override
+  Future<Result<List<Task>, AppFailure>> listTasks(String projectId) async {
+    await _tick();
+    final list = _s.tasks.where((t) => t.projectId == projectId).toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    return Ok(list);
+  }
+
+  @override
+  Future<Result<Task, AppFailure>> getTask(
+    String projectId,
+    String id,
+  ) async {
+    await _tick();
+    final t = _s.tasks
+        .where((t) => t.id == id && t.projectId == projectId)
+        .firstOrNull;
+    if (t == null) return const Err(NotFoundFailure());
+    return Ok(t);
+  }
+
+  @override
+  Future<Result<Task, AppFailure>> createTask(
+    String projectId,
+    CreateTaskRequest body,
+  ) async {
+    await _tick();
+    final id = _s.nextId('tk');
+    final maxRef = _s.tasks
+        .where((t) => t.projectId == projectId)
+        .fold<int>(100, (m, t) => t.reference > m ? t.reference : m);
+    final maxOrder = _s.tasks
+        .where((t) =>
+            t.projectId == projectId && t.userStoryId == body.userStoryId)
+        .fold<double>(0, (m, t) => t.order > m ? t.order : m);
+    final task = Task(
+      id: id,
+      projectId: projectId,
+      reference: maxRef + 1,
+      subject: body.subject,
+      description: body.description,
+      statusId: body.statusId,
+      userStoryId: body.userStoryId,
+      assignedTo: body.assignedTo,
+      order: maxOrder + 1,
+      version: 1,
+      createdAt: DateTime.now().toUtc(),
+      modifiedAt: DateTime.now().toUtc(),
+      etag: _s.etagOf(id, 1),
+    );
+    _s.tasks.add(task);
+    return Ok(task);
+  }
+
+  @override
+  Future<Result<Task, AppFailure>> updateTask(
+    String projectId,
+    String id, {
+    required UpdateTaskRequest body,
+    required String etag,
+  }) async {
+    await _tick();
+    final i = _s.tasks.indexWhere(
+      (t) => t.id == id && t.projectId == projectId,
+    );
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _s.tasks[i];
+    if (cur.etag != etag) return const Err(ConflictFailure());
+    final patch = body.toJson();
+    final next = Task(
+      id: cur.id,
+      projectId: cur.projectId,
+      reference: cur.reference,
+      subject: (patch['subject'] as String?) ?? cur.subject,
+      description: (patch['description'] as String?) ?? cur.description,
+      statusId: patch.containsKey('status_id')
+          ? patch['status_id'] as String?
+          : cur.statusId,
+      userStoryId: patch.containsKey('user_story_id')
+          ? patch['user_story_id'] as String?
+          : cur.userStoryId,
+      ownerId: cur.ownerId,
+      assignedTo: patch.containsKey('assigned_to')
+          ? patch['assigned_to'] as String?
+          : cur.assignedTo,
+      order: cur.order,
+      version: cur.version,
+      createdAt: cur.createdAt,
+      modifiedAt: cur.modifiedAt,
+    );
+    final bumped = _bumpTask(cur, next: next);
+    _s.tasks[i] = bumped;
+    return Ok(bumped);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteTask(
+    String projectId,
+    String id, {
+    required String etag,
+  }) async {
+    await _tick();
+    _s.tasks.removeWhere(
+      (t) => t.id == id && t.projectId == projectId,
+    );
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  // ---- issues ----
+
+  @override
+  Future<Result<List<Issue>, AppFailure>> listIssues(String projectId) async {
+    await _tick();
+    final list = _s.issues.where((i) => i.projectId == projectId).toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    return Ok(list);
+  }
+
+  @override
+  Future<Result<Issue, AppFailure>> getIssue(
+    String projectId,
+    String id,
+  ) async {
+    await _tick();
+    final iss = _s.issues
+        .where((i) => i.id == id && i.projectId == projectId)
+        .firstOrNull;
+    if (iss == null) return const Err(NotFoundFailure());
+    return Ok(iss);
+  }
+
+  @override
+  Future<Result<Issue, AppFailure>> createIssue(
+    String projectId,
+    CreateIssueRequest body,
+  ) async {
+    await _tick();
+    final id = _s.nextId('iss');
+    final maxRef = _s.issues
+        .where((i) => i.projectId == projectId)
+        .fold<int>(200, (m, i) => i.reference > m ? i.reference : m);
+    final issue = Issue(
+      id: id,
+      projectId: projectId,
+      reference: maxRef + 1,
+      subject: body.subject,
+      description: body.description,
+      statusId: body.statusId,
+      typeId: body.typeId,
+      priorityId: body.priorityId,
+      severityId: body.severityId,
+      assignedTo: body.assignedTo,
+      labels: body.labels,
+      components: body.components,
+      version: 1,
+      createdAt: DateTime.now().toUtc(),
+      modifiedAt: DateTime.now().toUtc(),
+      etag: _s.etagOf(id, 1),
+    );
+    _s.issues.add(issue);
+    return Ok(issue);
+  }
+
+  @override
+  Future<Result<Issue, AppFailure>> updateIssue(
+    String projectId,
+    String id, {
+    required UpdateIssueRequest body,
+    required String etag,
+  }) async {
+    await _tick();
+    final i = _s.issues.indexWhere(
+      (i) => i.id == id && i.projectId == projectId,
+    );
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _s.issues[i];
+    if (cur.etag != etag) return const Err(ConflictFailure());
+    final patch = body.toJson();
+    final next = Issue(
+      id: cur.id,
+      projectId: cur.projectId,
+      reference: cur.reference,
+      subject: (patch['subject'] as String?) ?? cur.subject,
+      description: (patch['description'] as String?) ?? cur.description,
+      statusId: patch.containsKey('status_id')
+          ? patch['status_id'] as String?
+          : cur.statusId,
+      typeId: patch.containsKey('type_id')
+          ? patch['type_id'] as String?
+          : cur.typeId,
+      priorityId: patch.containsKey('priority_id')
+          ? patch['priority_id'] as String?
+          : cur.priorityId,
+      severityId: patch.containsKey('severity_id')
+          ? patch['severity_id'] as String?
+          : cur.severityId,
+      ownerId: cur.ownerId,
+      assignedTo: patch.containsKey('assigned_to')
+          ? patch['assigned_to'] as String?
+          : cur.assignedTo,
+      labels: patch.containsKey('labels')
+          ? (patch['labels'] as List<dynamic>).cast<String>()
+          : cur.labels,
+      components: patch.containsKey('components')
+          ? (patch['components'] as List<dynamic>).cast<String>()
+          : cur.components,
+      version: cur.version,
+      createdAt: cur.createdAt,
+      modifiedAt: cur.modifiedAt,
+    );
+    final bumped = _bumpIssue(cur, next: next);
+    _s.issues[i] = bumped;
+    return Ok(bumped);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteIssue(
+    String projectId,
+    String id, {
+    required String etag,
+  }) async {
+    await _tick();
+    _s.issues.removeWhere(
+      (i) => i.id == id && i.projectId == projectId,
+    );
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  // ---- ref resolver ----
+
+  @override
+  Future<Result<ResolvedRef, AppFailure>> resolveRef(
+    String projectId,
+    int reference,
+  ) async {
+    await _tick();
+    for (final e in _s.epics) {
+      if (e.projectId == projectId && e.reference == reference) {
+        return Ok(ResolvedRef(kind: 'epic', id: e.id, ref: reference));
+      }
+    }
+    for (final u in _s.userStories) {
+      if (u.projectId == projectId && u.reference == reference) {
+        return Ok(ResolvedRef(kind: 'user_story', id: u.id, ref: reference));
+      }
+    }
+    for (final t in _s.tasks) {
+      if (t.projectId == projectId && t.reference == reference) {
+        return Ok(ResolvedRef(kind: 'task', id: t.id, ref: reference));
+      }
+    }
+    for (final i in _s.issues) {
+      if (i.projectId == projectId && i.reference == reference) {
+        return Ok(ResolvedRef(kind: 'issue', id: i.id, ref: reference));
+      }
+    }
+    return const Err(NotFoundFailure());
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Activity (comments + history + attachments)
+// ---------------------------------------------------------------------------
+
+class DemoActivityRepository implements ActivityRepository {
+  DemoActivityRepository(this._s);
+  final DemoStore _s;
+
+  @override
+  Future<Result<List<Comment>, AppFailure>> listComments(
+    String projectId,
+    EntityKind kind,
+    String entityId,
+  ) async {
+    await _tick();
+    final out = _s.comments
+        .where((c) => c.targetType == kind.wire && c.targetId == entityId)
+        .toList();
+    return Ok(out);
+  }
+
+  @override
+  Future<Result<Comment, AppFailure>> createComment(
+    String projectId,
+    EntityKind kind,
+    String entityId,
+    CreateCommentRequest body,
+  ) async {
+    await _tick();
+    final c = Comment(
+      id: _s.nextId('cm'),
+      targetType: kind.wire,
+      targetId: entityId,
+      authorId: _s.currentUser.id,
+      body: body.body,
+      bodyHtml: body.body,
+      createdAt: DateTime.now().toUtc(),
+    );
+    _s.comments.add(c);
+    return Ok(c);
+  }
+
+  @override
+  Future<Result<Comment, AppFailure>> updateComment(
+    String projectId,
+    EntityKind kind,
+    String entityId,
+    String commentId,
+    UpdateCommentRequest body,
+  ) async {
+    await _tick();
+    final i = _s.comments.indexWhere((c) => c.id == commentId);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _s.comments[i];
+    final next = Comment(
+      id: cur.id,
+      targetType: cur.targetType,
+      targetId: cur.targetId,
+      authorId: cur.authorId,
+      body: body.body,
+      bodyHtml: body.body,
+      editedAt: DateTime.now().toUtc(),
+      createdAt: cur.createdAt,
+    );
+    _s.comments[i] = next;
+    return Ok(next);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteComment(
+    String projectId,
+    EntityKind kind,
+    String entityId,
+    String commentId,
+  ) async {
+    await _tick();
+    _s.comments.removeWhere((c) => c.id == commentId);
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<HistoryEvent>, AppFailure>> listHistory(
+    String projectId,
+    EntityKind kind,
+    String entityId,
+  ) async {
+    await _tick();
+    return Ok(_s.historyEvents.toList());
+  }
+
+  @override
+  Future<Result<List<Attachment>, AppFailure>> listAttachments(
+    String projectId,
+    EntityKind kind,
+    String entityId,
+  ) async {
+    await _tick();
+    final out = _s.attachments
+        .where((a) =>
+            a.projectId == projectId &&
+            a.targetType == kind.wire &&
+            a.targetId == entityId)
+        .toList();
+    return Ok(out);
+  }
+
+  @override
+  Future<Result<Attachment, AppFailure>> uploadAttachment(
+    String projectId,
+    EntityKind kind,
+    String entityId, {
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+    ProgressCallback? onSendProgress,
+    CancelToken? cancelToken,
+  }) async {
+    // Mimic two progress ticks so the UI's progress bar actually moves.
+    onSendProgress?.call(bytes.length ~/ 2, bytes.length);
+    await _tick();
+    onSendProgress?.call(bytes.length, bytes.length);
+    final att = Attachment(
+      id: _s.nextId('att'),
+      projectId: projectId,
+      targetType: kind.wire,
+      targetId: entityId,
+      uploaderId: _s.currentUser.id,
+      filename: filename,
+      contentType: contentType ?? 'application/octet-stream',
+      sizeBytes: bytes.length,
+      sha256: 'demo-sha-${bytes.length}',
+      createdAt: DateTime.now().toUtc(),
+    );
+    _s.attachments.add(att);
+    return Ok(att);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteAttachment(
+    String projectId,
+    String attachmentId,
+  ) async {
+    await _tick();
+    _s.attachments.removeWhere((a) => a.id == attachmentId);
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<SignedDownload, AppFailure>> signAttachmentUrl(
+    String projectId,
+    String attachmentId,
+  ) async {
+    await _tick();
+    final a = _s.attachments
+        .where((a) => a.id == attachmentId)
+        .firstOrNull;
+    if (a == null) return const Err(NotFoundFailure());
+    return Ok(SignedDownload(
+      url: 'about:blank#demo-${a.filename}',
+      expiresAt:
+          DateTime.now().add(const Duration(minutes: 15)).millisecondsSinceEpoch ~/
+              1000,
+      filename: a.filename,
+    ));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Milestones + Board
+// ---------------------------------------------------------------------------
+
+class DemoMilestonesRepository implements MilestonesRepository {
+  DemoMilestonesRepository(this._s);
+  final DemoStore _s;
+
+  @override
+  Future<Result<List<Milestone>, AppFailure>> list(String projectId) async {
+    await _tick();
+    return Ok(
+      _s.milestones.where((m) => m.projectId == projectId).toList()
+        ..sort((a, b) => a.order.compareTo(b.order)),
+    );
+  }
+
+  @override
+  Future<Result<Milestone, AppFailure>> get(
+    String projectId,
+    String id,
+  ) async {
+    await _tick();
+    final m = _s.milestones
+        .where((m) => m.id == id && m.projectId == projectId)
+        .firstOrNull;
+    if (m == null) return const Err(NotFoundFailure());
+    return Ok(m);
+  }
+
+  @override
+  Future<Result<Milestone, AppFailure>> create(
+    String projectId,
+    CreateMilestoneRequest body,
+  ) async {
+    await _tick();
+    final id = _s.nextId('ms');
+    final order =
+        _s.milestones.where((m) => m.projectId == projectId).length + 1;
+    final ms = Milestone(
+      id: id,
+      projectId: projectId,
+      name: body.name,
+      slug: body.slug ?? body.name.toLowerCase().replaceAll(' ', '-'),
+      startDate: body.startDate,
+      endDate: body.endDate,
+      closed: false,
+      order: order.toDouble(),
+      version: 1,
+      createdAt: DateTime.now().toUtc(),
+      modifiedAt: DateTime.now().toUtc(),
+    );
+    _s.milestones.add(ms);
+    return Ok(ms);
+  }
+
+  @override
+  Future<Result<Milestone, AppFailure>> update(
+    String projectId,
+    String id, {
+    required UpdateMilestoneRequest body,
+  }) async {
+    await _tick();
+    final i = _s.milestones.indexWhere(
+      (m) => m.id == id && m.projectId == projectId,
+    );
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _s.milestones[i];
+    final patch = body.toJson();
+    final next = Milestone(
+      id: cur.id,
+      projectId: cur.projectId,
+      name: (patch['name'] as String?) ?? cur.name,
+      slug: cur.slug,
+      startDate: patch.containsKey('start_date')
+          ? (patch['start_date'] == null
+              ? null
+              : DateTime.tryParse(patch['start_date'] as String))
+          : cur.startDate,
+      endDate: patch.containsKey('end_date')
+          ? (patch['end_date'] == null
+              ? null
+              : DateTime.tryParse(patch['end_date'] as String))
+          : cur.endDate,
+      closed: cur.closed,
+      closedAt: cur.closedAt,
+      order: cur.order,
+      version: cur.version + 1,
+      createdAt: cur.createdAt,
+      modifiedAt: DateTime.now().toUtc(),
+    );
+    _s.milestones[i] = next;
+    return Ok(next);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> delete(
+    String projectId,
+    String id,
+  ) async {
+    await _tick();
+    _s.milestones.removeWhere(
+      (m) => m.id == id && m.projectId == projectId,
+    );
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> close(String projectId, String id) async {
+    await _tick();
+    final i = _s.milestones.indexWhere(
+      (m) => m.id == id && m.projectId == projectId,
+    );
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _s.milestones[i];
+    _s.milestones[i] = Milestone(
+      id: cur.id,
+      projectId: cur.projectId,
+      name: cur.name,
+      slug: cur.slug,
+      startDate: cur.startDate,
+      endDate: cur.endDate,
+      closed: true,
+      closedAt: DateTime.now().toUtc(),
+      order: cur.order,
+      version: cur.version + 1,
+      createdAt: cur.createdAt,
+      modifiedAt: DateTime.now().toUtc(),
+    );
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<MilestoneStats, AppFailure>> stats(
+    String projectId,
+    String id,
+  ) async {
+    await _tick();
+    final stories = _s.userStories
+        .where((u) => u.projectId == projectId && u.milestoneId == id)
+        .toList();
+    final taxonomy = _s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[];
+    final statusById = {for (final t in taxonomy) t.id: t};
+
+    var totalPoints = 0.0;
+    var donePoints = 0.0;
+    for (final s in stories) {
+      final pt = s.pointsId == null ? null : statusById[s.pointsId!]?.value;
+      final closed = s.statusId != null &&
+          (statusById[s.statusId]?.isClosed ?? false);
+      totalPoints += pt ?? 0;
+      if (closed) donePoints += pt ?? 0;
+    }
+    final usIds = stories.map((s) => s.id).toSet();
+    final tasks = _s.tasks.where((t) =>
+        t.userStoryId != null && usIds.contains(t.userStoryId)).toList();
+    final doneTasks = tasks
+        .where((t) =>
+            t.statusId != null &&
+            (statusById[t.statusId]?.isClosed ?? false))
+        .length;
+    return Ok(MilestoneStats(
+      totalPoints: totalPoints,
+      completedPoints: donePoints,
+      totalTasks: tasks.length,
+      completedTasks: doneTasks,
+    ));
+  }
+}
+
+class DemoBoardRepository implements BoardRepository {
+  DemoBoardRepository(this._s);
+  final DemoStore _s;
+
+  @override
+  Future<Result<BoardSnapshot, AppFailure>> load(
+    String projectId,
+    String milestoneId,
+  ) async {
+    await _tick();
+    final statuses = (_s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[])
+        .where((t) => t.kind == TaxonomyKind.usStatus)
+        .toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    final stories = _s.userStories
+        .where((u) =>
+            u.projectId == projectId && u.milestoneId == milestoneId)
+        .toList();
+    final columns = <BoardColumn>[
+      for (final s in statuses)
+        BoardColumn(
+          status: s,
+          userStories: stories
+              .where((u) => u.statusId == s.id)
+              .map((u) => _card(u))
+              .toList(),
+        ),
+      // Trailing no-status column.
+      BoardColumn(
+        status: null,
+        userStories: stories
+            .where((u) => u.statusId == null)
+            .map((u) => _card(u))
+            .toList(),
+      ),
+    ];
+    return Ok(BoardSnapshot(milestoneId: milestoneId, columns: columns));
+  }
+
+  BoardCard _card(UserStory u) => BoardCard(
+    story: u,
+    tasks: _s.tasks
+        .where((t) => t.userStoryId == u.id)
+        .toList()
+      ..sort((a, b) => a.order.compareTo(b.order)),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Wiki
+// ---------------------------------------------------------------------------
+
+class DemoWikiRepository implements WikiRepository {
+  DemoWikiRepository(this._s);
+  final DemoStore _s;
+
+  @override
+  Future<Result<List<WikiPage>, AppFailure>> list(String projectId) async {
+    await _tick();
+    return Ok(
+      _s.wikiPages.where((p) => p.projectId == projectId).toList(),
+    );
+  }
+
+  @override
+  Future<Result<WikiPage, AppFailure>> get(
+    String projectId,
+    String pageId,
+  ) async {
+    await _tick();
+    final p = _s.wikiPages
+        .where((p) => p.id == pageId && p.projectId == projectId)
+        .firstOrNull;
+    if (p == null) return const Err(NotFoundFailure());
+    return Ok(p);
+  }
+
+  @override
+  Future<Result<WikiPage, AppFailure>> create(
+    String projectId,
+    CreateWikiPageRequest body,
+  ) async {
+    await _tick();
+    final id = _s.nextId('wp');
+    final page = WikiPage(
+      id: id,
+      projectId: projectId,
+      slug: body.slug ?? body.title.toLowerCase().replaceAll(' ', '-'),
+      title: body.title,
+      body: body.body,
+      bodyHtml: body.body,
+      version: 1,
+      editorId: _s.currentUser.id,
+      createdAt: DateTime.now().toUtc(),
+      modifiedAt: DateTime.now().toUtc(),
+      etag: _s.etagOf(id, 1),
+    );
+    _s.wikiPages.add(page);
+    _s.revisionsByPage[id] = [
+      WikiRevision(
+        id: _s.nextId('wpr'),
+        pageId: id,
+        rev: 1,
+        title: page.title,
+        body: page.body,
+        editorId: _s.currentUser.id,
+        createdAt: page.createdAt,
+      ),
+    ];
+    return Ok(page);
+  }
+
+  @override
+  Future<Result<WikiPage, AppFailure>> update(
+    String projectId,
+    String pageId, {
+    required UpdateWikiPageRequest body,
+    required String etag,
+  }) async {
+    await _tick();
+    final i = _s.wikiPages.indexWhere(
+      (p) => p.id == pageId && p.projectId == projectId,
+    );
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _s.wikiPages[i];
+    if (cur.etag != etag) return const Err(ConflictFailure());
+    final v = cur.version + 1;
+    final next = WikiPage(
+      id: cur.id,
+      projectId: cur.projectId,
+      slug: cur.slug,
+      title: body.title ?? cur.title,
+      body: body.body ?? cur.body,
+      bodyHtml: body.body ?? cur.body,
+      version: v,
+      editorId: _s.currentUser.id,
+      createdAt: cur.createdAt,
+      modifiedAt: DateTime.now().toUtc(),
+      etag: _s.etagOf(cur.id, v),
+    );
+    _s.wikiPages[i] = next;
+    _s.revisionsByPage.putIfAbsent(cur.id, () => []);
+    _s.revisionsByPage[cur.id] = [
+      ..._s.revisionsByPage[cur.id]!,
+      WikiRevision(
+        id: _s.nextId('wpr'),
+        pageId: cur.id,
+        rev: v,
+        title: next.title,
+        body: next.body,
+        editorId: _s.currentUser.id,
+        createdAt: DateTime.now().toUtc(),
+      ),
+    ];
+    return Ok(next);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> delete(
+    String projectId,
+    String pageId, {
+    required String etag,
+  }) async {
+    await _tick();
+    _s.wikiPages.removeWhere((p) => p.id == pageId);
+    _s.revisionsByPage.remove(pageId);
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<WikiRevision>, AppFailure>> listRevisions(
+    String projectId,
+    String pageId,
+  ) async {
+    await _tick();
+    return Ok(List.of(_s.revisionsByPage[pageId] ?? const <WikiRevision>[]));
+  }
+
+  @override
+  Future<Result<WikiRevision, AppFailure>> getRevision(
+    String projectId,
+    String pageId,
+    int rev,
+  ) async {
+    await _tick();
+    final r = (_s.revisionsByPage[pageId] ?? const <WikiRevision>[])
+        .where((x) => x.rev == rev)
+        .firstOrNull;
+    if (r == null) return const Err(NotFoundFailure());
+    return Ok(r);
+  }
+
+  @override
+  Future<Result<WikiDiff, AppFailure>> diff(
+    String projectId,
+    String pageId,
+    int from, {
+    int? to,
+  }) async {
+    await _tick();
+    final revs = _s.revisionsByPage[pageId] ?? const <WikiRevision>[];
+    final fromBody =
+        revs.where((r) => r.rev == from).firstOrNull?.body ?? '';
+    final toBody = to == null
+        ? (_s.wikiPages.where((p) => p.id == pageId).firstOrNull?.body ?? '')
+        : revs.where((r) => r.rev == to).firstOrNull?.body ?? '';
+    // Tiny line-mode synthetic diff so the diff tab has something to show.
+    final fromLines = fromBody.split('\n');
+    final toLines = toBody.split('\n');
+    final sb = StringBuffer('@@ demo diff @@\n');
+    for (final l in fromLines) {
+      if (!toLines.contains(l)) sb.writeln('-$l');
+    }
+    for (final l in toLines) {
+      if (!fromLines.contains(l)) sb.writeln('+$l');
+    }
+    return Ok(WikiDiff(from: from, to: to, diff: sb.toString()));
+  }
+
+  @override
+  Future<Result<WikiPage, AppFailure>> restore(
+    String projectId,
+    String pageId,
+    int rev,
+  ) async {
+    await _tick();
+    final r = (_s.revisionsByPage[pageId] ?? const <WikiRevision>[])
+        .where((x) => x.rev == rev)
+        .firstOrNull;
+    if (r == null) return const Err(NotFoundFailure());
+    final cur = _s.wikiPages.firstWhere((p) => p.id == pageId);
+    return update(
+      projectId,
+      pageId,
+      body: UpdateWikiPageRequest(title: r.title, body: r.body ?? ''),
+      etag: cur.etag!,
+    );
+  }
+}

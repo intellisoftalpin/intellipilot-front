@@ -15,6 +15,9 @@
 #   ./scripts/run-web.sh --build --port 5000
 #   ./scripts/run-web.sh -- --dart-define=FOO=bar  # extra args after `--`
 #
+# Run the offline demo (no backend, seeded in-memory data):
+#   ./scripts/run-web.sh -- --dart-define=INTELLIPILOT_DEMO=true
+#
 # Environment overrides:
 #   FLUTTER_BIN         Explicit Flutter binary (skips fvm autodetection).
 #   INTELLIPILOT_PORT   Default port if --port isn't supplied.
