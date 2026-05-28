@@ -1,6 +1,8 @@
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/core/utils/listenable_stream.dart';
+import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
+import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
 import 'package:intellipilot/features/auth/presentation/forgot_password_page.dart';
 import 'package:intellipilot/features/auth/presentation/login_page.dart';
 import 'package:intellipilot/features/auth/presentation/register_page.dart';
@@ -45,6 +47,12 @@ abstract class Routes {
   static String projectSettingsFor(String id) => '/projects/$id/settings';
   static String projectBacklogFor(String id) => '/projects/$id/backlog';
   static String projectIssuesFor(String id) => '/projects/$id/issues';
+  static String entityDetailFor(
+    String projectId,
+    EntityKind kind,
+    String entityId,
+  ) =>
+      '/projects/$projectId/items/${kind.slug}/$entityId';
   static String acceptInvitationFor(String token) => '/i/$token';
 }
 
@@ -132,6 +140,22 @@ GoRouter buildRouter({required SessionBloc session}) {
         name: 'project_issues',
         builder: (context, state) =>
             IssuesPage(projectId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/projects/:projectId/items/:kind/:entityId',
+        name: 'entity_detail',
+        builder: (context, state) {
+          final slug = state.pathParameters['kind']!;
+          final kind = EntityKind.values.firstWhere(
+            (k) => k.slug == slug,
+            orElse: () => EntityKind.userStory,
+          );
+          return EntityDetailPage(
+            projectId: state.pathParameters['projectId']!,
+            kind: kind,
+            entityId: state.pathParameters['entityId']!,
+          );
+        },
       ),
       GoRoute(
         path: '/i/:token',

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/tasks_cubit.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
@@ -175,15 +178,34 @@ class _TaskListViewState extends State<_TaskListView> {
                                   ],
                                 ],
                               ),
-                              secondary: widget.canEdit
-                                  ? IconButton(
-                                      icon:
-                                          const Icon(Icons.delete_outline),
+                              secondary: Wrap(
+                                spacing: 4,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.open_in_new),
+                                    tooltip: t.actionOpenDetail,
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      context.go(
+                                        Routes.entityDetailFor(
+                                          task.projectId,
+                                          EntityKind.task,
+                                          task.id,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  if (widget.canEdit)
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                      ),
                                       onPressed: () => context
                                           .read<TasksCubit>()
                                           .delete(task.id),
-                                    )
-                                  : null,
+                                    ),
+                                ],
+                              ),
                               controlAffinity:
                                   ListTileControlAffinity.leading,
                             );

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/issues_cubit.dart';
@@ -308,6 +311,13 @@ class _IssueRow extends StatelessWidget {
       child: ListTile(
         leading: HexColorDot(hex: status?.color ?? '', size: 14),
         title: Text(issue.subject),
+        onTap: () => context.go(
+          Routes.entityDetailFor(
+            issue.projectId,
+            EntityKind.issue,
+            issue.id,
+          ),
+        ),
         subtitle: Wrap(
           spacing: 6,
           runSpacing: 4,

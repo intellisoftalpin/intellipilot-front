@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/backlog_cubit.dart';
@@ -349,11 +352,20 @@ class _EpicSection extends StatelessWidget {
         trailing: canEditEpic && epic != null
             ? PopupMenuButton<String>(
                 itemBuilder: (_) => [
+                  PopupMenuItem(value: 'open', child: Text(t.actionOpenDetail)),
                   PopupMenuItem(value: 'edit', child: Text(t.actionEdit)),
                   PopupMenuItem(value: 'delete', child: Text(t.actionDelete)),
                 ],
                 onSelected: (v) async {
-                  if (v == 'edit') {
+                  if (v == 'open') {
+                    context.go(
+                      Routes.entityDetailFor(
+                        epic!.projectId,
+                        EntityKind.epic,
+                        epic!.id,
+                      ),
+                    );
+                  } else if (v == 'edit') {
                     final updated =
                         await showEpicEditDialog(context, existing: epic);
                     if (updated == null || !context.mounted) return;
@@ -423,10 +435,28 @@ class _UserStoryRow extends StatelessWidget {
           if (p?.value != null) '${t.taxonomyValueLabel}: ${p!.value}',
         ].join(' · '),
       ),
+      onTap: () => context.go(
+        Routes.entityDetailFor(
+          story.projectId,
+          EntityKind.userStory,
+          story.id,
+        ),
+      ),
       trailing: canEdit
           ? Wrap(
               spacing: 4,
               children: [
+                IconButton(
+                  icon: const Icon(Icons.open_in_new),
+                  tooltip: t.actionOpenDetail,
+                  onPressed: () => context.go(
+                    Routes.entityDetailFor(
+                      story.projectId,
+                      EntityKind.userStory,
+                      story.id,
+                    ),
+                  ),
+                ),
                 IconButton(
                   icon: const Icon(Icons.checklist_outlined),
                   tooltip: t.tasksOpenTooltip,

@@ -19,7 +19,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 6 | Taxonomy, labels, components | 1 w | Per-project catalog editors | **Done** |
 | 7 | Backlog — epics & user stories | 2 w | Backlog list, detail, CRUD, reorder | **Done** |
 | 8 | Backlog — tasks & issues | 1.5 w | Task/issue CRUD, link to user story / epic | **Done** |
-| 9 | Comments, history, attachments | 1.5 w | Polymorphic comment widget, file upload, activity stream | |
+| 9 | Comments, history, attachments | 1.5 w | Polymorphic comment widget, file upload, activity stream | **Done** |
 | 10 | Board (Kanban) | 2 w | Drag-drop board, swimlanes, filters, saved views | |
 | 11 | Milestones / sprints | 1.5 w | List, sprint board, burndown, close sprint | |
 | 12 | Wiki | 1.5 w | Page tree, editor, revisions, diff, restore | |
@@ -311,7 +311,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 9 — Comments, history, attachments
+## Phase 9 — Comments, history, attachments — **Done**
 
 **Scope**
 - Comment thread widget: list (`GET .../comments`), create (`POST`), edit (`PATCH`), delete (`DELETE`). Markdown editor with split preview; mention autocomplete (`@user`, `#ref`); emoji picker.
@@ -324,6 +324,16 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 - Editing a comment 30s after creation requires the same user (server enforces; UI hides edit for others).
 - Activity stream renders 200+ entries smoothly via virtualization.
 - Uploading a 30 MiB file on web works without OOM; oversized file is rejected client-side with a clear error.
+
+**Delivered (2026-05-28)**
+- New `features/activity/` slice with `ActivityRepository` covering comments + history + attachments. Comments unwrap the `{comments: [...]}` envelope; history returns the raw `{diff, actor_id, created_at}` rows; attachments stream via dio multipart with `onSendProgress` + `CancelToken`. Repo-level wire-format test covers all five endpoints + multipart shape.
+- Three cubits: `ActivityStreamCubit` merges comments + history into a single newest-first stream with an `ActivityFilter` (all/comments/history) toggle. `AttachmentsCubit` owns the in-flight `UploadProgress` (filename + sent/total + cancel token) and rejects oversized files client-side. Permission gating is read from the surrounding `ProjectDetailCubit`.
+- New `EntityKind` enum (`epics | userstories | tasks | issues`) shared between the router (URL slug) and the wire format (target_type). A single `/projects/:projectId/items/:kind/:entityId` route renders `EntityDetailPage` for all four kinds — fetches the entity header via `BacklogRepository`, then drops into a two-tab layout (Activity, Attachments).
+- `CommentComposer` autosaves the in-progress comment to the `drafts` Hive box every 3s (`Timer`-debounced) and restores on mount with a "draft restored" snackbar. Cleared on successful post.
+- `AttachmentsView` reuses a small `FilePicker` interface (`<input type=file>` on web, no-op stub on native) and a platform-conditional `url_opener` (web window.open, stub on native) so the test VM compiles cleanly. Downloads go through the signed-URL endpoint and resolve against the configured `ApiConfig.baseUrl` so cross-origin SPAs work.
+- Backlog rows (epics/user stories/tasks/issues) gained an "open detail" affordance: tapping a user-story or issue card jumps to the detail page; epics get the entry in the popup menu; the tasks dialog opens the per-task detail.
+- ARB extended with 27 strings; `flutter analyze` clean; **204 tests pass**; web release build green. Broader bloc/widget tests for the activity slice intentionally deferred per the paused coverage gate.
+- Deferred / out of scope (per the Phase 9 plan): Markdown rendering keeps `SelectableText(body)` for v1 (server already produces `body_html`, so a future swap to a markdown widget is cosmetic). Mention autocomplete (`@user`, `#ref`) and emoji picker are stretch items pushed to Phase 13 polish. Drag-and-drop file upload is parked behind Phase 16 (desktop/mobile polish); the web file picker handles the v1 flow. Realtime refresh of the activity stream stays in Phase 19.
 
 ---
 

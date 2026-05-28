@@ -3,11 +3,14 @@ import 'package:intellipilot/app/l10n/locale_cubit.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
 import 'package:intellipilot/core/io/file_downloader.dart';
+import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/network/api_config.dart';
 import 'package:intellipilot/core/network/cookie_setup.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
+import 'package:intellipilot/features/activity/data/activity_repository_impl.dart';
+import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/auth/data/auth_repository_impl.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:intellipilot/features/backlog/data/backlog_repository_impl.dart';
@@ -50,6 +53,10 @@ Future<void> configureDependencies({
     ..registerLazySingleton<KeyValueStorage>(
       () => makeStorage(HiveBoxes.ui),
       instanceName: HiveBoxes.ui,
+    )
+    ..registerLazySingleton<KeyValueStorage>(
+      () => makeStorage(HiveBoxes.drafts),
+      instanceName: HiveBoxes.drafts,
     );
 
   // --- Primitives ------------------------------------------------------
@@ -108,8 +115,12 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<BacklogRepository>(
     () => BacklogRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<ActivityRepository>(
+    () => ActivityRepositoryImpl(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
   getIt.registerLazySingleton<FileDownloader>(FileDownloader.new);
+  getIt.registerLazySingleton<FilePicker>(FilePicker.new);
   getIt.registerLazySingleton<SessionBloc>(
     () => SessionBloc(repository: getIt<AuthRepository>()),
   );
@@ -120,13 +131,16 @@ Future<void> configureForTests({
   required KeyValueStorage settingsStorage,
   required KeyValueStorage uiStorage,
   required AuthRepository authRepository,
+  KeyValueStorage? draftsStorage,
   MfaRepository? mfaRepository,
   PasskeyService? passkeyService,
   ProfileRepository? profileRepository,
   ProjectsRepository? projectsRepository,
   CatalogRepository? catalogRepository,
   BacklogRepository? backlogRepository,
+  ActivityRepository? activityRepository,
   FileDownloader? fileDownloader,
+  FilePicker? filePicker,
   ApiConfig? apiConfig,
 }) async {
   getIt
@@ -136,6 +150,10 @@ Future<void> configureForTests({
       instanceName: HiveBoxes.settings,
     )
     ..registerSingleton<KeyValueStorage>(uiStorage, instanceName: HiveBoxes.ui)
+    ..registerSingleton<KeyValueStorage>(
+      draftsStorage ?? InMemoryKeyValueStorage(),
+      instanceName: HiveBoxes.drafts,
+    )
     ..registerSingleton<UuidGen>(const DefaultUuidGen())
     ..registerSingleton<Logger>(Logger())
     ..registerSingleton<ApiConfig>(
@@ -161,9 +179,13 @@ Future<void> configureForTests({
     ..registerSingleton<BacklogRepository>(
       backlogRepository ?? _NoopBacklogRepository(),
     )
+    ..registerSingleton<ActivityRepository>(
+      activityRepository ?? _NoopActivityRepository(),
+    )
     ..registerSingleton<FileDownloader>(
       fileDownloader ?? const _InMemoryDownloader(),
     )
+    ..registerSingleton<FilePicker>(filePicker ?? const _StubFilePicker())
     ..registerSingleton<SessionBloc>(SessionBloc(repository: authRepository))
     ..registerSingleton<ThemeCubit>(ThemeCubit(settingsStorage))
     ..registerSingleton<LocaleCubit>(LocaleCubit(settingsStorage));
@@ -237,6 +259,14 @@ class _NoopBacklogRepository implements BacklogRepository {
       );
 }
 
+class _NoopActivityRepository implements ActivityRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(
+        '_NoopActivityRepository.${invocation.memberName}',
+      );
+}
+
 class _InMemoryDownloader implements FileDownloader {
   const _InMemoryDownloader();
 
@@ -249,4 +279,14 @@ class _InMemoryDownloader implements FileDownloader {
     required String mimeType,
     required String contents,
   }) async => true;
+}
+
+class _StubFilePicker implements FilePicker {
+  const _StubFilePicker();
+
+  @override
+  bool get isSupported => false;
+
+  @override
+  Future<PickedFile?> pickSingleFile() async => null;
 }
