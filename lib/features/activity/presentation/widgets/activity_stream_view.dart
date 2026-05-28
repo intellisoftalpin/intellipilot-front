@@ -10,12 +10,22 @@ import 'package:intellipilot/features/projects/presentation/cubits/project_detai
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// Activity tab: filter chips + merged comments/history list + composer.
+///
+/// Set [shrinkWrap] to true when embedding inside a `SingleChildScrollView`
+/// (e.g. the Jira-style entity detail page). In that mode entries render as
+/// a `Column` of rows that sizes to content rather than the default
+/// `Expanded(ListView)` fill-parent layout.
 class ActivityStreamView extends StatelessWidget {
-  const ActivityStreamView({required this.draftKey, super.key});
+  const ActivityStreamView({
+    required this.draftKey,
+    this.shrinkWrap = false,
+    super.key,
+  });
 
   /// Unique key per (entity kind + entity id) used by [CommentComposer] for
   /// draft autosave.
   final String draftKey;
+  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +39,36 @@ class ActivityStreamView extends StatelessWidget {
           return Center(child: Text(t.activityLoadFailed));
         }
         if (state is! ActivityStreamLoaded) return const SizedBox.shrink();
+        if (shrinkWrap) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _FilterBar(filter: state.filter),
+              const Divider(height: 1),
+              if (state.entries.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: Text(t.activityEmpty)),
+                )
+              else
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final entry in state.entries)
+                        if (entry.isComment)
+                          _CommentRow(comment: entry.comment!)
+                        else
+                          _HistoryRow(event: entry.history!),
+                    ],
+                  ),
+                ),
+              _ComposerGate(draftKey: draftKey, busy: state.busy),
+            ],
+          );
+        }
         return Column(
           children: [
             _FilterBar(filter: state.filter),

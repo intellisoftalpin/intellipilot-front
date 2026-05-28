@@ -11,7 +11,12 @@ import 'package:intellipilot/features/projects/presentation/cubits/project_detai
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class AttachmentsView extends StatelessWidget {
-  const AttachmentsView({super.key});
+  const AttachmentsView({this.shrinkWrap = false, super.key});
+
+  /// When true, the file list renders as a `Column` inline rather than an
+  /// `Expanded(ListView)` — for embedding in a scrollable parent (e.g. the
+  /// Jira-style entity detail page).
+  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +41,34 @@ class AttachmentsView extends StatelessWidget {
           return Center(child: Text(t.activityLoadFailed));
         }
         if (state is! AttachmentsLoaded) return const SizedBox.shrink();
+        if (shrinkWrap) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _UploadBar(upload: state.upload),
+              const Divider(height: 1),
+              if (state.items.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: Text(t.attachmentsEmpty)),
+                )
+              else
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < state.items.length; i++) ...[
+                        if (i > 0) const Divider(height: 1),
+                        _Row(att: state.items[i]),
+                      ],
+                    ],
+                  ),
+                ),
+            ],
+          );
+        }
         return Column(
           children: [
             _UploadBar(upload: state.upload),
