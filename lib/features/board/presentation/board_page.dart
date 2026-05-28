@@ -349,9 +349,13 @@ class _CardView extends StatelessWidget {
         ),
       ),
     );
-    return LongPressDraggable<String>(
+    // Plain `Draggable` (not `LongPressDraggable`) so mouse-driven platforms
+    // (web / desktop) start the drag on pointer-down + move without a hold
+    // gesture. Flutter's gesture arena disambiguates this from the
+    // InkWell's tap, so tap-to-open still works.
+    return Draggable<String>(
       data: card.story.id,
-      delay: const Duration(milliseconds: 200),
+      dragAnchorStrategy: pointerDragAnchorStrategy,
       feedback: Material(
         elevation: 4,
         borderRadius: BorderRadius.circular(8),
