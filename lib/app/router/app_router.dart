@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
+import 'package:intellipilot/app/shell/main_shell.dart';
 import 'package:intellipilot/core/utils/listenable_stream.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
@@ -87,6 +88,13 @@ GoRouter buildRouter({required SessionBloc session}) {
     refreshListenable: GoRouterRefreshStream(session.stream),
     redirect: (context, state) => _guard(session.state, state),
     routes: [
+      // Authenticated routes share the app shell (top bar + project rail).
+      // Public + auth routes (login, register, password reset, MFA, accept
+      // invitation) sit outside this ShellRoute so they keep the
+      // chrome-free auth layout.
+      ShellRoute(
+        builder: (context, state, child) => MainShell(child: child),
+        routes: [
       GoRoute(
         path: Routes.home,
         name: 'home',
@@ -213,6 +221,8 @@ GoRouter buildRouter({required SessionBloc session}) {
             entityId: state.pathParameters['entityId']!,
           );
         },
+      ),
+        ],
       ),
       GoRoute(
         path: '/i/:token',
