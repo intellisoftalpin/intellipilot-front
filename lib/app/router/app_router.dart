@@ -11,6 +11,7 @@ import 'package:intellipilot/features/auth/presentation/reset_password_page.dart
 import 'package:intellipilot/features/backlog/presentation/backlog_page.dart';
 import 'package:intellipilot/features/backlog/presentation/issues_page.dart';
 import 'package:intellipilot/features/board/presentation/board_page.dart';
+import 'package:intellipilot/features/board/presentation/task_board_page.dart';
 import 'package:intellipilot/features/home/presentation/home_page.dart';
 import 'package:intellipilot/features/mfa/presentation/mfa_verify_page.dart';
 import 'package:intellipilot/features/mfa/presentation/passkey_signin_page.dart';
@@ -55,6 +56,7 @@ abstract class Routes {
   static String projectBacklogFor(String id) => '/projects/$id/backlog';
   static String projectIssuesFor(String id) => '/projects/$id/issues';
   static String projectBoardFor(String id) => '/projects/$id/board';
+  static String projectTaskBoardFor(String id) => '/projects/$id/task-board';
   static String projectMilestonesFor(String id) => '/projects/$id/milestones';
   static String milestoneDetailFor(String projectId, String milestoneId) =>
       '/projects/$projectId/milestones/$milestoneId';
@@ -169,6 +171,12 @@ GoRouter buildRouter({required SessionBloc session}) {
         name: 'project_board',
         builder: (context, state) =>
             BoardPage(projectId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/projects/:id/task-board',
+        name: 'project_task_board',
+        builder: (context, state) =>
+            TaskBoardPage(projectId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/projects/:id/milestones',

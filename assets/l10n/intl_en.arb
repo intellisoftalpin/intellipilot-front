@@ -1068,5 +1068,14 @@
   "railWiki": "Wiki",
   "@railWiki": { "description": "Project-scoped left rail label." },
   "railSettings": "Settings",
-  "@railSettings": { "description": "Project-scoped left rail label." }
+  "@railSettings": { "description": "Project-scoped left rail label." },
+
+  "taskBoardTitle": "Task board",
+  "@taskBoardTitle": { "description": "App-bar title on the task board page." },
+  "taskBoardLoadFailed": "Couldn't load the task board.",
+  "@taskBoardLoadFailed": { "description": "Error state on the task board page." },
+  "taskBoardNoStatuses": "No task statuses configured yet. Add at least one in Catalog → Task statuses to use the task board.",
+  "@taskBoardNoStatuses": { "description": "Empty-state copy when the task_status taxonomy is empty." },
+  "actionOpenTaskBoard": "Open task board",
+  "@actionOpenTaskBoard": { "description": "Project overview CTA." }
 }

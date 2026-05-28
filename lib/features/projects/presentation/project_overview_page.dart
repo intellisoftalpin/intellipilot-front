@@ -213,6 +213,12 @@ class _Overview extends StatelessWidget {
                   label: Text(t.actionOpenBoard),
                 ),
                 FilledButton.tonalIcon(
+                  icon: const Icon(Icons.task_alt),
+                  onPressed: () =>
+                      context.go(Routes.projectTaskBoardFor(project.id)),
+                  label: Text(t.actionOpenTaskBoard),
+                ),
+                FilledButton.tonalIcon(
                   icon: const Icon(Icons.flag_outlined),
                   onPressed: () =>
                       context.go(Routes.projectMilestonesFor(project.id)),
