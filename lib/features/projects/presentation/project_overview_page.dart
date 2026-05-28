@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
@@ -132,9 +133,15 @@ class _Overview extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final project = state.project;
+    final maxWidth = responsiveValue<double>(
+      context,
+      compact: double.infinity,
+      medium: 720,
+      expanded: 960,
+    );
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
+        constraints: BoxConstraints(maxWidth: maxWidth),
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [

@@ -26,7 +26,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 13 | Command palette, keyboard shortcuts, polish | 1 w | Cmd-K, hotkeys, empty states, micro-animations | **Done** |
 | 14 | Permissions UI hardening | 0.5 w | Every action gated, "request access" CTAs | **Done** |
 | 15 | Accessibility & l10n audit | 1 w | Screen reader pass, contrast, key flows in EN; pipeline for adding languages | **Done** |
-| 16 | Desktop & mobile polish | 1.5 w | Responsive breakpoints, native menus, file pickers, deep links | |
+| 16 | Desktop & mobile polish | 1.5 w | Responsive breakpoints, native menus, file pickers, deep links | **Partial** |
 | 17 | Test hardening & golden suite | 1 w | Coverage targets met, golden suite stable | |
 | 18 | Release engineering | 1 w | Flavors, signing, store metadata, autoupdate research | |
 | 19 | (Backend-blocked) realtime, notifications | TBD | Pending backend SSE/WS + notification endpoints | |
@@ -519,7 +519,20 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 16 — Desktop & mobile polish
+## Phase 16 — Desktop & mobile polish — **Partial (testable subset)**
+
+**Delivered (2026-05-28)**
+- **`pathUrlStrategy` on web** — `core/ui/path_strategy.dart` (platform-conditional) calls `usePathUrlStrategy()` from `flutter_web_plugins/url_strategy.dart` at bootstrap. Native targets get a no-op stub. Web URLs are now `/projects/abc` instead of `/#/projects/abc`.
+- **Responsive breakpoints utility** — `core/ui/breakpoints.dart` defines `Breakpoint.compact|medium|expanded` (`< 600`, `600–839`, `≥ 840`) following Material 3. Adds a `responsiveValue<T>(context, compact, medium, expanded)` helper for sizing constants with automatic fallback. `ProjectOverviewPage` adopts it to grow the content max-width on larger screens.
+- Wire-format / breakpoint unit tests cover the three breakpoint thresholds plus the fallback chain. `flutter analyze` clean; **224 tests pass**; web release build green.
+
+**Deferred (needs device/OS verification, parked for a hands-on pass)**
+- **Navigation rail / permanent drawer** — the breakpoint utility is in place, but lifting every shell page to a responsive `NavigationBar`/`NavigationRail`/drawer needs a go_router `StatefulShellRoute` refactor that's risky without device-level QA.
+- **Native menu bar** (macOS / Windows / Linux desktop), **deep-link config files** (Android App Links, iOS Universal Links), **native file picker** (replace the web-only `<input type=file>` shim), **`flutter_native_splash` generator runs** — every one of these needs to be exercised on the actual platform to confirm it works; shipping them blind would be misleading.
+- **Window state restoration** and **drag-from-titlebar regions** — desktop-only, same constraint.
+
+The original scope follows verbatim in case a later session picks up the
+hands-on pass.
 
 **Scope**
 - Responsive breakpoints: `compact` (< 600), `medium` (600–839), `expanded` (≥ 840). Replace bottom nav ↔ navigation rail ↔ permanent drawer accordingly.

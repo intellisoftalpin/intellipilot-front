@@ -5,6 +5,7 @@ import 'package:intellipilot/app/app.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
+import 'package:intellipilot/core/ui/path_strategy.dart';
 import 'package:logger/logger.dart';
 
 /// Single entry-point shared by every flavor (`main_dev.dart`, `main_prod.dart`).
@@ -14,6 +15,7 @@ import 'package:logger/logger.dart';
 /// the catch-all with a real crash reporter (Sentry).
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  applyPathUrlStrategy();
 
   await runZonedGuarded<Future<void>>(
     () async {
