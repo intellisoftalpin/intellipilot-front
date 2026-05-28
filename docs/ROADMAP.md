@@ -22,7 +22,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 9 | Comments, history, attachments | 1.5 w | Polymorphic comment widget, file upload, activity stream | **Done** |
 | 10 | Board (Kanban) | 2 w | Drag-drop board, swimlanes, filters, saved views | **Done** |
 | 11 | Milestones / sprints | 1.5 w | List, sprint board, burndown, close sprint | **Done** |
-| 12 | Wiki | 1.5 w | Page tree, editor, revisions, diff, restore | |
+| 12 | Wiki | 1.5 w | Page tree, editor, revisions, diff, restore | **Done** |
 | 13 | Command palette, keyboard shortcuts, polish | 1 w | Cmd-K, hotkeys, empty states, micro-animations | |
 | 14 | Permissions UI hardening | 0.5 w | Every action gated, "request access" CTAs | |
 | 15 | Accessibility & l10n audit | 1 w | Screen reader pass, contrast, key flows in EN; pipeline for adding languages | |
@@ -405,7 +405,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 12 — Wiki
+## Phase 12 — Wiki — **Done**
 
 **Scope**
 - `/projects/:id/wiki`: page tree (nested), sortable. "New page" CTA, search.
@@ -418,6 +418,22 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 **Acceptance**
 - Editing a page another user has updated mid-edit shows a "page changed" banner with options: discard / merge view / overwrite.
 - Diff view renders large pages (10k chars) without lag.
+
+**Delivered (2026-05-28)**
+- New `features/wiki/` slice: DTOs for `WikiPage` / `WikiRevision` / `WikiDiff`, `WikiRepository` covering list + get + create + update (ETag round-trip) + delete (ETag round-trip) + list/get revisions + diff (`{from,to,diff}` envelope, server-supplied unified diff text) + restore.
+- Three cubits — `WikiListCubit` (load + search + create + delete), `WikiPageCubit` (load + start/cancel editing + setDraftBody/Title + save + overwrite for conflict resolution + restoreRevision), `WikiRevisionsCubit` (load + select-with-lazy-body+diff fetch).
+- Pages:
+  - `WikiListPage` at `/projects/:id/wiki` — searchable card list, "New page" FAB gated on `Permission.wikiCreate`; create dialog jumps straight to the new page.
+  - `WikiPageView` at `/projects/:projectId/wiki/:pageId` — view ↔ edit toggle; edit mode is a split editor (textfield + live preview pane). Save with the captured ETag; on failure we refetch and surface a conflict banner with Overwrite / Discard choices.
+  - `WikiRevisionsPage` at `/projects/:projectId/wiki/:pageId/revisions` — left rail of revisions, right pane has Snapshot + Diff tabs. Diff lines are coloured (`+` green, `-` red, `@@` hunk markers shaded). Restore prompts before issuing the POST.
+- Project overview gets a tonal "Open wiki" CTA, gated on `project.wikiEnabled`. Route helpers: `Routes.projectWikiFor`, `Routes.wikiPageFor`, `Routes.wikiRevisionsFor`.
+- Wire-format tests for list/get/update (ETag + If-Match shape) + revisions list + diff (query param + envelope) + restore endpoint. `flutter analyze` clean; **217 tests pass**; web release build green.
+- Deferred / out of scope:
+  - **Page tree / nesting** — the backend schema is flat (no `parent_id`), so v1 ships a flat list. Tree comes when the backend grows a parent relation.
+  - **Rendered markdown / HTML output** — the page body renders as monospace plain text. Adding a markdown widget (`flutter_markdown` is deprecated; `markdown_widget` or `flutter_html` are candidates) is parked for Phase 13 polish to avoid a dep bump mid-stream.
+  - **Inline attachments via signed URLs** — the existing attachments slice covers backlog entities; extending it to wiki + inline image rendering follows the markdown widget decision.
+  - **Editor draft autosave to Hive** — the in-memory cubit draft survives the editor session but doesn't persist across page reloads yet. Wiring through `HiveBoxes.drafts` keyed on `wiki:<pageId>` is a small follow-up but parked to keep this phase tight.
+  - **"Merge view" conflict option** — the banner currently exposes Overwrite + Discard. A real three-way merge UI lands with Phase 17 polish.
 
 ---
 

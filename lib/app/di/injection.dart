@@ -28,6 +28,8 @@ import 'package:intellipilot/features/profile/data/profile_repository_impl.dart'
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/projects_repository_impl.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
+import 'package:intellipilot/features/wiki/data/wiki_repository_impl.dart';
+import 'package:intellipilot/features/wiki/domain/wiki_repository.dart';
 import 'package:logger/logger.dart';
 
 /// Global service locator. Composition is intentionally manual at this stage
@@ -132,6 +134,9 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<BoardRepository>(
     () => BoardRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<WikiRepository>(
+    () => WikiRepositoryImpl(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
   getIt.registerLazySingleton<FileDownloader>(FileDownloader.new);
   getIt.registerLazySingleton<FilePicker>(FilePicker.new);
@@ -155,6 +160,7 @@ Future<void> configureForTests({
   ActivityRepository? activityRepository,
   MilestonesRepository? milestonesRepository,
   BoardRepository? boardRepository,
+  WikiRepository? wikiRepository,
   FileDownloader? fileDownloader,
   FilePicker? filePicker,
   ApiConfig? apiConfig,
@@ -207,6 +213,9 @@ Future<void> configureForTests({
     )
     ..registerSingleton<BoardRepository>(
       boardRepository ?? _NoopBoardRepository(),
+    )
+    ..registerSingleton<WikiRepository>(
+      wikiRepository ?? _NoopWikiRepository(),
     )
     ..registerSingleton<FileDownloader>(
       fileDownloader ?? const _InMemoryDownloader(),
@@ -306,6 +315,14 @@ class _NoopBoardRepository implements BoardRepository {
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError(
         '_NoopBoardRepository.${invocation.memberName}',
+      );
+}
+
+class _NoopWikiRepository implements WikiRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(
+        '_NoopWikiRepository.${invocation.memberName}',
       );
 }
 

@@ -26,6 +26,9 @@ import 'package:intellipilot/features/projects/presentation/project_overview_pag
 import 'package:intellipilot/features/projects/presentation/project_settings_page.dart';
 import 'package:intellipilot/features/projects/presentation/projects_list_page.dart';
 import 'package:intellipilot/features/settings/presentation/settings_page.dart';
+import 'package:intellipilot/features/wiki/presentation/wiki_list_page.dart';
+import 'package:intellipilot/features/wiki/presentation/wiki_page_view.dart';
+import 'package:intellipilot/features/wiki/presentation/wiki_revisions_page.dart';
 
 /// Stable route names used by code (do not hard-code paths at call sites).
 abstract class Routes {
@@ -54,6 +57,11 @@ abstract class Routes {
   static String projectMilestonesFor(String id) => '/projects/$id/milestones';
   static String milestoneDetailFor(String projectId, String milestoneId) =>
       '/projects/$projectId/milestones/$milestoneId';
+  static String projectWikiFor(String id) => '/projects/$id/wiki';
+  static String wikiPageFor(String projectId, String pageId) =>
+      '/projects/$projectId/wiki/$pageId';
+  static String wikiRevisionsFor(String projectId, String pageId) =>
+      '/projects/$projectId/wiki/$pageId/revisions';
   static String entityDetailFor(
     String projectId,
     EntityKind kind,
@@ -166,6 +174,28 @@ GoRouter buildRouter({required SessionBloc session}) {
         builder: (context, state) => MilestoneDetailPage(
           projectId: state.pathParameters['projectId']!,
           milestoneId: state.pathParameters['milestoneId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/projects/:id/wiki',
+        name: 'project_wiki',
+        builder: (context, state) =>
+            WikiListPage(projectId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/projects/:projectId/wiki/:pageId',
+        name: 'wiki_page',
+        builder: (context, state) => WikiPageView(
+          projectId: state.pathParameters['projectId']!,
+          pageId: state.pathParameters['pageId']!,
+        ),
+      ),
+      GoRoute(
+        path: '/projects/:projectId/wiki/:pageId/revisions',
+        name: 'wiki_revisions',
+        builder: (context, state) => WikiRevisionsPage(
+          projectId: state.pathParameters['projectId']!,
+          pageId: state.pathParameters['pageId']!,
         ),
       ),
       GoRoute(

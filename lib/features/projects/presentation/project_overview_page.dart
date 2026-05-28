@@ -205,6 +205,13 @@ class _Overview extends StatelessWidget {
                       context.go(Routes.projectMilestonesFor(project.id)),
                   label: Text(t.actionOpenMilestones),
                 ),
+                if (project.wikiEnabled)
+                  FilledButton.tonalIcon(
+                    icon: const Icon(Icons.menu_book_outlined),
+                    onPressed: () =>
+                        context.go(Routes.projectWikiFor(project.id)),
+                    label: Text(t.actionOpenWiki),
+                  ),
                 FilledButton.tonalIcon(
                   icon: const Icon(Icons.bug_report_outlined),
                   onPressed: () =>
