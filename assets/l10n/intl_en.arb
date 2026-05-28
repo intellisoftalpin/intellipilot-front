@@ -1014,5 +1014,20 @@
   "shortcutGoBoardDescription": "Go to this project's board",
   "@shortcutGoBoardDescription": { "description": "Shortcut description." },
   "shortcutGoWikiDescription": "Go to this project's wiki",
-  "@shortcutGoWikiDescription": { "description": "Shortcut description." }
+  "@shortcutGoWikiDescription": { "description": "Shortcut description." },
+
+  "requestAccessTitle": "You don't have access to this section.",
+  "@requestAccessTitle": { "description": "Title shown when a permission gate blocks the page." },
+  "requestAccessBody": "Ask a project admin to grant you the '{permission}' permission.",
+  "@requestAccessBody": {
+    "description": "Body of the request-access card.",
+    "placeholders": { "permission": { "type": "String", "example": "epic.modify" } }
+  },
+  "requestAccessCopyAdmin": "Copy admin email ({email})",
+  "@requestAccessCopyAdmin": {
+    "description": "Button label that puts the admin email on the clipboard.",
+    "placeholders": { "email": { "type": "String", "example": "owner@example.com" } }
+  },
+  "requestAccessCopied": "Email copied to clipboard.",
+  "@requestAccessCopied": { "description": "Snackbar after clipboard copy succeeds." }
 }

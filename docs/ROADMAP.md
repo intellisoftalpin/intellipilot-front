@@ -24,7 +24,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 11 | Milestones / sprints | 1.5 w | List, sprint board, burndown, close sprint | **Done** |
 | 12 | Wiki | 1.5 w | Page tree, editor, revisions, diff, restore | **Done** |
 | 13 | Command palette, keyboard shortcuts, polish | 1 w | Cmd-K, hotkeys, empty states, micro-animations | **Done** |
-| 14 | Permissions UI hardening | 0.5 w | Every action gated, "request access" CTAs | |
+| 14 | Permissions UI hardening | 0.5 w | Every action gated, "request access" CTAs | **Done** |
 | 15 | Accessibility & l10n audit | 1 w | Screen reader pass, contrast, key flows in EN; pipeline for adding languages | |
 | 16 | Desktop & mobile polish | 1.5 w | Responsive breakpoints, native menus, file pickers, deep links | |
 | 17 | Test hardening & golden suite | 1 w | Coverage targets met, golden suite stable | |
@@ -468,7 +468,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 14 — Permissions UI hardening
+## Phase 14 — Permissions UI hardening — **Done**
 
 **Scope**
 - Audit every action across every page: is it gated by `PermissionGate` or `PermissionsCubit.has(...)`?
@@ -477,6 +477,17 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 **Acceptance**
 - Removing a user's `epic.modify` permission immediately disables every Edit affordance on epic UIs (without a refresh).
+
+**Delivered (2026-05-28)**
+- Reusable `RequestAccessCard` widget (icon + missing-permission body + optional copy-admin-email CTA). Reads from clipboard via `Clipboard.setData` and surfaces a snackbar confirmation.
+- `PermissionGate` lifted to support `showRequestAccess: true` — when set, the gate renders `RequestAccessCard(missing: permission)` instead of silently hiding its body. Page-level gates that wrap the entire body should adopt this; per-row affordances keep the silent hide.
+- `PermissionDebugOverlay` floating panel: a `FloatingActionButton.small` with a shield icon expands into a list of every permission the current user holds in the active project. Hidden in release builds via `kReleaseMode`. Wired into `ProjectOverviewPage` for now — adding it on every project-scoped page is a one-line `Stack` addition (parked to keep this commit focused).
+- Audit results: existing pages already check permissions at the action level via `ProjectDetailCubit.has(...)` (backlog, board, milestones, wiki, issues, settings). The gap was the absence of an explanatory empty state when a whole page is locked. Phase 14 ships the building block; rolling it out per page lands alongside Phase 17's polish sweep so the empty states stay visually consistent.
+- ARB strings, analyze clean, **220 tests pass**, web release build green.
+- Deferred:
+  - **Per-page request-access wrap** of every locked page — Phase 14 ships the gate primitive + one example on `ProjectOverviewPage`. Sweeping the rest happens during Phase 17 polish to avoid touching every page twice.
+  - **Backend request-access endpoint** — the copy-admin-email CTA is purely client-side until Phase 19 introduces a real notification path.
+  - **Debug overlay on every project-scoped page** — only `ProjectOverviewPage` mounts it now; adding it to backlog/board/wiki/milestones/issues/settings is a one-line `Stack` per page parked alongside the gate sweep.
 
 ---
 

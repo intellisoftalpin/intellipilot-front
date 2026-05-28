@@ -9,6 +9,7 @@ import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
+import 'package:intellipilot/features/projects/presentation/widgets/permission_debug_overlay.dart';
 import 'package:intellipilot/features/projects/presentation/widgets/permission_gate.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -87,32 +88,37 @@ class _ProjectOverviewView extends StatelessWidget {
           ),
         ],
       ),
-      body: BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
-        builder: (context, state) {
-          if (state is ProjectDetailLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is ProjectDetailFailed) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(t.projectLoadFailed),
-                  const SizedBox(height: 8),
-                  FilledButton(
-                    onPressed: () =>
-                        context.read<ProjectDetailCubit>().load(),
-                    child: Text(t.actionRetry),
+      body: Stack(
+        children: [
+          BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
+            builder: (context, state) {
+              if (state is ProjectDetailLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (state is ProjectDetailFailed) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(t.projectLoadFailed),
+                      const SizedBox(height: 8),
+                      FilledButton(
+                        onPressed: () =>
+                            context.read<ProjectDetailCubit>().load(),
+                        child: Text(t.actionRetry),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            );
-          }
-          if (state is ProjectDetailLoaded) {
-            return _Overview(state: state);
-          }
-          return const SizedBox.shrink();
-        },
+                );
+              }
+              if (state is ProjectDetailLoaded) {
+                return _Overview(state: state);
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+          const PermissionDebugOverlay(),
+        ],
       ),
     );
   }
