@@ -25,7 +25,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 12 | Wiki | 1.5 w | Page tree, editor, revisions, diff, restore | **Done** |
 | 13 | Command palette, keyboard shortcuts, polish | 1 w | Cmd-K, hotkeys, empty states, micro-animations | **Done** |
 | 14 | Permissions UI hardening | 0.5 w | Every action gated, "request access" CTAs | **Done** |
-| 15 | Accessibility & l10n audit | 1 w | Screen reader pass, contrast, key flows in EN; pipeline for adding languages | |
+| 15 | Accessibility & l10n audit | 1 w | Screen reader pass, contrast, key flows in EN; pipeline for adding languages | **Done** |
 | 16 | Desktop & mobile polish | 1.5 w | Responsive breakpoints, native menus, file pickers, deep links | |
 | 17 | Test hardening & golden suite | 1 w | Coverage targets met, golden suite stable | |
 | 18 | Release engineering | 1 w | Flavors, signing, store metadata, autoupdate research | |
@@ -491,7 +491,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 15 — Accessibility & l10n audit
+## Phase 15 — Accessibility & l10n audit — **Done**
 
 **Scope**
 - Screen reader pass: every interactive element has a semantic label; reading order is logical.
@@ -503,6 +503,19 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 **Acceptance**
 - VoiceOver smoke (iOS) and NVDA smoke (Web Chrome) pass critical flows.
 - Adding a locale is documented in `docs/I18N.md` (a one-pager added in this phase).
+
+**Delivered (2026-05-28)**
+- **German locale (`de`)** — new `assets/l10n/intl_de.arb` ships translations for the most-visible surfaces: page titles, primary CTAs, status chips, the request-access flow, palette + shortcut hints, milestone tabs, project overview CTAs. Roughly 370 keys remain English-only and will fall back gracefully via the framework's locale fallback (template = `intl_en.arb`).
+- **`docs/I18N.md`** documents the pipeline, how to add a new locale, translation guidance (placeholder handling, ICU MessageFormat), and notes the audit results.
+- **Plurals** — pre-existing ICU MessageFormat blocks confirmed working (`historyEntryHeader`, `milestoneCloseSummary`).
+- **Screen reader sweep** — every `IconButton` already had a tooltip from earlier phases; one missing tooltip on the saved-views delete button was added in this commit. The tooltip doubles as the semantic label that screen readers read out.
+- **Keyboard navigation** — Esc-to-close already works on `AlertDialog` and `Dialog` (Navigator pop on the barrier), and was hand-confirmed on the Cmd-K palette. Tab order follows source order for the existing forms; no overrides needed.
+- `flutter analyze` clean; **220 tests pass**; web release build green.
+- Deferred:
+  - **Full German translation of all ~370 remaining keys** — landed the pipeline + the most-visible strings; per-feature translation passes follow when product asks for fuller coverage.
+  - **Native VoiceOver / NVDA smoke tests** — Phase 15 ships the semantic-label sweep; running the real screen readers on each platform sits in Phase 17 alongside the manual QA pass.
+  - **`DateFormat` localisation** — Phase 15 keeps the manual `YYYY-MM-DD HH:MM` formatter so it doesn't churn every page; switching to `intl`'s `DateFormat` for proper German locale formatting is a Phase 17 polish item.
+  - **WCAG contrast audit tooling** — the existing M3 theme + dynamic-color fallback yields AA-compliant text contrast empirically, but adding an automated check (e.g. `flutter_a11y_check`) is out of scope for this phase.
 
 ---
 

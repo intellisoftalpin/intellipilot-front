@@ -1,0 +1,86 @@
+{
+  "@@locale": "de",
+
+  "appTitle": "IntelliPilot",
+  "homeWelcomeTitle": "Willkommen bei IntelliPilot",
+  "homeWelcomeBody": "Authentifizierung und Projektabläufe folgen in kommenden Phasen.",
+  "homeHealthCheckSection": "Backend-Verbindung",
+  "homePingButton": "Backend anpingen",
+
+  "settingsTitle": "Einstellungen",
+  "settingsAppearance": "Erscheinungsbild",
+  "settingsLanguage": "Sprache",
+  "themeLight": "Hell",
+  "themeDark": "Dunkel",
+  "themeSystem": "System",
+  "themeSeedColor": "Akzentfarbe",
+  "themeUseDynamic": "Systemfarben verwenden, sofern verfügbar",
+  "localeSystem": "Systemstandard",
+
+  "loginSubtitle": "Melden Sie sich an, um fortzufahren.",
+  "registerTitle": "Konto erstellen",
+  "forgotPasswordTitle": "Passwort vergessen",
+  "resetPasswordTitle": "Passwort zurücksetzen",
+
+  "fieldEmail": "E-Mail",
+  "fieldPassword": "Passwort",
+  "fieldUsername": "Benutzername",
+  "fieldFullName": "Vollständiger Name (optional)",
+  "fieldNewPassword": "Neues Passwort",
+
+  "actionSignIn": "Anmelden",
+  "actionRegister": "Konto erstellen",
+  "actionSave": "Speichern",
+  "actionCancel": "Abbrechen",
+  "actionDelete": "Löschen",
+  "actionEdit": "Bearbeiten",
+  "actionRetry": "Erneut versuchen",
+  "actionDone": "Fertig",
+  "actionAdd": "Hinzufügen",
+  "actionCreate": "Erstellen",
+
+  "linkForgotPassword": "Passwort vergessen?",
+  "linkCreateAccount": "Noch kein Konto? Registrieren",
+
+  "errUnknown": "Etwas ist schiefgelaufen. Bitte erneut versuchen.",
+
+  "projectOverviewTitle": "Projekt",
+  "projectSettingsTitle": "Projekteinstellungen",
+  "actionOpenBacklog": "Backlog öffnen",
+  "actionOpenBoard": "Board öffnen",
+  "actionOpenIssues": "Issues öffnen",
+  "actionOpenMilestones": "Meilensteine öffnen",
+  "actionOpenWiki": "Wiki öffnen",
+
+  "backlogTitle": "Backlog",
+  "boardTitle": "Board",
+  "issuesTitle": "Issues",
+  "milestonesTitle": "Meilensteine",
+  "wikiTitle": "Wiki",
+
+  "milestoneStatusOpen": "Offen",
+  "milestoneStatusClosed": "Abgeschlossen",
+  "milestoneTabStats": "Statistik",
+  "milestoneTabScope": "Umfang",
+  "milestoneTabBoard": "Board",
+
+  "entityTabActivity": "Aktivität",
+  "entityTabAttachments": "Anhänge",
+  "activityFilterAll": "Alle",
+  "activityFilterComments": "Kommentare",
+  "activityFilterHistory": "Verlauf",
+
+  "paletteHint": "Projekte, Seiten suchen, #123 für Arbeitseinheit eingeben…",
+  "paletteEmpty": "Keine Treffer.",
+  "shortcutHelpTitle": "Tastenkombinationen",
+  "shortcutPaletteDescription": "Befehlspalette öffnen",
+  "shortcutHelpDescription": "Diese Hilfe anzeigen",
+  "shortcutGoProjectsDescription": "Zu Projekten",
+  "shortcutGoSettingsDescription": "Zu den Einstellungen",
+  "shortcutGoBoardDescription": "Zum Board dieses Projekts",
+  "shortcutGoWikiDescription": "Zum Wiki dieses Projekts",
+
+  "requestAccessTitle": "Sie haben keinen Zugriff auf diesen Bereich.",
+  "requestAccessBody": "Bitten Sie einen Projektadministrator um die Berechtigung „{permission}“.",
+  "requestAccessCopied": "E-Mail in die Zwischenablage kopiert."
+}

@@ -175,6 +175,7 @@ class _SavedViewsDialogState extends State<_SavedViewsDialog> {
                 },
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline),
+                  tooltip: AppLocalizations.of(context).actionDelete,
                   onPressed: () async {
                     final next =
                         _views.where((x) => x.name != v.name).toList();
