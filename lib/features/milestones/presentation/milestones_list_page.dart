@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
 import 'package:intellipilot/features/milestones/presentation/cubits/milestones_list_cubit.dart';
@@ -107,11 +108,10 @@ class _ListView extends StatelessWidget {
           }
           if (state is! MilestonesListLoaded) return const SizedBox.shrink();
           if (state.milestones.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(t.milestonesEmpty, textAlign: TextAlign.center),
-              ),
+            return EmptyState(
+              icon: Icons.flag_outlined,
+              title: t.milestonesTitle,
+              body: t.milestonesEmpty,
             );
           }
           final detail = context.watch<ProjectDetailCubit>().state;

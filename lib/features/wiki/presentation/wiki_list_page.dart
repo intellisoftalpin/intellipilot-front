@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
@@ -101,11 +102,10 @@ class _View extends StatelessWidget {
           }
           if (state is! WikiListLoaded) return const SizedBox.shrink();
           if (state.pages.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(t.wikiEmpty, textAlign: TextAlign.center),
-              ),
+            return EmptyState(
+              icon: Icons.article_outlined,
+              title: t.wikiTitle,
+              body: t.wikiEmpty,
             );
           }
           return Center(

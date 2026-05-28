@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intellipilot/core/ui/markdown_text.dart';
+import 'package:intellipilot/core/ui/timestamps.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/cubits/activity_stream_cubit.dart';
 import 'package:intellipilot/features/activity/presentation/widgets/comment_composer.dart';
@@ -124,7 +126,7 @@ class _CommentRow extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _timestamp(context, comment.createdAt),
+                    formatTimestamp(context, comment.createdAt),
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
@@ -150,7 +152,7 @@ class _CommentRow extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            SelectableText(comment.body),
+            MarkdownText(comment.body),
           ],
         ),
       ),
@@ -240,7 +242,7 @@ class _HistoryRow extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _timestamp(context, event.createdAt),
+                    formatTimestamp(context, event.createdAt),
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
@@ -311,14 +313,4 @@ class _ComposerGate extends StatelessWidget {
     if (!canComment) return const SizedBox.shrink();
     return CommentComposer(draftKey: draftKey, busy: busy);
   }
-}
-
-String _timestamp(BuildContext context, DateTime dt) {
-  final local = dt.toLocal();
-  final yy = local.year.toString().padLeft(4, '0');
-  final mm = local.month.toString().padLeft(2, '0');
-  final dd = local.day.toString().padLeft(2, '0');
-  final h = local.hour.toString().padLeft(2, '0');
-  final m = local.minute.toString().padLeft(2, '0');
-  return '$yy-$mm-$dd $h:$m';
 }

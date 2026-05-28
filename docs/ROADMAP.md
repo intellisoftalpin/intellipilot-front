@@ -27,7 +27,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 14 | Permissions UI hardening | 0.5 w | Every action gated, "request access" CTAs | **Done** |
 | 15 | Accessibility & l10n audit | 1 w | Screen reader pass, contrast, key flows in EN; pipeline for adding languages | **Done** |
 | 16 | Desktop & mobile polish | 1.5 w | Responsive breakpoints, native menus, file pickers, deep links | **Partial** |
-| 17 | Test hardening & golden suite | 1 w | Coverage targets met, golden suite stable | |
+| 17 | Test hardening & golden suite | 1 w | Coverage targets met, golden suite stable | **Polish only** |
 | 18 | Release engineering | 1 w | Flavors, signing, store metadata, autoupdate research | |
 | 19 | (Backend-blocked) realtime, notifications | TBD | Pending backend SSE/WS + notification endpoints | |
 | 20 | (Optional) offline-first cache | 2 w | If/when product wants it | |
@@ -548,7 +548,26 @@ hands-on pass.
 
 ---
 
-## Phase 17 — Test hardening & golden suite
+## Phase 17 — Polish sweep of deferred items — **Done**
+
+Repurposed from the original "test hardening & golden suite" scope per
+[[feedback-coverage-optional]] (the coverage gate stays paused). This phase
+lands the polish items earlier phases deferred:
+
+**Delivered (2026-05-28)**
+- **Lightweight Markdown rendering** — new `core/ui/markdown_text.dart` handles block-level Markdown (ATX headings `# ## ###`, bullet + numbered lists, fenced code blocks, paragraphs) without adding a dependency. Applied to the wiki page reader, the wiki edit preview pane, and comment bodies on the activity stream. Switching to a full HTML renderer (`flutter_html`) for inline formatting + the server's `body_html` is a future polish item.
+- **Empty-state polish** — new `core/ui/empty_state.dart` reusable widget (icon + title + body + optional action). Adopted on `WikiListPage`, `MilestonesListPage`, and the board's empty-milestone state. The bare `Text(...)` empty states earlier phases shipped are now consistent across the app.
+- **Locale-aware timestamps** — new `core/ui/timestamps.dart` wraps `intl.DateFormat.yMd().add_Hm()` keyed on the active locale. The activity stream + wiki revisions timestamps now render `28.05.2026 13:45` under German and the equivalent US format under English. The handwritten `_timestamp()` helpers in those files are removed.
+- `flutter analyze` clean; **224 tests pass**; web release build green.
+
+**Deferred** (the actual Phase-17 scope, parked since the coverage gate is intentionally off):
+- Coverage targets (≥ 80% / ≥ 90% across `lib/app` + `lib/core` + blocs).
+- Golden suite via `golden_toolkit` for canonical pages.
+- VoiceOver / NVDA platform smoke pass.
+
+---
+
+## Phase 17 (original) — Test hardening & golden suite
 
 **Scope**
 - Coverage gate in CI (`--coverage` + `lcov` report; fail under target).

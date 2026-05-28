@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
@@ -144,17 +145,18 @@ class _Reader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 760),
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: SelectableText(
-            state.page.body.isEmpty
-                ? '— ${AppLocalizations.of(context).wikiEmptyBody} —'
-                : state.page.body,
-            style: const TextStyle(fontFamily: 'monospace'),
-          ),
+          child: state.page.body.isEmpty
+              ? Text(
+                  '— ${t.wikiEmptyBody} —',
+                  style: TextStyle(color: Theme.of(context).colorScheme.outline),
+                )
+              : MarkdownText(state.page.body),
         ),
       ),
     );
@@ -214,12 +216,15 @@ class _Editor extends StatelessWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: SingleChildScrollView(
-                        child: SelectableText(
-                          (state.draftBody ?? state.page.body).isEmpty
-                              ? '— ${t.wikiEmptyBody} —'
-                              : (state.draftBody ?? state.page.body),
-                          style: const TextStyle(fontFamily: 'monospace'),
-                        ),
+                        child: (state.draftBody ?? state.page.body).isEmpty
+                            ? Text(
+                                '— ${t.wikiEmptyBody} —',
+                                style: TextStyle(
+                                  color:
+                                      Theme.of(context).colorScheme.outline,
+                                ),
+                              )
+                            : MarkdownText(state.draftBody ?? state.page.body),
                       ),
                     ),
                   ),

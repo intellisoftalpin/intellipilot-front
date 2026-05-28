@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/data/dtos/board_dtos.dart';
@@ -116,18 +117,10 @@ class _BoardView extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
           if (state is BoardEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.flag_outlined, size: 48),
-                    const SizedBox(height: 12),
-                    Text(t.boardNeedsMilestone, textAlign: TextAlign.center),
-                  ],
-                ),
-              ),
+            return EmptyState(
+              icon: Icons.flag_outlined,
+              title: t.boardTitle,
+              body: t.boardNeedsMilestone,
             );
           }
           if (state is BoardFailed) {

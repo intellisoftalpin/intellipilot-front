@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/core/ui/timestamps.dart';
 import 'package:intellipilot/features/wiki/data/dtos/wiki_dtos.dart';
 import 'package:intellipilot/features/wiki/domain/wiki_repository.dart';
 import 'package:intellipilot/features/wiki/presentation/cubits/wiki_page_cubit.dart';
@@ -70,7 +71,7 @@ class _View extends StatelessWidget {
                       selected: selected,
                       dense: true,
                       title: Text('r${rev.rev} · ${rev.title}'),
-                      subtitle: Text(_timestamp(rev.createdAt)),
+                      subtitle: Text(formatTimestamp(context, rev.createdAt)),
                       onTap: () =>
                           context.read<WikiRevisionsCubit>().select(rev.rev),
                     );
@@ -204,14 +205,4 @@ class _DiffView extends StatelessWidget {
       },
     );
   }
-}
-
-String _timestamp(DateTime dt) {
-  final local = dt.toLocal();
-  final yy = local.year.toString().padLeft(4, '0');
-  final mm = local.month.toString().padLeft(2, '0');
-  final dd = local.day.toString().padLeft(2, '0');
-  final h = local.hour.toString().padLeft(2, '0');
-  final m = local.minute.toString().padLeft(2, '0');
-  return '$yy-$mm-$dd $h:$m';
 }
