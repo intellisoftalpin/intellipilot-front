@@ -194,6 +194,12 @@ class _Overview extends StatelessWidget {
                   label: Text(t.actionOpenBacklog),
                 ),
                 FilledButton.tonalIcon(
+                  icon: const Icon(Icons.view_kanban_outlined),
+                  onPressed: () =>
+                      context.go(Routes.projectBoardFor(project.id)),
+                  label: Text(t.actionOpenBoard),
+                ),
+                FilledButton.tonalIcon(
                   icon: const Icon(Icons.bug_report_outlined),
                   onPressed: () =>
                       context.go(Routes.projectIssuesFor(project.id)),

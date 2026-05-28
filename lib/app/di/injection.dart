@@ -15,11 +15,15 @@ import 'package:intellipilot/features/auth/data/auth_repository_impl.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:intellipilot/features/backlog/data/backlog_repository_impl.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
+import 'package:intellipilot/features/board/data/board_repository_impl.dart';
+import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/data/catalog_repository_impl.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/mfa/data/mfa_repository_impl.dart';
 import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
+import 'package:intellipilot/features/milestones/data/milestones_repository_impl.dart';
+import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
 import 'package:intellipilot/features/profile/data/profile_repository_impl.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/projects_repository_impl.dart';
@@ -57,6 +61,10 @@ Future<void> configureDependencies({
     ..registerLazySingleton<KeyValueStorage>(
       () => makeStorage(HiveBoxes.drafts),
       instanceName: HiveBoxes.drafts,
+    )
+    ..registerLazySingleton<KeyValueStorage>(
+      () => makeStorage(HiveBoxes.boards),
+      instanceName: HiveBoxes.boards,
     );
 
   // --- Primitives ------------------------------------------------------
@@ -118,6 +126,12 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<ActivityRepository>(
     () => ActivityRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<MilestonesRepository>(
+    () => MilestonesRepositoryImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<BoardRepository>(
+    () => BoardRepositoryImpl(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
   getIt.registerLazySingleton<FileDownloader>(FileDownloader.new);
   getIt.registerLazySingleton<FilePicker>(FilePicker.new);
@@ -139,6 +153,8 @@ Future<void> configureForTests({
   CatalogRepository? catalogRepository,
   BacklogRepository? backlogRepository,
   ActivityRepository? activityRepository,
+  MilestonesRepository? milestonesRepository,
+  BoardRepository? boardRepository,
   FileDownloader? fileDownloader,
   FilePicker? filePicker,
   ApiConfig? apiConfig,
@@ -153,6 +169,10 @@ Future<void> configureForTests({
     ..registerSingleton<KeyValueStorage>(
       draftsStorage ?? InMemoryKeyValueStorage(),
       instanceName: HiveBoxes.drafts,
+    )
+    ..registerSingleton<KeyValueStorage>(
+      InMemoryKeyValueStorage(),
+      instanceName: HiveBoxes.boards,
     )
     ..registerSingleton<UuidGen>(const DefaultUuidGen())
     ..registerSingleton<Logger>(Logger())
@@ -181,6 +201,12 @@ Future<void> configureForTests({
     )
     ..registerSingleton<ActivityRepository>(
       activityRepository ?? _NoopActivityRepository(),
+    )
+    ..registerSingleton<MilestonesRepository>(
+      milestonesRepository ?? _NoopMilestonesRepository(),
+    )
+    ..registerSingleton<BoardRepository>(
+      boardRepository ?? _NoopBoardRepository(),
     )
     ..registerSingleton<FileDownloader>(
       fileDownloader ?? const _InMemoryDownloader(),
@@ -264,6 +290,22 @@ class _NoopActivityRepository implements ActivityRepository {
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError(
         '_NoopActivityRepository.${invocation.memberName}',
+      );
+}
+
+class _NoopMilestonesRepository implements MilestonesRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(
+        '_NoopMilestonesRepository.${invocation.memberName}',
+      );
+}
+
+class _NoopBoardRepository implements BoardRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(
+        '_NoopBoardRepository.${invocation.memberName}',
       );
 }
 

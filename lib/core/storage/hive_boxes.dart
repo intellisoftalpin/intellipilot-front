@@ -9,6 +9,7 @@ class HiveBoxes {
   static const String ui = 'ui';
   static const String etags = 'etags';
   static const String drafts = 'drafts';
+  static const String boards = 'boards';
 
   /// Initialize Hive and open all app-lifetime boxes.
   static Future<void> init() async {
@@ -18,6 +19,7 @@ class HiveBoxes {
       Hive.openBox<dynamic>(ui),
       Hive.openBox<dynamic>(etags),
       Hive.openBox<dynamic>(drafts),
+      Hive.openBox<dynamic>(boards),
     ]);
   }
 }

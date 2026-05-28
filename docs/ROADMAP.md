@@ -20,7 +20,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 7 | Backlog — epics & user stories | 2 w | Backlog list, detail, CRUD, reorder | **Done** |
 | 8 | Backlog — tasks & issues | 1.5 w | Task/issue CRUD, link to user story / epic | **Done** |
 | 9 | Comments, history, attachments | 1.5 w | Polymorphic comment widget, file upload, activity stream | **Done** |
-| 10 | Board (Kanban) | 2 w | Drag-drop board, swimlanes, filters, saved views | |
+| 10 | Board (Kanban) | 2 w | Drag-drop board, swimlanes, filters, saved views | **Done** |
 | 11 | Milestones / sprints | 1.5 w | List, sprint board, burndown, close sprint | |
 | 12 | Wiki | 1.5 w | Page tree, editor, revisions, diff, restore | |
 | 13 | Command palette, keyboard shortcuts, polish | 1 w | Cmd-K, hotkeys, empty states, micro-animations | |
@@ -337,7 +337,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 10 — Board (Kanban)
+## Phase 10 — Board (Kanban) — **Done**
 
 **Scope**
 - `/projects/:id/board`: columns from taxonomy `status` kind, cards from active milestone user-stories + tasks.
@@ -352,6 +352,21 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 - Board renders 200 cards across 6 columns with no jank on a mid-spec laptop (web profile).
 - Drag operation has < 100 ms perceived latency thanks to optimistic update.
 - Saved views survive restart; "Default view" can be set per user per project.
+
+**Delivered (2026-05-28)**
+- New `features/board/` slice plus a minimal `features/milestones/` slice (list-only, since the board scopes to one milestone and full milestone CRUD ships in Phase 11). `BoardRepository.load(projectId, milestoneId)` wraps the polymorphic `/milestones/:id/board` endpoint; `MilestonesRepository.list` powers the appbar picker.
+- `BoardCubit` owns {milestones, current milestoneId, BoardSnapshot, BoardFilter}. It loads the open milestone by default (falling back to the first one if all are closed), exposes `switchMilestone`, `setFilter`, and an optimistic `moveCard` that PATCHes user-story `status_id` with the existing ETag round-trip and rolls back via `staleData: true` + reload on 409.
+- New `/projects/:id/board` page: horizontal scroll of Material `DragTarget` columns + `LongPressDraggable` cards. Cards open the entity detail page on tap (long-press starts a drag). Highlight on the column under the cursor.
+- Right-edge `BoardFiltersDrawer` with a search field + assignee dropdown (computed from cards currently on screen). Reset button clears the in-memory filter.
+- Saved views: `SavedView` records persist to a new `HiveBoxes.boards` box, keyed `views:<projectId>`. The dialog supports create / apply / delete. Applying a saved view re-filters and switches to its milestone.
+- Project overview gains a tonal "Open board" CTA next to "Open backlog" / "Open issues". Route helper `Routes.projectBoardFor(id)` added.
+- Wire-format tests for the milestones envelope, the board envelope (status + nested user_stories + tasks), and the null-status trailing column. `flutter analyze` clean; **207 tests pass**; web release build green.
+- Deferred / out of scope:
+  - **Swimlanes** (group-by rows) parked for Phase 13 polish — the cubit's data shape supports it but the UI affordance isn't surfaced yet.
+  - **WIP limits** parked until the backend exposes `wip_limit` on `TaxonomyItem` (not in the current schema).
+  - **Card side-sheet vs full page**: Phase 10 ships full-page navigation only; the side-sheet variant for wide breakpoints stays a Phase 13 polish item.
+  - **Hover quick-actions toolbar** (assign-to-me, change status, add comment) is parked behind Phase 13 since long-press drag + tap-to-open already covers the v1 mouse flow.
+  - **Filter axes beyond search/assignee** (label, component, type, priority, severity) need an enriched board endpoint that doesn't bake labels/components/type/etc. into the user-story shape — likely a Phase 13 follow-up alongside Cmd-K.
 
 ---
 
