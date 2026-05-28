@@ -1077,5 +1077,14 @@
   "taskBoardNoStatuses": "No task statuses configured yet. Add at least one in Catalog → Task statuses to use the task board.",
   "@taskBoardNoStatuses": { "description": "Empty-state copy when the task_status taxonomy is empty." },
   "actionOpenTaskBoard": "Open task board",
-  "@actionOpenTaskBoard": { "description": "Project overview CTA." }
+  "@actionOpenTaskBoard": { "description": "Project overview CTA." },
+
+  "actionNewTask": "New task",
+  "@actionNewTask": { "description": "Dialog title for creating a task." },
+  "actionEditTask": "Edit task",
+  "@actionEditTask": { "description": "Dialog title for editing a task." },
+  "taskFieldParent": "Parent user story",
+  "@taskFieldParent": { "description": "Field label inside the task edit dialog." },
+  "taskNoParent": "— No parent —",
+  "@taskNoParent": { "description": "Dropdown placeholder for a task with no parent user story." }
 }
