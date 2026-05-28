@@ -17,7 +17,12 @@ class CookieSetup {
 
   factory CookieSetup.inMemory() {
     final jar = CookieJar();
-    return CookieSetup(jar: jar, manager: CookieManager(jar));
+    // The dio cookie manager asserts !kIsWeb in its constructor — on web,
+    // browser-owned cookies are used instead.
+    return CookieSetup(
+      jar: jar,
+      manager: kIsWeb ? null : CookieManager(jar),
+    );
   }
 
   final CookieJar jar;
