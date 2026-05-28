@@ -63,7 +63,12 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
   }
 
   void _reload() {
-    setState(() => _future = _load());
+    // Block body, not `=> _future = _load()` — that arrow form returns the
+    // Future the assignment evaluates to, which setState rejects as
+    // "callback returned a Future" in strict mode.
+    setState(() {
+      _future = _load();
+    });
   }
 
   @override
