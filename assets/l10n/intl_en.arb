@@ -995,5 +995,24 @@
     "placeholders": { "rev": { "type": "int", "example": "3" } }
   },
   "wikiDiffEmpty": "No diff available.",
-  "@wikiDiffEmpty": { "description": "Empty state inside the diff tab." }
+  "@wikiDiffEmpty": { "description": "Empty state inside the diff tab." },
+
+  "paletteHint": "Search projects, pages, type #123 for a work item…",
+  "@paletteHint": { "description": "Cmd-K palette input hint." },
+  "paletteEmpty": "No matches.",
+  "@paletteEmpty": { "description": "Empty state inside the Cmd-K palette." },
+  "shortcutHelpTitle": "Keyboard shortcuts",
+  "@shortcutHelpTitle": { "description": "Help dialog title." },
+  "shortcutPaletteDescription": "Open the command palette",
+  "@shortcutPaletteDescription": { "description": "Shortcut description." },
+  "shortcutHelpDescription": "Show this help",
+  "@shortcutHelpDescription": { "description": "Shortcut description." },
+  "shortcutGoProjectsDescription": "Go to projects",
+  "@shortcutGoProjectsDescription": { "description": "Shortcut description." },
+  "shortcutGoSettingsDescription": "Go to settings",
+  "@shortcutGoSettingsDescription": { "description": "Shortcut description." },
+  "shortcutGoBoardDescription": "Go to this project's board",
+  "@shortcutGoBoardDescription": { "description": "Shortcut description." },
+  "shortcutGoWikiDescription": "Go to this project's wiki",
+  "@shortcutGoWikiDescription": { "description": "Shortcut description." }
 }

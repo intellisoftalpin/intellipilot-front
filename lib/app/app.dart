@@ -5,6 +5,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
+import 'package:intellipilot/app/shell/keyboard_shortcuts.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
@@ -50,6 +51,9 @@ class _IntelliPilotAppState extends State<IntelliPilotApp> {
                         AppLocalizations.localizationsDelegates,
                     supportedLocales: AppLocalizations.supportedLocales,
                     routerConfig: _router,
+                    builder: (context, child) => GlobalShortcutsShell(
+                      child: child ?? const SizedBox.shrink(),
+                    ),
                   );
                 },
               );

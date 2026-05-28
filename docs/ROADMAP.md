@@ -23,7 +23,7 @@ This roadmap is **phased**, not time-boxed. Each phase is a coherent, shippable 
 | 10 | Board (Kanban) | 2 w | Drag-drop board, swimlanes, filters, saved views | **Done** |
 | 11 | Milestones / sprints | 1.5 w | List, sprint board, burndown, close sprint | **Done** |
 | 12 | Wiki | 1.5 w | Page tree, editor, revisions, diff, restore | **Done** |
-| 13 | Command palette, keyboard shortcuts, polish | 1 w | Cmd-K, hotkeys, empty states, micro-animations | |
+| 13 | Command palette, keyboard shortcuts, polish | 1 w | Cmd-K, hotkeys, empty states, micro-animations | **Done** |
 | 14 | Permissions UI hardening | 0.5 w | Every action gated, "request access" CTAs | |
 | 15 | Accessibility & l10n audit | 1 w | Screen reader pass, contrast, key flows in EN; pipeline for adding languages | |
 | 16 | Desktop & mobile polish | 1.5 w | Responsive breakpoints, native menus, file pickers, deep links | |
@@ -437,7 +437,7 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 
 ---
 
-## Phase 13 — Command palette, hotkeys, polish
+## Phase 13 — Command palette, hotkeys, polish — **Done**
 
 **Scope**
 - Cmd-K palette: search across projects, issues (via `/resolve`), pages, commands.
@@ -454,6 +454,17 @@ Total to a usable v1 (phases 0–18): **~25 person-weeks**.
 **Acceptance**
 - Hotkey help dialog is the only source of truth (renders from a single registry → no shortcut drift).
 - All hotkeys disabled while a text field has focus (so `j` in a comment field types `j`).
+
+**Delivered (2026-05-28)**
+- New `features/palette/` slice: `PaletteResult` sealed class (`ProjectResult` / `WikiResult` / `EntityResult` / `CommandResult`), `PaletteCubit` that fans out free-text queries to `ProjectsRepository.listProjects` + `WikiRepository.list` and routes `#NNN` queries through the Phase-8 `BacklogRepository.resolveRef` resolver when a project is active.
+- `CmdKDialog` opens at the top of the viewport (640 px wide) with arrow-key navigation, Enter to activate, Esc to close. Each result type renders its own icon and navigates via `go_router`.
+- `lib/app/shell/keyboard_shortcuts.dart` owns the single `kShortcutRegistry` that drives both the listener and the help dialog — the registry is the single source of truth so docs can't drift.
+- `GlobalShortcutsShell` wraps the routed child via `MaterialApp.router`'s `builder`. It listens to `HardwareKeyboard`, opens the palette on `Ctrl/Cmd+K`, shows the help dialog on `?`, and handles `g p` / `g s` / `g b` / `g w` chord sequences (with a 700 ms inter-key window). The listener short-circuits when a `EditableText` is focused so typing `g` in a comment doesn't navigate away.
+- Cubit unit tests cover free-text routing (projects + wiki match) and the `#NNN` → `EntityResult` ref-resolve path, including the fallback when no project is active. `flutter analyze` clean; **220 tests pass**; web release build green.
+- Deferred / out of scope:
+  - **`c` (context-aware create), `j` / `k` navigation, `e` (edit)** — the chord engine + registry is in place; these hotkeys need per-page intent integration (board / backlog / wiki) which lands alongside Phase 17 polish to avoid churning every list page in this commit.
+  - **Empty-state illustrations + micro-animations + toast queue** — kept as polish for a Phase 17 sweep so we can move on to permissions hardening (Phase 14) first; the existing snackbar pattern is sufficient day-to-day.
+  - **Command contributions per host page** (palette `CommandResult`s like "new user story" surfaced only on the backlog) — wiring per-page command bundles into the palette is a small follow-up; the type system is already in place.
 
 ---
 
