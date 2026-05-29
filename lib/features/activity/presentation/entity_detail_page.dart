@@ -389,7 +389,6 @@ class _DetailView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final entity = data.entity;
     final t = AppLocalizations.of(context);
     final isWide = Breakpoints.of(context).isExpanded;
@@ -411,18 +410,17 @@ class _DetailView extends StatelessWidget {
           ],
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(40),
+          preferredSize: const Size.fromHeight(56),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text(
-                entity.subject,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              child: _SubjectEditor(
+                entity: entity,
+                kind: kind,
+                projectId: projectId,
+                entityId: entityId,
+                onChanged: onChanged,
               ),
             ),
           ),
@@ -493,6 +491,104 @@ class _DetailView extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Action bar
 // ---------------------------------------------------------------------------
+
+/// Click-to-edit description panel — Jira-style. Display renders the
+/// stored markdown; tap switches to a multiline text field for raw
+/// markdown editing. Save PATCHes via the shared dispatcher.
+class _DescriptionEditor extends StatelessWidget {
+  const _DescriptionEditor({
+    required this.data,
+    required this.kind,
+    required this.entityId,
+    required this.projectId,
+    required this.onChanged,
+  });
+
+  final _PageData data;
+  final EntityKind kind;
+  final String entityId;
+  final String projectId;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final canEdit = context.select<ProjectDetailCubit, bool>((c) {
+      final s = c.state;
+      return s is ProjectDetailLoaded && s.has(_modifyPermissionFor(kind));
+    });
+    return _InlineTextEditor(
+      value: data.entity.description,
+      canEdit: canEdit,
+      multiline: true,
+      placeholder: t.descriptionPlaceholder,
+      displayBuilder: (_) => MarkdownText(data.entity.description),
+      onSave: (next) async {
+        final ok = await _patchEntityKind(
+          kind: kind,
+          projectId: projectId,
+          entityId: entityId,
+          epicPatch: () => UpdateEpicRequest(description: next),
+          usPatch: () => UpdateUserStoryRequest(description: next),
+          taskPatch: () => UpdateTaskRequest(description: next),
+          issuePatch: () => UpdateIssueRequest(description: next),
+        );
+        if (ok) onChanged();
+        return ok;
+      },
+    );
+  }
+}
+
+/// Inline-editable title in the app bar. Renders the entity subject
+/// as a bold heading; click-to-edit switches to a TextField. Save
+/// PATCHes the subject for any kind via the shared dispatcher.
+class _SubjectEditor extends StatelessWidget {
+  const _SubjectEditor({
+    required this.entity,
+    required this.kind,
+    required this.projectId,
+    required this.entityId,
+    required this.onChanged,
+  });
+
+  final _EntityRecord entity;
+  final EntityKind kind;
+  final String projectId;
+  final String entityId;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final canEdit = context.select<ProjectDetailCubit, bool>((c) {
+      final s = c.state;
+      return s is ProjectDetailLoaded && s.has(_modifyPermissionFor(kind));
+    });
+    return _InlineTextEditor(
+      value: entity.subject,
+      canEdit: canEdit,
+      displayStyle: theme.textTheme.titleLarge?.copyWith(
+        fontWeight: FontWeight.w700,
+      ),
+      onSave: (next) async {
+        final trimmed = next.trim();
+        if (trimmed.isEmpty) return false;
+        final ok = await _patchEntityKind(
+          kind: kind,
+          projectId: projectId,
+          entityId: entityId,
+          epicPatch: () => UpdateEpicRequest(subject: trimmed),
+          usPatch: () => UpdateUserStoryRequest(subject: trimmed),
+          taskPatch: () => UpdateTaskRequest(subject: trimmed),
+          issuePatch: () => UpdateIssueRequest(subject: trimmed),
+        );
+        if (ok) onChanged();
+        return ok;
+      },
+    );
+  }
+}
 
 class _ActionBar extends StatelessWidget {
   const _ActionBar({
@@ -760,15 +856,13 @@ class _LeftColumn extends StatelessWidget {
         const SizedBox(height: 12),
         _Panel(
           title: AppLocalizations.of(context).panelDescription,
-          child: data.entity.description.isEmpty
-              ? Text(
-                  AppLocalizations.of(context).descriptionPlaceholder,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.outline,
-                    fontStyle: FontStyle.italic,
-                  ),
-                )
-              : MarkdownText(data.entity.description),
+          child: _DescriptionEditor(
+            data: data,
+            kind: kind,
+            entityId: entityId,
+            projectId: projectId,
+            onChanged: onChanged,
+          ),
         ),
         const SizedBox(height: 12),
         _Panel(
@@ -1623,6 +1717,11 @@ class _PeopleTable extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
+        // Reporter (ownerId) is read-only at the API layer — none of
+        // the UpdateXxxRequest DTOs expose an ownerId field. The
+        // creator stays immutable. Surface it as plain text so users
+        // don't expect a click-to-edit affordance that the backend
+        // would reject.
         _kvRow(
           context,
           t.detailFieldReporter,
@@ -1751,6 +1850,207 @@ Permission _modifyPermissionFor(EntityKind kind) => switch (kind) {
       EntityKind.task => Permission.taskModify,
       EntityKind.issue => Permission.issueModify,
     };
+
+/// Shared PATCH dispatcher for any field on the entity detail page.
+/// The caller passes only the builder matching the active kind; the
+/// helper fetches the fresh entity for its etag, runs the PATCH, and
+/// returns true on success. Pages are responsible for calling
+/// `onChanged()` themselves on the result.
+Future<bool> _patchEntityKind({
+  required EntityKind kind,
+  required String projectId,
+  required String entityId,
+  UpdateEpicRequest Function()? epicPatch,
+  UpdateUserStoryRequest Function()? usPatch,
+  UpdateTaskRequest Function()? taskPatch,
+  UpdateIssueRequest Function()? issuePatch,
+}) async {
+  final backlog = getIt<BacklogRepository>();
+  switch (kind) {
+    case EntityKind.epic:
+      if (epicPatch == null) return false;
+      final fresh = (await backlog.getEpic(projectId, entityId)).valueOrNull;
+      if (fresh?.etag == null) return false;
+      final res = await backlog.updateEpic(
+        projectId,
+        entityId,
+        body: epicPatch(),
+        etag: fresh!.etag!,
+      );
+      return res.isOk;
+    case EntityKind.userStory:
+      if (usPatch == null) return false;
+      final fresh =
+          (await backlog.getUserStory(projectId, entityId)).valueOrNull;
+      if (fresh?.etag == null) return false;
+      final res = await backlog.updateUserStory(
+        projectId,
+        entityId,
+        body: usPatch(),
+        etag: fresh!.etag!,
+      );
+      return res.isOk;
+    case EntityKind.task:
+      if (taskPatch == null) return false;
+      final fresh = (await backlog.getTask(projectId, entityId)).valueOrNull;
+      if (fresh?.etag == null) return false;
+      final res = await backlog.updateTask(
+        projectId,
+        entityId,
+        body: taskPatch(),
+        etag: fresh!.etag!,
+      );
+      return res.isOk;
+    case EntityKind.issue:
+      if (issuePatch == null) return false;
+      final fresh = (await backlog.getIssue(projectId, entityId)).valueOrNull;
+      if (fresh?.etag == null) return false;
+      final res = await backlog.updateIssue(
+        projectId,
+        entityId,
+        body: issuePatch(),
+        etag: fresh!.etag!,
+      );
+      return res.isOk;
+  }
+}
+
+/// Reusable click-to-edit text widget. Click on the rendered display
+/// (`displayBuilder` or plain text) → switches into a `TextField` with
+/// inline Save / Cancel. `onSave` returns `true` to commit + collapse,
+/// `false` to keep the editor open with the typed text intact.
+class _InlineTextEditor extends StatefulWidget {
+  const _InlineTextEditor({
+    required this.value,
+    required this.canEdit,
+    required this.onSave,
+    this.placeholder,
+    this.displayBuilder,
+    this.displayStyle,
+    this.multiline = false,
+  });
+
+  final String value;
+  final bool canEdit;
+  final Future<bool> Function(String value) onSave;
+  final String? placeholder;
+  final Widget Function(BuildContext)? displayBuilder;
+  final TextStyle? displayStyle;
+  final bool multiline;
+
+  @override
+  State<_InlineTextEditor> createState() => _InlineTextEditorState();
+}
+
+class _InlineTextEditorState extends State<_InlineTextEditor> {
+  late TextEditingController _ctrl;
+  bool _editing = false;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(covariant _InlineTextEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_editing && oldWidget.value != widget.value) {
+      _ctrl.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final ok = await widget.onSave(_ctrl.text);
+    if (!mounted) return;
+    setState(() {
+      _saving = false;
+      if (ok) _editing = false;
+    });
+  }
+
+  void _cancel() {
+    setState(() {
+      _ctrl.text = widget.value;
+      _editing = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = AppLocalizations.of(context);
+    if (_editing) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            maxLines: widget.multiline ? null : 1,
+            minLines: widget.multiline ? 3 : null,
+            onSubmitted: widget.multiline ? null : (_) => _save(),
+            style: widget.multiline ? null : widget.displayStyle,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: _saving ? null : _cancel,
+                child: Text(t.actionCancel),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: _saving ? null : _save,
+                child: _saving
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(t.actionSave),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+    final hasValue = widget.value.isNotEmpty;
+    final display = hasValue
+        ? (widget.displayBuilder?.call(context) ??
+            Text(widget.value, style: widget.displayStyle))
+        : Text(
+            widget.placeholder ?? '—',
+            style: (widget.displayStyle ?? theme.textTheme.bodyMedium)?.copyWith(
+              color: theme.colorScheme.outline,
+              fontStyle: FontStyle.italic,
+              fontWeight: FontWeight.normal,
+            ),
+          );
+    if (!widget.canEdit) return display;
+    return InkWell(
+      onTap: () => setState(() => _editing = true),
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.all(2),
+        child: display,
+      ),
+    );
+  }
+}
 
 Color _hexToColor(String hex) {
   var h = hex.replaceAll('#', '');
