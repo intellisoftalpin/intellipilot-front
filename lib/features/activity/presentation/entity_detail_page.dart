@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -1610,6 +1612,12 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
 /// Opens the inline searchable picker anchored below [anchorContext].
 /// Returns the picked id, the [_kNoneSentinel] for "None", or null if
 /// the user dismissed the popup.
+///
+/// Implemented with [OverlayEntry] rather than `showMenu` because the
+/// stock `_PopupMenuRoute` wraps every entry in `IntrinsicWidth`, and
+/// our picker body has a TextField + ListView that can't compute an
+/// intrinsic width — during the popup's open animation Flutter would
+/// emit `Cannot hit test a render box with no size` errors.
 Future<String?> _showSearchablePicker(
   BuildContext anchorContext, {
   required List<_Candidate> candidates,
@@ -1617,59 +1625,141 @@ Future<String?> _showSearchablePicker(
   required String noneLabel,
 }) async {
   final anchor = anchorContext.findRenderObject() as RenderBox?;
-  final overlay = Overlay.of(anchorContext).context.findRenderObject()
-      as RenderBox?;
+  final overlayState = Overlay.of(anchorContext);
+  final overlay = overlayState.context.findRenderObject() as RenderBox?;
   if (anchor == null || overlay == null) return null;
-  final topLeft = anchor.localToGlobal(Offset.zero, ancestor: overlay);
-  final bottomRight =
-      anchor.localToGlobal(anchor.size.bottomRight(Offset.zero), ancestor: overlay);
-  final position = RelativeRect.fromLTRB(
-    topLeft.dx,
-    bottomRight.dy + 4,
-    overlay.size.width - bottomRight.dx,
-    overlay.size.height - bottomRight.dy,
+
+  const popupWidth = 280.0;
+  const popupHeight = 340.0;
+  const gap = 4.0;
+
+  final anchorTopLeft =
+      anchor.localToGlobal(Offset.zero, ancestor: overlay);
+  final anchorSize = anchor.size;
+  final overlaySize = overlay.size;
+
+  var left = anchorTopLeft.dx;
+  if (left + popupWidth > overlaySize.width - 8) {
+    left = overlaySize.width - popupWidth - 8;
+  }
+  if (left < 8) left = 8;
+
+  var top = anchorTopLeft.dy + anchorSize.height + gap;
+  if (top + popupHeight > overlaySize.height - 8) {
+    // Not enough room below — flip above the anchor.
+    top = anchorTopLeft.dy - popupHeight - gap;
+  }
+  if (top < 8) top = 8;
+
+  final completer = Completer<String?>();
+  late OverlayEntry entry;
+  void close([String? value]) {
+    if (!completer.isCompleted) completer.complete(value);
+    if (entry.mounted) entry.remove();
+  }
+
+  entry = OverlayEntry(
+    builder: (ctx) => _PickerOverlay(
+      left: left,
+      top: top,
+      width: popupWidth,
+      height: popupHeight,
+      candidates: candidates,
+      currentId: currentId,
+      noneLabel: noneLabel,
+      onPicked: close,
+      onDismiss: close,
+    ),
   );
-  return showMenu<String>(
-    context: anchorContext,
-    position: position,
-    constraints: const BoxConstraints(minWidth: 240, maxWidth: 320),
-    items: [
-      _SearchablePickerEntry(
-        candidates: candidates,
-        currentId: currentId,
-        noneLabel: noneLabel,
-      ),
-    ],
-  );
+  overlayState.insert(entry);
+  return completer.future;
 }
 
-/// Custom PopupMenuEntry that hosts the entire searchable picker UI
-/// (search field + filtered candidate list with keyboard navigation).
-/// The State pops the surrounding popup menu with the chosen id when
-/// the user commits.
-class _SearchablePickerEntry extends PopupMenuEntry<String> {
-  const _SearchablePickerEntry({
+/// Modal-style overlay that hosts the searchable picker body. A
+/// full-screen translucent barrier captures outside taps; the picker
+/// itself is positioned and sized by the caller.
+class _PickerOverlay extends StatelessWidget {
+  const _PickerOverlay({
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
     required this.candidates,
     required this.currentId,
     required this.noneLabel,
+    required this.onPicked,
+    required this.onDismiss,
+  });
+
+  final double left;
+  final double top;
+  final double width;
+  final double height;
+  final List<_Candidate> candidates;
+  final String? currentId;
+  final String noneLabel;
+  final ValueChanged<String?> onPicked;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Outside-tap barrier (transparent — Jira-style popups don't
+        // dim the page behind them).
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onDismiss,
+            child: const SizedBox.expand(),
+          ),
+        ),
+        Positioned(
+          left: left,
+          top: top,
+          width: width,
+          height: height,
+          child: Material(
+            elevation: 6,
+            borderRadius: BorderRadius.circular(8),
+            clipBehavior: Clip.antiAlias,
+            color: Theme.of(context).colorScheme.surface,
+            child: _SearchablePickerBody(
+              candidates: candidates,
+              currentId: currentId,
+              noneLabel: noneLabel,
+              onPicked: onPicked,
+              onDismiss: onDismiss,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Body of the searchable picker — TextField at the top, filtered list
+/// below. Pops the hosting overlay via [onPicked] / [onDismiss].
+class _SearchablePickerBody extends StatefulWidget {
+  const _SearchablePickerBody({
+    required this.candidates,
+    required this.currentId,
+    required this.noneLabel,
+    required this.onPicked,
+    required this.onDismiss,
   });
 
   final List<_Candidate> candidates;
   final String? currentId;
   final String noneLabel;
+  final ValueChanged<String?> onPicked;
+  final VoidCallback onDismiss;
 
   @override
-  double get height => 340;
-
-  @override
-  bool represents(String? value) => false;
-
-  @override
-  State<_SearchablePickerEntry> createState() =>
-      _SearchablePickerEntryState();
+  State<_SearchablePickerBody> createState() => _SearchablePickerBodyState();
 }
 
-class _SearchablePickerEntryState extends State<_SearchablePickerEntry> {
+class _SearchablePickerBodyState extends State<_SearchablePickerBody> {
   late final TextEditingController _searchCtrl;
   late final FocusNode _searchFocus;
   int _highlight = 0;
@@ -1724,9 +1814,7 @@ class _SearchablePickerEntryState extends State<_SearchablePickerEntry> {
     if (index < 0 || index >= rows.length) return;
     final row = rows[index];
     if (!row.isSelectable) return;
-    Navigator.of(context).pop(
-      row.isNone ? _kNoneSentinel : row.candidate!.id,
-    );
+    widget.onPicked(row.isNone ? _kNoneSentinel : row.candidate!.id);
   }
 
   @override
@@ -1766,14 +1854,12 @@ class _SearchablePickerEntryState extends State<_SearchablePickerEntry> {
           ),
           _DismissIntent: CallbackAction<_DismissIntent>(
             onInvoke: (_) {
-              Navigator.of(context).pop();
+              widget.onDismiss();
               return null;
             },
           ),
         },
-        child: SizedBox(
-          height: 340,
-          child: Column(
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
@@ -1891,8 +1977,7 @@ class _SearchablePickerEntryState extends State<_SearchablePickerEntry> {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }
 
