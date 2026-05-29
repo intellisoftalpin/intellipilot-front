@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -1406,11 +1407,23 @@ class _Candidate {
   final String? colorHex;
 }
 
-/// Click-to-edit value cell. When [canEdit] is true the display text
-/// becomes a [PopupMenuButton] target: clicking opens the candidate
-/// list (with a "None" option at the top) and picking calls [onPicked]
-/// — which the caller wires to a PATCH + reload.
-class _ClickToEditCell extends StatelessWidget {
+/// Sentinel value popped from the searchable picker when the user
+/// chooses the "None" row. Translated back to `null` before invoking
+/// the caller's handler (PopupMenu routes don't carry nullable values
+/// cleanly — null pops are treated as cancellations).
+const String _kNoneSentinel = '__none__';
+
+/// Click-to-edit value cell, Jira-style.
+///
+/// - **Hover reveal**: caret + subtle background only appear on mouse hover.
+/// - **Truncation tooltip**: long display text surfaces the full value.
+/// - **Searchable picker**: tap → custom MenuAnchor with a filter field at
+///   the top and keyboard navigation (↑/↓/Enter/Esc).
+/// - **Permission gate**: when [canEdit] is false the row stays tappable
+///   so we can surface a SnackBar explaining why nothing happened.
+/// - **Optimistic update**: the new value renders immediately with a small
+///   spinner overlay during the PATCH; reverts on failure.
+class _ClickToEditCell extends StatefulWidget {
   const _ClickToEditCell({
     required this.displayText,
     required this.candidates,
@@ -1428,87 +1441,468 @@ class _ClickToEditCell extends StatelessWidget {
   final Future<bool> Function(String? newId) onPicked;
 
   @override
+  State<_ClickToEditCell> createState() => _ClickToEditCellState();
+}
+
+class _ClickToEditCellState extends State<_ClickToEditCell> {
+  bool _hovering = false;
+
+  /// Display override for the optimistic-update window: shows the
+  /// just-picked label until the PATCH resolves; on failure we revert.
+  String? _optimisticDisplay;
+  bool _saving = false;
+
+  Future<void> _open() async {
+    final picked = await _showSearchablePicker(
+      context,
+      candidates: widget.candidates,
+      currentId: widget.currentId,
+      noneLabel: widget.noneLabel,
+    );
+    if (picked == null || !mounted) return;
+    final newId = picked == _kNoneSentinel ? null : picked;
+    // Optimistic display: figure out what the next display text would be
+    final newDisplay = newId == null
+        ? '—'
+        : widget.candidates
+                .where((c) => c.id == newId)
+                .cast<_Candidate?>()
+                .firstOrNull
+                ?.label ??
+            '—';
+    setState(() {
+      _optimisticDisplay = newDisplay;
+      _saving = true;
+    });
+    final ok = await widget.onPicked(newId);
+    if (!mounted) return;
+    setState(() {
+      _saving = false;
+      if (!ok) _optimisticDisplay = null;
+    });
+  }
+
+  void _showReadOnlyToast(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).fieldReadOnlyToast),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textStyle = theme.textTheme.bodyMedium;
-    if (!canEdit) {
-      return SelectableText(displayText, style: textStyle);
+    final shownText = _optimisticDisplay ?? widget.displayText;
+    if (!widget.canEdit) {
+      return MouseRegion(
+        cursor: SystemMouseCursors.basic,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _showReadOnlyToast(context),
+          child: Tooltip(
+            message: shownText,
+            waitDuration: const Duration(milliseconds: 600),
+            child: Text(
+              shownText,
+              style: textStyle,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ),
+      );
     }
-    // PopupMenuButton silently drops `null` values (it treats them as
-    // "canceled" and routes them to `onCanceled` instead of
-    // `onSelected`). We can't represent the "None" option as `value:
-    // null` directly — use a sentinel string and translate it back
-    // before invoking the caller's handler.
-    const noneSentinel = '__none__';
-    return PopupMenuButton<String>(
-      tooltip: '',
-      position: PopupMenuPosition.under,
-      itemBuilder: (_) => [
-        PopupMenuItem<String>(
-          value: noneSentinel,
+    final caretVisible = _hovering || _saving;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _saving ? null : _open,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 80),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          decoration: BoxDecoration(
+            color: _hovering
+                ? theme.colorScheme.surfaceContainerHighest
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.block_outlined,
-                size: 14,
-                color: theme.colorScheme.outline,
+              Flexible(
+                child: Tooltip(
+                  message: shownText,
+                  waitDuration: const Duration(milliseconds: 600),
+                  child: Text(
+                    shownText,
+                    style: textStyle,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
-              const SizedBox(width: 8),
-              Text(noneLabel),
+              const SizedBox(width: 4),
+              if (_saving)
+                SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    color: theme.colorScheme.primary,
+                  ),
+                )
+              else
+                Icon(
+                  Icons.unfold_more,
+                  size: 14,
+                  color: caretVisible
+                      ? theme.colorScheme.outline
+                      : Colors.transparent,
+                ),
             ],
           ),
-        ),
-        for (final c in candidates)
-          PopupMenuItem<String>(
-            value: c.id,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (c.colorHex != null) ...[
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: _hexToColor(c.colorHex!),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Text(c.label),
-              ],
-            ),
-          ),
-      ],
-      onSelected: (id) => onPicked(id == noneSentinel ? null : id),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4),
-          color: Colors.transparent,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                displayText,
-                style: textStyle,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.unfold_more,
-              size: 14,
-              color: theme.colorScheme.outline,
-            ),
-          ],
         ),
       ),
     );
   }
+}
+
+/// Opens the inline searchable picker anchored below [anchorContext].
+/// Returns the picked id, the [_kNoneSentinel] for "None", or null if
+/// the user dismissed the popup.
+Future<String?> _showSearchablePicker(
+  BuildContext anchorContext, {
+  required List<_Candidate> candidates,
+  required String? currentId,
+  required String noneLabel,
+}) async {
+  final anchor = anchorContext.findRenderObject() as RenderBox?;
+  final overlay = Overlay.of(anchorContext).context.findRenderObject()
+      as RenderBox?;
+  if (anchor == null || overlay == null) return null;
+  final topLeft = anchor.localToGlobal(Offset.zero, ancestor: overlay);
+  final bottomRight =
+      anchor.localToGlobal(anchor.size.bottomRight(Offset.zero), ancestor: overlay);
+  final position = RelativeRect.fromLTRB(
+    topLeft.dx,
+    bottomRight.dy + 4,
+    overlay.size.width - bottomRight.dx,
+    overlay.size.height - bottomRight.dy,
+  );
+  return showMenu<String>(
+    context: anchorContext,
+    position: position,
+    constraints: const BoxConstraints(minWidth: 240, maxWidth: 320),
+    items: [
+      _SearchablePickerEntry(
+        candidates: candidates,
+        currentId: currentId,
+        noneLabel: noneLabel,
+      ),
+    ],
+  );
+}
+
+/// Custom PopupMenuEntry that hosts the entire searchable picker UI
+/// (search field + filtered candidate list with keyboard navigation).
+/// The State pops the surrounding popup menu with the chosen id when
+/// the user commits.
+class _SearchablePickerEntry extends PopupMenuEntry<String> {
+  const _SearchablePickerEntry({
+    required this.candidates,
+    required this.currentId,
+    required this.noneLabel,
+  });
+
+  final List<_Candidate> candidates;
+  final String? currentId;
+  final String noneLabel;
+
+  @override
+  double get height => 340;
+
+  @override
+  bool represents(String? value) => false;
+
+  @override
+  State<_SearchablePickerEntry> createState() =>
+      _SearchablePickerEntryState();
+}
+
+class _SearchablePickerEntryState extends State<_SearchablePickerEntry> {
+  late final TextEditingController _searchCtrl;
+  late final FocusNode _searchFocus;
+  int _highlight = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchCtrl = TextEditingController();
+    _searchFocus = FocusNode();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _searchFocus.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    _searchFocus.dispose();
+    super.dispose();
+  }
+
+  List<_PickerRow> _rows() {
+    final q = _searchCtrl.text.trim().toLowerCase();
+    final filtered = widget.candidates.where((c) {
+      if (q.isEmpty) return true;
+      return c.label.toLowerCase().contains(q);
+    }).toList();
+    return [
+      const _PickerRow.none(),
+      for (final c in filtered) _PickerRow.candidate(c),
+    ];
+  }
+
+  void _move(int delta) {
+    final n = _rows().length;
+    if (n == 0) return;
+    setState(() => _highlight = (_highlight + delta).clamp(0, n - 1));
+  }
+
+  void _commitIndex(int index) {
+    final rows = _rows();
+    if (index < 0 || index >= rows.length) return;
+    final row = rows[index];
+    Navigator.of(context).pop(
+      row.isNone ? _kNoneSentinel : row.candidate!.id,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final rows = _rows();
+    if (_highlight >= rows.length) _highlight = rows.length - 1;
+    if (_highlight < 0) _highlight = 0;
+    return Shortcuts(
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.arrowDown): _MoveDownIntent(),
+        SingleActivator(LogicalKeyboardKey.arrowUp): _MoveUpIntent(),
+        SingleActivator(LogicalKeyboardKey.enter): _CommitIntent(),
+        SingleActivator(LogicalKeyboardKey.numpadEnter): _CommitIntent(),
+        SingleActivator(LogicalKeyboardKey.escape): _DismissIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          _MoveDownIntent: CallbackAction<_MoveDownIntent>(
+            onInvoke: (_) {
+              _move(1);
+              return null;
+            },
+          ),
+          _MoveUpIntent: CallbackAction<_MoveUpIntent>(
+            onInvoke: (_) {
+              _move(-1);
+              return null;
+            },
+          ),
+          _CommitIntent: CallbackAction<_CommitIntent>(
+            onInvoke: (_) {
+              _commitIndex(_highlight);
+              return null;
+            },
+          ),
+          _DismissIntent: CallbackAction<_DismissIntent>(
+            onInvoke: (_) {
+              Navigator.of(context).pop();
+              return null;
+            },
+          ),
+        },
+        child: SizedBox(
+          height: 340,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: TextField(
+                  controller: _searchCtrl,
+                  focusNode: _searchFocus,
+                  textInputAction: TextInputAction.done,
+                  decoration: InputDecoration(
+                    hintText: t.pickerSearchHint,
+                    prefixIcon: const Icon(Icons.search, size: 16),
+                    isDense: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onChanged: (_) => setState(() => _highlight = 0),
+                  onSubmitted: (_) => _commitIndex(_highlight),
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: rows.length == 1 && rows.first.isNone
+                    // Only the None row remains — show "No matches"
+                    // alongside it so users know the filter is active.
+                    ? _NoMatchesBody(noneRow: rows.first, onTap: () => _commitIndex(0))
+                    : ListView.builder(
+                        padding: EdgeInsets.zero,
+                        itemCount: rows.length,
+                        itemBuilder: (context, i) {
+                          final row = rows[i];
+                          final selected = i == _highlight;
+                          final isCurrent = row.candidate?.id == widget.currentId;
+                          return Container(
+                            color: selected
+                                ? theme.colorScheme.primaryContainer
+                                    .withValues(alpha: 0.5)
+                                : null,
+                            child: InkWell(
+                              onTap: () => _commitIndex(i),
+                              onHover: (h) {
+                                if (h) setState(() => _highlight = i);
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                child: Row(
+                                  children: [
+                                    if (row.isNone)
+                                      Icon(
+                                        Icons.block_outlined,
+                                        size: 14,
+                                        color: theme.colorScheme.outline,
+                                      )
+                                    else if (row.candidate?.colorHex != null)
+                                      Container(
+                                        width: 10,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          color: _hexToColor(
+                                            row.candidate!.colorHex!,
+                                          ),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      )
+                                    else
+                                      const SizedBox(width: 10),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        row.isNone
+                                            ? widget.noneLabel
+                                            : row.candidate!.label,
+                                        style: theme.textTheme.bodyMedium,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (isCurrent) ...[
+                                      const SizedBox(width: 8),
+                                      Icon(
+                                        Icons.check,
+                                        size: 14,
+                                        color: theme.colorScheme.primary,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoMatchesBody extends StatelessWidget {
+  const _NoMatchesBody({required this.noneRow, required this.onTap});
+  final _PickerRow noneRow;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.block_outlined,
+                  size: 14,
+                  color: theme.colorScheme.outline,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    t.statusValueNone,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: Center(
+            child: Text(
+              t.pickerNoMatch,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PickerRow {
+  const _PickerRow.none()
+      : isNone = true,
+        candidate = null;
+  const _PickerRow.candidate(_Candidate this.candidate) : isNone = false;
+  final bool isNone;
+  final _Candidate? candidate;
+}
+
+class _MoveDownIntent extends Intent {
+  const _MoveDownIntent();
+}
+
+class _MoveUpIntent extends Intent {
+  const _MoveUpIntent();
+}
+
+class _CommitIntent extends Intent {
+  const _CommitIntent();
+}
+
+class _DismissIntent extends Intent {
+  const _DismissIntent();
 }
 
 class _MultiCandidate {

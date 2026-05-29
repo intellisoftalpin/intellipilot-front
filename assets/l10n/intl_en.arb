@@ -1224,5 +1224,11 @@
   "railExpand": "Expand menu",
   "@railExpand": { "description": "Tooltip on the rail toggle when the rail is collapsed." },
   "statusValueNone": "None",
-  "@statusValueNone": { "description": "Placeholder used in inline editors when no value is selected." }
+  "@statusValueNone": { "description": "Placeholder used in inline editors when no value is selected." },
+  "pickerSearchHint": "Search…",
+  "@pickerSearchHint": { "description": "Hint shown in the search field of an inline taxonomy picker." },
+  "pickerNoMatch": "No matches",
+  "@pickerNoMatch": { "description": "Shown when the search query has no candidates." },
+  "fieldReadOnlyToast": "You don't have permission to change this.",
+  "@fieldReadOnlyToast": { "description": "Snackbar shown when a permission-locked field is tapped." }
 }
