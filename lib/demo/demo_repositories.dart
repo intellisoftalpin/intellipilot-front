@@ -240,8 +240,30 @@ class DemoProjectsRepository implements ProjectsRepository {
     _s.taxonomyByProject[id] = const [];
     _s.labelsByProject[id] = const [];
     _s.componentsByProject[id] = const [];
-    _s.rolesByProject[id] = const [];
-    _s.membersByProject[id] = const [];
+    // The creator must show up as an admin member, otherwise
+    // ProjectDetailCubit.load resolves their permissions via the empty
+    // member→role chain and returns an empty set — which then hides every
+    // FAB and empty-state CTA on the project's sub-pages.
+    final adminRole = Role(
+      id: '$id-role-admin',
+      projectId: id,
+      slug: 'admin',
+      name: 'Administrator',
+      order: 0,
+      isAdmin: true,
+      permissions: Permission.values.toSet(),
+    );
+    _s.rolesByProject[id] = [adminRole];
+    _s.membersByProject[id] = [
+      Membership(
+        id: '$id-mbr-creator',
+        projectId: id,
+        userId: _s.currentUser.id,
+        roleId: adminRole.id,
+        roleSlug: adminRole.slug,
+        createdAt: DateTime.now().toUtc(),
+      ),
+    ];
     _s.invitationsByProject[id] = const [];
     return Ok(project);
   }
