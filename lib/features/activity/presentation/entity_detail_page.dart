@@ -56,85 +56,97 @@ class EntityDetailPage extends StatefulWidget {
 class _EntityDetailPageState extends State<EntityDetailPage> {
   static const _maxBytes = 25 * 1024 * 1024;
 
-  late Future<_PageData?> _future;
+  _PageData? _data;
+  bool _initialLoading = true;
+  bool _failed = false;
 
   @override
   void initState() {
     super.initState();
-    _future = _load();
+    _initialLoad();
   }
 
-  void _reload() {
-    // Block body, not `=> _future = _load()` — that arrow form returns the
-    // Future the assignment evaluates to, which setState rejects as
-    // "callback returned a Future" in strict mode.
+  Future<void> _initialLoad() async {
+    final data = await _load();
+    if (!mounted) return;
     setState(() {
-      _future = _load();
+      _initialLoading = false;
+      _data = data;
+      _failed = data == null;
     });
+  }
+
+  /// Silent refresh — re-fetches the page data and swaps it in WITHOUT
+  /// rebuilding the scaffold / showing a loading spinner. Called from
+  /// every inline editor when a PATCH succeeds so a field change feels
+  /// instantaneous (Jira-style). The optimistic cell display already
+  /// shows the new value, so even the brief network round-trip is
+  /// invisible to the user.
+  Future<void> _reload() async {
+    final data = await _load();
+    if (!mounted) return;
+    if (data != null) {
+      setState(() => _data = data);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    return FutureBuilder<_PageData?>(
-      future: _future,
-      builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final data = snap.data;
-        if (data == null) {
-          return Scaffold(
-            appBar: AppBar(title: Text(t.entityDetailTitle)),
-            body: Center(child: Text(t.entityDetailLoadFailed)),
-          );
-        }
-        return MultiBlocProvider(
-          providers: [
-            BlocProvider<ProjectDetailCubit>(
-              create: (_) => ProjectDetailCubit(
-                repo: getIt<ProjectsRepository>(),
-                projectId: widget.projectId,
-                currentUserId: data.profile.id,
-              )..load(),
-            ),
-            BlocProvider<ActivityStreamCubit>(
-              create: (_) => ActivityStreamCubit(
-                repo: getIt<ActivityRepository>(),
-                projectId: widget.projectId,
-                kind: widget.kind,
-                entityId: widget.entityId,
-              )..load(),
-            ),
-            BlocProvider<AttachmentsCubit>(
-              create: (_) => AttachmentsCubit(
-                repo: getIt<ActivityRepository>(),
-                projectId: widget.projectId,
-                kind: widget.kind,
-                entityId: widget.entityId,
-                maxBytes: _maxBytes,
-              )..load(),
-            ),
-            BlocProvider<LinksCubit>(
-              create: (_) => LinksCubit(
-                repo: getIt<LinksRepository>(),
-                projectId: widget.projectId,
-                kind: widget.kind,
-                entityId: widget.entityId,
-              )..load(),
-            ),
-          ],
-          child: _DetailView(
-            data: data,
+    if (_initialLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_failed || _data == null) {
+      return Scaffold(
+        appBar: AppBar(title: Text(t.entityDetailTitle)),
+        body: Center(child: Text(t.entityDetailLoadFailed)),
+      );
+    }
+    final data = _data!;
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<ProjectDetailCubit>(
+          create: (_) => ProjectDetailCubit(
+            repo: getIt<ProjectsRepository>(),
+            projectId: widget.projectId,
+            currentUserId: data.profile.id,
+          )..load(),
+        ),
+        BlocProvider<ActivityStreamCubit>(
+          create: (_) => ActivityStreamCubit(
+            repo: getIt<ActivityRepository>(),
+            projectId: widget.projectId,
             kind: widget.kind,
             entityId: widget.entityId,
+          )..load(),
+        ),
+        BlocProvider<AttachmentsCubit>(
+          create: (_) => AttachmentsCubit(
+            repo: getIt<ActivityRepository>(),
             projectId: widget.projectId,
-            onChanged: _reload,
-          ),
-        );
-      },
+            kind: widget.kind,
+            entityId: widget.entityId,
+            maxBytes: _maxBytes,
+          )..load(),
+        ),
+        BlocProvider<LinksCubit>(
+          create: (_) => LinksCubit(
+            repo: getIt<LinksRepository>(),
+            projectId: widget.projectId,
+            kind: widget.kind,
+            entityId: widget.entityId,
+          )..load(),
+        ),
+      ],
+      child: _DetailView(
+        data: data,
+        kind: widget.kind,
+        entityId: widget.entityId,
+        projectId: widget.projectId,
+        onChanged: _reload,
+      ),
     );
   }
 
