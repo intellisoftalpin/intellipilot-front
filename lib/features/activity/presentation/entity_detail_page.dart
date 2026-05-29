@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
@@ -1401,10 +1402,20 @@ class _Candidate {
     required this.id,
     required this.label,
     this.colorHex,
+    this.icon,
+    this.pinned = false,
   });
   final String id;
   final String label;
   final String? colorHex;
+
+  /// Optional Material icon used in place of the colored bullet. Useful
+  /// for shortcuts like "Assign to me" that aren't taxonomy items.
+  final IconData? icon;
+
+  /// Pinned candidates render at the very top of the picker, above the
+  /// search results, separated by a divider. Use for shortcuts.
+  final bool pinned;
 }
 
 /// Sentinel value popped from the searchable picker when the user
@@ -1657,26 +1668,37 @@ class _SearchablePickerEntryState extends State<_SearchablePickerEntry> {
 
   List<_PickerRow> _rows() {
     final q = _searchCtrl.text.trim().toLowerCase();
-    final filtered = widget.candidates.where((c) {
-      if (q.isEmpty) return true;
-      return c.label.toLowerCase().contains(q);
-    }).toList();
-    return [
+    bool matches(_Candidate c) =>
+        q.isEmpty || c.label.toLowerCase().contains(q);
+    final pinned = widget.candidates.where((c) => c.pinned && matches(c));
+    final regular = widget.candidates.where((c) => !c.pinned && matches(c));
+    final out = <_PickerRow>[
+      for (final c in pinned) _PickerRow.candidate(c),
+      if (pinned.isNotEmpty) const _PickerRow.divider(),
       const _PickerRow.none(),
-      for (final c in filtered) _PickerRow.candidate(c),
+      for (final c in regular) _PickerRow.candidate(c),
     ];
+    return out;
   }
 
   void _move(int delta) {
-    final n = _rows().length;
+    final rows = _rows();
+    final n = rows.length;
     if (n == 0) return;
-    setState(() => _highlight = (_highlight + delta).clamp(0, n - 1));
+    var next = _highlight + delta;
+    // Skip dividers in both directions.
+    while (next >= 0 && next < n && !rows[next].isSelectable) {
+      next += delta;
+    }
+    if (next < 0 || next >= n) return;
+    setState(() => _highlight = next);
   }
 
   void _commitIndex(int index) {
     final rows = _rows();
     if (index < 0 || index >= rows.length) return;
     final row = rows[index];
+    if (!row.isSelectable) return;
     Navigator.of(context).pop(
       row.isNone ? _kNoneSentinel : row.candidate!.id,
     );
@@ -1758,8 +1780,13 @@ class _SearchablePickerEntryState extends State<_SearchablePickerEntry> {
                         itemCount: rows.length,
                         itemBuilder: (context, i) {
                           final row = rows[i];
+                          if (row.isDivider) {
+                            return const Divider(height: 8, thickness: 1);
+                          }
                           final selected = i == _highlight;
-                          final isCurrent = row.candidate?.id == widget.currentId;
+                          final isCurrent =
+                              row.candidate?.id == widget.currentId;
+                          final candidate = row.candidate;
                           return Container(
                             color: selected
                                 ? theme.colorScheme.primaryContainer
@@ -1783,13 +1810,19 @@ class _SearchablePickerEntryState extends State<_SearchablePickerEntry> {
                                         size: 14,
                                         color: theme.colorScheme.outline,
                                       )
-                                    else if (row.candidate?.colorHex != null)
+                                    else if (candidate?.icon != null)
+                                      Icon(
+                                        candidate!.icon,
+                                        size: 14,
+                                        color: theme.colorScheme.primary,
+                                      )
+                                    else if (candidate?.colorHex != null)
                                       Container(
                                         width: 10,
                                         height: 10,
                                         decoration: BoxDecoration(
                                           color: _hexToColor(
-                                            row.candidate!.colorHex!,
+                                            candidate!.colorHex!,
                                           ),
                                           shape: BoxShape.circle,
                                         ),
@@ -1801,7 +1834,7 @@ class _SearchablePickerEntryState extends State<_SearchablePickerEntry> {
                                       child: Text(
                                         row.isNone
                                             ? widget.noneLabel
-                                            : row.candidate!.label,
+                                            : candidate!.label,
                                         style: theme.textTheme.bodyMedium,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -1883,10 +1916,20 @@ class _NoMatchesBody extends StatelessWidget {
 class _PickerRow {
   const _PickerRow.none()
       : isNone = true,
+        isDivider = false,
         candidate = null;
-  const _PickerRow.candidate(_Candidate this.candidate) : isNone = false;
+  const _PickerRow.candidate(_Candidate this.candidate)
+      : isNone = false,
+        isDivider = false;
+  const _PickerRow.divider()
+      : isNone = false,
+        isDivider = true,
+        candidate = null;
   final bool isNone;
+  final bool isDivider;
   final _Candidate? candidate;
+
+  bool get isSelectable => !isDivider;
 }
 
 class _MoveDownIntent extends Intent {
@@ -2258,16 +2301,17 @@ class _PeopleTable extends StatelessWidget {
           t.detailFieldAssignee,
           _ClickToEditCell(
             displayText: _userLabel(data.entity.assignedTo, me, t),
-            // Without a full member directory the picker offers the
-            // common Jira shortcut: assign-to-me or unassign. Future
-            // work can swap this for a searchable member list.
-            candidates: [
-              _Candidate(id: me, label: '${t.detailValueYou} ($me)'),
-            ],
+            candidates: _assigneeCandidates(t, me),
             currentId: data.entity.assignedTo,
             noneLabel: '—',
             canEdit: canEdit,
-            onPicked: (id) => _patchAssignee(id),
+            onPicked: (id) async {
+              final ok = await _patchAssignee(id);
+              if (ok && id != null) {
+                await _RecentAssignees.push(projectId, id);
+              }
+              return ok;
+            },
           ),
         ),
         const SizedBox(height: 4),
@@ -2289,6 +2333,28 @@ class _PeopleTable extends StatelessWidget {
     if (id == null) return '—';
     if (id == me) return '${t.detailValueYou} ($id)';
     return id;
+  }
+
+  /// Build the assignee picker's candidate list:
+  /// - "Assign to me" pinned at the top with a person icon (always
+  ///   the current user — the most-used Jira shortcut).
+  /// - Recent assignees for this project (persisted in the UI Hive
+  ///   box). Shows raw user ids today — once the backend exposes
+  ///   member display names the labels can swap to those.
+  List<_Candidate> _assigneeCandidates(AppLocalizations t, String me) {
+    final recent = _RecentAssignees.read(projectId)
+        .where((id) => id != me)
+        .take(5)
+        .toList();
+    return [
+      _Candidate(
+        id: me,
+        label: t.assigneeAssignToMe,
+        icon: Icons.person_outline,
+        pinned: true,
+      ),
+      for (final id in recent) _Candidate(id: id, label: id),
+    ];
   }
 
   Future<bool> _patchAssignee(String? assigneeId) async {
@@ -2603,6 +2669,35 @@ class _InlineTextEditorState extends State<_InlineTextEditor> {
         child: display,
       ),
     );
+  }
+}
+
+/// Recent-assignees memory backed by the UI Hive box. Tracks the last
+/// few user ids that the current viewer has assigned anything to on a
+/// given project so the assignee picker can surface them above the
+/// (future) full member list. IDs only — display name resolution is a
+/// separate concern that depends on the backend exposing a member
+/// directory.
+class _RecentAssignees {
+  static const _prefix = 'assignee.recent.';
+  static const _max = 5;
+
+  static List<String> read(String projectId) {
+    final box = getIt<KeyValueStorage>(instanceName: HiveBoxes.ui);
+    final raw = box.get<List<dynamic>>('$_prefix$projectId');
+    if (raw == null) return const [];
+    return raw.whereType<String>().toList();
+  }
+
+  static Future<void> push(String projectId, String userId) async {
+    final box = getIt<KeyValueStorage>(instanceName: HiveBoxes.ui);
+    final current = read(projectId);
+    final next = <String>[
+      userId,
+      for (final id in current)
+        if (id != userId) id,
+    ].take(_max).toList();
+    await box.set<List<dynamic>>('$_prefix$projectId', next);
   }
 }
 

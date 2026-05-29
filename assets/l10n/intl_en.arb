@@ -1230,5 +1230,7 @@
   "pickerNoMatch": "No matches",
   "@pickerNoMatch": { "description": "Shown when the search query has no candidates." },
   "fieldReadOnlyToast": "You don't have permission to change this.",
-  "@fieldReadOnlyToast": { "description": "Snackbar shown when a permission-locked field is tapped." }
+  "@fieldReadOnlyToast": { "description": "Snackbar shown when a permission-locked field is tapped." },
+  "assigneeAssignToMe": "Assign to me",
+  "@assigneeAssignToMe": { "description": "Pinned shortcut at the top of the assignee picker." }
 }
