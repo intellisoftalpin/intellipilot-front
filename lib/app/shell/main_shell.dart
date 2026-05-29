@@ -145,11 +145,9 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                   _BrandMark(
                     compact: compact,
                     onTap: () => context.go(Routes.projects),
-                  )
-                else if (activeProjectId != null)
-                  _ProjectHeader(projectId: activeProjectId!),
+                  ),
                 if (!compact) ...[
-                  const SizedBox(width: 16),
+                  if (showBrandMark) const SizedBox(width: 16),
                   _NavLink(
                     label: AppLocalizations.of(context).topNavProjects,
                     onTap: () => context.go(Routes.projects),
@@ -603,17 +601,24 @@ class _ProjectRailState extends State<_ProjectRail> {
       // on the per-destination Tooltip below for discoverability.
       labelType: NavigationRailLabelType.none,
       // The leading area shares its vertical position with the top bar
-      // on the right column, so we size it to match (52px) — the toggle
-      // button reads as the leftmost segment of the global header.
+      // on the right column, so we size it to match (52px). The toggle
+      // is the leftmost element; when the rail is expanded the project
+      // name renders to its right (tap → overview).
       leading: SizedBox(
         height: 52,
-        child: Align(
-          alignment: Alignment.center,
-          child: IconButton(
-            tooltip: expanded ? t.railCollapse : t.railExpand,
-            icon: Icon(expanded ? Icons.menu_open : Icons.menu),
-            onPressed: _toggle,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: expanded ? t.railCollapse : t.railExpand,
+              icon: Icon(expanded ? Icons.menu_open : Icons.menu),
+              onPressed: _toggle,
+            ),
+            if (expanded)
+              Flexible(
+                child: _ProjectHeader(projectId: widget.projectId),
+              ),
+          ],
         ),
       ),
       destinations: [
