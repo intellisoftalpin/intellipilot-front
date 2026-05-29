@@ -111,9 +111,9 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
   final String? activeProjectId;
 
   /// On non-project routes the brand mark renders at the start of the
-  /// bar. On project-scoped routes (where the rail already occupies
-  /// the left edge) we hide the brand and surface the current project
-  /// header in its place via [_ProjectHeader].
+  /// bar. On project-scoped routes (where the rail already owns the
+  /// project identity) the brand is hidden so the top bar only carries
+  /// global actions (nav, search, create, avatar).
   final bool showBrandMark;
 
   @override
@@ -171,95 +171,6 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                 const SizedBox(width: 8),
                 const _AvatarMenu(),
                 const SizedBox(width: 12),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-/// Top-bar project chip rendered immediately to the right of the rail
-/// toggle on project-scoped routes. Click → project overview. The name
-/// is fetched once per project id and cached in a process-wide map so
-/// navigating between this project's sub-pages doesn't refetch.
-class _ProjectHeader extends StatefulWidget {
-  const _ProjectHeader({required this.projectId});
-  final String projectId;
-
-  @override
-  State<_ProjectHeader> createState() => _ProjectHeaderState();
-}
-
-class _ProjectHeaderState extends State<_ProjectHeader> {
-  static final Map<String, Future<Project?>> _cache = {};
-
-  late Future<Project?> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _resolve(widget.projectId);
-  }
-
-  @override
-  void didUpdateWidget(covariant _ProjectHeader oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.projectId != widget.projectId) {
-      _future = _resolve(widget.projectId);
-    }
-  }
-
-  static Future<Project?> _resolve(String id) {
-    return _cache.putIfAbsent(
-      id,
-      () => getIt<ProjectsRepository>()
-          .getProject(id)
-          .then((r) => r.valueOrNull),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: () => context.go(Routes.projectDetailFor(widget.projectId)),
-      borderRadius: BorderRadius.circular(6),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: FutureBuilder<Project?>(
-          future: _future,
-          builder: (context, snap) {
-            final name = snap.data?.name ?? '…';
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(
-                    Icons.folder_outlined,
-                    size: 16,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 220),
-                  child: Text(
-                    name,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
               ],
             );
           },
@@ -591,43 +502,37 @@ class _ProjectRailState extends State<_ProjectRail> {
 
     final selectedIndex = _selectedIndexFor(widget.currentRoute, items);
     final expanded = _currentExpanded;
+    final theme = Theme.of(context);
 
-    return NavigationRail(
-      extended: expanded,
-      selectedIndex: selectedIndex,
-      onDestinationSelected: (i) => context.go(items[i].path),
-      // When extended=true the rail ignores labelType (labels render
-      // next to icons). When collapsed we keep labelType=none and rely
-      // on the per-destination Tooltip below for discoverability.
-      labelType: NavigationRailLabelType.none,
-      // The leading area shares its vertical position with the top bar
-      // on the right column, so we size it to match (52px). The toggle
-      // is the leftmost element; when the rail is expanded the project
-      // name renders to its right (tap → overview).
-      leading: SizedBox(
-        height: 52,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+    return Material(
+      color: theme.colorScheme.surface,
+      child: SizedBox(
+        width: expanded ? 240 : 64,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            IconButton(
+            _RailRow(
+              icon: expanded ? Icons.menu_open : Icons.menu,
+              label: expanded
+                  ? _ProjectName(projectId: widget.projectId)
+                  : null,
               tooltip: expanded ? t.railCollapse : t.railExpand,
-              icon: Icon(expanded ? Icons.menu_open : Icons.menu),
-              onPressed: _toggle,
+              selected: false,
+              onTap: _toggle,
             ),
-            if (expanded)
-              Flexible(
-                child: _ProjectHeader(projectId: widget.projectId),
+            Divider(height: 1, color: theme.colorScheme.outlineVariant),
+            const SizedBox(height: 8),
+            for (var i = 0; i < items.length; i++)
+              _RailRow(
+                icon: items[i].icon,
+                label: expanded ? Text(items[i].label) : null,
+                tooltip: items[i].label,
+                selected: i == selectedIndex,
+                onTap: () => context.go(items[i].path),
               ),
           ],
         ),
       ),
-      destinations: [
-        for (final i in items)
-          NavigationRailDestination(
-            icon: Tooltip(message: i.label, child: Icon(i.icon)),
-            label: Text(i.label),
-          ),
-      ],
     );
   }
 
@@ -654,4 +559,123 @@ class _RailItem {
   final IconData icon;
   final String label;
   final String path;
+}
+
+/// A single row in the project rail. The icon sits at a fixed left line
+/// (column-x = 20 + icon centre) for every row — header included — so
+/// the vertical rhythm reads as one consistent column. Selected rows
+/// get a pill-shaped primary-container background like Material 3
+/// NavigationRail destinations.
+class _RailRow extends StatelessWidget {
+  const _RailRow({
+    required this.icon,
+    required this.label,
+    required this.tooltip,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+
+  /// Optional trailing label widget. `null` collapses the row to icon-only.
+  final Widget? label;
+  final String tooltip;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fg = selected
+        ? theme.colorScheme.onPrimaryContainer
+        : theme.colorScheme.onSurfaceVariant;
+    final row = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: selected ? theme.colorScheme.primaryContainer : null,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: fg),
+            if (label != null) ...[
+              const SizedBox(width: 12),
+              Expanded(
+                child: DefaultTextStyle.merge(
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: fg,
+                    fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                  child: label!,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    final tappable = InkWell(
+      onTap: onTap,
+      child: row,
+    );
+    return label == null ? Tooltip(message: tooltip, child: tappable) : tappable;
+  }
+}
+
+/// Lightweight project-name resolver that drives the rail header label.
+/// Reuses the same process-wide cache as the previous _ProjectHeader so
+/// navigating across the same project's sub-pages doesn't refetch.
+class _ProjectName extends StatefulWidget {
+  const _ProjectName({required this.projectId});
+  final String projectId;
+
+  @override
+  State<_ProjectName> createState() => _ProjectNameState();
+}
+
+class _ProjectNameState extends State<_ProjectName> {
+  static final Map<String, Future<Project?>> _cache = {};
+
+  late Future<Project?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _resolve(widget.projectId);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProjectName oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.projectId != widget.projectId) {
+      _future = _resolve(widget.projectId);
+    }
+  }
+
+  static Future<Project?> _resolve(String id) {
+    return _cache.putIfAbsent(
+      id,
+      () => getIt<ProjectsRepository>()
+          .getProject(id)
+          .then((r) => r.valueOrNull),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Project?>(
+      future: _future,
+      builder: (context, snap) {
+        return Text(
+          snap.data?.name ?? '…',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        );
+      },
+    );
+  }
 }
