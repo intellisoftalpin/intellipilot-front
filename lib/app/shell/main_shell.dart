@@ -7,6 +7,8 @@ import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/features/palette/presentation/cmd_k_dialog.dart';
+import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
+import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// App-wide chrome wrapping the routed page. Adds:
@@ -43,17 +45,36 @@ class MainShell extends StatelessWidget {
     final showRail =
         scope != null && Breakpoints.of(context).isAtLeastMedium;
 
+    // Project-scoped layout: full-height rail on the left (toggle pinned
+    // at the top), and the top bar shows the current project's icon +
+    // name first — matching Jira's project sidebar.
+    if (showRail) {
+      return Scaffold(
+        body: Row(
+          children: [
+            _ProjectRail(projectId: scope, currentRoute: route),
+            const VerticalDivider(width: 1),
+            Expanded(
+              child: Column(
+                children: [
+                  _TopBar(
+                    activeProjectId: scope,
+                    showBrandMark: false,
+                  ),
+                  Expanded(child: child),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Non-project routes (projects list, account, settings): single
+    // column with the brand mark on the top bar, no rail.
     return Scaffold(
       appBar: _TopBar(activeProjectId: scope),
-      body: showRail
-          ? Row(
-              children: [
-                _ProjectRail(projectId: scope, currentRoute: route),
-                const VerticalDivider(width: 1),
-                Expanded(child: child),
-              ],
-            )
-          : child,
+      body: child,
     );
   }
 
@@ -86,8 +107,14 @@ class MainShell extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget implements PreferredSizeWidget {
-  const _TopBar({this.activeProjectId});
+  const _TopBar({this.activeProjectId, this.showBrandMark = true});
   final String? activeProjectId;
+
+  /// On non-project routes the brand mark renders at the start of the
+  /// bar. On project-scoped routes (where the rail already occupies
+  /// the left edge) we hide the brand and surface the current project
+  /// header in its place via [_ProjectHeader].
+  final bool showBrandMark;
 
   @override
   Size get preferredSize => const Size.fromHeight(52);
@@ -114,12 +141,15 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
             return Row(
               children: [
                 const SizedBox(width: 12),
-                _BrandMark(
-                  compact: compact,
-                  onTap: () => context.go(Routes.projects),
-                ),
+                if (showBrandMark)
+                  _BrandMark(
+                    compact: compact,
+                    onTap: () => context.go(Routes.projects),
+                  )
+                else if (activeProjectId != null)
+                  _ProjectHeader(projectId: activeProjectId!),
                 if (!compact) ...[
-                  const SizedBox(width: 24),
+                  const SizedBox(width: 16),
                   _NavLink(
                     label: AppLocalizations.of(context).topNavProjects,
                     onTap: () => context.go(Routes.projects),
@@ -143,6 +173,95 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                 const SizedBox(width: 8),
                 const _AvatarMenu(),
                 const SizedBox(width: 12),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Top-bar project chip rendered immediately to the right of the rail
+/// toggle on project-scoped routes. Click → project overview. The name
+/// is fetched once per project id and cached in a process-wide map so
+/// navigating between this project's sub-pages doesn't refetch.
+class _ProjectHeader extends StatefulWidget {
+  const _ProjectHeader({required this.projectId});
+  final String projectId;
+
+  @override
+  State<_ProjectHeader> createState() => _ProjectHeaderState();
+}
+
+class _ProjectHeaderState extends State<_ProjectHeader> {
+  static final Map<String, Future<Project?>> _cache = {};
+
+  late Future<Project?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _resolve(widget.projectId);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProjectHeader oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.projectId != widget.projectId) {
+      _future = _resolve(widget.projectId);
+    }
+  }
+
+  static Future<Project?> _resolve(String id) {
+    return _cache.putIfAbsent(
+      id,
+      () => getIt<ProjectsRepository>()
+          .getProject(id)
+          .then((r) => r.valueOrNull),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: () => context.go(Routes.projectDetailFor(widget.projectId)),
+      borderRadius: BorderRadius.circular(6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: FutureBuilder<Project?>(
+          future: _future,
+          builder: (context, snap) {
+            final name = snap.data?.name ?? '…';
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Icons.folder_outlined,
+                    size: 16,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 220),
+                  child: Text(
+                    name,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             );
           },
@@ -483,14 +602,18 @@ class _ProjectRailState extends State<_ProjectRail> {
       // next to icons). When collapsed we keep labelType=none and rely
       // on the per-destination Tooltip below for discoverability.
       labelType: NavigationRailLabelType.none,
-      leading: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: IconButton(
-          tooltip: expanded ? t.railCollapse : t.railExpand,
-          icon: Icon(
-            expanded ? Icons.menu_open : Icons.menu,
+      // The leading area shares its vertical position with the top bar
+      // on the right column, so we size it to match (52px) — the toggle
+      // button reads as the leftmost segment of the global header.
+      leading: SizedBox(
+        height: 52,
+        child: Align(
+          alignment: Alignment.center,
+          child: IconButton(
+            tooltip: expanded ? t.railCollapse : t.railExpand,
+            icon: Icon(expanded ? Icons.menu_open : Icons.menu),
+            onPressed: _toggle,
           ),
-          onPressed: _toggle,
         ),
       ),
       destinations: [
