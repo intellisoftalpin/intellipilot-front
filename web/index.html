@@ -31,6 +31,39 @@
 
   <title>intellipilot</title>
   <link rel="manifest" href="manifest.json">
+  <style>
+    /* Service-worker "new build ready" banner. Styled to match the
+       IntelliPilot indigo theme; rendered above the Flutter canvas so it
+       remains visible even if the SPA is stuck. */
+    #ip-sw-banner {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f1f3b;
+      color: #f8fafc;
+      padding: 12px 20px;
+      border-radius: 10px;
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.25);
+      font: 500 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      display: none;
+      align-items: center;
+      gap: 14px;
+      z-index: 999999;
+    }
+    #ip-sw-banner button {
+      background: #5B5BD6;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+    #ip-sw-banner button:hover {
+      background: #6e6ee0;
+    }
+  </style>
 </head>
 <body>
   <!--
@@ -41,6 +74,32 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <div id="ip-sw-banner" role="status" aria-live="polite">
+    <span>A new version is available.</span>
+    <button type="button" onclick="window.location.reload()">Reload now</button>
+  </div>
+  <script>
+    // Watch the Flutter-generated service worker for updates. When the new
+    // build finishes installing (and the user already has the old one open),
+    // surface a banner inviting them to reload. Pure JS so it works even if
+    // the Flutter canvas is wedged on the old assets.
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        regs.forEach(function (reg) {
+          reg.addEventListener('updatefound', function () {
+            var nw = reg.installing;
+            if (!nw) return;
+            nw.addEventListener('statechange', function () {
+              if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+                document.getElementById('ip-sw-banner').style.display = 'flex';
+              }
+            });
+          });
+        });
+      });
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

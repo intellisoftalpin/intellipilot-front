@@ -581,17 +581,22 @@ lands the polish items earlier phases deferred:
 
 ---
 
-## Phase 18 — Release engineering
+## Phase 18 — Release engineering — **Partial (testable subset)**
 
-**Scope**
-- Flavors: `dev`, `staging`, `prod` — distinct `applicationId` / bundle id, icon overlay, base URL.
-- Signing: Android keystore, iOS provisioning profiles, macOS notarization, Windows code signing, Linux GPG.
+**Delivered (2026-05-29)**
+- **BuildInfo** (`app/build_info.dart`) — single source of truth for the client identity. Reads `INTELLIPILOT_VERSION`, `INTELLIPILOT_BUILD`, `INTELLIPILOT_FLAVOR` from `--dart-define`. Defaults match `pubspec.yaml`'s `version: 0.1.0+1` so `flutter run` surfaces sensible values during local dev.
+- **`X-Client-Version` header** — new `ClientVersionInterceptor` stamps every outgoing request with `BuildInfo.clientIdentifier` (e.g. `intellipilot-front/0.1.0+1 (dev)`), so backend logs can correlate API errors with the frontend build.
+- **About dialog** — Settings → About surfaces version + build + flavor + channel name, with a Copy build info button that pushes `clientIdentifier` to the clipboard.
+- **Web service-worker reload prompt** — `web/index.html` watches the Flutter-generated service worker for `updatefound` and renders an indigo "A new version is available — Reload now" banner. Pure JS so it works even if the SPA is wedged on the old assets.
+- `flutter analyze` clean; **224 tests pass**; web release build green.
+
+**Deferred (needs device/CI integration)**
+- Flavor build configs (`applicationId`, bundle id, icon overlay per flavor) — the env-var plumbing is wired but the per-platform manifest changes (AndroidManifest, Info.plist, MSIX) need device QA.
+- Signing pipelines: Android keystore, iOS provisioning, macOS notarization, Windows code signing, Linux GPG.
 - Store metadata: screenshots, descriptions, privacy policy.
-- Versioning: semver from a single source (`pubspec.yaml`), embedded in About dialog and `X-Client-Version` header.
-- Web: cache-busting via `--web-renderer canvaskit` or `html` decision (canvaskit for fidelity, html for size — likely canvaskit).
-- Auto-update research:
-  - Desktop: investigate `auto_updater`, `Sparkle` (macOS).
-  - Web: service worker prompt-to-reload on new build.
+- Cache-busting renderer decision (canvaskit vs html) — leaving the Flutter default for now.
+- Desktop auto-update research (`auto_updater`, Sparkle).
+- `docs/RELEASE.md` — empty until at least one platform's pipeline ships.
 
 **Acceptance**
 - A new build can be released to all targets from a tagged commit with documented steps in `docs/RELEASE.md`.

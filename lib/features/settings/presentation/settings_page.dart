@@ -6,6 +6,7 @@ import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
 import 'package:intellipilot/core/widgets/app_scaffold.dart';
+import 'package:intellipilot/features/settings/presentation/about_dialog.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -28,6 +29,8 @@ class SettingsPage extends StatelessWidget {
           _SecuritySection(),
           SizedBox(height: 16),
           _AccountSection(),
+          SizedBox(height: 16),
+          _AboutSection(),
         ],
       ),
     );
@@ -202,6 +205,24 @@ class _SecuritySection extends StatelessWidget {
         subtitle: Text(l10n.settingsSecuritySubtitle),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.go(Routes.security),
+      ),
+    );
+  }
+}
+
+class _AboutSection extends StatelessWidget {
+  const _AboutSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.info_outline),
+        title: Text(l10n.settingsAboutTitle),
+        subtitle: Text(l10n.settingsAboutSubtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => showIntelliPilotAboutDialog(context),
       ),
     );
   }

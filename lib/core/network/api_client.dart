@@ -4,6 +4,7 @@ import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/error/failure_mapper.dart';
 import 'package:intellipilot/core/network/api_config.dart';
 import 'package:intellipilot/core/network/interceptors/auth_interceptor.dart';
+import 'package:intellipilot/core/network/interceptors/client_version_interceptor.dart';
 import 'package:intellipilot/core/network/interceptors/etag_interceptor.dart';
 import 'package:intellipilot/core/network/interceptors/idempotency_interceptor.dart';
 import 'package:intellipilot/core/network/interceptors/logging_interceptor.dart';
@@ -44,6 +45,7 @@ class ApiClient {
     }
     _dio.interceptors
       ..add(RequestIdInterceptor(uuidGen))
+      ..add(const ClientVersionInterceptor())
       ..add(AuthInterceptor(tokenProvider))
       ..add(IdempotencyInterceptor(uuidGen))
       ..add(const EtagInterceptor());
