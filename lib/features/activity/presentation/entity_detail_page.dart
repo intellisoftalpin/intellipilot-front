@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
@@ -13,11 +15,6 @@ import 'package:intellipilot/features/activity/presentation/widgets/activity_str
 import 'package:intellipilot/features/activity/presentation/widgets/attachments_view.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
-import 'package:intellipilot/features/backlog/presentation/cubits/issues_cubit.dart';
-import 'package:intellipilot/features/backlog/presentation/widgets/epic_edit_dialog.dart';
-import 'package:intellipilot/features/backlog/presentation/widgets/issue_edit_dialog.dart';
-import 'package:intellipilot/features/backlog/presentation/widgets/task_edit_dialog.dart';
-import 'package:intellipilot/features/backlog/presentation/widgets/user_story_edit_dialog.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
@@ -477,7 +474,9 @@ class _ActionBar extends StatelessWidget {
             }
             return FilledButton.tonalIcon(
               icon: const Icon(Icons.edit_outlined, size: 16),
-              onPressed: () => _openEditor(context),
+              onPressed: () => context.go(
+                Routes.entityEditFor(projectId, kind, entityId),
+              ),
               label: Text(t.actionEdit),
             );
           },
@@ -508,18 +507,6 @@ class _ActionBar extends StatelessWidget {
     EntityKind.task => Permission.taskModify,
     EntityKind.issue => Permission.issueModify,
   };
-
-  Future<void> _openEditor(BuildContext context) async {
-    final res = await openEditDialog(
-      context,
-      backlog: getIt<BacklogRepository>(),
-      catalog: getIt<CatalogRepository>(),
-      kind: kind,
-      projectId: projectId,
-      entityId: entityId,
-    );
-    if (res) onChanged();
-  }
 }
 
 class _StatusPill extends StatelessWidget {
@@ -975,162 +962,6 @@ Widget _kvRow(BuildContext context, String label, String value) {
       ),
     ],
   );
-}
-
-// ---------------------------------------------------------------------------
-// Shared edit-dialog dispatcher (extracted so the action bar + future
-// inline-edit affordances can both call it).
-// ---------------------------------------------------------------------------
-
-Future<bool> openEditDialog(
-  BuildContext context, {
-  required BacklogRepository backlog,
-  required CatalogRepository catalog,
-  required EntityKind kind,
-  required String projectId,
-  required String entityId,
-}) async {
-  switch (kind) {
-    case EntityKind.epic:
-      final epic = (await backlog.getEpic(projectId, entityId)).valueOrNull;
-      if (epic == null || !context.mounted) return false;
-      final body = await showEpicEditDialog(context, existing: epic);
-      if (body == null || epic.etag == null) return false;
-      await backlog.updateEpic(
-        projectId,
-        entityId,
-        body: UpdateEpicRequest(
-          subject: body.subject,
-          description: body.description,
-          statusId: body.statusId,
-          color: body.color,
-          assignedTo: body.assignedTo,
-        ),
-        etag: epic.etag!,
-      );
-      return true;
-    case EntityKind.userStory:
-      final us = (await backlog.getUserStory(projectId, entityId)).valueOrNull;
-      if (us == null || !context.mounted) return false;
-      final epics = (await backlog.listEpics(projectId)).valueOrNull ?? [];
-      final statuses =
-          (await catalog.listTaxonomy(projectId, TaxonomyKind.usStatus))
-                  .valueOrNull ??
-              [];
-      final points =
-          (await catalog.listTaxonomy(projectId, TaxonomyKind.point))
-                  .valueOrNull ??
-              [];
-      if (!context.mounted) return false;
-      final body = await showUserStoryEditDialog(
-        context,
-        epics: epics,
-        statuses: statuses,
-        points: points,
-        existing: us,
-      );
-      if (body == null || us.etag == null) return false;
-      await backlog.updateUserStory(
-        projectId,
-        entityId,
-        body: UpdateUserStoryRequest(
-          subject: body.subject,
-          description: body.description,
-          statusId: body.statusId,
-          epicId: body.epicId,
-          pointsId: body.pointsId,
-          assignedTo: body.assignedTo,
-        ),
-        etag: us.etag!,
-      );
-      return true;
-    case EntityKind.task:
-      final task = (await backlog.getTask(projectId, entityId)).valueOrNull;
-      if (task == null || !context.mounted) return false;
-      final stories =
-          (await backlog.listUserStories(projectId)).valueOrNull ?? [];
-      final statuses =
-          (await catalog.listTaxonomy(projectId, TaxonomyKind.taskStatus))
-                  .valueOrNull ??
-              [];
-      if (!context.mounted) return false;
-      final body = await showTaskEditDialog(
-        context,
-        userStories: stories,
-        statuses: statuses,
-        existing: task,
-      );
-      if (body == null || task.etag == null) return false;
-      await backlog.updateTask(
-        projectId,
-        entityId,
-        body: UpdateTaskRequest(
-          subject: body.subject,
-          description: body.description,
-          statusId: body.statusId,
-          userStoryId: body.userStoryId,
-          assignedTo: body.assignedTo,
-        ),
-        etag: task.etag!,
-      );
-      return true;
-    case EntityKind.issue:
-      final issue = (await backlog.getIssue(projectId, entityId)).valueOrNull;
-      if (issue == null || !context.mounted) return false;
-      final statuses =
-          (await catalog.listTaxonomy(projectId, TaxonomyKind.issueStatus))
-                  .valueOrNull ??
-              [];
-      final types =
-          (await catalog.listTaxonomy(projectId, TaxonomyKind.issueType))
-                  .valueOrNull ??
-              [];
-      final priorities =
-          (await catalog.listTaxonomy(projectId, TaxonomyKind.priority))
-                  .valueOrNull ??
-              [];
-      final severities =
-          (await catalog.listTaxonomy(projectId, TaxonomyKind.severity))
-                  .valueOrNull ??
-              [];
-      final labels =
-          (await catalog.listLabels(projectId)).valueOrNull ?? [];
-      final components =
-          (await catalog.listComponents(projectId)).valueOrNull ?? [];
-      if (!context.mounted) return false;
-      final state = IssuesLoaded(
-        issues: const [],
-        statuses: statuses,
-        types: types,
-        priorities: priorities,
-        severities: severities,
-        labels: labels,
-        components: components,
-      );
-      final body = await showIssueEditDialog(
-        context,
-        state: state,
-        existing: issue,
-      );
-      if (body == null || issue.etag == null) return false;
-      await backlog.updateIssue(
-        projectId,
-        entityId,
-        body: UpdateIssueRequest(
-          subject: body.subject,
-          description: body.description,
-          statusId: body.statusId,
-          typeId: body.typeId,
-          priorityId: body.priorityId,
-          severityId: body.severityId,
-          assignedTo: body.assignedTo,
-          labels: body.labels,
-          components: body.components,
-        ),
-        etag: issue.etag!,
-      );
-      return true;
-  }
 }
 
 Color _hexToColor(String hex) {

@@ -4,6 +4,7 @@ import 'package:intellipilot/app/shell/main_shell.dart';
 import 'package:intellipilot/core/utils/listenable_stream.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
+import 'package:intellipilot/features/activity/presentation/entity_edit_page.dart';
 import 'package:intellipilot/features/auth/presentation/forgot_password_page.dart';
 import 'package:intellipilot/features/auth/presentation/login_page.dart';
 import 'package:intellipilot/features/auth/presentation/register_page.dart';
@@ -71,6 +72,12 @@ abstract class Routes {
     String entityId,
   ) =>
       '/projects/$projectId/items/${kind.slug}/$entityId';
+  static String entityEditFor(
+    String projectId,
+    EntityKind kind,
+    String entityId,
+  ) =>
+      '/projects/$projectId/items/${kind.slug}/$entityId/edit';
   static String acceptInvitationFor(String token) => '/i/$token';
 }
 
@@ -224,6 +231,22 @@ GoRouter buildRouter({required SessionBloc session}) {
             orElse: () => EntityKind.userStory,
           );
           return EntityDetailPage(
+            projectId: state.pathParameters['projectId']!,
+            kind: kind,
+            entityId: state.pathParameters['entityId']!,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/projects/:projectId/items/:kind/:entityId/edit',
+        name: 'entity_edit',
+        builder: (context, state) {
+          final slug = state.pathParameters['kind']!;
+          final kind = EntityKind.values.firstWhere(
+            (k) => k.slug == slug,
+            orElse: () => EntityKind.userStory,
+          );
+          return EntityEditPage(
             projectId: state.pathParameters['projectId']!,
             kind: kind,
             entityId: state.pathParameters['entityId']!,
