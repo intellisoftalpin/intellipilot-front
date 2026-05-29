@@ -1257,12 +1257,18 @@ class _ClickToEditCell extends StatelessWidget {
     if (!canEdit) {
       return SelectableText(displayText, style: textStyle);
     }
-    return PopupMenuButton<String?>(
+    // PopupMenuButton silently drops `null` values (it treats them as
+    // "canceled" and routes them to `onCanceled` instead of
+    // `onSelected`). We can't represent the "None" option as `value:
+    // null` directly — use a sentinel string and translate it back
+    // before invoking the caller's handler.
+    const noneSentinel = '__none__';
+    return PopupMenuButton<String>(
       tooltip: '',
       position: PopupMenuPosition.under,
       itemBuilder: (_) => [
-        PopupMenuItem<String?>(
-          value: null,
+        PopupMenuItem<String>(
+          value: noneSentinel,
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1277,7 +1283,7 @@ class _ClickToEditCell extends StatelessWidget {
           ),
         ),
         for (final c in candidates)
-          PopupMenuItem<String?>(
+          PopupMenuItem<String>(
             value: c.id,
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -1298,7 +1304,7 @@ class _ClickToEditCell extends StatelessWidget {
             ),
           ),
       ],
-      onSelected: (id) => onPicked(id),
+      onSelected: (id) => onPicked(id == noneSentinel ? null : id),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
         decoration: BoxDecoration(
