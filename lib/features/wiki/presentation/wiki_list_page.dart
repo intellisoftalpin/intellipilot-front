@@ -102,10 +102,20 @@ class _View extends StatelessWidget {
           }
           if (state is! WikiListLoaded) return const SizedBox.shrink();
           if (state.pages.isEmpty) {
+            final detail = context.watch<ProjectDetailCubit>().state;
+            final canCreate = detail is ProjectDetailLoaded &&
+                detail.has(Permission.wikiCreate);
             return EmptyState(
               icon: Icons.article_outlined,
               title: t.wikiTitle,
               body: t.wikiEmpty,
+              action: canCreate
+                  ? FilledButton.icon(
+                      icon: const Icon(Icons.add),
+                      onPressed: () => _newPage(context),
+                      label: Text(t.actionNewWikiPage),
+                    )
+                  : null,
             );
           }
           return Center(

@@ -108,10 +108,26 @@ class _ListView extends StatelessWidget {
           }
           if (state is! MilestonesListLoaded) return const SizedBox.shrink();
           if (state.milestones.isEmpty) {
+            final detail = context.watch<ProjectDetailCubit>().state;
+            final canCreate = detail is ProjectDetailLoaded &&
+                detail.has(Permission.milestoneCreate);
             return EmptyState(
               icon: Icons.flag_outlined,
               title: t.milestonesTitle,
               body: t.milestonesEmpty,
+              action: canCreate
+                  ? FilledButton.icon(
+                      icon: const Icon(Icons.add),
+                      onPressed: () async {
+                        final cubit = context.read<MilestonesListCubit>();
+                        final body =
+                            await showMilestoneEditDialog(context);
+                        if (body == null) return;
+                        await cubit.create(body);
+                      },
+                      label: Text(t.actionNewMilestone),
+                    )
+                  : null,
             );
           }
           final detail = context.watch<ProjectDetailCubit>().state;
