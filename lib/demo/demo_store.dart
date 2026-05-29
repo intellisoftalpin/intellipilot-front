@@ -7,6 +7,7 @@
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
+import 'package:intellipilot/features/links/data/dtos/link_dtos.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
@@ -52,6 +53,9 @@ class DemoStore {
   final List<Comment> comments = [];
   final List<HistoryEvent> historyEvents = [];
   final List<Attachment> attachments = [];
+
+  // -- entity links --------------------------------------------------------
+  final List<EntityLink> links = [];
 
   // -- id counters ---------------------------------------------------------
   int _seq = 0;
@@ -438,6 +442,44 @@ void seedDemoStore(DemoStore s) {
       createdAt: now,
       modifiedAt: now,
       etag: s.etagOf('iss-2', 1),
+    ),
+  ]);
+
+  // ---- links ----------------------------------------------------------
+  // Seed three so the panel has visible state to play with:
+  //   • US-login `blocks` US-backlog (dependency)
+  //   • T-form   `relates to` US-login (symmetric)
+  //   • iss-1    `duplicates` iss-2 (directional)
+  s.links.addAll([
+    EntityLink(
+      id: 'lnk-1',
+      projectId: projectId,
+      sourceKind: EntityKind.userStory,
+      sourceId: 'us-login',
+      targetKind: EntityKind.userStory,
+      targetId: 'us-backlog',
+      type: LinkType.blocks,
+      createdAt: now,
+    ),
+    EntityLink(
+      id: 'lnk-2',
+      projectId: projectId,
+      sourceKind: EntityKind.task,
+      sourceId: 'tk-form',
+      targetKind: EntityKind.userStory,
+      targetId: 'us-login',
+      type: LinkType.relates,
+      createdAt: now,
+    ),
+    EntityLink(
+      id: 'lnk-3',
+      projectId: projectId,
+      sourceKind: EntityKind.issue,
+      sourceId: 'iss-1',
+      targetKind: EntityKind.issue,
+      targetId: 'iss-2',
+      type: LinkType.duplicates,
+      createdAt: now,
     ),
   ]);
 

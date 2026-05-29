@@ -12,6 +12,7 @@ import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
+import 'package:intellipilot/core/error/problem.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/demo/demo_store.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
@@ -24,6 +25,8 @@ import 'package:intellipilot/features/board/data/dtos/board_dtos.dart';
 import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/links/data/dtos/link_dtos.dart';
+import 'package:intellipilot/features/links/domain/links_repository.dart';
 import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
@@ -1954,5 +1957,83 @@ class DemoWikiRepository implements WikiRepository {
       body: UpdateWikiPageRequest(title: r.title, body: r.body ?? ''),
       etag: cur.etag!,
     );
+  }
+}
+
+class DemoLinksRepository implements LinksRepository {
+  DemoLinksRepository(this._s);
+  final DemoStore _s;
+
+  @override
+  Future<Result<List<EntityLink>, AppFailure>> listFor(
+    String projectId,
+    EntityKind kind,
+    String entityId,
+  ) async {
+    await _tick();
+    final out = _s.links
+        .where(
+          (l) =>
+              l.projectId == projectId &&
+              ((l.sourceKind == kind && l.sourceId == entityId) ||
+                  (l.targetKind == kind && l.targetId == entityId)),
+        )
+        .toList();
+    return Ok(out);
+  }
+
+  @override
+  Future<Result<EntityLink, AppFailure>> create(
+    String projectId,
+    CreateLinkRequest body,
+  ) async {
+    await _tick();
+    // Reject self-links and exact duplicates so the demo behaves like a
+    // sane backend would.
+    if (body.sourceKind == body.targetKind && body.sourceId == body.targetId) {
+      return const Err(
+        ValidationFailure(fieldErrors: [
+          FieldError(field: 'target_id', code: 'self_link'),
+        ]),
+      );
+    }
+    final duplicate = _s.links.any(
+      (l) =>
+          l.projectId == projectId &&
+          l.type == body.type &&
+          l.sourceKind == body.sourceKind &&
+          l.sourceId == body.sourceId &&
+          l.targetKind == body.targetKind &&
+          l.targetId == body.targetId,
+    );
+    if (duplicate) {
+      return const Err(ConflictFailure());
+    }
+    final link = EntityLink(
+      id: _s.nextId('lnk'),
+      projectId: projectId,
+      sourceKind: body.sourceKind,
+      sourceId: body.sourceId,
+      targetKind: body.targetKind,
+      targetId: body.targetId,
+      type: body.type,
+      createdAt: DateTime.now().toUtc(),
+    );
+    _s.links.add(link);
+    return Ok(link);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> delete(
+    String projectId,
+    String linkId,
+  ) async {
+    await _tick();
+    final i = _s.links.indexWhere(
+      (l) => l.id == linkId && l.projectId == projectId,
+    );
+    if (i < 0) return const Err(NotFoundFailure());
+    _s.links.removeAt(i);
+    return const Ok(Unit.instance);
   }
 }

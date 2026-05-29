@@ -19,6 +19,8 @@ import 'package:intellipilot/features/board/data/board_repository_impl.dart';
 import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/data/catalog_repository_impl.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/links/data/links_repository_http.dart';
+import 'package:intellipilot/features/links/domain/links_repository.dart';
 import 'package:intellipilot/features/mfa/data/mfa_repository_impl.dart';
 import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
@@ -137,6 +139,9 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<WikiRepository>(
     () => WikiRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<LinksRepository>(
+    () => LinksRepositoryHttp(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
   getIt.registerLazySingleton<FileDownloader>(FileDownloader.new);
   getIt.registerLazySingleton<FilePicker>(FilePicker.new);
@@ -161,6 +166,7 @@ Future<void> configureForTests({
   MilestonesRepository? milestonesRepository,
   BoardRepository? boardRepository,
   WikiRepository? wikiRepository,
+  LinksRepository? linksRepository,
   FileDownloader? fileDownloader,
   FilePicker? filePicker,
   ApiConfig? apiConfig,
@@ -216,6 +222,9 @@ Future<void> configureForTests({
     )
     ..registerSingleton<WikiRepository>(
       wikiRepository ?? _NoopWikiRepository(),
+    )
+    ..registerSingleton<LinksRepository>(
+      linksRepository ?? _NoopLinksRepository(),
     )
     ..registerSingleton<FileDownloader>(
       fileDownloader ?? const _InMemoryDownloader(),
@@ -323,6 +332,14 @@ class _NoopWikiRepository implements WikiRepository {
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError(
         '_NoopWikiRepository.${invocation.memberName}',
+      );
+}
+
+class _NoopLinksRepository implements LinksRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError(
+        '_NoopLinksRepository.${invocation.memberName}',
       );
 }
 

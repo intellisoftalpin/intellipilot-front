@@ -17,6 +17,9 @@ import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/links/domain/links_repository.dart';
+import 'package:intellipilot/features/links/presentation/cubits/links_cubit.dart';
+import 'package:intellipilot/features/links/presentation/widgets/links_panel.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
@@ -112,6 +115,14 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
                 maxBytes: _maxBytes,
               )..load(),
             ),
+            BlocProvider<LinksCubit>(
+              create: (_) => LinksCubit(
+                repo: getIt<LinksRepository>(),
+                projectId: widget.projectId,
+                kind: widget.kind,
+                entityId: widget.entityId,
+              )..load(),
+            ),
           ],
           child: _DetailView(
             data: data,
@@ -175,6 +186,8 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
     lookups.add(backlog.listEpics(widget.projectId));
     lookups.add(backlog.listUserStories(widget.projectId));
     lookups.add(milestones.list(widget.projectId));
+    lookups.add(backlog.listTasks(widget.projectId));
+    lookups.add(backlog.listIssues(widget.projectId));
     final results = await Future.wait(lookups);
 
     List<T> resolve<T>(int i) =>
@@ -198,6 +211,8 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
       epicsById: {for (final e in resolve<Epic>(9)) e.id: e},
       userStoriesById: {for (final u in resolve<UserStory>(10)) u.id: u},
       milestonesById: {for (final m in resolve<Milestone>(11)) m.id: m},
+      tasksById: {for (final t in resolve<Task>(12)) t.id: t},
+      issuesById: {for (final i in resolve<Issue>(13)) i.id: i},
     );
   }
 }
@@ -217,6 +232,8 @@ class _PageData {
     required this.epicsById,
     required this.userStoriesById,
     required this.milestonesById,
+    required this.tasksById,
+    required this.issuesById,
   });
 
   final UserProfile profile;
@@ -228,6 +245,8 @@ class _PageData {
   final Map<String, Epic> epicsById;
   final Map<String, UserStory> userStoriesById;
   final Map<String, Milestone> milestonesById;
+  final Map<String, Task> tasksById;
+  final Map<String, Issue> issuesById;
 }
 
 sealed class _EntityRecord {
@@ -708,6 +727,22 @@ class _LeftColumn extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _Panel(
+          title: AppLocalizations.of(context).panelLinks,
+          child: LinksPanelContent(
+            projectId: data.project.id,
+            sourceKind: kind,
+            sourceId: entityId,
+            modifyPermission: _modifyPermissionFor(kind),
+            lookup: LinksLookup(
+              epics: data.epicsById,
+              userStories: data.userStoriesById,
+              tasks: data.tasksById,
+              issues: data.issuesById,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _Panel(
           title: AppLocalizations.of(context).panelAttachments,
           child: const AttachmentsView(shrinkWrap: true),
         ),
@@ -963,6 +998,13 @@ Widget _kvRow(BuildContext context, String label, String value) {
     ],
   );
 }
+
+Permission _modifyPermissionFor(EntityKind kind) => switch (kind) {
+      EntityKind.epic => Permission.epicModify,
+      EntityKind.userStory => Permission.usModify,
+      EntityKind.task => Permission.taskModify,
+      EntityKind.issue => Permission.issueModify,
+    };
 
 Color _hexToColor(String hex) {
   var h = hex.replaceAll('#', '');
