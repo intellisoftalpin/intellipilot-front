@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
+import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
@@ -203,18 +204,33 @@ class _Column extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  HexColorDot(hex: status?.color ?? '', size: 12),
+                  HexColorDot(hex: status?.color ?? '', size: 10),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      status?.name ?? t.boardColumnNoStatus,
-                      style: theme.textTheme.titleSmall,
+                      (status?.name ?? t.boardColumnNoStatus).toUpperCase(),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
-                  Text(
-                    '${tasks.length}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.outline,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${tasks.length}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -265,13 +281,11 @@ class _TaskCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'T-${task.reference}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.outline,
-                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IssueKeyChip(text: 'T-${task.reference}'),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 6),
               Text(
                 task.subject,
                 style: theme.textTheme.bodyMedium,

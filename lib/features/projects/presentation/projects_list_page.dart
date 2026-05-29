@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/projects_list_cubit.dart';
@@ -156,15 +157,38 @@ class _LoadedState extends State<_Loaded> {
                             vertical: 4,
                           ),
                           child: ListTile(
-                            leading: const Icon(Icons.folder_outlined),
-                            title: Text(p.name),
-                            subtitle: Text(
-                              p.description.isEmpty
-                                  ? p.slug
-                                  : '${p.slug} · ${p.description}',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                            leading: Icon(
+                              Icons.folder_outlined,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
+                            title: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    p.name,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IssueKeyChip(text: p.slug),
+                              ],
+                            ),
+                            subtitle: p.description.isEmpty
+                                ? null
+                                : Padding(
+                                    padding:
+                                        const EdgeInsets.only(top: 2),
+                                    child: Text(
+                                      p.description,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () => context.go(
                               Routes.projectDetailFor(p.id),

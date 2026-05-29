@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
@@ -339,15 +340,22 @@ class _EpicSection extends StatelessWidget {
         leading: epic == null
             ? const Icon(Icons.folder_open_outlined)
             : HexColorDot(hex: epic!.color, size: 18),
-        title: Text(
-          epic == null
-              ? t.backlogNoEpicGroup
-              : epic!.subject,
-        ),
+        title: epic == null
+            ? Text(t.backlogNoEpicGroup)
+            : Row(
+                children: [
+                  IssueKeyChip(text: 'EPIC-${epic!.reference}'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(epic!.subject, overflow: TextOverflow.ellipsis),
+                  ),
+                ],
+              ),
         subtitle: Text(
-          epic == null
-              ? '${stories.length} ${t.backlogStoryCountSuffix}'
-              : 'EPIC-${epic!.reference} · ${stories.length} ${t.backlogStoryCountSuffix}',
+          '${stories.length} ${t.backlogStoryCountSuffix}',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.outline,
+          ),
         ),
         trailing: canEditEpic && epic != null
             ? PopupMenuButton<String>(
@@ -426,14 +434,27 @@ class _UserStoryRow extends StatelessWidget {
         .cast<TaxonomyItem?>()
         .firstOrNull;
     return ListTile(
-      leading: HexColorDot(hex: status?.color ?? '', size: 14),
+      leading: IssueKeyChip(text: 'US-${story.reference}'),
       title: Text(story.subject),
-      subtitle: Text(
-        [
-          'US-${story.reference}',
-          if (status != null) status.name,
-          if (p?.value != null) '${t.taxonomyValueLabel}: ${p!.value}',
-        ].join(' · '),
+      subtitle: Wrap(
+        spacing: 8,
+        runSpacing: 4,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          if (status != null)
+            StatusPill(
+              label: status.name,
+              colorHex: status.color,
+              dense: true,
+            ),
+          if (p?.value != null)
+            Text(
+              '${t.taxonomyValueLabel}: ${p!.value}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+        ],
       ),
       onTap: () => context.go(
         Routes.entityDetailFor(

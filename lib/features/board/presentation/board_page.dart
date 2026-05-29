@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
+import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/data/dtos/board_dtos.dart';
@@ -252,18 +253,34 @@ class _BoardColumnView extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  HexColorDot(hex: column.status?.color ?? '', size: 12),
+                  HexColorDot(hex: column.status?.color ?? '', size: 10),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      column.status?.name ?? t.boardColumnNoStatus,
-                      style: theme.textTheme.titleSmall,
+                      (column.status?.name ?? t.boardColumnNoStatus)
+                          .toUpperCase(),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
-                  Text(
-                    '${column.userStories.length}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.outline,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${column.userStories.length}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -314,13 +331,11 @@ class _CardView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'US-${card.story.reference}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.outline,
-                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IssueKeyChip(text: 'US-${card.story.reference}'),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 6),
               Text(
                 card.story.subject,
                 style: theme.textTheme.bodyMedium,
