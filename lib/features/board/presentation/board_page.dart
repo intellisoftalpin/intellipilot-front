@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
@@ -904,6 +905,13 @@ class _BoardDetailsPanel extends StatelessWidget {
       kind: kind,
       entityId: entityId,
       onClose: onClose,
+      // In panel mode the subject renders as a clickable link instead
+      // of an inline editor. Tapping it routes to the standalone
+      // detail page (the panel itself stays in place until the user
+      // closes it via ×).
+      onOpen: () => GoRouter.of(context).go(
+        Routes.entityDetailFor(projectId, kind, entityId),
+      ),
     );
   }
 }

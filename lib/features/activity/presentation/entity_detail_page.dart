@@ -45,6 +45,7 @@ class EntityDetailPage extends StatefulWidget {
     required this.kind,
     required this.entityId,
     this.onClose,
+    this.onOpen,
     super.key,
   });
 
@@ -56,7 +57,16 @@ class EntityDetailPage extends StatefulWidget {
   /// actions slot. Used when the page is embedded as a panel (e.g. the
   /// board's right-side details pane) so the host can dismiss it
   /// without leaving the underlying screen.
+  ///
+  /// Setting [onClose] also switches the layout to **compact mode**:
+  /// the subject becomes a clickable link (firing [onOpen]) instead of
+  /// an inline editor, and body / panel paddings shrink so the same
+  /// content reads cleanly inside a ~420px panel.
   final VoidCallback? onClose;
+
+  /// Called when the subject is tapped in compact mode. Hosts wire
+  /// this to navigate to the standalone detail-page route.
+  final VoidCallback? onOpen;
 
   @override
   State<EntityDetailPage> createState() => _EntityDetailPageState();
@@ -156,6 +166,7 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
         projectId: widget.projectId,
         onChanged: _reload,
         onClose: widget.onClose,
+        onOpen: widget.onOpen,
       ),
     );
   }
@@ -404,6 +415,7 @@ class _DetailView extends StatelessWidget {
     required this.projectId,
     required this.onChanged,
     this.onClose,
+    this.onOpen,
   });
 
   final _PageData data;
@@ -412,6 +424,9 @@ class _DetailView extends StatelessWidget {
   final String projectId;
   final VoidCallback onChanged;
   final VoidCallback? onClose;
+  final VoidCallback? onOpen;
+
+  bool get _isCompact => onClose != null;
 
   @override
   Widget build(BuildContext context) {
@@ -444,24 +459,41 @@ class _DetailView extends StatelessWidget {
             ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
+          preferredSize: Size.fromHeight(_isCompact ? 44 : 56),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: EdgeInsets.fromLTRB(
+              _isCompact ? 12 : 16,
+              0,
+              _isCompact ? 12 : 16,
+              _isCompact ? 8 : 12,
+            ),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: _SubjectEditor(
-                entity: entity,
-                kind: kind,
-                projectId: projectId,
-                entityId: entityId,
-                onChanged: onChanged,
-              ),
+              child: _isCompact && onOpen != null
+                  ? _SubjectLink(
+                      subject: entity.subject,
+                      onTap: onOpen!,
+                    )
+                  : _SubjectEditor(
+                      entity: entity,
+                      kind: kind,
+                      projectId: projectId,
+                      entityId: entityId,
+                      onChanged: onChanged,
+                    ),
             ),
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      body: _KvLabelWidth(
+        width: _isCompact ? 96 : 140,
+        child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          _isCompact ? 12 : 16,
+          _isCompact ? 8 : 12,
+          _isCompact ? 12 : 16,
+          _isCompact ? 16 : 32,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -477,21 +509,29 @@ class _DetailView extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 5, child: _LeftColumn(
-                    data: data,
-                    kind: kind,
-                    entityId: entityId,
-                    projectId: projectId,
-                    onChanged: onChanged,
-                  )),
+                  Expanded(
+                    flex: 5,
+                    child: _LeftColumn(
+                      data: data,
+                      kind: kind,
+                      entityId: entityId,
+                      projectId: projectId,
+                      onChanged: onChanged,
+                      compact: _isCompact,
+                    ),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(flex: 3, child: _RightColumn(
-                    data: data,
-                    kind: kind,
-                    entityId: entityId,
-                    projectId: projectId,
-                    onChanged: onChanged,
-                  )),
+                  Expanded(
+                    flex: 3,
+                    child: _RightColumn(
+                      data: data,
+                      kind: kind,
+                      entityId: entityId,
+                      projectId: projectId,
+                      onChanged: onChanged,
+                      compact: _isCompact,
+                    ),
+                  ),
                 ],
               )
             else
@@ -504,19 +544,22 @@ class _DetailView extends StatelessWidget {
                     entityId: entityId,
                     projectId: projectId,
                     onChanged: onChanged,
+                    compact: _isCompact,
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: _isCompact ? 8 : 12),
                   _RightColumn(
                     data: data,
                     kind: kind,
                     entityId: entityId,
                     projectId: projectId,
                     onChanged: onChanged,
+                    compact: _isCompact,
                   ),
                 ],
               ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -577,6 +620,41 @@ class _DescriptionEditor extends StatelessWidget {
 /// Inline-editable title in the app bar. Renders the entity subject
 /// as a bold heading; click-to-edit switches to a TextField. Save
 /// PATCHes the subject for any kind via the shared dispatcher.
+/// Subject rendered as a clickable link — used in compact mode (panel
+/// embed). Tapping calls [onTap] which is wired to navigate to the
+/// standalone detail page. Multi-line capable with ellipsis fallback
+/// so long titles never blow the panel's width.
+class _SubjectLink extends StatelessWidget {
+  const _SubjectLink({required this.subject, required this.onTap});
+  final String subject;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+          child: Text(
+            subject,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: theme.colorScheme.primary,
+              decoration: TextDecoration.underline,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _SubjectEditor extends StatelessWidget {
   const _SubjectEditor({
     required this.entity,
@@ -865,19 +943,23 @@ class _LeftColumn extends StatelessWidget {
     required this.entityId,
     required this.projectId,
     required this.onChanged,
+    this.compact = false,
   });
   final _PageData data;
   final EntityKind kind;
   final String entityId;
   final String projectId;
   final VoidCallback onChanged;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final gap = SizedBox(height: compact ? 8 : 12);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Panel(
+          compact: compact,
           title: AppLocalizations.of(context).panelDetails,
           child: _DetailsTable(
             data: data,
@@ -885,10 +967,12 @@ class _LeftColumn extends StatelessWidget {
             entityId: entityId,
             projectId: projectId,
             onChanged: onChanged,
+            compact: compact,
           ),
         ),
-        const SizedBox(height: 12),
+        gap,
         _Panel(
+          compact: compact,
           title: AppLocalizations.of(context).panelDescription,
           child: _DescriptionEditor(
             data: data,
@@ -898,8 +982,9 @@ class _LeftColumn extends StatelessWidget {
             onChanged: onChanged,
           ),
         ),
-        const SizedBox(height: 12),
+        gap,
         _Panel(
+          compact: compact,
           title: AppLocalizations.of(context).panelLinks,
           child: LinksPanelContent(
             projectId: data.project.id,
@@ -914,13 +999,15 @@ class _LeftColumn extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        gap,
         _Panel(
+          compact: compact,
           title: AppLocalizations.of(context).panelAttachments,
           child: const AttachmentsView(shrinkWrap: true),
         ),
-        const SizedBox(height: 12),
+        gap,
         _Panel(
+          compact: compact,
           title: AppLocalizations.of(context).panelActivity,
           child: ActivityStreamView(
             draftKey: '${kind.wire}:$entityId',
@@ -939,12 +1026,14 @@ class _RightColumn extends StatelessWidget {
     required this.entityId,
     required this.projectId,
     required this.onChanged,
+    this.compact = false,
   });
   final _PageData data;
   final EntityKind kind;
   final String entityId;
   final String projectId;
   final VoidCallback onChanged;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -952,6 +1041,7 @@ class _RightColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Panel(
+          compact: compact,
           title: AppLocalizations.of(context).panelPeople,
           child: _PeopleTable(
             data: data,
@@ -961,8 +1051,9 @@ class _RightColumn extends StatelessWidget {
             onChanged: onChanged,
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: compact ? 8 : 12),
         _Panel(
+          compact: compact,
           title: AppLocalizations.of(context).panelDates,
           child: _DatesTable(data: data),
         ),
@@ -972,9 +1063,14 @@ class _RightColumn extends StatelessWidget {
 }
 
 class _Panel extends StatelessWidget {
-  const _Panel({required this.title, required this.child});
+  const _Panel({
+    required this.title,
+    required this.child,
+    this.compact = false,
+  });
   final String title;
   final Widget child;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -984,10 +1080,15 @@ class _Panel extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            padding: EdgeInsets.fromLTRB(
+              compact ? 12 : 16,
+              compact ? 8 : 12,
+              compact ? 12 : 16,
+              compact ? 6 : 8,
+            ),
             child: Text(
               title,
-              style: theme.textTheme.labelMedium?.copyWith(
+              style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
                 letterSpacing: 0.4,
                 fontWeight: FontWeight.w700,
@@ -996,7 +1097,12 @@ class _Panel extends StatelessWidget {
           ),
           const Divider(height: 1),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            padding: EdgeInsets.fromLTRB(
+              compact ? 12 : 16,
+              compact ? 8 : 12,
+              compact ? 12 : 16,
+              compact ? 12 : 16,
+            ),
             child: child,
           ),
         ],
@@ -1016,12 +1122,14 @@ class _DetailsTable extends StatelessWidget {
     required this.entityId,
     required this.projectId,
     required this.onChanged,
+    this.compact = false,
   });
   final _PageData data;
   final EntityKind kind;
   final String entityId;
   final String projectId;
   final VoidCallback onChanged;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -2542,27 +2650,54 @@ Widget _kvRow(BuildContext context, String label, String value) {
   return _kvRowWith(
     context,
     label,
-    SelectableText(value, style: Theme.of(context).textTheme.bodyMedium),
+    Text(
+      value,
+      style: Theme.of(context).textTheme.bodyMedium,
+      overflow: TextOverflow.ellipsis,
+      maxLines: 2,
+    ),
   );
 }
 
 Widget _kvRowWith(BuildContext context, String label, Widget value) {
   final theme = Theme.of(context);
+  final labelWidth = _KvLabelWidth.of(context);
   return Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       SizedBox(
-        width: 140,
+        width: labelWidth,
         child: Text(
           label,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.outline,
           ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
       ),
       Expanded(child: value),
     ],
   );
+}
+
+/// Tightens the label column of every nested `_kvRow` / `_kvRowWith`. The
+/// detail page sets a wider value (140) by default; compact mode (panel
+/// embed) drops to 96 so the value side gets the headroom it needs at
+/// 420px panel width without overflowing.
+class _KvLabelWidth extends InheritedWidget {
+  const _KvLabelWidth({required super.child, required this.width});
+  final double width;
+
+  static double of(BuildContext context) {
+    final w =
+        context.dependOnInheritedWidgetOfExactType<_KvLabelWidth>();
+    return w?.width ?? 140;
+  }
+
+  @override
+  bool updateShouldNotify(_KvLabelWidth oldWidget) =>
+      oldWidget.width != width;
 }
 
 Permission _modifyPermissionFor(EntityKind kind) => switch (kind) {
