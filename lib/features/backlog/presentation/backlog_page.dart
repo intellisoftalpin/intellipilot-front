@@ -333,8 +333,53 @@ class _EpicSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return DragTarget<String>(
+      // Reject drags whose source is already in this epic — `moveToEpic` is
+      // a no-op then, but suppressing the highlight is the honest signal.
+      onWillAcceptWithDetails: (details) {
+        if (!canEditUs) return false;
+        final cubit = context.read<BacklogCubit>();
+        final s = cubit.state;
+        if (s is! BacklogLoaded) return false;
+        final src = s.userStories
+            .where((u) => u.id == details.data)
+            .cast<UserStory?>()
+            .firstOrNull;
+        return src != null && src.epicId != epic?.id;
+      },
+      onAcceptWithDetails: (details) {
+        context.read<BacklogCubit>().moveUserStoryToEpic(
+          details.data,
+          epic?.id,
+        );
+      },
+      builder: (context, candidate, rejected) {
+        final highlighted = candidate.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: highlighted
+                  ? theme.colorScheme.primary
+                  : Colors.transparent,
+              width: 2,
+            ),
+            color: highlighted
+                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.35)
+                : null,
+          ),
+          child: _buildCard(context, t),
+        );
+      },
+    );
+  }
+
+  Widget _buildCard(BuildContext context, AppLocalizations t) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: EdgeInsets.zero,
       child: ExpansionTile(
         initiallyExpanded: true,
         leading: epic == null
@@ -427,13 +472,14 @@ class _UserStoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
     final status =
         statuses.where((s) => s.id == story.statusId).cast<TaxonomyItem?>().firstOrNull;
     final p = points
         .where((p) => p.id == story.pointsId)
         .cast<TaxonomyItem?>()
         .firstOrNull;
-    return ListTile(
+    final tile = ListTile(
       leading: IssueKeyChip(text: 'US-${story.reference}'),
       title: Text(story.subject),
       subtitle: Wrap(
@@ -536,6 +582,39 @@ class _UserStoryRow extends StatelessWidget {
               ],
             )
           : null,
+    );
+    if (!canEdit) return tile;
+    final feedback = Material(
+      elevation: 4,
+      borderRadius: BorderRadius.circular(8),
+      color: theme.colorScheme.surface,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IssueKeyChip(text: 'US-${story.reference}'),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  story.subject,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return Draggable<String>(
+      data: story.id,
+      dragAnchorStrategy: pointerDragAnchorStrategy,
+      feedback: feedback,
+      childWhenDragging: Opacity(opacity: 0.4, child: tile),
+      child: tile,
     );
   }
 }

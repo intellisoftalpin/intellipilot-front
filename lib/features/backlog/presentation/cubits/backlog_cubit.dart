@@ -222,6 +222,62 @@ class BacklogCubit extends Cubit<BacklogState> {
     await load();
   }
 
+  /// Drag-and-drop on the backlog page: re-parent a user story under a
+  /// different epic (or the unparented bucket when `epicId` is null).
+  /// Optimistic — patches the local list before the PATCH round-trips,
+  /// then `load()` reconciles. On 409 rolls back via the standard
+  /// stale-data path.
+  Future<void> moveUserStoryToEpic(String storyId, String? epicId) async {
+    final s = state;
+    if (s is! BacklogLoaded) return;
+    final idx = s.userStories.indexWhere((u) => u.id == storyId);
+    if (idx < 0) return;
+    final current = s.userStories[idx];
+    if (current.epicId == epicId) return;
+    final patched = UserStory(
+      id: current.id,
+      projectId: current.projectId,
+      reference: current.reference,
+      subject: current.subject,
+      description: current.description,
+      order: current.order,
+      version: current.version,
+      createdAt: current.createdAt,
+      modifiedAt: current.modifiedAt,
+      statusId: current.statusId,
+      epicId: epicId,
+      milestoneId: current.milestoneId,
+      pointsId: current.pointsId,
+      ownerId: current.ownerId,
+      assignedTo: current.assignedTo,
+      etag: current.etag,
+    );
+    final updated = List<UserStory>.of(s.userStories)..[idx] = patched;
+    emit(s.copyWith(userStories: updated, busy: true, lastError: null));
+
+    final got = await _repo.getUserStory(projectId, storyId);
+    final fresh = got.valueOrNull;
+    if (fresh == null) {
+      emit(s.copyWith(busy: false, lastError: got.failureOrNull));
+      await load();
+      return;
+    }
+    final res = await _repo.updateUserStory(
+      projectId,
+      storyId,
+      body: UpdateUserStoryRequest(epicId: epicId),
+      etag: fresh.etag ?? '',
+    );
+    if (res.isErr) {
+      final f = res.failureOrNull;
+      final stale = f is ConflictFailure;
+      emit(s.copyWith(busy: false, lastError: f, staleData: stale));
+      await load();
+      return;
+    }
+    await load();
+  }
+
   /// Optimistic reorder. On 409/412, rolls back via `load()` and surfaces
   /// `staleData: true` so the UI can show a banner.
   Future<void> reorderUserStory(String movedId, int newIndex) async {
