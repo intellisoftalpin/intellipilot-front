@@ -44,12 +44,19 @@ class EntityDetailPage extends StatefulWidget {
     required this.projectId,
     required this.kind,
     required this.entityId,
+    this.onClose,
     super.key,
   });
 
   final String projectId;
   final EntityKind kind;
   final String entityId;
+
+  /// When set, the page renders a close (×) button in the app bar
+  /// actions slot. Used when the page is embedded as a panel (e.g. the
+  /// board's right-side details pane) so the host can dismiss it
+  /// without leaving the underlying screen.
+  final VoidCallback? onClose;
 
   @override
   State<EntityDetailPage> createState() => _EntityDetailPageState();
@@ -148,6 +155,7 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
         entityId: widget.entityId,
         projectId: widget.projectId,
         onChanged: _reload,
+        onClose: widget.onClose,
       ),
     );
   }
@@ -395,6 +403,7 @@ class _DetailView extends StatelessWidget {
     required this.entityId,
     required this.projectId,
     required this.onChanged,
+    this.onClose,
   });
 
   final _PageData data;
@@ -402,6 +411,7 @@ class _DetailView extends StatelessWidget {
   final String entityId;
   final String projectId;
   final VoidCallback onChanged;
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -425,6 +435,14 @@ class _DetailView extends StatelessWidget {
             Crumb(label: key, mono: true),
           ],
         ),
+        actions: [
+          if (onClose != null)
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: t.actionCancel,
+              onPressed: onClose,
+            ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
           child: Padding(

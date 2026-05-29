@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
@@ -8,6 +7,7 @@ import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
+import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/data/dtos/board_dtos.dart';
@@ -876,13 +876,14 @@ class _EmptyColumnNote extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Right-side details panel — opens when a card is clicked. Renders a summary
-// card with the entity's key + subject (clickable → full detail page),
-// status / type / priority / description preview, and a prominent "Open"
-// button. Reload happens on selection change via the panel's ValueKey.
+// Right-side details panel — opens when a card is clicked. Embeds the full
+// EntityDetailPage so the panel renders the same edit affordances,
+// description, links, attachments, and activity stream the standalone
+// detail page shows. The page collapses to a single column at the panel's
+// 420px width automatically (`Breakpoints.isExpanded` is false there).
 // ---------------------------------------------------------------------------
 
-class _BoardDetailsPanel extends StatefulWidget {
+class _BoardDetailsPanel extends StatelessWidget {
   const _BoardDetailsPanel({
     required this.projectId,
     required this.kind,
@@ -897,312 +898,12 @@ class _BoardDetailsPanel extends StatefulWidget {
   final VoidCallback onClose;
 
   @override
-  State<_BoardDetailsPanel> createState() => _BoardDetailsPanelState();
-}
-
-class _BoardDetailsPanelState extends State<_BoardDetailsPanel> {
-  late Future<_PanelData?> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
-  }
-
-  Future<_PanelData?> _load() async {
-    final backlog = getIt<BacklogRepository>();
-    final catalog = getIt<CatalogRepository>();
-    final taxonomy = <TaxonomyItem>[];
-    for (final k in [
-      TaxonomyKind.usStatus,
-      TaxonomyKind.taskStatus,
-      TaxonomyKind.issueStatus,
-      TaxonomyKind.issueType,
-      TaxonomyKind.priority,
-      TaxonomyKind.severity,
-      TaxonomyKind.point,
-    ]) {
-      taxonomy.addAll(
-        (await catalog.listTaxonomy(widget.projectId, k)).valueOrNull ?? [],
-      );
-    }
-    final byId = {for (final t in taxonomy) t.id: t};
-    switch (widget.kind) {
-      case EntityKind.userStory:
-        final us =
-            (await backlog.getUserStory(widget.projectId, widget.entityId))
-                .valueOrNull;
-        if (us == null) return null;
-        return _PanelData(
-          key: 'US-${us.reference}',
-          subject: us.subject,
-          description: us.description,
-          rows: [
-            _PanelRow('Status', byId[us.statusId]?.name ?? '—'),
-            _PanelRow('Points', byId[us.pointsId]?.name ?? '—'),
-          ],
-        );
-      case EntityKind.task:
-        final task =
-            (await backlog.getTask(widget.projectId, widget.entityId))
-                .valueOrNull;
-        if (task == null) return null;
-        return _PanelData(
-          key: 'T-${task.reference}',
-          subject: task.subject,
-          description: task.description,
-          rows: [
-            _PanelRow('Status', byId[task.statusId]?.name ?? '—'),
-          ],
-        );
-      case EntityKind.epic:
-        final epic =
-            (await backlog.getEpic(widget.projectId, widget.entityId))
-                .valueOrNull;
-        if (epic == null) return null;
-        return _PanelData(
-          key: 'EPIC-${epic.reference}',
-          subject: epic.subject,
-          description: epic.description,
-          rows: [
-            _PanelRow('Status', byId[epic.statusId]?.name ?? '—'),
-          ],
-        );
-      case EntityKind.issue:
-        final issue =
-            (await backlog.getIssue(widget.projectId, widget.entityId))
-                .valueOrNull;
-        if (issue == null) return null;
-        return _PanelData(
-          key: 'ISSUE-${issue.reference}',
-          subject: issue.subject,
-          description: issue.description,
-          rows: [
-            _PanelRow('Status', byId[issue.statusId]?.name ?? '—'),
-            _PanelRow('Type', byId[issue.typeId]?.name ?? '—'),
-            _PanelRow('Priority', byId[issue.priorityId]?.name ?? '—'),
-            _PanelRow('Severity', byId[issue.severityId]?.name ?? '—'),
-          ],
-        );
-    }
-  }
-
-  void _openFullPage() {
-    context.go(
-      Routes.entityDetailFor(
-        widget.projectId,
-        widget.kind,
-        widget.entityId,
-      ),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      child: FutureBuilder<_PanelData?>(
-        future: _future,
-        builder: (context, snap) {
-          if (snap.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final data = snap.data;
-          if (data == null) {
-            return Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: widget.onClose,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: Text(
-                      AppLocalizations.of(context).entityDetailLoadFailed,
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-          return _PanelBody(
-            data: data,
-            onClose: widget.onClose,
-            onOpen: _openFullPage,
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _PanelData {
-  const _PanelData({
-    required this.key,
-    required this.subject,
-    required this.description,
-    required this.rows,
-  });
-  final String key;
-  final String subject;
-  final String description;
-  final List<_PanelRow> rows;
-}
-
-class _PanelRow {
-  const _PanelRow(this.label, this.value);
-  final String label;
-  final String value;
-}
-
-class _PanelBody extends StatelessWidget {
-  const _PanelBody({
-    required this.data,
-    required this.onClose,
-    required this.onOpen,
-  });
-  final _PanelData data;
-  final VoidCallback onClose;
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Toolbar
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-          child: Row(
-            children: [
-              IssueKeyChip(text: data.key),
-              const Spacer(),
-              IconButton(
-                tooltip: AppLocalizations.of(context).actionOpenDetail,
-                icon: const Icon(Icons.open_in_new, size: 18),
-                onPressed: onOpen,
-              ),
-              IconButton(
-                tooltip: AppLocalizations.of(context).actionCancel,
-                icon: const Icon(Icons.close),
-                onPressed: onClose,
-              ),
-            ],
-          ),
-        ),
-        // Subject — Jira pattern: clicking the title navigates to full
-        // page; status pills / chips sit in the body below.
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: InkWell(
-            onTap: onOpen,
-            borderRadius: BorderRadius.circular(4),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                data.subject,
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.primary,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const Divider(height: 1),
-        // Body
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final r in data.rows) ...[
-                  _PanelKvRow(label: r.label, value: r.value),
-                  const SizedBox(height: 6),
-                ],
-                const SizedBox(height: 12),
-                Text(
-                  AppLocalizations.of(context).panelDescription,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    letterSpacing: 0.4,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (data.description.isEmpty)
-                  Text(
-                    AppLocalizations.of(context).descriptionPlaceholder,
-                    style: TextStyle(
-                      color: theme.colorScheme.outline,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  )
-                else
-                  Text(
-                    data.description,
-                    style: theme.textTheme.bodyMedium,
-                    maxLines: 20,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: FilledButton.icon(
-            icon: const Icon(Icons.open_in_new, size: 16),
-            onPressed: onOpen,
-            label: Text(AppLocalizations.of(context).actionOpenDetail),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _PanelKvRow extends StatelessWidget {
-  const _PanelKvRow({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.outline,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: theme.textTheme.bodyMedium,
-          ),
-        ),
-      ],
+    return EntityDetailPage(
+      projectId: projectId,
+      kind: kind,
+      entityId: entityId,
+      onClose: onClose,
     );
   }
 }
