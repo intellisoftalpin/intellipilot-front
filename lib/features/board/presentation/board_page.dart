@@ -116,7 +116,9 @@ class _BoardPageState extends State<BoardPage> {
   }
 }
 
-class _BoardView extends StatelessWidget {
+typedef _Selected = ({EntityKind kind, String id});
+
+class _BoardView extends StatefulWidget {
   const _BoardView({
     required this.projectId,
     required this.mode,
@@ -127,14 +129,53 @@ class _BoardView extends StatelessWidget {
   final ValueChanged<_BoardViewMode> onModeChanged;
 
   @override
+  State<_BoardView> createState() => _BoardViewState();
+}
+
+class _BoardViewState extends State<_BoardView> {
+  /// The card a user clicked on. When non-null the right-side details
+  /// panel shows the entity; the card itself renders with a primary
+  /// outline so it's obvious which one is open.
+  _Selected? _selected;
+
+  void _select(EntityKind kind, String id) {
+    setState(() => _selected = (kind: kind, id: id));
+  }
+
+  void _clearSelection() => setState(() => _selected = null);
+
+  @override
+  void didUpdateWidget(covariant _BoardView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Switching between Stories ⇄ Tasks invalidates the current
+    // selection — the entity kind no longer matches the visible cards.
+    if (oldWidget.mode != widget.mode) _clearSelection();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final body = widget.mode == _BoardViewMode.stories
+        ? _StoryBoardBody(
+            projectId: widget.projectId,
+            selectedId: _selected?.kind == EntityKind.userStory
+                ? _selected?.id
+                : null,
+            onSelect: (id) => _select(EntityKind.userStory, id),
+          )
+        : _TaskBoardBody(
+            projectId: widget.projectId,
+            selectedId:
+                _selected?.kind == EntityKind.task ? _selected?.id : null,
+            onSelect: (id) => _select(EntityKind.task, id),
+          );
     return Scaffold(
       appBar: AppBar(
         title: BlocBuilder<BoardCubit, BoardState>(
           builder: (context, state) {
             final extras = <Crumb>[];
-            if (mode == _BoardViewMode.stories && state is BoardLoaded) {
+            if (widget.mode == _BoardViewMode.stories &&
+                state is BoardLoaded) {
               final m = state.milestones.firstWhere(
                 (m) => m.id == state.milestoneId,
                 orElse: () => state.milestones.first,
@@ -142,11 +183,11 @@ class _BoardView extends StatelessWidget {
               extras.add(Crumb(label: m.name));
             }
             return ProjectSectionBreadcrumb(
-              projectId: projectId,
+              projectId: widget.projectId,
               currentLabel: t.boardTitle,
               sectionRoute: extras.isEmpty
                   ? null
-                  : Routes.projectBoardFor(projectId),
+                  : Routes.projectBoardFor(widget.projectId),
               extraCrumbs: extras,
             );
           },
@@ -167,14 +208,14 @@ class _BoardView extends StatelessWidget {
                   icon: const Icon(Icons.task_alt, size: 16),
                 ),
               ],
-              selected: {mode},
-              onSelectionChanged: (s) => onModeChanged(s.first),
+              selected: {widget.mode},
+              onSelectionChanged: (s) => widget.onModeChanged(s.first),
               style: const ButtonStyle(
                 visualDensity: VisualDensity.compact,
               ),
             ),
           ),
-          if (mode == _BoardViewMode.stories)
+          if (widget.mode == _BoardViewMode.stories)
             BlocBuilder<BoardCubit, BoardState>(
               builder: (context, state) {
                 if (state is! BoardLoaded) return const SizedBox.shrink();
@@ -198,12 +239,27 @@ class _BoardView extends StatelessWidget {
             ),
         ],
       ),
-      endDrawer: mode == _BoardViewMode.stories
+      endDrawer: widget.mode == _BoardViewMode.stories
           ? const BoardFiltersDrawer()
           : null,
-      body: mode == _BoardViewMode.stories
-          ? _StoryBoardBody(projectId: projectId)
-          : _TaskBoardBody(projectId: projectId),
+      body: Row(
+        children: [
+          Expanded(child: body),
+          if (_selected != null) ...[
+            const VerticalDivider(width: 1),
+            SizedBox(
+              width: 420,
+              child: _BoardDetailsPanel(
+                key: ValueKey('${_selected!.kind}:${_selected!.id}'),
+                projectId: widget.projectId,
+                kind: _selected!.kind,
+                entityId: _selected!.id,
+                onClose: _clearSelection,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -214,8 +270,14 @@ class _BoardView extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _StoryBoardBody extends StatelessWidget {
-  const _StoryBoardBody({required this.projectId});
+  const _StoryBoardBody({
+    required this.projectId,
+    required this.selectedId,
+    required this.onSelect,
+  });
   final String projectId;
+  final String? selectedId;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -248,7 +310,12 @@ class _StoryBoardBody extends StatelessWidget {
           );
         }
         if (state is BoardLoaded) {
-          return _StoriesLoaded(state: state, projectId: projectId);
+          return _StoriesLoaded(
+            state: state,
+            projectId: projectId,
+            selectedId: selectedId,
+            onSelect: onSelect,
+          );
         }
         return const SizedBox.shrink();
       },
@@ -285,9 +352,16 @@ class _MilestonePicker extends StatelessWidget {
 }
 
 class _StoriesLoaded extends StatelessWidget {
-  const _StoriesLoaded({required this.state, required this.projectId});
+  const _StoriesLoaded({
+    required this.state,
+    required this.projectId,
+    required this.selectedId,
+    required this.onSelect,
+  });
   final BoardLoaded state;
   final String projectId;
+  final String? selectedId;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -316,7 +390,12 @@ class _StoriesLoaded extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 for (final col in state.visibleColumns)
-                  _StoryColumn(column: col, projectId: projectId),
+                  _StoryColumn(
+                    column: col,
+                    projectId: projectId,
+                    selectedId: selectedId,
+                    onSelect: onSelect,
+                  ),
                 const SizedBox(width: 16),
               ],
             ),
@@ -328,9 +407,16 @@ class _StoriesLoaded extends StatelessWidget {
 }
 
 class _StoryColumn extends StatelessWidget {
-  const _StoryColumn({required this.column, required this.projectId});
+  const _StoryColumn({
+    required this.column,
+    required this.projectId,
+    required this.selectedId,
+    required this.onSelect,
+  });
   final BoardColumn column;
   final String projectId;
+  final String? selectedId;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -365,7 +451,12 @@ class _StoryColumn extends StatelessWidget {
               ),
               const Divider(height: 12),
               for (final card in column.userStories)
-                _StoryCard(card: card, projectId: projectId),
+                _StoryCard(
+                  card: card,
+                  projectId: projectId,
+                  selected: card.story.id == selectedId,
+                  onTap: () => onSelect(card.story.id),
+                ),
               if (column.userStories.isEmpty) _EmptyColumnNote(label: t.boardEmptyColumn),
             ],
           ),
@@ -376,23 +467,33 @@ class _StoryColumn extends StatelessWidget {
 }
 
 class _StoryCard extends StatelessWidget {
-  const _StoryCard({required this.card, required this.projectId});
+  const _StoryCard({
+    required this.card,
+    required this.projectId,
+    required this.selected,
+    required this.onTap,
+  });
   final BoardCard card;
   final String projectId;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cardWidget = Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      child: InkWell(
-        onTap: () => context.go(
-          Routes.entityDetailFor(
-            projectId,
-            EntityKind.userStory,
-            card.story.id,
-          ),
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: selected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.outlineVariant,
+          width: selected ? 2 : 1,
         ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: InkWell(
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: Column(
@@ -457,8 +558,14 @@ class _StoryCard extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _TaskBoardBody extends StatelessWidget {
-  const _TaskBoardBody({required this.projectId});
+  const _TaskBoardBody({
+    required this.projectId,
+    required this.selectedId,
+    required this.onSelect,
+  });
   final String projectId;
+  final String? selectedId;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -491,16 +598,28 @@ class _TaskBoardBody extends StatelessWidget {
             body: t.taskBoardNoStatuses,
           );
         }
-        return _TasksLoaded(state: state, projectId: projectId);
+        return _TasksLoaded(
+          state: state,
+          projectId: projectId,
+          selectedId: selectedId,
+          onSelect: onSelect,
+        );
       },
     );
   }
 }
 
 class _TasksLoaded extends StatelessWidget {
-  const _TasksLoaded({required this.state, required this.projectId});
+  const _TasksLoaded({
+    required this.state,
+    required this.projectId,
+    required this.selectedId,
+    required this.onSelect,
+  });
   final TaskBoardLoaded state;
   final String projectId;
+  final String? selectedId;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -534,11 +653,15 @@ class _TasksLoaded extends StatelessWidget {
                     status: status,
                     tasks: buckets[status.id] ?? const [],
                     projectId: projectId,
+                    selectedId: selectedId,
+                    onSelect: onSelect,
                   ),
                 _TaskColumn(
                   status: null,
                   tasks: buckets[null] ?? const [],
                   projectId: projectId,
+                  selectedId: selectedId,
+                  onSelect: onSelect,
                 ),
                 const SizedBox(width: 16),
               ],
@@ -555,12 +678,16 @@ class _TaskColumn extends StatelessWidget {
     required this.status,
     required this.tasks,
     required this.projectId,
+    required this.selectedId,
+    required this.onSelect,
   });
 
   /// Null for the trailing "no status" column.
   final TaxonomyItem? status;
   final List<Task> tasks;
   final String projectId;
+  final String? selectedId;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -595,7 +722,12 @@ class _TaskColumn extends StatelessWidget {
               ),
               const Divider(height: 12),
               for (final task in tasks)
-                _TaskCard(task: task, projectId: projectId),
+                _TaskCard(
+                  task: task,
+                  projectId: projectId,
+                  selected: task.id == selectedId,
+                  onTap: () => onSelect(task.id),
+                ),
               if (tasks.isEmpty) _EmptyColumnNote(label: t.boardEmptyColumn),
             ],
           ),
@@ -606,23 +738,33 @@ class _TaskColumn extends StatelessWidget {
 }
 
 class _TaskCard extends StatelessWidget {
-  const _TaskCard({required this.task, required this.projectId});
+  const _TaskCard({
+    required this.task,
+    required this.projectId,
+    required this.selected,
+    required this.onTap,
+  });
   final Task task;
   final String projectId;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cardWidget = Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
-      child: InkWell(
-        onTap: () => context.go(
-          Routes.entityDetailFor(
-            projectId,
-            EntityKind.task,
-            task.id,
-          ),
+      shape: RoundedRectangleBorder(
+        side: BorderSide(
+          color: selected
+              ? theme.colorScheme.primary
+              : theme.colorScheme.outlineVariant,
+          width: selected ? 2 : 1,
         ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: InkWell(
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(10),
           child: Column(
@@ -729,6 +871,338 @@ class _EmptyColumnNote extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Right-side details panel — opens when a card is clicked. Renders a summary
+// card with the entity's key + subject (clickable → full detail page),
+// status / type / priority / description preview, and a prominent "Open"
+// button. Reload happens on selection change via the panel's ValueKey.
+// ---------------------------------------------------------------------------
+
+class _BoardDetailsPanel extends StatefulWidget {
+  const _BoardDetailsPanel({
+    required this.projectId,
+    required this.kind,
+    required this.entityId,
+    required this.onClose,
+    super.key,
+  });
+
+  final String projectId;
+  final EntityKind kind;
+  final String entityId;
+  final VoidCallback onClose;
+
+  @override
+  State<_BoardDetailsPanel> createState() => _BoardDetailsPanelState();
+}
+
+class _BoardDetailsPanelState extends State<_BoardDetailsPanel> {
+  late Future<_PanelData?> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<_PanelData?> _load() async {
+    final backlog = getIt<BacklogRepository>();
+    final catalog = getIt<CatalogRepository>();
+    final taxonomy = <TaxonomyItem>[];
+    for (final k in [
+      TaxonomyKind.usStatus,
+      TaxonomyKind.taskStatus,
+      TaxonomyKind.issueStatus,
+      TaxonomyKind.issueType,
+      TaxonomyKind.priority,
+      TaxonomyKind.severity,
+      TaxonomyKind.point,
+    ]) {
+      taxonomy.addAll(
+        (await catalog.listTaxonomy(widget.projectId, k)).valueOrNull ?? [],
+      );
+    }
+    final byId = {for (final t in taxonomy) t.id: t};
+    switch (widget.kind) {
+      case EntityKind.userStory:
+        final us =
+            (await backlog.getUserStory(widget.projectId, widget.entityId))
+                .valueOrNull;
+        if (us == null) return null;
+        return _PanelData(
+          key: 'US-${us.reference}',
+          subject: us.subject,
+          description: us.description,
+          rows: [
+            _PanelRow('Status', byId[us.statusId]?.name ?? '—'),
+            _PanelRow('Points', byId[us.pointsId]?.name ?? '—'),
+          ],
+        );
+      case EntityKind.task:
+        final task =
+            (await backlog.getTask(widget.projectId, widget.entityId))
+                .valueOrNull;
+        if (task == null) return null;
+        return _PanelData(
+          key: 'T-${task.reference}',
+          subject: task.subject,
+          description: task.description,
+          rows: [
+            _PanelRow('Status', byId[task.statusId]?.name ?? '—'),
+          ],
+        );
+      case EntityKind.epic:
+        final epic =
+            (await backlog.getEpic(widget.projectId, widget.entityId))
+                .valueOrNull;
+        if (epic == null) return null;
+        return _PanelData(
+          key: 'EPIC-${epic.reference}',
+          subject: epic.subject,
+          description: epic.description,
+          rows: [
+            _PanelRow('Status', byId[epic.statusId]?.name ?? '—'),
+          ],
+        );
+      case EntityKind.issue:
+        final issue =
+            (await backlog.getIssue(widget.projectId, widget.entityId))
+                .valueOrNull;
+        if (issue == null) return null;
+        return _PanelData(
+          key: 'ISSUE-${issue.reference}',
+          subject: issue.subject,
+          description: issue.description,
+          rows: [
+            _PanelRow('Status', byId[issue.statusId]?.name ?? '—'),
+            _PanelRow('Type', byId[issue.typeId]?.name ?? '—'),
+            _PanelRow('Priority', byId[issue.priorityId]?.name ?? '—'),
+            _PanelRow('Severity', byId[issue.severityId]?.name ?? '—'),
+          ],
+        );
+    }
+  }
+
+  void _openFullPage() {
+    context.go(
+      Routes.entityDetailFor(
+        widget.projectId,
+        widget.kind,
+        widget.entityId,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface,
+      child: FutureBuilder<_PanelData?>(
+        future: _future,
+        builder: (context, snap) {
+          if (snap.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final data = snap.data;
+          if (data == null) {
+            return Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: widget.onClose,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: Text(
+                      AppLocalizations.of(context).entityDetailLoadFailed,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+          return _PanelBody(
+            data: data,
+            onClose: widget.onClose,
+            onOpen: _openFullPage,
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PanelData {
+  const _PanelData({
+    required this.key,
+    required this.subject,
+    required this.description,
+    required this.rows,
+  });
+  final String key;
+  final String subject;
+  final String description;
+  final List<_PanelRow> rows;
+}
+
+class _PanelRow {
+  const _PanelRow(this.label, this.value);
+  final String label;
+  final String value;
+}
+
+class _PanelBody extends StatelessWidget {
+  const _PanelBody({
+    required this.data,
+    required this.onClose,
+    required this.onOpen,
+  });
+  final _PanelData data;
+  final VoidCallback onClose;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Toolbar
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+          child: Row(
+            children: [
+              IssueKeyChip(text: data.key),
+              const Spacer(),
+              IconButton(
+                tooltip: AppLocalizations.of(context).actionOpenDetail,
+                icon: const Icon(Icons.open_in_new, size: 18),
+                onPressed: onOpen,
+              ),
+              IconButton(
+                tooltip: AppLocalizations.of(context).actionCancel,
+                icon: const Icon(Icons.close),
+                onPressed: onClose,
+              ),
+            ],
+          ),
+        ),
+        // Subject — Jira pattern: clicking the title navigates to full
+        // page; status pills / chips sit in the body below.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: InkWell(
+            onTap: onOpen,
+            borderRadius: BorderRadius.circular(4),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                data.subject,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: theme.colorScheme.primary,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const Divider(height: 1),
+        // Body
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (final r in data.rows) ...[
+                  _PanelKvRow(label: r.label, value: r.value),
+                  const SizedBox(height: 6),
+                ],
+                const SizedBox(height: 12),
+                Text(
+                  AppLocalizations.of(context).panelDescription,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.4,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (data.description.isEmpty)
+                  Text(
+                    AppLocalizations.of(context).descriptionPlaceholder,
+                    style: TextStyle(
+                      color: theme.colorScheme.outline,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  )
+                else
+                  Text(
+                    data.description,
+                    style: theme.textTheme.bodyMedium,
+                    maxLines: 20,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: FilledButton.icon(
+            icon: const Icon(Icons.open_in_new, size: 16),
+            onPressed: onOpen,
+            label: Text(AppLocalizations.of(context).actionOpenDetail),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PanelKvRow extends StatelessWidget {
+  const _PanelKvRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: theme.textTheme.bodyMedium,
+          ),
+        ),
+      ],
     );
   }
 }
