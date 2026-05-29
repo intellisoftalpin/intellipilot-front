@@ -1470,25 +1470,10 @@ class _ClickToEditCell extends StatefulWidget {
 }
 
 class _ClickToEditCellState extends State<_ClickToEditCell> {
-  bool _hovering = false;
-
   /// Display override for the optimistic-update window: shows the
   /// just-picked label until the PATCH resolves; on failure we revert.
   String? _optimisticDisplay;
   bool _saving = false;
-
-  /// Defer hover-state setState calls to a post-frame callback. Calling
-  /// setState directly inside `MouseRegion.onEnter`/`onExit` fires
-  /// `!_debugDuringDeviceUpdate` because the rebuild it schedules
-  /// retriggers the mouse tracker mid-flight.
-  void _setHover(bool value) {
-    if (_hovering == value) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _hovering != value) {
-        setState(() => _hovering = value);
-      }
-    });
-  }
 
   Future<void> _open() async {
     final picked = await _showSearchablePicker(
@@ -1552,23 +1537,18 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
         ),
       );
     }
-    final caretVisible = _hovering || _saving;
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => _setHover(true),
-      onExit: (_) => _setHover(false),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+    // Hover is rendered by InkWell.hoverColor — synchronised with the
+    // Flutter mouse tracker internally, so we don't need our own
+    // setState-driven hover state (which raced between cells and left
+    // multiple rows stuck "hovered" when the mouse moved quickly).
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
         onTap: _saving ? null : _open,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 80),
+        borderRadius: BorderRadius.circular(4),
+        hoverColor: theme.colorScheme.surfaceContainerHighest,
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-          decoration: BoxDecoration(
-            color: _hovering
-                ? theme.colorScheme.surfaceContainerHighest
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(4),
-          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1597,9 +1577,7 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
                 Icon(
                   Icons.unfold_more,
                   size: 14,
-                  color: caretVisible
-                      ? theme.colorScheme.outline
-                      : Colors.transparent,
+                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
                 ),
             ],
           ),
@@ -2112,19 +2090,7 @@ class _MultiSelectCellState extends State<_MultiSelectCell> {
   /// Optimistic display state — the in-flight new id list. Replaces
   /// `widget.selectedIds` until the PATCH resolves; reverts on failure.
   List<String>? _optimistic;
-  bool _hovering = false;
   bool _saving = false;
-
-  /// Same post-frame deferral as [_ClickToEditCellState._setHover] —
-  /// see that doc for why this can't be a synchronous setState.
-  void _setHover(bool value) {
-    if (_hovering == value) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _hovering != value) {
-        setState(() => _hovering = value);
-      }
-    });
-  }
 
   Future<void> _commit(List<String> next) async {
     setState(() {
@@ -2196,22 +2162,16 @@ class _MultiSelectCellState extends State<_MultiSelectCell> {
 
     if (chips.isEmpty) {
       // Empty state — clicking anywhere on the row opens the dialog.
-      return MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => _setHover(true),
-        onExit: (_) => _setHover(false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
+      // Hover bg / cursor / ripple all come from InkWell — no manual
+      // hover state needed.
+      return Material(
+        type: MaterialType.transparency,
+        child: InkWell(
           onTap: _saving ? null : _openDialog,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 80),
+          borderRadius: BorderRadius.circular(4),
+          hoverColor: theme.colorScheme.surfaceContainerHighest,
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            decoration: BoxDecoration(
-              color: _hovering
-                  ? theme.colorScheme.surfaceContainerHighest
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(4),
-            ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -2233,9 +2193,7 @@ class _MultiSelectCellState extends State<_MultiSelectCell> {
                   Icon(
                     Icons.add,
                     size: 14,
-                    color: _hovering
-                        ? theme.colorScheme.outline
-                        : Colors.transparent,
+                    color: theme.colorScheme.outline.withValues(alpha: 0.4),
                   ),
               ],
             ),
@@ -2244,10 +2202,7 @@ class _MultiSelectCellState extends State<_MultiSelectCell> {
       );
     }
 
-    return MouseRegion(
-      onEnter: (_) => _setHover(true),
-      onExit: (_) => _setHover(false),
-      child: Wrap(
+    return Wrap(
         spacing: 6,
         runSpacing: 6,
         crossAxisAlignment: WrapCrossAlignment.center,
@@ -2311,7 +2266,6 @@ class _MultiSelectCellState extends State<_MultiSelectCell> {
             ),
           ),
         ],
-      ),
     );
   }
 }
