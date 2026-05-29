@@ -15,11 +15,14 @@ import 'package:logger/logger.dart';
 /// through the logger instead of crashing silently. Phase 18 will replace
 /// the catch-all with a real crash reporter (Sentry).
 Future<void> bootstrap() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  applyPathUrlStrategy();
-
   await runZonedGuarded<Future<void>>(
     () async {
+      // Binding init MUST live in the same zone as `runApp` — otherwise
+      // Flutter logs a "Zone mismatch" warning at every microtask and any
+      // zone-specific config (timers, error hooks) is silently unreliable.
+      WidgetsFlutterBinding.ensureInitialized();
+      applyPathUrlStrategy();
+
       await HiveBoxes.init();
       if (isDemoMode) {
         await configureDemoDependencies();
