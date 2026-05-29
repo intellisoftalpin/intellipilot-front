@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
@@ -157,12 +158,7 @@ class _Loaded extends StatelessWidget {
             const Divider(height: 16),
             Expanded(
               child: visible.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Text(t.issuesEmpty, textAlign: TextAlign.center),
-                      ),
-                    )
+                  ? _EmptyIssues(state: state)
                   : ListView.builder(
                       itemCount: visible.length,
                       itemBuilder: (context, i) {
@@ -178,6 +174,40 @@ class _Loaded extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Empty state for the issue list. Always renders the bug icon + headline;
+/// adds an inline "New issue" CTA when the viewer has `issue:create`.
+/// Without that fallback the only entry point is the Scaffold FAB, which
+/// users on tight viewports or with a scroll-wheel hovering elsewhere
+/// frequently miss.
+class _EmptyIssues extends StatelessWidget {
+  const _EmptyIssues({required this.state});
+  final IssuesLoaded state;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final detail = context.watch<ProjectDetailCubit>().state;
+    final canCreate =
+        detail is ProjectDetailLoaded && detail.has(Permission.issueCreate);
+    return EmptyState(
+      icon: Icons.bug_report_outlined,
+      title: t.issuesTitle,
+      body: t.issuesEmpty,
+      action: canCreate
+          ? FilledButton.icon(
+              icon: const Icon(Icons.add),
+              onPressed: () async {
+                final cubit = context.read<IssuesCubit>();
+                final body = await showIssueEditDialog(context, state: state);
+                if (body != null) await cubit.create(body);
+              },
+              label: Text(t.actionNewIssue),
+            )
+          : null,
     );
   }
 }
