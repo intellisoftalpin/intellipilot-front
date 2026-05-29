@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
@@ -81,8 +82,15 @@ class _DetailView extends StatelessWidget {
         appBar: AppBar(
           title: BlocBuilder<MilestoneDetailCubit, MilestoneDetailState>(
             builder: (_, s) {
-              if (s is MilestoneDetailLoaded) return Text(s.milestone.name);
-              return Text(t.milestoneDetailTitle);
+              final name = s is MilestoneDetailLoaded
+                  ? s.milestone.name
+                  : t.milestoneDetailTitle;
+              return ProjectSectionBreadcrumb(
+                projectId: projectId,
+                currentLabel: t.milestonesTitle,
+                sectionRoute: Routes.projectMilestonesFor(projectId),
+                extraCrumbs: [Crumb(label: name)],
+              );
             },
           ),
           actions: [

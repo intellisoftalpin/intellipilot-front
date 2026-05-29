@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
@@ -29,7 +30,9 @@ class _ProjectsListView extends StatelessWidget {
     final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(t.projectsTitle),
+        title: BreadcrumbBar(
+          crumbs: [Crumb(label: t.projectsTitle)],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),

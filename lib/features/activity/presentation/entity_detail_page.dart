@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
-import 'package:intellipilot/app/theme/app_theme.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/core/ui/timestamps.dart';
@@ -391,31 +391,42 @@ class _DetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final entity = data.entity;
-    final breadcrumb = '${data.project.name} / ${entity.prefix}-${entity.reference}';
+    final t = AppLocalizations.of(context);
     final isWide = Breakpoints.of(context).isExpanded;
+    final key = '${entity.prefix}-${entity.reference}';
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              breadcrumb,
-              style: AppTheme.mono(context, size: 11).copyWith(
-                color: theme.colorScheme.outline,
-              ),
+        title: BreadcrumbBar(
+          crumbs: [
+            Crumb(
+              label: t.projectsTitle,
+              onTap: () => context.go(Routes.projects),
             ),
-            Text(
-              entity.subject,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            Crumb(
+              label: data.project.name,
+              onTap: () =>
+                  context.go(Routes.projectDetailFor(data.project.id)),
             ),
+            Crumb(label: key, mono: true),
           ],
         ),
-        toolbarHeight: 64,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(40),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                entity.subject,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),

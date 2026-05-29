@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/timestamps.dart';
 import 'package:intellipilot/features/wiki/data/dtos/wiki_dtos.dart';
 import 'package:intellipilot/features/wiki/domain/wiki_repository.dart';
@@ -36,19 +38,35 @@ class WikiRevisionsPage extends StatelessWidget {
           )..load(),
         ),
       ],
-      child: const _View(),
+      child: _View(projectId: projectId),
     );
   }
 }
 
 class _View extends StatelessWidget {
-  const _View();
+  const _View({required this.projectId});
+  final String projectId;
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(t.wikiRevisionsTitle)),
+      appBar: AppBar(
+        title: BlocBuilder<WikiPageCubit, WikiPageState>(
+          builder: (_, s) {
+            final pageTitle = s is WikiPageLoaded ? s.page.title : '…';
+            return ProjectSectionBreadcrumb(
+              projectId: projectId,
+              currentLabel: t.wikiTitle,
+              sectionRoute: Routes.projectWikiFor(projectId),
+              extraCrumbs: [
+                Crumb(label: pageTitle),
+                Crumb(label: t.wikiRevisionsTitle),
+              ],
+            );
+          },
+        ),
+      ),
       body: BlocBuilder<WikiRevisionsCubit, WikiRevisionsState>(
         builder: (context, state) {
           if (state is WikiRevisionsLoading) {

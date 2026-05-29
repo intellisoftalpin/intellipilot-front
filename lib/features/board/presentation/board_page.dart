@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
@@ -77,14 +78,22 @@ class _BoardView extends StatelessWidget {
       appBar: AppBar(
         title: BlocBuilder<BoardCubit, BoardState>(
           builder: (context, state) {
+            final extras = <Crumb>[];
             if (state is BoardLoaded) {
               final m = state.milestones.firstWhere(
                 (m) => m.id == state.milestoneId,
                 orElse: () => state.milestones.first,
               );
-              return Text('${t.boardTitle} · ${m.name}');
+              extras.add(Crumb(label: m.name));
             }
-            return Text(t.boardTitle);
+            return ProjectSectionBreadcrumb(
+              projectId: projectId,
+              currentLabel: t.boardTitle,
+              sectionRoute: extras.isEmpty
+                  ? null
+                  : Routes.projectBoardFor(projectId),
+              extraCrumbs: extras,
+            );
           },
         ),
         actions: [

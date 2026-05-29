@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
@@ -75,7 +76,12 @@ class _View extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(t.taskBoardTitle)),
+      appBar: AppBar(
+        title: ProjectSectionBreadcrumb(
+          projectId: projectId,
+          currentLabel: t.taskBoardTitle,
+        ),
+      ),
       body: BlocBuilder<TaskBoardCubit, TaskBoardState>(
         builder: (context, state) {
           if (state is TaskBoardLoading) {

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
@@ -65,8 +66,18 @@ class _ProjectOverviewView extends StatelessWidget {
       appBar: AppBar(
         title: BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
           builder: (_, s) {
-            if (s is ProjectDetailLoaded) return Text(s.project.name);
-            return Text(t.projectOverviewTitle);
+            final projectName = s is ProjectDetailLoaded
+                ? s.project.name
+                : t.projectOverviewTitle;
+            return BreadcrumbBar(
+              crumbs: [
+                Crumb(
+                  label: t.projectsTitle,
+                  onTap: () => context.go(Routes.projects),
+                ),
+                Crumb(label: projectName),
+              ],
+            );
           },
         ),
         actions: [

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
-import 'package:intellipilot/app/theme/app_theme.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
@@ -319,13 +319,6 @@ class _EditViewState extends State<_EditView> {
     EntityKind.issue => 'ISSUE',
   };
 
-  String _kindLabel(AppLocalizations t) => switch (widget.kind) {
-    EntityKind.epic => t.kindLabelEpic,
-    EntityKind.userStory => t.kindLabelUserStory,
-    EntityKind.task => t.kindLabelTask,
-    EntityKind.issue => t.kindLabelIssue,
-  };
-
   Future<void> _save() async {
     final subject = _subjectCtrl.text.trim();
     if (subject.isEmpty) return;
@@ -407,32 +400,37 @@ class _EditViewState extends State<_EditView> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final theme = Theme.of(context);
     final isWide = Breakpoints.of(context).isExpanded;
     final maxWidth = isWide ? 880.0 : double.infinity;
-    final breadcrumb =
-        '${widget.data.project.name} / ${_prefix()}-${_reference(widget.data)}';
+    final key = '${_prefix()}-${_reference(widget.data)}';
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              breadcrumb,
-              style: AppTheme.mono(context, size: 11).copyWith(
-                color: theme.colorScheme.outline,
+        title: BreadcrumbBar(
+          crumbs: [
+            Crumb(
+              label: t.projectsTitle,
+              onTap: () => context.go(Routes.projects),
+            ),
+            Crumb(
+              label: widget.data.project.name,
+              onTap: () => context.go(
+                Routes.projectDetailFor(widget.data.project.id),
               ),
             ),
-            Text(
-              '${t.actionEdit} · ${_kindLabel(t)}',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
+            Crumb(
+              label: key,
+              mono: true,
+              onTap: () => context.go(
+                Routes.entityDetailFor(
+                  widget.projectId,
+                  widget.kind,
+                  widget.entityId,
+                ),
               ),
             ),
+            Crumb(label: t.actionEdit),
           ],
         ),
-        toolbarHeight: 64,
         actions: [
           TextButton(
             onPressed: widget.saving ? null : widget.onCancel,

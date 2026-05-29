@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
@@ -80,14 +81,26 @@ class _PageView extends StatelessWidget {
         }
         if (state is WikiPageFailed) {
           return Scaffold(
-            appBar: AppBar(title: Text(t.wikiPageTitle)),
+            appBar: AppBar(
+              title: ProjectSectionBreadcrumb(
+                projectId: projectId,
+                currentLabel: t.wikiTitle,
+                sectionRoute: Routes.projectWikiFor(projectId),
+                extraCrumbs: [Crumb(label: t.wikiPageTitle)],
+              ),
+            ),
             body: Center(child: Text(t.wikiPageLoadFailed)),
           );
         }
         if (state is! WikiPageLoaded) return const SizedBox.shrink();
         return Scaffold(
           appBar: AppBar(
-            title: Text(state.page.title),
+            title: ProjectSectionBreadcrumb(
+              projectId: projectId,
+              currentLabel: t.wikiTitle,
+              sectionRoute: Routes.projectWikiFor(projectId),
+              extraCrumbs: [Crumb(label: state.page.title)],
+            ),
             actions: [
               IconButton(
                 tooltip: t.wikiRevisionsTooltip,

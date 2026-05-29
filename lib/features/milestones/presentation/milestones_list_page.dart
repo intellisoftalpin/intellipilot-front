@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
@@ -67,7 +68,12 @@ class _ListView extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(t.milestonesTitle)),
+      appBar: AppBar(
+        title: ProjectSectionBreadcrumb(
+          projectId: projectId,
+          currentLabel: t.milestonesTitle,
+        ),
+      ),
       floatingActionButton: BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
         builder: (context, s) {
           if (s is! ProjectDetailLoaded ||

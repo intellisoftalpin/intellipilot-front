@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
@@ -78,7 +79,12 @@ class _BacklogView extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(t.backlogTitle)),
+      appBar: AppBar(
+        title: ProjectSectionBreadcrumb(
+          projectId: projectId,
+          currentLabel: t.backlogTitle,
+        ),
+      ),
       floatingActionButton:
           BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
         builder: (context, detail) {

@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/components_tab.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/labels_tab.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/taxonomy_tab.dart';
@@ -91,12 +92,9 @@ class _SettingsView extends StatelessWidget {
       length: 7,
       child: Scaffold(
         appBar: AppBar(
-          title: BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
-            builder: (_, s) => Text(
-              s is ProjectDetailLoaded
-                  ? '${s.project.name} · ${t.projectSettingsTitle}'
-                  : t.projectSettingsTitle,
-            ),
+          title: ProjectSectionBreadcrumb(
+            projectId: projectId,
+            currentLabel: t.projectSettingsTitle,
           ),
           bottom: TabBar(
             isScrollable: true,
