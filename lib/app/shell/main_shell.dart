@@ -511,6 +511,10 @@ class _ProjectRailState extends State<_ProjectRail> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // 4px top padding aligns the rail header divider with the
+            // top bar's 52px bottom border on the right column — without
+            // it the rail divider lands 4px above the toolbar's line.
+            const SizedBox(height: 4),
             _RailRow(
               icon: expanded ? Icons.menu_open : Icons.menu,
               label: expanded
