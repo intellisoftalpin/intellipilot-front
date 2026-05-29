@@ -453,7 +453,13 @@ class _DetailView extends StatelessWidget {
                     onChanged: onChanged,
                   )),
                   const SizedBox(width: 16),
-                  Expanded(flex: 3, child: _RightColumn(data: data)),
+                  Expanded(flex: 3, child: _RightColumn(
+                    data: data,
+                    kind: kind,
+                    entityId: entityId,
+                    projectId: projectId,
+                    onChanged: onChanged,
+                  )),
                 ],
               )
             else
@@ -468,7 +474,13 @@ class _DetailView extends StatelessWidget {
                     onChanged: onChanged,
                   ),
                   const SizedBox(height: 12),
-                  _RightColumn(data: data),
+                  _RightColumn(
+                    data: data,
+                    kind: kind,
+                    entityId: entityId,
+                    projectId: projectId,
+                    onChanged: onChanged,
+                  ),
                 ],
               ),
           ],
@@ -793,8 +805,18 @@ class _LeftColumn extends StatelessWidget {
 }
 
 class _RightColumn extends StatelessWidget {
-  const _RightColumn({required this.data});
+  const _RightColumn({
+    required this.data,
+    required this.kind,
+    required this.entityId,
+    required this.projectId,
+    required this.onChanged,
+  });
   final _PageData data;
+  final EntityKind kind;
+  final String entityId;
+  final String projectId;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -803,7 +825,13 @@ class _RightColumn extends StatelessWidget {
       children: [
         _Panel(
           title: AppLocalizations.of(context).panelPeople,
-          child: _PeopleTable(data: data),
+          child: _PeopleTable(
+            data: data,
+            kind: kind,
+            entityId: entityId,
+            projectId: projectId,
+            onChanged: onChanged,
+          ),
         ),
         const SizedBox(height: 12),
         _Panel(
@@ -912,15 +940,15 @@ class _DetailsTable extends StatelessWidget {
               issuePatch: () => UpdateIssueRequest(severityId: id),
             ),
           ),
-          _readonlyRow(
+          _labelsRow(
             context,
-            t.detailFieldLabels,
-            _labelList(issue.labels, data.labelsById),
+            currentIds: issue.labels,
+            canEdit: canEdit,
           ),
-          _readonlyRow(
+          _componentsRow(
             context,
-            t.detailFieldComponents,
-            _componentList(issue.components, data.componentsById),
+            currentIds: issue.components,
+            canEdit: canEdit,
           ),
         ]);
       case _UsRec(:final us):
@@ -1111,6 +1139,61 @@ class _DetailsTable extends StatelessWidget {
       ],
       onPicked: (id) => _patchEntity(
         taskPatch: () => UpdateTaskRequest(userStoryId: id),
+      ),
+    );
+  }
+
+  Widget _labelsRow(
+    BuildContext context, {
+    required List<String> currentIds,
+    required bool canEdit,
+  }) {
+    final t = AppLocalizations.of(context);
+    final all = data.labelsById.values.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return _kvRowWith(
+      context,
+      t.detailFieldLabels,
+      _MultiSelectCell(
+        displayText: _labelList(currentIds, data.labelsById),
+        candidates: [
+          for (final l in all)
+            _MultiCandidate(id: l.id, label: l.name, colorHex: l.color),
+        ],
+        selectedIds: currentIds,
+        title: t.detailFieldLabels,
+        emptyLabel: '—',
+        canEdit: canEdit,
+        onSaved: (next) => _patchEntity(
+          issuePatch: () => UpdateIssueRequest(labels: next),
+        ),
+      ),
+    );
+  }
+
+  Widget _componentsRow(
+    BuildContext context, {
+    required List<String> currentIds,
+    required bool canEdit,
+  }) {
+    final t = AppLocalizations.of(context);
+    final all = data.componentsById.values.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    return _kvRowWith(
+      context,
+      t.detailFieldComponents,
+      _MultiSelectCell(
+        displayText: _componentList(currentIds, data.componentsById),
+        candidates: [
+          for (final c in all) _MultiCandidate(id: c.id, label: c.name),
+        ],
+        selectedIds: currentIds,
+        title: t.detailFieldComponents,
+        emptyLabel: '—',
+        canEdit: canEdit,
+        onSaved: (next) => _patchEntity(
+          issuePatch: () => UpdateIssueRequest(components: next),
+        ),
       ),
     );
   }
@@ -1334,21 +1417,210 @@ class _ClickToEditCell extends StatelessWidget {
   }
 }
 
+class _MultiCandidate {
+  const _MultiCandidate({
+    required this.id,
+    required this.label,
+    this.colorHex,
+  });
+  final String id;
+  final String label;
+  final String? colorHex;
+}
+
+/// Click-to-edit cell for multi-select fields (Labels / Components).
+/// Tapping opens a dialog of checkboxes; Save PATCHes the full new id
+/// list. Read-only fallback when [canEdit] is false.
+class _MultiSelectCell extends StatelessWidget {
+  const _MultiSelectCell({
+    required this.displayText,
+    required this.candidates,
+    required this.selectedIds,
+    required this.title,
+    required this.emptyLabel,
+    required this.canEdit,
+    required this.onSaved,
+  });
+
+  final String displayText;
+  final List<_MultiCandidate> candidates;
+  final List<String> selectedIds;
+  final String title;
+  final String emptyLabel;
+  final bool canEdit;
+  final Future<bool> Function(List<String> nextIds) onSaved;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textStyle = theme.textTheme.bodyMedium;
+    if (!canEdit) {
+      return SelectableText(displayText, style: textStyle);
+    }
+    return InkWell(
+      onTap: () async {
+        final picked = await showDialog<List<String>>(
+          context: context,
+          builder: (ctx) => _MultiSelectDialog(
+            title: title,
+            candidates: candidates,
+            initial: selectedIds,
+            emptyLabel: emptyLabel,
+          ),
+        );
+        if (picked != null) await onSaved(picked);
+      },
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                displayText,
+                style: textStyle,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.unfold_more,
+              size: 14,
+              color: theme.colorScheme.outline,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MultiSelectDialog extends StatefulWidget {
+  const _MultiSelectDialog({
+    required this.title,
+    required this.candidates,
+    required this.initial,
+    required this.emptyLabel,
+  });
+
+  final String title;
+  final List<_MultiCandidate> candidates;
+  final List<String> initial;
+  final String emptyLabel;
+
+  @override
+  State<_MultiSelectDialog> createState() => _MultiSelectDialogState();
+}
+
+class _MultiSelectDialogState extends State<_MultiSelectDialog> {
+  late final Set<String> _picked;
+
+  @override
+  void initState() {
+    super.initState();
+    _picked = widget.initial.toSet();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(widget.title),
+      content: SizedBox(
+        width: 360,
+        height: 360,
+        child: widget.candidates.isEmpty
+            ? Center(child: Text(widget.emptyLabel))
+            : ListView.builder(
+                itemCount: widget.candidates.length,
+                itemBuilder: (context, i) {
+                  final c = widget.candidates[i];
+                  return CheckboxListTile(
+                    dense: true,
+                    title: Row(
+                      children: [
+                        if (c.colorHex != null) ...[
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: _hexToColor(c.colorHex!),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
+                        Expanded(child: Text(c.label)),
+                      ],
+                    ),
+                    value: _picked.contains(c.id),
+                    onChanged: (v) => setState(() {
+                      if (v ?? false) {
+                        _picked.add(c.id);
+                      } else {
+                        _picked.remove(c.id);
+                      }
+                    }),
+                  );
+                },
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(t.actionCancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_picked.toList()),
+          child: Text(t.actionSave),
+        ),
+      ],
+    );
+  }
+}
+
 class _PeopleTable extends StatelessWidget {
-  const _PeopleTable({required this.data});
+  const _PeopleTable({
+    required this.data,
+    required this.kind,
+    required this.entityId,
+    required this.projectId,
+    required this.onChanged,
+  });
   final _PageData data;
+  final EntityKind kind;
+  final String entityId;
+  final String projectId;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final me = data.profile.id;
+    final canEdit = context.select<ProjectDetailCubit, bool>((c) {
+      final s = c.state;
+      return s is ProjectDetailLoaded && s.has(_modifyPermissionFor(kind));
+    });
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _kvRow(
+        _kvRowWith(
           context,
           t.detailFieldAssignee,
-          _userLabel(data.entity.assignedTo, me, t),
+          _ClickToEditCell(
+            displayText: _userLabel(data.entity.assignedTo, me, t),
+            // Without a full member directory the picker offers the
+            // common Jira shortcut: assign-to-me or unassign. Future
+            // work can swap this for a searchable member list.
+            candidates: [
+              _Candidate(id: me, label: '${t.detailValueYou} ($me)'),
+            ],
+            currentId: data.entity.assignedTo,
+            noneLabel: '—',
+            canEdit: canEdit,
+            onPicked: (id) => _patchAssignee(id),
+          ),
         ),
         const SizedBox(height: 4),
         _kvRow(
@@ -1364,6 +1636,59 @@ class _PeopleTable extends StatelessWidget {
     if (id == null) return '—';
     if (id == me) return '${t.detailValueYou} ($id)';
     return id;
+  }
+
+  Future<bool> _patchAssignee(String? assigneeId) async {
+    final backlog = getIt<BacklogRepository>();
+    var ok = false;
+    switch (kind) {
+      case EntityKind.epic:
+        final fresh =
+            (await backlog.getEpic(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateEpic(
+          projectId,
+          entityId,
+          body: UpdateEpicRequest(assignedTo: assigneeId),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+      case EntityKind.userStory:
+        final fresh =
+            (await backlog.getUserStory(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateUserStory(
+          projectId,
+          entityId,
+          body: UpdateUserStoryRequest(assignedTo: assigneeId),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+      case EntityKind.task:
+        final fresh =
+            (await backlog.getTask(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateTask(
+          projectId,
+          entityId,
+          body: UpdateTaskRequest(assignedTo: assigneeId),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+      case EntityKind.issue:
+        final fresh =
+            (await backlog.getIssue(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateIssue(
+          projectId,
+          entityId,
+          body: UpdateIssueRequest(assignedTo: assigneeId),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+    }
+    if (ok) onChanged();
+    return ok;
   }
 }
 
