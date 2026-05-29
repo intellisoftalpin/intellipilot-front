@@ -1232,5 +1232,9 @@
   "fieldReadOnlyToast": "You don't have permission to change this.",
   "@fieldReadOnlyToast": { "description": "Snackbar shown when a permission-locked field is tapped." },
   "assigneeAssignToMe": "Assign to me",
-  "@assigneeAssignToMe": { "description": "Pinned shortcut at the top of the assignee picker." }
+  "@assigneeAssignToMe": { "description": "Pinned shortcut at the top of the assignee picker." },
+  "boardViewStories": "Stories",
+  "@boardViewStories": { "description": "Toggle label on the board page showing user-story columns." },
+  "boardViewTasks": "Tasks",
+  "@boardViewTasks": { "description": "Toggle label on the board page showing task columns." }
 }

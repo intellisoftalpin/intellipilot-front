@@ -12,7 +12,6 @@ import 'package:intellipilot/features/auth/presentation/reset_password_page.dart
 import 'package:intellipilot/features/backlog/presentation/backlog_page.dart';
 import 'package:intellipilot/features/backlog/presentation/issues_page.dart';
 import 'package:intellipilot/features/board/presentation/board_page.dart';
-import 'package:intellipilot/features/board/presentation/task_board_page.dart';
 import 'package:intellipilot/features/home/presentation/home_page.dart';
 import 'package:intellipilot/features/mfa/presentation/mfa_verify_page.dart';
 import 'package:intellipilot/features/mfa/presentation/passkey_signin_page.dart';
@@ -57,7 +56,12 @@ abstract class Routes {
   static String projectBacklogFor(String id) => '/projects/$id/backlog';
   static String projectIssuesFor(String id) => '/projects/$id/issues';
   static String projectBoardFor(String id) => '/projects/$id/board';
-  static String projectTaskBoardFor(String id) => '/projects/$id/task-board';
+
+  /// Back-compat alias for callers that still link to the standalone
+  /// task board. Both views now live on the unified Board page with a
+  /// Stories / Tasks toggle in the app bar, so we route to the same URL.
+  @Deprecated('Use projectBoardFor — Stories/Tasks toggle on the board')
+  static String projectTaskBoardFor(String id) => projectBoardFor(id);
   static String projectMilestonesFor(String id) => '/projects/$id/milestones';
   static String milestoneDetailFor(String projectId, String milestoneId) =>
       '/projects/$projectId/milestones/$milestoneId';
@@ -180,10 +184,14 @@ GoRouter buildRouter({required SessionBloc session}) {
             BoardPage(projectId: state.pathParameters['id']!),
       ),
       GoRoute(
+        // Back-compat: the standalone task board collapsed into the
+        // unified Board page with a Stories ⇄ Tasks toggle. Anyone
+        // visiting an old `/task-board` link lands on the board, where
+        // their last-chosen mode (persisted per project) is honoured.
         path: '/projects/:id/task-board',
-        name: 'project_task_board',
-        builder: (context, state) =>
-            TaskBoardPage(projectId: state.pathParameters['id']!),
+        name: 'project_task_board_legacy',
+        redirect: (context, state) =>
+            Routes.projectBoardFor(state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/projects/:id/milestones',
