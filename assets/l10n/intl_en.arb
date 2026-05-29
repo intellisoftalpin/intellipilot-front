@@ -1222,5 +1222,7 @@
   "railCollapse": "Collapse menu",
   "@railCollapse": { "description": "Tooltip on the rail toggle when the rail is expanded." },
   "railExpand": "Expand menu",
-  "@railExpand": { "description": "Tooltip on the rail toggle when the rail is collapsed." }
+  "@railExpand": { "description": "Tooltip on the rail toggle when the rail is collapsed." },
+  "statusValueNone": "None",
+  "@statusValueNone": { "description": "Placeholder used in inline editors when no value is selected." }
 }

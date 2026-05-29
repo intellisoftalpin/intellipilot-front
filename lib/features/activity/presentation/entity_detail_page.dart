@@ -445,7 +445,13 @@ class _DetailView extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 5, child: _LeftColumn(data: data, kind: kind, entityId: entityId)),
+                  Expanded(flex: 5, child: _LeftColumn(
+                    data: data,
+                    kind: kind,
+                    entityId: entityId,
+                    projectId: projectId,
+                    onChanged: onChanged,
+                  )),
                   const SizedBox(width: 16),
                   Expanded(flex: 3, child: _RightColumn(data: data)),
                 ],
@@ -454,7 +460,13 @@ class _DetailView extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _LeftColumn(data: data, kind: kind, entityId: entityId),
+                  _LeftColumn(
+                    data: data,
+                    kind: kind,
+                    entityId: entityId,
+                    projectId: projectId,
+                    onChanged: onChanged,
+                  ),
                   const SizedBox(height: 12),
                   _RightColumn(data: data),
                 ],
@@ -709,10 +721,14 @@ class _LeftColumn extends StatelessWidget {
     required this.data,
     required this.kind,
     required this.entityId,
+    required this.projectId,
+    required this.onChanged,
   });
   final _PageData data;
   final EntityKind kind;
   final String entityId;
+  final String projectId;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -721,7 +737,13 @@ class _LeftColumn extends StatelessWidget {
       children: [
         _Panel(
           title: AppLocalizations.of(context).panelDetails,
-          child: _DetailsTable(data: data),
+          child: _DetailsTable(
+            data: data,
+            kind: kind,
+            entityId: entityId,
+            projectId: projectId,
+            onChanged: onChanged,
+          ),
         ),
         const SizedBox(height: 12),
         _Panel(
@@ -832,45 +854,99 @@ class _Panel extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _DetailsTable extends StatelessWidget {
-  const _DetailsTable({required this.data});
+  const _DetailsTable({
+    required this.data,
+    required this.kind,
+    required this.entityId,
+    required this.projectId,
+    required this.onChanged,
+  });
   final _PageData data;
+  final EntityKind kind;
+  final String entityId;
+  final String projectId;
+  final VoidCallback onChanged;
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final entity = data.entity;
-    final rows = <_DetailRow>[
-      _DetailRow(t.detailFieldType, _kindLabel(t, entity)),
-      _DetailRow(t.detailFieldStatus,
-          _taxonomyName(entity.statusId, data.taxonomyById) ?? '—'),
+    final canEdit = context.select<ProjectDetailCubit, bool>((c) {
+      final s = c.state;
+      return s is ProjectDetailLoaded && s.has(_modifyPermissionFor(kind));
+    });
+    final rows = <Widget>[
+      _readonlyRow(context, t.detailFieldType, _kindLabel(t, entity)),
+      _statusRow(context, canEdit: canEdit),
     ];
     switch (entity) {
       case _IssueRec(:final issue):
         rows.addAll([
-          _DetailRow(t.detailFieldIssueType,
-              _taxonomyName(issue.typeId, data.taxonomyById) ?? '—'),
-          _DetailRow(t.detailFieldPriority,
-              _taxonomyName(issue.priorityId, data.taxonomyById) ?? '—'),
-          _DetailRow(t.detailFieldSeverity,
-              _taxonomyName(issue.severityId, data.taxonomyById) ?? '—'),
-          _DetailRow(t.detailFieldLabels,
-              _labelList(issue.labels, data.labelsById)),
-          _DetailRow(t.detailFieldComponents,
-              _componentList(issue.components, data.componentsById)),
+          _taxonomyRow(
+            context,
+            label: t.detailFieldIssueType,
+            currentId: issue.typeId,
+            kind: TaxonomyKind.issueType,
+            canEdit: canEdit,
+            patch: (id) => _patchEntity(
+              issuePatch: () => UpdateIssueRequest(typeId: id),
+            ),
+          ),
+          _taxonomyRow(
+            context,
+            label: t.detailFieldPriority,
+            currentId: issue.priorityId,
+            kind: TaxonomyKind.priority,
+            canEdit: canEdit,
+            patch: (id) => _patchEntity(
+              issuePatch: () => UpdateIssueRequest(priorityId: id),
+            ),
+          ),
+          _taxonomyRow(
+            context,
+            label: t.detailFieldSeverity,
+            currentId: issue.severityId,
+            kind: TaxonomyKind.severity,
+            canEdit: canEdit,
+            patch: (id) => _patchEntity(
+              issuePatch: () => UpdateIssueRequest(severityId: id),
+            ),
+          ),
+          _readonlyRow(
+            context,
+            t.detailFieldLabels,
+            _labelList(issue.labels, data.labelsById),
+          ),
+          _readonlyRow(
+            context,
+            t.detailFieldComponents,
+            _componentList(issue.components, data.componentsById),
+          ),
         ]);
       case _UsRec(:final us):
         rows.addAll([
-          _DetailRow(t.detailFieldEpic,
-              _epicLabel(us.epicId, data.epicsById)),
-          _DetailRow(t.detailFieldMilestone,
-              _milestoneLabel(us.milestoneId, data.milestonesById)),
-          _DetailRow(t.detailFieldPoints,
-              _pointsLabel(us.pointsId, data.taxonomyById)),
+          _epicRow(context, currentId: us.epicId, canEdit: canEdit),
+          _milestoneRow(context, currentId: us.milestoneId, canEdit: canEdit),
+          _taxonomyRow(
+            context,
+            label: t.detailFieldPoints,
+            currentId: us.pointsId,
+            kind: TaxonomyKind.point,
+            canEdit: canEdit,
+            displayBuilder: (item) => item.value == null
+                ? item.name
+                : '${item.name} (${item.value})',
+            patch: (id) => _patchEntity(
+              usPatch: () => UpdateUserStoryRequest(pointsId: id),
+            ),
+          ),
         ]);
       case _TaskRec(:final task):
-        rows.add(_DetailRow(
-            t.detailFieldParent,
-            _userStoryLabel(task.userStoryId, data.userStoriesById)));
+        rows.add(_parentUsRow(
+          context,
+          currentId: task.userStoryId,
+          canEdit: canEdit,
+        ));
       case _EpicRec():
         break;
     }
@@ -880,9 +956,252 @@ class _DetailsTable extends StatelessWidget {
         for (final row in rows)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
-            child: _kvRow(context, row.label, row.value),
+            child: row,
           ),
       ],
+    );
+  }
+
+  // ---- row builders ------------------------------------------------------
+
+  Widget _readonlyRow(BuildContext context, String label, String value) =>
+      _kvRow(context, label, value);
+
+  Widget _statusRow(BuildContext context, {required bool canEdit}) {
+    final t = AppLocalizations.of(context);
+    final entity = data.entity;
+    final taxonomyKind = switch (kind) {
+      EntityKind.epic => TaxonomyKind.usStatus, // epics share US statuses
+      EntityKind.userStory => TaxonomyKind.usStatus,
+      EntityKind.task => TaxonomyKind.taskStatus,
+      EntityKind.issue => TaxonomyKind.issueStatus,
+    };
+    return _taxonomyRow(
+      context,
+      label: t.detailFieldStatus,
+      currentId: entity.statusId,
+      kind: taxonomyKind,
+      canEdit: canEdit,
+      patch: (id) => _patchEntity(
+        epicPatch: () => UpdateEpicRequest(statusId: id),
+        usPatch: () => UpdateUserStoryRequest(statusId: id),
+        taskPatch: () => UpdateTaskRequest(statusId: id),
+        issuePatch: () => UpdateIssueRequest(statusId: id),
+      ),
+    );
+  }
+
+  Widget _taxonomyRow(
+    BuildContext context, {
+    required String label,
+    required String? currentId,
+    required TaxonomyKind kind,
+    required bool canEdit,
+    required Future<bool> Function(String? newId) patch,
+    String Function(TaxonomyItem)? displayBuilder,
+  }) {
+    final t = AppLocalizations.of(context);
+    final all = data.taxonomyById.values
+        .where((tx) => tx.kind == kind)
+        .toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    final current = currentId == null ? null : data.taxonomyById[currentId];
+    final renderLabel = displayBuilder ?? (TaxonomyItem item) => item.name;
+    return _editableRow(
+      context,
+      label: label,
+      displayText: current == null ? '—' : renderLabel(current),
+      currentId: currentId,
+      noneLabel: t.statusValueNone,
+      canEdit: canEdit,
+      candidates: [
+        for (final item in all)
+          _Candidate(
+            id: item.id,
+            label: renderLabel(item),
+            colorHex: item.color,
+          ),
+      ],
+      onPicked: patch,
+    );
+  }
+
+  Widget _epicRow(
+    BuildContext context, {
+    required String? currentId,
+    required bool canEdit,
+  }) {
+    final t = AppLocalizations.of(context);
+    final epics = data.epicsById.values.toList()
+      ..sort((a, b) => a.reference.compareTo(b.reference));
+    final current = currentId == null ? null : data.epicsById[currentId];
+    return _editableRow(
+      context,
+      label: t.detailFieldEpic,
+      displayText:
+          current == null ? '—' : 'EPIC-${current.reference} · ${current.subject}',
+      currentId: currentId,
+      noneLabel: t.backlogNoEpic,
+      canEdit: canEdit,
+      candidates: [
+        for (final e in epics)
+          _Candidate(
+            id: e.id,
+            label: 'EPIC-${e.reference} · ${e.subject}',
+            colorHex: e.color,
+          ),
+      ],
+      onPicked: (id) => _patchEntity(
+        usPatch: () => UpdateUserStoryRequest(epicId: id),
+      ),
+    );
+  }
+
+  Widget _milestoneRow(
+    BuildContext context, {
+    required String? currentId,
+    required bool canEdit,
+  }) {
+    final t = AppLocalizations.of(context);
+    final milestones = data.milestonesById.values.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    final current =
+        currentId == null ? null : data.milestonesById[currentId];
+    return _editableRow(
+      context,
+      label: t.detailFieldMilestone,
+      displayText: current?.name ?? '—',
+      currentId: currentId,
+      noneLabel: t.statusValueNone,
+      canEdit: canEdit,
+      candidates: [
+        for (final m in milestones) _Candidate(id: m.id, label: m.name),
+      ],
+      onPicked: (id) => _patchEntity(
+        usPatch: () => UpdateUserStoryRequest(milestoneId: id),
+      ),
+    );
+  }
+
+  Widget _parentUsRow(
+    BuildContext context, {
+    required String? currentId,
+    required bool canEdit,
+  }) {
+    final t = AppLocalizations.of(context);
+    final stories = data.userStoriesById.values.toList()
+      ..sort((a, b) => a.reference.compareTo(b.reference));
+    final current =
+        currentId == null ? null : data.userStoriesById[currentId];
+    return _editableRow(
+      context,
+      label: t.detailFieldParent,
+      displayText: current == null
+          ? '—'
+          : 'US-${current.reference} · ${current.subject}',
+      currentId: currentId,
+      noneLabel: t.taskNoParent,
+      canEdit: canEdit,
+      candidates: [
+        for (final u in stories)
+          _Candidate(
+            id: u.id,
+            label: 'US-${u.reference} · ${u.subject}',
+          ),
+      ],
+      onPicked: (id) => _patchEntity(
+        taskPatch: () => UpdateTaskRequest(userStoryId: id),
+      ),
+    );
+  }
+
+  /// Top-level patch dispatcher used by every editable row. The caller
+  /// passes only the builder for its kind; others are null. Fetches the
+  /// fresh entity for its etag, runs the PATCH, and triggers `onChanged`
+  /// on success so the page reloads.
+  Future<bool> _patchEntity({
+    UpdateEpicRequest Function()? epicPatch,
+    UpdateUserStoryRequest Function()? usPatch,
+    UpdateTaskRequest Function()? taskPatch,
+    UpdateIssueRequest Function()? issuePatch,
+  }) async {
+    final backlog = getIt<BacklogRepository>();
+    var ok = false;
+    switch (kind) {
+      case EntityKind.epic:
+        if (epicPatch == null) return false;
+        final fresh =
+            (await backlog.getEpic(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateEpic(
+          projectId,
+          entityId,
+          body: epicPatch(),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+      case EntityKind.userStory:
+        if (usPatch == null) return false;
+        final fresh =
+            (await backlog.getUserStory(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateUserStory(
+          projectId,
+          entityId,
+          body: usPatch(),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+      case EntityKind.task:
+        if (taskPatch == null) return false;
+        final fresh =
+            (await backlog.getTask(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateTask(
+          projectId,
+          entityId,
+          body: taskPatch(),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+      case EntityKind.issue:
+        if (issuePatch == null) return false;
+        final fresh =
+            (await backlog.getIssue(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateIssue(
+          projectId,
+          entityId,
+          body: issuePatch(),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+    }
+    if (ok) onChanged();
+    return ok;
+  }
+
+  Widget _editableRow(
+    BuildContext context, {
+    required String label,
+    required String displayText,
+    required String? currentId,
+    required String noneLabel,
+    required bool canEdit,
+    required List<_Candidate> candidates,
+    required Future<bool> Function(String? newId) onPicked,
+  }) {
+    return _kvRowWith(
+      context,
+      label,
+      _ClickToEditCell(
+        displayText: displayText,
+        candidates: candidates,
+        currentId: currentId,
+        noneLabel: noneLabel,
+        canEdit: canEdit,
+        onPicked: onPicked,
+      ),
     );
   }
 
@@ -893,31 +1212,119 @@ class _DetailsTable extends StatelessWidget {
     _IssueRec() => t.kindLabelIssue,
   };
 
-  String? _taxonomyName(String? id, Map<String, TaxonomyItem> by) =>
-      id == null ? null : by[id]?.name;
   String _labelList(List<String> ids, Map<String, Label> by) =>
       ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
   String _componentList(List<String> ids, Map<String, Component> by) =>
       ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
-  String _epicLabel(String? id, Map<String, Epic> by) {
-    if (id == null) return '—';
-    final e = by[id];
-    return e == null ? id : 'EPIC-${e.reference} · ${e.subject}';
-  }
+}
 
-  String _userStoryLabel(String? id, Map<String, UserStory> by) {
-    if (id == null) return '—';
-    final u = by[id];
-    return u == null ? id : 'US-${u.reference} · ${u.subject}';
-  }
+class _Candidate {
+  const _Candidate({
+    required this.id,
+    required this.label,
+    this.colorHex,
+  });
+  final String id;
+  final String label;
+  final String? colorHex;
+}
 
-  String _milestoneLabel(String? id, Map<String, Milestone> by) =>
-      id == null ? '—' : (by[id]?.name ?? id);
-  String _pointsLabel(String? id, Map<String, TaxonomyItem> by) {
-    if (id == null) return '—';
-    final p = by[id];
-    if (p == null) return id;
-    return p.value == null ? p.name : '${p.name} (${p.value})';
+/// Click-to-edit value cell. When [canEdit] is true the display text
+/// becomes a [PopupMenuButton] target: clicking opens the candidate
+/// list (with a "None" option at the top) and picking calls [onPicked]
+/// — which the caller wires to a PATCH + reload.
+class _ClickToEditCell extends StatelessWidget {
+  const _ClickToEditCell({
+    required this.displayText,
+    required this.candidates,
+    required this.currentId,
+    required this.noneLabel,
+    required this.canEdit,
+    required this.onPicked,
+  });
+
+  final String displayText;
+  final List<_Candidate> candidates;
+  final String? currentId;
+  final String noneLabel;
+  final bool canEdit;
+  final Future<bool> Function(String? newId) onPicked;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textStyle = theme.textTheme.bodyMedium;
+    if (!canEdit) {
+      return SelectableText(displayText, style: textStyle);
+    }
+    return PopupMenuButton<String?>(
+      tooltip: '',
+      position: PopupMenuPosition.under,
+      itemBuilder: (_) => [
+        PopupMenuItem<String?>(
+          value: null,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.block_outlined,
+                size: 14,
+                color: theme.colorScheme.outline,
+              ),
+              const SizedBox(width: 8),
+              Text(noneLabel),
+            ],
+          ),
+        ),
+        for (final c in candidates)
+          PopupMenuItem<String?>(
+            value: c.id,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (c.colorHex != null) ...[
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: _hexToColor(c.colorHex!),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Text(c.label),
+              ],
+            ),
+          ),
+      ],
+      onSelected: (id) => onPicked(id),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(4),
+          color: Colors.transparent,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                displayText,
+                style: textStyle,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              Icons.unfold_more,
+              size: 14,
+              color: theme.colorScheme.outline,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -980,13 +1387,15 @@ class _DatesTable extends StatelessWidget {
   }
 }
 
-class _DetailRow {
-  const _DetailRow(this.label, this.value);
-  final String label;
-  final String value;
+Widget _kvRow(BuildContext context, String label, String value) {
+  return _kvRowWith(
+    context,
+    label,
+    SelectableText(value, style: Theme.of(context).textTheme.bodyMedium),
+  );
 }
 
-Widget _kvRow(BuildContext context, String label, String value) {
+Widget _kvRowWith(BuildContext context, String label, Widget value) {
   final theme = Theme.of(context);
   return Row(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1000,12 +1409,7 @@ Widget _kvRow(BuildContext context, String label, String value) {
           ),
         ),
       ),
-      Expanded(
-        child: SelectableText(
-          value,
-          style: theme.textTheme.bodyMedium,
-        ),
-      ),
+      Expanded(child: value),
     ],
   );
 }
