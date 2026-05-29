@@ -1919,7 +1919,12 @@ class _MultiCandidate {
 /// Click-to-edit cell for multi-select fields (Labels / Components).
 /// Tapping opens a dialog of checkboxes; Save PATCHes the full new id
 /// list. Read-only fallback when [canEdit] is false.
-class _MultiSelectCell extends StatelessWidget {
+/// Multi-select inline editor — Jira-style. Renders each selected value
+/// as an `InputChip` with a delete (×) icon. Tapping the × removes
+/// just that one with an optimistic PATCH. Tapping the "+ Add" affix
+/// (or anywhere in the row when nothing is selected) opens the full
+/// checkbox dialog.
+class _MultiSelectCell extends StatefulWidget {
   const _MultiSelectCell({
     required this.displayText,
     required this.candidates,
@@ -1939,46 +1944,201 @@ class _MultiSelectCell extends StatelessWidget {
   final Future<bool> Function(List<String> nextIds) onSaved;
 
   @override
+  State<_MultiSelectCell> createState() => _MultiSelectCellState();
+}
+
+class _MultiSelectCellState extends State<_MultiSelectCell> {
+  /// Optimistic display state — the in-flight new id list. Replaces
+  /// `widget.selectedIds` until the PATCH resolves; reverts on failure.
+  List<String>? _optimistic;
+  bool _hovering = false;
+  bool _saving = false;
+
+  Future<void> _commit(List<String> next) async {
+    setState(() {
+      _optimistic = next;
+      _saving = true;
+    });
+    final ok = await widget.onSaved(next);
+    if (!mounted) return;
+    setState(() {
+      _saving = false;
+      if (!ok) _optimistic = null;
+    });
+  }
+
+  Future<void> _openDialog() async {
+    final visible = _optimistic ?? widget.selectedIds;
+    final picked = await showDialog<List<String>>(
+      context: context,
+      builder: (ctx) => _MultiSelectDialog(
+        title: widget.title,
+        candidates: widget.candidates,
+        initial: visible,
+        emptyLabel: widget.emptyLabel,
+      ),
+    );
+    if (picked != null) await _commit(picked);
+  }
+
+  void _removeOne(String id) {
+    final current = _optimistic ?? widget.selectedIds;
+    _commit(current.where((x) => x != id).toList());
+  }
+
+  void _showReadOnlyToast() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).fieldReadOnlyToast),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textStyle = theme.textTheme.bodyMedium;
-    if (!canEdit) {
-      return SelectableText(displayText, style: textStyle);
-    }
-    return InkWell(
-      onTap: () async {
-        final picked = await showDialog<List<String>>(
-          context: context,
-          builder: (ctx) => _MultiSelectDialog(
-            title: title,
-            candidates: candidates,
-            initial: selectedIds,
-            emptyLabel: emptyLabel,
+    final visibleIds = _optimistic ?? widget.selectedIds;
+    final byId = {for (final c in widget.candidates) c.id: c};
+    final chips = [
+      for (final id in visibleIds)
+        if (byId[id] != null) byId[id]!,
+    ];
+
+    if (!widget.canEdit) {
+      // Read-only: plain text + permission toast on tap.
+      return MouseRegion(
+        cursor: SystemMouseCursors.basic,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _showReadOnlyToast,
+          child: Text(
+            widget.displayText,
+            style: textStyle,
+            overflow: TextOverflow.ellipsis,
           ),
-        );
-        if (picked != null) await onSaved(picked);
-      },
-      borderRadius: BorderRadius.circular(4),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(
-                displayText,
-                style: textStyle,
-                overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }
+
+    if (chips.isEmpty) {
+      // Empty state — clicking anywhere on the row opens the dialog.
+      return MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hovering = true),
+        onExit: (_) => setState(() => _hovering = false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: _saving ? null : _openDialog,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 80),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            decoration: BoxDecoration(
+              color: _hovering
+                  ? theme.colorScheme.surfaceContainerHighest
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '—',
+                  style: textStyle?.copyWith(color: theme.colorScheme.outline),
+                ),
+                const SizedBox(width: 4),
+                if (_saving)
+                  SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      color: theme.colorScheme.primary,
+                    ),
+                  )
+                else
+                  Icon(
+                    Icons.add,
+                    size: 14,
+                    color: _hovering
+                        ? theme.colorScheme.outline
+                        : Colors.transparent,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovering = true),
+      onExit: (_) => setState(() => _hovering = false),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          for (final c in chips)
+            InputChip(
+              avatar: c.colorHex == null
+                  ? null
+                  : Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: _hexToColor(c.colorHex!),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+              label: Text(c.label),
+              onDeleted: _saving ? null : () => _removeOne(c.id),
+              deleteIcon: const Icon(Icons.close, size: 14),
+              labelPadding:
+                  const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              visualDensity: VisualDensity.compact,
+            ),
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _saving ? null : _openDialog,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: theme.colorScheme.outlineVariant),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_saving)
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: theme.colorScheme.primary,
+                        ),
+                      )
+                    else
+                      Icon(
+                        Icons.add,
+                        size: 12,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.unfold_more,
-              size: 14,
-              color: theme.colorScheme.outline,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
