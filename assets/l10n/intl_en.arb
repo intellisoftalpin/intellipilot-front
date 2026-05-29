@@ -1218,5 +1218,9 @@
   "linkSelfTargetError": "An item cannot link to itself.",
   "@linkSelfTargetError": { "description": "Validation error for self-link." },
   "linkDuplicateError": "That link already exists.",
-  "@linkDuplicateError": { "description": "Validation error for duplicate link." }
+  "@linkDuplicateError": { "description": "Validation error for duplicate link." },
+  "railCollapse": "Collapse menu",
+  "@railCollapse": { "description": "Tooltip on the rail toggle when the rail is expanded." },
+  "railExpand": "Expand menu",
+  "@railExpand": { "description": "Tooltip on the rail toggle when the rail is collapsed." }
 }

@@ -4,6 +4,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
+import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/features/palette/presentation/cmd_k_dialog.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
@@ -391,10 +392,44 @@ class _AvatarMenu extends StatelessWidget {
   }
 }
 
-class _ProjectRail extends StatelessWidget {
+/// Project navigation rail. The expanded/collapsed state is initialised
+/// from the viewport (wide → expanded, narrow → collapsed) and can then
+/// be flipped by the user via the toggle button in the rail's `leading`
+/// slot — the preference is persisted in the UI Hive box keyed by
+/// `project_rail.expanded` so the layout sticks across reloads.
+class _ProjectRail extends StatefulWidget {
   const _ProjectRail({required this.projectId, required this.currentRoute});
   final String projectId;
   final String currentRoute;
+
+  @override
+  State<_ProjectRail> createState() => _ProjectRailState();
+}
+
+class _ProjectRailState extends State<_ProjectRail> {
+  static const _prefsKey = 'project_rail.expanded';
+
+  /// `null` while we await the saved preference; falls back to the
+  /// viewport default on the first build.
+  bool? _userExpanded;
+
+  late final KeyValueStorage _storage =
+      getIt<KeyValueStorage>(instanceName: HiveBoxes.ui);
+
+  @override
+  void initState() {
+    super.initState();
+    _userExpanded = _storage.get<bool>(_prefsKey);
+  }
+
+  Future<void> _toggle() async {
+    final next = !_currentExpanded;
+    setState(() => _userExpanded = next);
+    await _storage.set<bool>(_prefsKey, next);
+  }
+
+  bool get _currentExpanded =>
+      _userExpanded ?? Breakpoints.of(context).isExpanded;
 
   @override
   Widget build(BuildContext context) {
@@ -403,53 +438,65 @@ class _ProjectRail extends StatelessWidget {
       _RailItem(
         icon: Icons.dashboard_outlined,
         label: t.railOverview,
-        path: Routes.projectDetailFor(projectId),
+        path: Routes.projectDetailFor(widget.projectId),
       ),
       _RailItem(
         icon: Icons.bookmark_outlined,
         label: t.railBacklog,
-        path: Routes.projectBacklogFor(projectId),
+        path: Routes.projectBacklogFor(widget.projectId),
       ),
       _RailItem(
         icon: Icons.view_kanban_outlined,
         label: t.railBoard,
-        path: Routes.projectBoardFor(projectId),
+        path: Routes.projectBoardFor(widget.projectId),
       ),
       _RailItem(
         icon: Icons.bug_report_outlined,
         label: t.railIssues,
-        path: Routes.projectIssuesFor(projectId),
+        path: Routes.projectIssuesFor(widget.projectId),
       ),
       _RailItem(
         icon: Icons.flag_outlined,
         label: t.railMilestones,
-        path: Routes.projectMilestonesFor(projectId),
+        path: Routes.projectMilestonesFor(widget.projectId),
       ),
       _RailItem(
         icon: Icons.menu_book_outlined,
         label: t.railWiki,
-        path: Routes.projectWikiFor(projectId),
+        path: Routes.projectWikiFor(widget.projectId),
       ),
       _RailItem(
         icon: Icons.settings_outlined,
         label: t.railSettings,
-        path: Routes.projectSettingsFor(projectId),
+        path: Routes.projectSettingsFor(widget.projectId),
       ),
     ];
 
-    final selectedIndex = _selectedIndexFor(currentRoute, items);
+    final selectedIndex = _selectedIndexFor(widget.currentRoute, items);
+    final expanded = _currentExpanded;
 
     return NavigationRail(
-      extended: Breakpoints.of(context).isExpanded,
+      extended: expanded,
       selectedIndex: selectedIndex,
       onDestinationSelected: (i) => context.go(items[i].path),
-      labelType: Breakpoints.of(context).isExpanded
-          ? NavigationRailLabelType.none
-          : NavigationRailLabelType.all,
+      // When extended=true the rail ignores labelType (labels render
+      // next to icons). When collapsed we keep labelType=none and rely
+      // on the per-destination Tooltip below for discoverability.
+      labelType: NavigationRailLabelType.none,
+      leading: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: IconButton(
+          tooltip: expanded ? t.railCollapse : t.railExpand,
+          icon: Icon(
+            expanded ? Icons.menu_open : Icons.menu,
+          ),
+          onPressed: _toggle,
+        ),
+      ),
       destinations: [
         for (final i in items)
           NavigationRailDestination(
-            icon: Icon(i.icon),
+            icon: Tooltip(message: i.label, child: Icon(i.icon)),
             label: Text(i.label),
           ),
       ],
