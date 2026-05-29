@@ -511,20 +511,28 @@ class _ProjectRailState extends State<_ProjectRail> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 4px top padding aligns the rail header divider with the
-            // top bar's 52px bottom border on the right column — without
-            // it the rail divider lands 4px above the toolbar's line.
-            const SizedBox(height: 4),
-            _RailRow(
-              icon: expanded ? Icons.menu_open : Icons.menu,
-              label: expanded
-                  ? _ProjectName(projectId: widget.projectId)
-                  : null,
-              tooltip: expanded ? t.railCollapse : t.railExpand,
-              selected: false,
-              onTap: _toggle,
+            // Header lives in its own Material with the SAME bottom
+            // border shape + 52px SizedBox the top bar uses. That's
+            // the only way to guarantee both horizontal dividers land
+            // on exactly the same pixel row — Material.shape draws the
+            // border on the box's inner edge, which a separate
+            // `Divider` widget can't replicate without 1-pixel drift.
+            Material(
+              color: theme.colorScheme.surface,
+              shape: Border(
+                bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+              ),
+              child: SizedBox(
+                height: 52,
+                child: _RailHeader(
+                  expanded: expanded,
+                  projectId: widget.projectId,
+                  collapseTooltip: t.railCollapse,
+                  expandTooltip: t.railExpand,
+                  onToggle: _toggle,
+                ),
+              ),
             ),
-            Divider(height: 1, color: theme.colorScheme.outlineVariant),
             const SizedBox(height: 8),
             for (var i = 0; i < items.length; i++)
               _RailRow(
@@ -563,6 +571,60 @@ class _RailItem {
   final IconData icon;
   final String label;
   final String path;
+}
+
+/// Rail header tap target — a single tile that toggles the rail and,
+/// when expanded, displays the current project name as its label.
+/// Lives inside a 52px Material shared shape with the top bar so the
+/// two bottom borders land on the same pixel row.
+class _RailHeader extends StatelessWidget {
+  const _RailHeader({
+    required this.expanded,
+    required this.projectId,
+    required this.collapseTooltip,
+    required this.expandTooltip,
+    required this.onToggle,
+  });
+
+  final bool expanded;
+  final String projectId;
+  final String collapseTooltip;
+  final String expandTooltip;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fg = theme.colorScheme.onSurfaceVariant;
+    // Match the destination row's icon column exactly: outer
+    // Padding(horizontal: 12) + inner padding(horizontal: 8) puts the
+    // 20px icon's centre at x=30 — same as the _RailRow rows below.
+    final tile = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          children: [
+            Icon(
+              expanded ? Icons.menu_open : Icons.menu,
+              size: 20,
+              color: fg,
+            ),
+            if (expanded) ...[
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ProjectName(projectId: projectId),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    return Tooltip(
+      message: expanded ? collapseTooltip : expandTooltip,
+      child: InkWell(onTap: onToggle, child: tile),
+    );
+  }
 }
 
 /// A single row in the project rail. The icon sits at a fixed left line
