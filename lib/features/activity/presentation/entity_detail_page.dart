@@ -1463,6 +1463,19 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
   String? _optimisticDisplay;
   bool _saving = false;
 
+  /// Defer hover-state setState calls to a post-frame callback. Calling
+  /// setState directly inside `MouseRegion.onEnter`/`onExit` fires
+  /// `!_debugDuringDeviceUpdate` because the rebuild it schedules
+  /// retriggers the mouse tracker mid-flight.
+  void _setHover(bool value) {
+    if (_hovering == value) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _hovering != value) {
+        setState(() => _hovering = value);
+      }
+    });
+  }
+
   Future<void> _open() async {
     final picked = await _showSearchablePicker(
       context,
@@ -1528,8 +1541,8 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
     final caretVisible = _hovering || _saving;
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
+      onEnter: (_) => _setHover(true),
+      onExit: (_) => _setHover(false),
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _saving ? null : _open,
@@ -1795,7 +1808,15 @@ class _SearchablePickerEntryState extends State<_SearchablePickerEntry> {
                             child: InkWell(
                               onTap: () => _commitIndex(i),
                               onHover: (h) {
-                                if (h) setState(() => _highlight = i);
+                                if (!h || _highlight == i) return;
+                                // Defer to avoid retriggering the
+                                // mouse-tracker mid-update.
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
+                                  if (mounted && _highlight != i) {
+                                    setState(() => _highlight = i);
+                                  }
+                                });
                               },
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
@@ -1997,6 +2018,17 @@ class _MultiSelectCellState extends State<_MultiSelectCell> {
   bool _hovering = false;
   bool _saving = false;
 
+  /// Same post-frame deferral as [_ClickToEditCellState._setHover] —
+  /// see that doc for why this can't be a synchronous setState.
+  void _setHover(bool value) {
+    if (_hovering == value) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _hovering != value) {
+        setState(() => _hovering = value);
+      }
+    });
+  }
+
   Future<void> _commit(List<String> next) async {
     setState(() {
       _optimistic = next;
@@ -2069,8 +2101,8 @@ class _MultiSelectCellState extends State<_MultiSelectCell> {
       // Empty state — clicking anywhere on the row opens the dialog.
       return MouseRegion(
         cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hovering = true),
-        onExit: (_) => setState(() => _hovering = false),
+        onEnter: (_) => _setHover(true),
+        onExit: (_) => _setHover(false),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: _saving ? null : _openDialog,
@@ -2116,8 +2148,8 @@ class _MultiSelectCellState extends State<_MultiSelectCell> {
     }
 
     return MouseRegion(
-      onEnter: (_) => setState(() => _hovering = true),
-      onExit: (_) => setState(() => _hovering = false),
+      onEnter: (_) => _setHover(true),
+      onExit: (_) => _setHover(false),
       child: Wrap(
         spacing: 6,
         runSpacing: 6,
