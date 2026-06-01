@@ -4,12 +4,17 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
+import 'package:intellipilot/core/ui/timestamps.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
+import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
+import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
+import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
+import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
@@ -48,16 +53,23 @@ class _EntityEditPageState extends State<EntityEditPage> {
     final backlog = getIt<BacklogRepository>();
     final catalog = getIt<CatalogRepository>();
     final projects = getIt<ProjectsRepository>();
+    final milestones = getIt<MilestonesRepository>();
+    final profileRepo = getIt<ProfileRepository>();
     final project =
         (await projects.getProject(widget.projectId)).valueOrNull;
     if (project == null) return null;
+    final profile = (await profileRepo.getProfile()).valueOrNull;
     switch (widget.kind) {
       case EntityKind.epic:
         final entity =
             (await backlog.getEpic(widget.projectId, widget.entityId))
                 .valueOrNull;
         if (entity == null) return null;
-        return _EditData(project: project, epic: entity);
+        return _EditData(
+          project: project,
+          profile: profile,
+          epic: entity,
+        );
       case EntityKind.userStory:
         final entity =
             (await backlog.getUserStory(widget.projectId, widget.entityId))
@@ -65,6 +77,7 @@ class _EntityEditPageState extends State<EntityEditPage> {
         if (entity == null) return null;
         final epics =
             (await backlog.listEpics(widget.projectId)).valueOrNull ?? [];
+        final ms = (await milestones.list(widget.projectId)).valueOrNull ?? [];
         final statuses = (await catalog.listTaxonomy(
                   widget.projectId, TaxonomyKind.usStatus,
                 ))
@@ -77,8 +90,10 @@ class _EntityEditPageState extends State<EntityEditPage> {
             [];
         return _EditData(
           project: project,
+          profile: profile,
           userStory: entity,
           epics: epics,
+          milestones: ms,
           statuses: statuses,
           points: points,
         );
@@ -97,6 +112,7 @@ class _EntityEditPageState extends State<EntityEditPage> {
             [];
         return _EditData(
           project: project,
+          profile: profile,
           task: entity,
           userStories: stories,
           statuses: statuses,
@@ -133,6 +149,7 @@ class _EntityEditPageState extends State<EntityEditPage> {
                 [];
         return _EditData(
           project: project,
+          profile: profile,
           issue: entity,
           statuses: statuses,
           types: types,
@@ -186,12 +203,14 @@ class _EntityEditPageState extends State<EntityEditPage> {
 class _EditData {
   _EditData({
     required this.project,
+    this.profile,
     this.epic,
     this.userStory,
     this.task,
     this.issue,
     this.epics = const [],
     this.userStories = const [],
+    this.milestones = const [],
     this.statuses = const [],
     this.points = const [],
     this.types = const [],
@@ -202,12 +221,14 @@ class _EditData {
   });
 
   final Project project;
+  final UserProfile? profile;
   final Epic? epic;
   final UserStory? userStory;
   final Task? task;
   final Issue? issue;
   final List<Epic> epics;
   final List<UserStory> userStories;
+  final List<Milestone> milestones;
   final List<TaxonomyItem> statuses;
   final List<TaxonomyItem> points;
   final List<TaxonomyItem> types;
@@ -243,9 +264,12 @@ class _EditView extends StatefulWidget {
 class _EditViewState extends State<_EditView> {
   late final TextEditingController _subjectCtrl;
   late final TextEditingController _descCtrl;
+  late final TextEditingController _assigneeCtrl;
+  late final TextEditingController _reporterCtrl;
 
   String? _statusId;
   String? _epicId;
+  String? _milestoneId;
   String? _pointsId;
   String? _userStoryId;
   String? _typeId;
@@ -261,6 +285,10 @@ class _EditViewState extends State<_EditView> {
     final d = widget.data;
     _subjectCtrl = TextEditingController(text: _initialSubject(d));
     _descCtrl = TextEditingController(text: _initialDescription(d));
+    _assigneeCtrl =
+        TextEditingController(text: _initialAssignee(d) ?? '');
+    _reporterCtrl =
+        TextEditingController(text: _initialReporter(d) ?? '');
     switch (widget.kind) {
       case EntityKind.epic:
         _statusId = d.epic?.statusId;
@@ -270,6 +298,7 @@ class _EditViewState extends State<_EditView> {
       case EntityKind.userStory:
         _statusId = d.userStory?.statusId;
         _epicId = d.userStory?.epicId;
+        _milestoneId = d.userStory?.milestoneId;
         _pointsId = d.userStory?.pointsId;
       case EntityKind.task:
         _statusId = d.task?.statusId;
@@ -282,6 +311,49 @@ class _EditViewState extends State<_EditView> {
         _labels.addAll(d.issue?.labels ?? const []);
         _components.addAll(d.issue?.components ?? const []);
     }
+  }
+
+  String? _initialAssignee(_EditData d) => switch (widget.kind) {
+    EntityKind.epic => d.epic?.assignedTo,
+    EntityKind.userStory => d.userStory?.assignedTo,
+    EntityKind.task => d.task?.assignedTo,
+    EntityKind.issue => d.issue?.assignedTo,
+  };
+
+  String? _initialReporter(_EditData d) => switch (widget.kind) {
+    EntityKind.epic => d.epic?.ownerId,
+    EntityKind.userStory => d.userStory?.ownerId,
+    EntityKind.task => d.task?.ownerId,
+    EntityKind.issue => d.issue?.ownerId,
+  };
+
+  DateTime _createdAt(_EditData d) => switch (widget.kind) {
+    EntityKind.epic => d.epic!.createdAt,
+    EntityKind.userStory => d.userStory!.createdAt,
+    EntityKind.task => d.task!.createdAt,
+    EntityKind.issue => d.issue!.createdAt,
+  };
+
+  DateTime _modifiedAt(_EditData d) => switch (widget.kind) {
+    EntityKind.epic => d.epic!.modifiedAt,
+    EntityKind.userStory => d.userStory!.modifiedAt,
+    EntityKind.task => d.task!.modifiedAt,
+    EntityKind.issue => d.issue!.modifiedAt,
+  };
+
+  String _kindLabel(AppLocalizations t) => switch (widget.kind) {
+    EntityKind.epic => t.kindLabelEpic,
+    EntityKind.userStory => t.kindLabelUserStory,
+    EntityKind.task => t.kindLabelTask,
+    EntityKind.issue => t.kindLabelIssue,
+  };
+
+  /// Returns the trimmed text from `c` or `null` when it's empty. Used so
+  /// the backend sees an explicit `null` to clear assignee/reporter
+  /// instead of an empty string.
+  String? _textOrNull(TextEditingController c) {
+    final v = c.text.trim();
+    return v.isEmpty ? null : v;
   }
 
   String _initialSubject(_EditData d) => switch (widget.kind) {
@@ -302,6 +374,8 @@ class _EditViewState extends State<_EditView> {
   void dispose() {
     _subjectCtrl.dispose();
     _descCtrl.dispose();
+    _assigneeCtrl.dispose();
+    _reporterCtrl.dispose();
     super.dispose();
   }
 
@@ -324,6 +398,8 @@ class _EditViewState extends State<_EditView> {
     if (subject.isEmpty) return;
     widget.onSavingChanged(true);
     final backlog = getIt<BacklogRepository>();
+    final assignedTo = _textOrNull(_assigneeCtrl);
+    final ownerId = _textOrNull(_reporterCtrl);
     try {
       switch (widget.kind) {
         case EntityKind.epic:
@@ -337,6 +413,8 @@ class _EditViewState extends State<_EditView> {
               description: _descCtrl.text.trim(),
               statusId: _statusId,
               color: _color,
+              assignedTo: assignedTo,
+              ownerId: ownerId,
             ),
             etag: etag,
           );
@@ -351,7 +429,10 @@ class _EditViewState extends State<_EditView> {
               description: _descCtrl.text.trim(),
               statusId: _statusId,
               epicId: _epicId,
+              milestoneId: _milestoneId,
               pointsId: _pointsId,
+              assignedTo: assignedTo,
+              ownerId: ownerId,
             ),
             etag: etag,
           );
@@ -366,6 +447,8 @@ class _EditViewState extends State<_EditView> {
               description: _descCtrl.text.trim(),
               statusId: _statusId,
               userStoryId: _userStoryId,
+              assignedTo: assignedTo,
+              ownerId: ownerId,
             ),
             etag: etag,
           );
@@ -384,6 +467,8 @@ class _EditViewState extends State<_EditView> {
               severityId: _severityId,
               labels: _labels.toList(),
               components: _components.toList(),
+              assignedTo: assignedTo,
+              ownerId: ownerId,
             ),
             etag: etag,
           );
@@ -492,6 +577,18 @@ class _EditViewState extends State<_EditView> {
                   title: t.panelDetails,
                   child: _kindFields(t),
                 ),
+                const SizedBox(height: 12),
+                _section(
+                  context,
+                  title: t.panelPeople,
+                  child: _peopleFields(t),
+                ),
+                const SizedBox(height: 12),
+                _section(
+                  context,
+                  title: t.panelMetadata,
+                  child: _metadataFields(t, key),
+                ),
               ],
             ),
           ),
@@ -553,6 +650,16 @@ class _EditViewState extends State<_EditView> {
               labelOf: (e) => 'EPIC-${e.reference} · ${e.subject}',
               current: _epicId,
               onChanged: (v) => setState(() => _epicId = v),
+            ),
+            const SizedBox(height: 12),
+            _idDropdown<Milestone>(
+              label: t.detailFieldMilestone,
+              none: t.backlogNoMilestone,
+              items: d.milestones,
+              idOf: (m) => m.id,
+              labelOf: (m) => m.name,
+              current: _milestoneId,
+              onChanged: (v) => setState(() => _milestoneId = v),
             ),
             const SizedBox(height: 12),
             _taxonomyDropdown(
@@ -677,6 +784,97 @@ class _EditViewState extends State<_EditView> {
           ],
         );
     }
+  }
+
+  Widget _peopleFields(AppLocalizations t) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _userField(
+          controller: _assigneeCtrl,
+          label: t.detailFieldAssignee,
+          suffixTooltip: t.assigneeAssignToMe,
+        ),
+        const SizedBox(height: 12),
+        _userField(
+          controller: _reporterCtrl,
+          label: t.detailFieldReporter,
+          suffixTooltip: t.reporterSetMe,
+        ),
+      ],
+    );
+  }
+
+  Widget _userField({
+    required TextEditingController controller,
+    required String label,
+    required String suffixTooltip,
+  }) {
+    final myId = widget.data.profile?.id;
+    final t = AppLocalizations.of(context);
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: t.editFieldUserPlaceholder,
+        suffixIcon: myId == null
+            ? null
+            : IconButton(
+                tooltip: suffixTooltip,
+                icon: const Icon(Icons.person_outline),
+                onPressed: () {
+                  controller.text = myId;
+                  controller.selection = TextSelection.fromPosition(
+                    TextPosition(offset: controller.text.length),
+                  );
+                },
+              ),
+      ),
+    );
+  }
+
+  Widget _metadataFields(AppLocalizations t, String referenceKey) {
+    final d = widget.data;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _metaRow(t.detailFieldType, _kindLabel(t)),
+        const SizedBox(height: 8),
+        _metaRow(t.editFieldKey, referenceKey, mono: true),
+        const SizedBox(height: 8),
+        _metaRow(t.detailFieldCreated, formatTimestamp(context, _createdAt(d))),
+        const SizedBox(height: 8),
+        _metaRow(t.detailFieldUpdated, formatTimestamp(context, _modifiedAt(d))),
+      ],
+    );
+  }
+
+  Widget _metaRow(String label, String value, {bool mono = false}) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 140,
+          child: Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        Expanded(
+          child: SelectableText(
+            value,
+            style: mono
+                ? theme.textTheme.bodyMedium?.copyWith(
+                    fontFamily: 'JetBrainsMono',
+                  )
+                : theme.textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _section(
