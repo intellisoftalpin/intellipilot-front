@@ -2527,15 +2527,23 @@ class _PeopleTable extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        // Reporter (ownerId) is read-only at the API layer — none of
-        // the UpdateXxxRequest DTOs expose an ownerId field. The
-        // creator stays immutable. Surface it as plain text so users
-        // don't expect a click-to-edit affordance that the backend
-        // would reject.
-        _kvRow(
+        _kvRowWith(
           context,
           t.detailFieldReporter,
-          _userLabel(data.entity.ownerId, me, t),
+          _ClickToEditCell(
+            displayText: _userLabel(data.entity.ownerId, me, t),
+            candidates: _reporterCandidates(t, me),
+            currentId: data.entity.ownerId,
+            noneLabel: '—',
+            canEdit: canEdit,
+            onPicked: (id) async {
+              final ok = await _patchReporter(id);
+              if (ok && id != null) {
+                await _RecentAssignees.push(projectId, id);
+              }
+              return ok;
+            },
+          ),
         ),
       ],
     );
@@ -2614,6 +2622,77 @@ class _PeopleTable extends StatelessWidget {
           projectId,
           entityId,
           body: UpdateIssueRequest(assignedTo: assigneeId),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+    }
+    if (ok) onChanged();
+    return ok;
+  }
+
+  /// Same shape as the assignee picker, with "Set me as reporter" as the
+  /// pinned shortcut and the same per-project recent-user history.
+  List<_Candidate> _reporterCandidates(AppLocalizations t, String me) {
+    final recent = _RecentAssignees.read(projectId)
+        .where((id) => id != me)
+        .take(5)
+        .toList();
+    return [
+      _Candidate(
+        id: me,
+        label: t.reporterSetMe,
+        icon: Icons.person_outline,
+        pinned: true,
+      ),
+      for (final id in recent) _Candidate(id: id, label: id),
+    ];
+  }
+
+  Future<bool> _patchReporter(String? ownerId) async {
+    final backlog = getIt<BacklogRepository>();
+    var ok = false;
+    switch (kind) {
+      case EntityKind.epic:
+        final fresh =
+            (await backlog.getEpic(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateEpic(
+          projectId,
+          entityId,
+          body: UpdateEpicRequest(ownerId: ownerId),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+      case EntityKind.userStory:
+        final fresh =
+            (await backlog.getUserStory(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateUserStory(
+          projectId,
+          entityId,
+          body: UpdateUserStoryRequest(ownerId: ownerId),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+      case EntityKind.task:
+        final fresh =
+            (await backlog.getTask(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateTask(
+          projectId,
+          entityId,
+          body: UpdateTaskRequest(ownerId: ownerId),
+          etag: fresh!.etag!,
+        );
+        ok = res.isOk;
+      case EntityKind.issue:
+        final fresh =
+            (await backlog.getIssue(projectId, entityId)).valueOrNull;
+        if (fresh?.etag == null) return false;
+        final res = await backlog.updateIssue(
+          projectId,
+          entityId,
+          body: UpdateIssueRequest(ownerId: ownerId),
           etag: fresh!.etag!,
         );
         ok = res.isOk;

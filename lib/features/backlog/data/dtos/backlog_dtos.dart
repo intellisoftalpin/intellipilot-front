@@ -145,6 +145,7 @@ class UpdateEpicRequest {
     this.statusId = const _Absent(),
     this.color,
     this.assignedTo = const _Absent(),
+    this.ownerId = const _Absent(),
   });
 
   final String? subject;
@@ -154,6 +155,7 @@ class UpdateEpicRequest {
   final Object? statusId;
   final String? color;
   final Object? assignedTo;
+  final Object? ownerId;
 
   Map<String, dynamic> toJson() => {
     if (subject != null) 'subject': subject,
@@ -161,6 +163,7 @@ class UpdateEpicRequest {
     if (statusId is! _Absent) 'status_id': statusId,
     if (color != null) 'color': color,
     if (assignedTo is! _Absent) 'assigned_to': assignedTo,
+    if (ownerId is! _Absent) 'owner_id': ownerId,
   };
 }
 
@@ -203,6 +206,7 @@ class UpdateUserStoryRequest {
     this.milestoneId = const _Absent(),
     this.pointsId = const _Absent(),
     this.assignedTo = const _Absent(),
+    this.ownerId = const _Absent(),
   });
 
   final String? subject;
@@ -212,6 +216,7 @@ class UpdateUserStoryRequest {
   final Object? milestoneId;
   final Object? pointsId;
   final Object? assignedTo;
+  final Object? ownerId;
 
   Map<String, dynamic> toJson() => {
     if (subject != null) 'subject': subject,
@@ -221,6 +226,7 @@ class UpdateUserStoryRequest {
     if (milestoneId is! _Absent) 'milestone_id': milestoneId,
     if (pointsId is! _Absent) 'points_id': pointsId,
     if (assignedTo is! _Absent) 'assigned_to': assignedTo,
+    if (ownerId is! _Absent) 'owner_id': ownerId,
   };
 }
 
@@ -344,12 +350,14 @@ class UpdateTaskRequest {
     this.statusId = const _Absent(),
     this.userStoryId = const _Absent(),
     this.assignedTo = const _Absent(),
+    this.ownerId = const _Absent(),
   });
   final String? subject;
   final String? description;
   final Object? statusId;
   final Object? userStoryId;
   final Object? assignedTo;
+  final Object? ownerId;
 
   Map<String, dynamic> toJson() => {
     if (subject != null) 'subject': subject,
@@ -357,6 +365,7 @@ class UpdateTaskRequest {
     if (statusId is! _Absent) 'status_id': statusId,
     if (userStoryId is! _Absent) 'user_story_id': userStoryId,
     if (assignedTo is! _Absent) 'assigned_to': assignedTo,
+    if (ownerId is! _Absent) 'owner_id': ownerId,
   };
 }
 
@@ -471,6 +480,7 @@ class UpdateIssueRequest {
     this.priorityId = const _Absent(),
     this.severityId = const _Absent(),
     this.assignedTo = const _Absent(),
+    this.ownerId = const _Absent(),
     this.labels,
     this.components,
   });
@@ -482,6 +492,7 @@ class UpdateIssueRequest {
   final Object? priorityId;
   final Object? severityId;
   final Object? assignedTo;
+  final Object? ownerId;
 
   /// Backend treats absent as "leave alone", present as "replace fully".
   final List<String>? labels;
@@ -495,6 +506,7 @@ class UpdateIssueRequest {
     if (priorityId is! _Absent) 'priority_id': priorityId,
     if (severityId is! _Absent) 'severity_id': severityId,
     if (assignedTo is! _Absent) 'assigned_to': assignedTo,
+    if (ownerId is! _Absent) 'owner_id': ownerId,
     if (labels != null) 'labels': labels,
     if (components != null) 'components': components,
   };

@@ -929,7 +929,9 @@ class DemoBacklogRepository implements BacklogRepository {
           ? patch['status_id'] as String?
           : cur.statusId,
       color: (patch['color'] as String?) ?? cur.color,
-      ownerId: cur.ownerId,
+      ownerId: patch.containsKey('owner_id')
+          ? patch['owner_id'] as String?
+          : cur.ownerId,
       assignedTo: patch.containsKey('assigned_to')
           ? patch['assigned_to'] as String?
           : cur.assignedTo,
@@ -1063,7 +1065,9 @@ class DemoBacklogRepository implements BacklogRepository {
       pointsId: patch.containsKey('points_id')
           ? patch['points_id'] as String?
           : cur.pointsId,
-      ownerId: cur.ownerId,
+      ownerId: patch.containsKey('owner_id')
+          ? patch['owner_id'] as String?
+          : cur.ownerId,
       assignedTo: patch.containsKey('assigned_to')
           ? patch['assigned_to'] as String?
           : cur.assignedTo,
@@ -1204,7 +1208,9 @@ class DemoBacklogRepository implements BacklogRepository {
       userStoryId: patch.containsKey('user_story_id')
           ? patch['user_story_id'] as String?
           : cur.userStoryId,
-      ownerId: cur.ownerId,
+      ownerId: patch.containsKey('owner_id')
+          ? patch['owner_id'] as String?
+          : cur.ownerId,
       assignedTo: patch.containsKey('assigned_to')
           ? patch['assigned_to'] as String?
           : cur.assignedTo,
@@ -1319,7 +1325,9 @@ class DemoBacklogRepository implements BacklogRepository {
       severityId: patch.containsKey('severity_id')
           ? patch['severity_id'] as String?
           : cur.severityId,
-      ownerId: cur.ownerId,
+      ownerId: patch.containsKey('owner_id')
+          ? patch['owner_id'] as String?
+          : cur.ownerId,
       assignedTo: patch.containsKey('assigned_to')
           ? patch['assigned_to'] as String?
           : cur.assignedTo,
