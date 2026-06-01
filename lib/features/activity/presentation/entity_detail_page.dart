@@ -432,7 +432,10 @@ class _DetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     final entity = data.entity;
     final t = AppLocalizations.of(context);
-    final isWide = Breakpoints.of(context).isExpanded;
+    // Compact (panel-embed) mode never has room for a two-column layout
+    // even on expanded screens — Breakpoints.of(context) reads the full
+    // screen width, not the panel's. Force a single column there.
+    final isWide = Breakpoints.of(context).isExpanded && !_isCompact;
     final key = '${entity.prefix}-${entity.reference}';
     return Scaffold(
       appBar: AppBar(
