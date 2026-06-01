@@ -1,0 +1,230 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  verify-tag:
+    name: verify tag matches pubspec
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+      build: ${{ steps.extract.outputs.build }}
+      is_prerelease: ${{ steps.extract.outputs.is_prerelease }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: extract
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          version="${tag#v}"
+
+          # pubspec.yaml uses `version: <semver>+<build>`. Extract both halves.
+          version_line="$(grep -E '^version:' pubspec.yaml | head -n1)"
+          if [[ -z "$version_line" ]]; then
+            echo "::error::No version: line in pubspec.yaml"
+            exit 1
+          fi
+          full="${version_line#version:}"
+          full="${full# }"
+          pubspec_version="${full%%+*}"
+          pubspec_build="${full#*+}"
+          if [[ "$pubspec_build" == "$full" ]]; then
+            pubspec_build=""
+          fi
+
+          if [[ "$version" != "$pubspec_version" ]]; then
+            echo "::error::Tag version ($version) != pubspec.yaml version ($pubspec_version)"
+            exit 1
+          fi
+
+          is_prerelease=false
+          if [[ "$version" == *-* ]]; then
+            is_prerelease=true
+          fi
+
+          # Build number: prefer pubspec's +N, fall back to the CI run number
+          # so the image always has a monotonically increasing build id.
+          build="${pubspec_build:-${GITHUB_RUN_NUMBER}}"
+
+          echo "version=$version"             >> "$GITHUB_OUTPUT"
+          echo "build=$build"                 >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$is_prerelease" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag, version=$version, build=$build, prerelease=$is_prerelease"
+
+  test:
+    name: lint + analyze + test
+    needs: verify-tag
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: flutter
+        shell: bash
+        run: |
+          version=$(jq -r .flutter .fvmrc)
+          echo "channel=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ steps.flutter.outputs.channel }}
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter gen-l10n
+      - run: dart format --set-exit-if-changed lib test
+      - run: flutter analyze --no-fatal-infos
+      - run: flutter test --coverage
+
+  release-bundle:
+    name: build web bundle + GHCR image
+    needs: [verify-tag, test]
+    runs-on: ubuntu-24.04
+    outputs:
+      tarball: ${{ steps.pkg.outputs.tarball }}
+      checksum: ${{ steps.pkg.outputs.checksum }}
+      digest: ${{ steps.image.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: flutter
+        shell: bash
+        run: |
+          version=$(jq -r .flutter .fvmrc)
+          echo "channel=$version" >> "$GITHUB_OUTPUT"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ steps.flutter.outputs.channel }}
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter gen-l10n
+
+      - name: flutter build web
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter build web --release \
+            --pwa-strategy=offline-first \
+            --dart-define=INTELLIPILOT_API_BASE=/api \
+            --dart-define=INTELLIPILOT_VERSION=${{ needs.verify-tag.outputs.version }} \
+            --dart-define=INTELLIPILOT_BUILD=${{ needs.verify-tag.outputs.build }} \
+            --dart-define=INTELLIPILOT_FLAVOR=prod
+
+      - name: package tarball + sha256
+        id: pkg
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ needs.verify-tag.outputs.version }}"
+          stage="dist/intellipilot-front-${version}-web"
+          mkdir -p "$stage"
+          cp -R build/web/. "$stage/"
+          tarball="intellipilot-front-${version}-web.tar.gz"
+          tar -C dist -czf "dist/${tarball}" "intellipilot-front-${version}-web"
+          ( cd dist && sha256sum "${tarball}" > "${tarball}.sha256" )
+          echo "tarball=dist/${tarball}"         >> "$GITHUB_OUTPUT"
+          echo "checksum=dist/${tarball}.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: attest bundle provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: ${{ steps.pkg.outputs.tarball }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-bundle
+          path: |
+            ${{ steps.pkg.outputs.tarball }}
+            ${{ steps.pkg.outputs.checksum }}
+          if-no-files-found: error
+          retention-days: 7
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: compute image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ needs.verify-tag.outputs.is_prerelease == 'false' }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.verify-tag.outputs.version }}
+
+      - name: build & push multi-arch image
+        id: image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: true
+          sbom: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=release-frontend
+          cache-to: type=gha,mode=max,scope=release-frontend
+
+      - name: attest image provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.image.outputs.digest }}
+          push-to-registry: true
+
+  release:
+    name: create GitHub Release
+    needs: [verify-tag, release-bundle]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-bundle
+          path: dist
+
+      - name: list assets
+        shell: bash
+        run: ls -la dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ needs.verify-tag.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          prerelease: ${{ needs.verify-tag.outputs.is_prerelease == 'true' }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/*.tar.gz
+            dist/*.tar.gz.sha256
