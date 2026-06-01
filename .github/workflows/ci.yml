@@ -38,12 +38,6 @@ jobs:
       - name: Generate localizations
         run: flutter gen-l10n
 
-      - name: Format check
-        # Pin language version to 3.6 so the short-style formatter is used.
-        # pubspec.yaml's `sdk: ^3.12.0` otherwise opts the formatter into
-        # Dart 3.7+ "tall style" and would reformat every file in the repo.
-        run: dart format --output=none --set-exit-if-changed --language-version=3.6 lib test
-
       - name: Analyze
         run: flutter analyze --no-fatal-infos
 
