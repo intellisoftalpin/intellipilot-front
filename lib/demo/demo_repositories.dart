@@ -74,6 +74,7 @@ class DemoAuthRepository implements AuthRepository {
     required String username,
     required String password,
     required String fullName,
+    String? invitationToken,
   }) async {
     await _tick();
     return const Ok<Unit, AppFailure>(Unit.instance);

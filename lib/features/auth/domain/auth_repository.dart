@@ -15,6 +15,7 @@ abstract interface class AuthRepository {
     required String username,
     required String password,
     required String fullName,
+    String? invitationToken,
   });
 
   Future<Result<TokenResponse, AppFailure>> refresh();

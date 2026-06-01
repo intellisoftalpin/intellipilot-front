@@ -44,6 +44,7 @@ class AuthRepositoryImpl implements AuthRepository {
     required String username,
     required String password,
     required String fullName,
+    String? invitationToken,
   }) async {
     final res = await _api.post(
       '$_basePath/register',
@@ -52,6 +53,7 @@ class AuthRepositoryImpl implements AuthRepository {
         username: username,
         password: password,
         fullName: fullName,
+        invitationToken: invitationToken,
       ).toJson(),
     );
     return res.when(ok: (_) => const Ok<Unit, AppFailure>(Unit.instance), err: Err.new);

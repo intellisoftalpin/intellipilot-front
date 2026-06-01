@@ -77,6 +77,8 @@ void seedDemoStore(DemoStore s) {
     lang: 'en',
     timezone: 'UTC',
     isActive: true,
+    isSuperadmin: true,
+    mustChangePassword: false,
     createdAt: now.subtract(const Duration(days: 30)),
   );
   s.users
@@ -89,6 +91,8 @@ void seedDemoStore(DemoStore s) {
       lang: 'en',
       timezone: 'UTC',
       isActive: true,
+      isSuperadmin: false,
+      mustChangePassword: false,
       createdAt: now.subtract(const Duration(days: 20)),
     ));
 

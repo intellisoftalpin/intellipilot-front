@@ -7,18 +7,24 @@ class RegisterRequest {
     required this.username,
     required this.password,
     this.fullName = '',
+    this.invitationToken,
   });
 
   final String email;
   final String username;
   final String password;
   final String fullName;
+  /// Platform-invitation token (V011). Required by the server when
+  /// `open_registration=false`; ignored otherwise.
+  final String? invitationToken;
 
   Map<String, dynamic> toJson() => {
     'email': email,
     'username': username,
     'password': password,
     'full_name': fullName,
+    if (invitationToken != null && invitationToken!.isNotEmpty)
+      'invitation_token': invitationToken,
   };
 }
 

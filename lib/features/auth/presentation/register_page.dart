@@ -10,19 +10,24 @@ import 'package:intellipilot/l10n/generated/app_localizations.dart';
 import 'package:reactive_forms/reactive_forms.dart';
 
 class RegisterPage extends StatelessWidget {
-  const RegisterPage({super.key});
+  const RegisterPage({super.key, this.invitationToken});
+
+  /// Optional `?token=` query param from a platform invitation link.
+  final String? invitationToken;
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider<RegisterCubit>(
       create: (_) => RegisterCubit(getIt<AuthRepository>()),
-      child: const _RegisterView(),
+      child: _RegisterView(invitationToken: invitationToken),
     );
   }
 }
 
 class _RegisterView extends StatefulWidget {
-  const _RegisterView();
+  const _RegisterView({this.invitationToken});
+
+  final String? invitationToken;
 
   @override
   State<_RegisterView> createState() => _RegisterViewState();
@@ -52,6 +57,7 @@ class _RegisterViewState extends State<_RegisterView> {
       username: _form.control('username').value as String,
       fullName: (_form.control('fullName').value as String?) ?? '',
       password: _form.control('password').value as String,
+      invitationToken: widget.invitationToken,
     );
   }
 
@@ -180,12 +186,25 @@ class _RegisterErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final theme = Theme.of(context).colorScheme;
-    final message = switch (failure) {
-      ConflictFailure() => t.errEmailOrUsernameTaken,
-      ValidationFailure() => t.errWeakPassword,
-      NetworkFailure() => t.errNetwork,
-      ServerFailure() => t.errServer,
-      _ => t.errUnknown,
+    // Some platform-invite / closed-registration cases come back as
+    // ForbiddenFailure with a problem.type slug; surface a precise message.
+    final problemType = failure.problem?.type;
+    final message = switch (problemType) {
+      'registration_closed' =>
+        'Registration is invite-only. Ask your administrator for an invitation link.',
+      'invitation_invalid' =>
+        'This invitation link is not recognised. Ask your administrator for a new one.',
+      'invitation_consumed' =>
+        'This invitation has already been used or has expired. Ask your administrator for a new one.',
+      'invitation_email_mismatch' =>
+        'The email you entered does not match the invitation. Use the email the invitation was sent to.',
+      _ => switch (failure) {
+        ConflictFailure() => t.errEmailOrUsernameTaken,
+        ValidationFailure() => t.errWeakPassword,
+        NetworkFailure() => t.errNetwork,
+        ServerFailure() => t.errServer,
+        _ => t.errUnknown,
+      },
     };
     return Container(
       padding: const EdgeInsets.all(12),

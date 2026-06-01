@@ -5,6 +5,9 @@ import 'package:intellipilot/core/utils/listenable_stream.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
 import 'package:intellipilot/features/activity/presentation/entity_edit_page.dart';
+import 'package:intellipilot/features/admin/presentation/admin_invitations_page.dart';
+import 'package:intellipilot/features/admin/presentation/admin_settings_page.dart';
+import 'package:intellipilot/features/admin/presentation/admin_users_page.dart';
 import 'package:intellipilot/features/auth/presentation/forgot_password_page.dart';
 import 'package:intellipilot/features/auth/presentation/login_page.dart';
 import 'package:intellipilot/features/auth/presentation/register_page.dart';
@@ -50,6 +53,12 @@ abstract class Routes {
   static const account = '/me/account';
   static const projects = '/projects';
   static const acceptInvitation = '/i';
+  // Platform-admin (V011) — only superadmins should reach these; the
+  // backend gates the API with 403, and the SPA hides the nav entry for
+  // non-admins, but no router-level redirect today.
+  static const adminUsers = '/admin/users';
+  static const adminInvitations = '/admin/invitations';
+  static const adminSettings = '/admin/settings';
 
   static String projectDetailFor(String id) => '/projects/$id';
   static String projectSettingsFor(String id) => '/projects/$id/settings';
@@ -261,6 +270,21 @@ GoRouter buildRouter({required SessionBloc session}) {
           );
         },
       ),
+      GoRoute(
+        path: Routes.adminUsers,
+        name: 'admin_users',
+        builder: (context, state) => const AdminUsersPage(),
+      ),
+      GoRoute(
+        path: Routes.adminInvitations,
+        name: 'admin_invitations',
+        builder: (context, state) => const AdminInvitationsPage(),
+      ),
+      GoRoute(
+        path: Routes.adminSettings,
+        name: 'admin_settings',
+        builder: (context, state) => const AdminSettingsPage(),
+      ),
         ],
       ),
       GoRoute(
@@ -277,7 +301,8 @@ GoRouter buildRouter({required SessionBloc session}) {
       GoRoute(
         path: Routes.register,
         name: 'register',
-        builder: (context, state) => const RegisterPage(),
+        builder: (context, state) =>
+            RegisterPage(invitationToken: state.uri.queryParameters['token']),
       ),
       GoRoute(
         path: Routes.forgotPassword,

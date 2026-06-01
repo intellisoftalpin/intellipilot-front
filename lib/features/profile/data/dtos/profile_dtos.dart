@@ -9,6 +9,8 @@ class UserProfile {
     required this.lang,
     required this.timezone,
     required this.isActive,
+    required this.isSuperadmin,
+    required this.mustChangePassword,
     required this.createdAt,
   });
 
@@ -21,6 +23,8 @@ class UserProfile {
       lang: (json['lang'] as String?) ?? 'en',
       timezone: (json['timezone'] as String?) ?? 'UTC',
       isActive: json['is_active'] as bool? ?? true,
+      isSuperadmin: json['is_superadmin'] as bool? ?? false,
+      mustChangePassword: json['must_change_password'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -32,12 +36,20 @@ class UserProfile {
   final String lang;
   final String timezone;
   final bool isActive;
+  /// Platform-wide admin flag (V011). Distinct from project-level admin —
+  /// gates the `/admin/*` surface in the SPA.
+  final bool isSuperadmin;
+  /// True when the account was created or reset by an admin and a fresh
+  /// password is required before any other navigation.
+  final bool mustChangePassword;
   final DateTime createdAt;
 
   UserProfile copyWith({
     String? fullName,
     String? lang,
     String? timezone,
+    bool? mustChangePassword,
+    bool? isSuperadmin,
   }) => UserProfile(
     id: id,
     email: email,
@@ -46,6 +58,8 @@ class UserProfile {
     lang: lang ?? this.lang,
     timezone: timezone ?? this.timezone,
     isActive: isActive,
+    isSuperadmin: isSuperadmin ?? this.isSuperadmin,
+    mustChangePassword: mustChangePassword ?? this.mustChangePassword,
     createdAt: createdAt,
   );
 }

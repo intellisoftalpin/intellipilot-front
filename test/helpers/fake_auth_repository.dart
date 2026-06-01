@@ -49,6 +49,7 @@ class FakeAuthRepository implements AuthRepository {
     required String username,
     required String password,
     required String fullName,
+    String? invitationToken,
   }) async =>
       registerHandler?.call() ??
       Future.value(const Err<Unit, AppFailure>(UnknownFailure()));

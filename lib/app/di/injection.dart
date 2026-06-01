@@ -11,6 +11,8 @@ import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
 import 'package:intellipilot/features/activity/data/activity_repository_impl.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
+import 'package:intellipilot/features/admin/data/admin_repository_impl.dart';
+import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/auth/data/auth_repository_impl.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:intellipilot/features/backlog/data/backlog_repository_impl.dart';
@@ -141,6 +143,9 @@ Future<void> configureDependencies({
   );
   getIt.registerLazySingleton<LinksRepository>(
     () => LinksRepositoryHttp(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<AdminRepository>(
+    () => AdminRepositoryImpl(getIt<ApiClient>()),
   );
   getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
   getIt.registerLazySingleton<FileDownloader>(FileDownloader.new);

@@ -40,6 +40,7 @@ class RegisterCubit extends Cubit<RegisterState> {
     required String username,
     required String password,
     required String fullName,
+    String? invitationToken,
   }) async {
     emit(const RegisterSubmitting());
     final result = await _repo.register(
@@ -47,6 +48,7 @@ class RegisterCubit extends Cubit<RegisterState> {
       username: username,
       password: password,
       fullName: fullName,
+      invitationToken: invitationToken,
     );
     result.when(
       ok: (_) => emit(const RegisterSucceeded()),
