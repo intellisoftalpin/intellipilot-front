@@ -12,6 +12,7 @@ import 'package:intellipilot/core/utils/uuid_gen.dart';
 import 'package:intellipilot/demo/demo_repositories.dart';
 import 'package:intellipilot/demo/demo_store.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
+import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/domain/board_repository.dart';
@@ -112,6 +113,9 @@ Future<void> configureDemoDependencies() async {
     ..registerLazySingleton<WikiRepository>(() => DemoWikiRepository(store))
     ..registerLazySingleton<LinksRepository>(
       () => DemoLinksRepository(store),
+    )
+    ..registerLazySingleton<AdminRepository>(
+      () => DemoAdminRepository(store),
     )
     ..registerLazySingleton<PasskeyService>(DemoPasskeyService.new)
     ..registerLazySingleton<FileDownloader>(FileDownloader.new)

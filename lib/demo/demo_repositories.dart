@@ -17,6 +17,8 @@ import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/demo/demo_store.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
+import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
+import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/auth/data/dtos/auth_dtos.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
@@ -2044,5 +2046,183 @@ class DemoLinksRepository implements LinksRepository {
     if (i < 0) return const Err(NotFoundFailure());
     _s.links.removeAt(i);
     return const Ok(Unit.instance);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Platform admin (V011) — stub so the /admin/* pages don't crash demo mode.
+// Reads pull from DemoStore.users; invitations + settings live in private
+// fields here (the demo doesn't persist them across reloads).
+// ---------------------------------------------------------------------------
+
+class DemoAdminRepository implements AdminRepository {
+  DemoAdminRepository(this._s);
+
+  final DemoStore _s;
+  final List<PendingInvitation> _invitations = [];
+  PlatformSettings _settings = PlatformSettings(
+    openRegistration: false,
+    updatedAt: DateTime.now().toUtc(),
+  );
+
+  @override
+  Future<Result<AdminUserList, AppFailure>> listUsers({
+    String? q,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    await _tick();
+    final needle = q?.trim().toLowerCase();
+    Iterable<UserProfile> filtered = _s.users;
+    if (needle != null && needle.isNotEmpty) {
+      filtered = filtered.where(
+        (u) =>
+            u.email.toLowerCase().contains(needle) ||
+            u.username.toLowerCase().contains(needle) ||
+            u.fullName.toLowerCase().contains(needle),
+      );
+    }
+    final all = filtered.toList(growable: false);
+    final page = all.skip(offset).take(limit).toList(growable: false);
+    return Ok(AdminUserList(
+      items: page,
+      total: all.length,
+      limit: limit,
+      offset: offset,
+    ));
+  }
+
+  @override
+  Future<Result<CreateUserResponse, AppFailure>> createUser(
+    CreateUserRequest body,
+  ) async {
+    await _tick();
+    final emailLower = body.email.trim().toLowerCase();
+    final dupe = _s.users.any((u) => u.email.toLowerCase() == emailLower);
+    if (dupe) return const Err(ConflictFailure());
+    final user = UserProfile(
+      id: _s.nextId('user'),
+      email: body.email,
+      username: body.username,
+      fullName: body.fullName,
+      lang: 'en',
+      timezone: 'UTC',
+      isActive: true,
+      isSuperadmin: body.isSuperadmin,
+      mustChangePassword: body.password == null,
+      createdAt: DateTime.now().toUtc(),
+    );
+    _s.users.add(user);
+    return Ok(CreateUserResponse(
+      user: user,
+      generatedPassword: body.password == null ? 'demo-generated-password' : null,
+    ));
+  }
+
+  @override
+  Future<Result<UserProfile, AppFailure>> updateUser(
+    String id,
+    UpdateUserRequest patch,
+  ) async {
+    await _tick();
+    final i = _s.users.indexWhere((u) => u.id == id);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _s.users[i];
+    final next = UserProfile(
+      id: cur.id,
+      email: cur.email,
+      username: cur.username,
+      fullName: patch.fullName ?? cur.fullName,
+      lang: cur.lang,
+      timezone: cur.timezone,
+      isActive: patch.isActive ?? cur.isActive,
+      isSuperadmin: patch.isSuperadmin ?? cur.isSuperadmin,
+      mustChangePassword: cur.mustChangePassword,
+      createdAt: cur.createdAt,
+    );
+    _s.users[i] = next;
+    return Ok(next);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteUser(String id) async {
+    await _tick();
+    final i = _s.users.indexWhere((u) => u.id == id);
+    if (i < 0) return const Err(NotFoundFailure());
+    _s.users.removeAt(i);
+    return const Ok(Unit.instance);
+  }
+
+  @override
+  Future<Result<PasswordResetIssued, AppFailure>> resetPassword(
+    String id,
+  ) async {
+    await _tick();
+    if (!_s.users.any((u) => u.id == id)) {
+      return const Err(NotFoundFailure());
+    }
+    return Ok(PasswordResetIssued(
+      resetToken: 'demo-reset-token',
+      expiresAt: DateTime.now().toUtc().add(const Duration(hours: 24)),
+    ));
+  }
+
+  @override
+  Future<Result<CreateInvitationResponse, AppFailure>> createInvitation(
+    CreateInvitationRequest body,
+  ) async {
+    await _tick();
+    final id = _s.nextId('inv');
+    final now = DateTime.now().toUtc();
+    final expires = now.add(const Duration(days: 7));
+    _invitations.add(PendingInvitation(
+      id: id,
+      email: body.email,
+      role: body.role,
+      invitedBy: _s.currentUser.id,
+      expiresAt: expires,
+      createdAt: now,
+    ));
+    return Ok(CreateInvitationResponse(
+      invitationId: id,
+      email: body.email,
+      role: body.role,
+      expiresAt: expires,
+      inviteToken: 'demo-invite-token-$id',
+    ));
+  }
+
+  @override
+  Future<Result<List<PendingInvitation>, AppFailure>> listInvitations() async {
+    await _tick();
+    return Ok(List.unmodifiable(_invitations));
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> revokeInvitation(String id) async {
+    await _tick();
+    final i = _invitations.indexWhere((inv) => inv.id == id);
+    if (i < 0) return const Err(NotFoundFailure());
+    _invitations.removeAt(i);
+    return const Ok(Unit.instance);
+  }
+
+  @override
+  Future<Result<PlatformSettings, AppFailure>> getSettings() async {
+    await _tick();
+    return Ok(_settings);
+  }
+
+  @override
+  Future<Result<PlatformSettings, AppFailure>> updateOpenRegistration(
+    bool value,
+  ) async {
+    await _tick();
+    _settings = PlatformSettings(
+      openRegistration: value,
+      updatedAt: DateTime.now().toUtc(),
+      updatedBy: _s.currentUser.id,
+    );
+    return Ok(_settings);
   }
 }
