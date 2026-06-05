@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_users_cubit.dart';
@@ -330,14 +331,44 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
     );
     if (!mounted) return;
     if (res == null) {
+      final st = widget.cubit.state;
+      final failure = st is AdminUsersLoaded ? st.lastError : null;
       setState(() {
         _busy = false;
-        _error = 'Could not create user. Check the email/username are free.';
+        _error = _failureMessage(failure);
       });
       return;
     }
     Navigator.of(context).pop(res);
   }
+
+  /// Turn a backend failure into a human-readable message. Validation failures
+  /// surface the exact per-field reasons returned by the API (e.g. "Username:
+  /// length is lower than 3") instead of a generic catch-all line.
+  String _failureMessage(AppFailure? failure) {
+    switch (failure) {
+      case ValidationFailure(:final fieldErrors) when fieldErrors.isNotEmpty:
+        return fieldErrors
+            .map((e) => '${_fieldLabel(e.field)}: ${e.message ?? 'invalid'}')
+            .join('\n');
+      case ConflictFailure():
+        return 'That email or username is already taken.';
+      case ForbiddenFailure():
+        return 'You do not have permission to create users.';
+      case NetworkFailure():
+        return 'Network error. Check your connection and try again.';
+      case _:
+        return 'Could not create user. Please try again.';
+    }
+  }
+
+  String _fieldLabel(String field) => switch (field) {
+    'email' => 'Email',
+    'username' => 'Username',
+    'full_name' => 'Full name',
+    'password' => 'Password',
+    _ => field,
+  };
 
   @override
   Widget build(BuildContext context) {
