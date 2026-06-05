@@ -20,7 +20,7 @@ class TaxonomyTab extends StatefulWidget {
 }
 
 class _TaxonomyTabState extends State<TaxonomyTab> {
-  TaxonomyKind _kind = TaxonomyKind.usStatus;
+  TaxonomyKind _kind = TaxonomyKind.issueStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -60,8 +60,6 @@ class _TaxonomyTabState extends State<TaxonomyTab> {
   }
 
   String _kindLabel(AppLocalizations t, TaxonomyKind k) => switch (k) {
-    TaxonomyKind.usStatus => t.taxKindUsStatus,
-    TaxonomyKind.taskStatus => t.taxKindTaskStatus,
     TaxonomyKind.issueStatus => t.taxKindIssueStatus,
     TaxonomyKind.issueType => t.taxKindIssueType,
     TaxonomyKind.priority => t.taxKindPriority,

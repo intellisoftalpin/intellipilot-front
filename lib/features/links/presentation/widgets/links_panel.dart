@@ -19,14 +19,10 @@ import 'package:intellipilot/l10n/generated/app_localizations.dart';
 class LinksLookup {
   const LinksLookup({
     required this.epics,
-    required this.userStories,
-    required this.tasks,
     required this.issues,
   });
 
   final Map<String, Epic> epics;
-  final Map<String, UserStory> userStories;
-  final Map<String, Task> tasks;
   final Map<String, Issue> issues;
 
   ({String key, String subject})? resolve(EntityKind kind, String id) {
@@ -34,17 +30,9 @@ class LinksLookup {
       case EntityKind.epic:
         final e = epics[id];
         return e == null ? null : (key: 'EPIC-${e.reference}', subject: e.subject);
-      case EntityKind.userStory:
-        final u = userStories[id];
-        return u == null ? null : (key: 'US-${u.reference}', subject: u.subject);
-      case EntityKind.task:
-        final t = tasks[id];
-        return t == null ? null : (key: 'T-${t.reference}', subject: t.subject);
       case EntityKind.issue:
         final i = issues[id];
-        return i == null
-            ? null
-            : (key: 'ISSUE-${i.reference}', subject: i.subject);
+        return i == null ? null : (key: '#${i.reference}', subject: i.subject);
     }
   }
 }

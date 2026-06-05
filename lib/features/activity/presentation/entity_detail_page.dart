@@ -191,14 +191,6 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
         final v = (await backlog.getEpic(widget.projectId, widget.entityId))
             .valueOrNull;
         if (v != null) entity = _EntityRecord.epic(v);
-      case EntityKind.userStory:
-        final v = (await backlog.getUserStory(widget.projectId, widget.entityId))
-            .valueOrNull;
-        if (v != null) entity = _EntityRecord.userStory(v);
-      case EntityKind.task:
-        final v = (await backlog.getTask(widget.projectId, widget.entityId))
-            .valueOrNull;
-        if (v != null) entity = _EntityRecord.task(v);
       case EntityKind.issue:
         final v = (await backlog.getIssue(widget.projectId, widget.entityId))
             .valueOrNull;
@@ -209,8 +201,6 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
     // Resolve every taxonomy item used by the kind so we can render
     // status/type/priority/severity/points names.
     final lookups = <Future<dynamic>>[];
-    lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.usStatus));
-    lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.taskStatus));
     lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.issueStatus));
     lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.issueType));
     lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.priority));
@@ -219,9 +209,7 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
     lookups.add(catalog.listLabels(widget.projectId));
     lookups.add(catalog.listComponents(widget.projectId));
     lookups.add(backlog.listEpics(widget.projectId));
-    lookups.add(backlog.listUserStories(widget.projectId));
     lookups.add(milestones.list(widget.projectId));
-    lookups.add(backlog.listTasks(widget.projectId));
     lookups.add(backlog.listIssues(widget.projectId));
     final results = await Future.wait(lookups);
 
@@ -233,21 +221,17 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
       ...resolve<TaxonomyItem>(2),
       ...resolve<TaxonomyItem>(3),
       ...resolve<TaxonomyItem>(4),
-      ...resolve<TaxonomyItem>(5),
-      ...resolve<TaxonomyItem>(6),
     ];
     return _PageData(
       profile: profile,
       project: project,
       entity: entity,
       taxonomyById: {for (final t in taxonomyAll) t.id: t},
-      labelsById: {for (final l in resolve<Label>(7)) l.id: l},
-      componentsById: {for (final c in resolve<Component>(8)) c.id: c},
-      epicsById: {for (final e in resolve<Epic>(9)) e.id: e},
-      userStoriesById: {for (final u in resolve<UserStory>(10)) u.id: u},
-      milestonesById: {for (final m in resolve<Milestone>(11)) m.id: m},
-      tasksById: {for (final t in resolve<Task>(12)) t.id: t},
-      issuesById: {for (final i in resolve<Issue>(13)) i.id: i},
+      labelsById: {for (final l in resolve<Label>(5)) l.id: l},
+      componentsById: {for (final c in resolve<Component>(6)) c.id: c},
+      epicsById: {for (final e in resolve<Epic>(7)) e.id: e},
+      milestonesById: {for (final m in resolve<Milestone>(8)) m.id: m},
+      issuesById: {for (final i in resolve<Issue>(9)) i.id: i},
     );
   }
 }
@@ -265,9 +249,7 @@ class _PageData {
     required this.labelsById,
     required this.componentsById,
     required this.epicsById,
-    required this.userStoriesById,
     required this.milestonesById,
-    required this.tasksById,
     required this.issuesById,
   });
 
@@ -278,17 +260,13 @@ class _PageData {
   final Map<String, Label> labelsById;
   final Map<String, Component> componentsById;
   final Map<String, Epic> epicsById;
-  final Map<String, UserStory> userStoriesById;
   final Map<String, Milestone> milestonesById;
-  final Map<String, Task> tasksById;
   final Map<String, Issue> issuesById;
 }
 
 sealed class _EntityRecord {
   const _EntityRecord();
   factory _EntityRecord.epic(Epic e) = _EpicRec;
-  factory _EntityRecord.userStory(UserStory u) = _UsRec;
-  factory _EntityRecord.task(Task t) = _TaskRec;
   factory _EntityRecord.issue(Issue i) = _IssueRec;
 
   String get subject;
@@ -326,56 +304,6 @@ class _EpicRec extends _EntityRecord {
   DateTime get modifiedAt => epic.modifiedAt;
   @override
   String get kindLabelKey => 'Epic';
-}
-
-class _UsRec extends _EntityRecord {
-  _UsRec(this.us);
-  final UserStory us;
-  @override
-  String get subject => us.subject;
-  @override
-  String get description => us.description;
-  @override
-  int get reference => us.reference;
-  @override
-  String get prefix => 'US';
-  @override
-  String? get statusId => us.statusId;
-  @override
-  String? get assignedTo => us.assignedTo;
-  @override
-  String? get ownerId => us.ownerId;
-  @override
-  DateTime get createdAt => us.createdAt;
-  @override
-  DateTime get modifiedAt => us.modifiedAt;
-  @override
-  String get kindLabelKey => 'User story';
-}
-
-class _TaskRec extends _EntityRecord {
-  _TaskRec(this.task);
-  final Task task;
-  @override
-  String get subject => task.subject;
-  @override
-  String get description => task.description;
-  @override
-  int get reference => task.reference;
-  @override
-  String get prefix => 'T';
-  @override
-  String? get statusId => task.statusId;
-  @override
-  String? get assignedTo => task.assignedTo;
-  @override
-  String? get ownerId => task.ownerId;
-  @override
-  DateTime get createdAt => task.createdAt;
-  @override
-  DateTime get modifiedAt => task.modifiedAt;
-  @override
-  String get kindLabelKey => 'Task';
 }
 
 class _IssueRec extends _EntityRecord {
@@ -609,8 +537,6 @@ class _DescriptionEditor extends StatelessWidget {
           projectId: projectId,
           entityId: entityId,
           epicPatch: () => UpdateEpicRequest(description: next),
-          usPatch: () => UpdateUserStoryRequest(description: next),
-          taskPatch: () => UpdateTaskRequest(description: next),
           issuePatch: () => UpdateIssueRequest(description: next),
         );
         if (ok) onChanged();
@@ -694,8 +620,6 @@ class _SubjectEditor extends StatelessWidget {
           projectId: projectId,
           entityId: entityId,
           epicPatch: () => UpdateEpicRequest(subject: trimmed),
-          usPatch: () => UpdateUserStoryRequest(subject: trimmed),
-          taskPatch: () => UpdateTaskRequest(subject: trimmed),
           issuePatch: () => UpdateIssueRequest(subject: trimmed),
         );
         if (ok) onChanged();
@@ -768,8 +692,6 @@ class _ActionBar extends StatelessWidget {
 
   Permission _modifyPermission(EntityKind kind) => switch (kind) {
     EntityKind.epic => Permission.epicModify,
-    EntityKind.userStory => Permission.usModify,
-    EntityKind.task => Permission.taskModify,
     EntityKind.issue => Permission.issueModify,
   };
 }
@@ -870,8 +792,6 @@ class _StatusPill extends StatelessWidget {
 
   Permission _statusChangePermission(EntityKind kind) => switch (kind) {
     EntityKind.epic => Permission.epicModify,
-    EntityKind.userStory => Permission.usModify,
-    EntityKind.task => Permission.taskModify,
     EntityKind.issue => Permission.issueModify,
   };
 
@@ -880,9 +800,7 @@ class _StatusPill extends StatelessWidget {
     Map<String, TaxonomyItem> taxonomy,
   ) {
     final target = switch (kind) {
-      EntityKind.epic => TaxonomyKind.usStatus, // epics share US statuses
-      EntityKind.userStory => TaxonomyKind.usStatus,
-      EntityKind.task => TaxonomyKind.taskStatus,
+      EntityKind.epic => TaxonomyKind.issueStatus, // unified issue status
       EntityKind.issue => TaxonomyKind.issueStatus,
     };
     final list =
@@ -901,25 +819,6 @@ class _StatusPill extends StatelessWidget {
           projectId,
           entityId,
           body: UpdateEpicRequest(statusId: targetStatusId),
-          etag: fresh!.etag!,
-        );
-      case EntityKind.userStory:
-        final fresh =
-            (await backlog.getUserStory(projectId, entityId)).valueOrNull;
-        if (fresh?.etag == null) return;
-        await backlog.updateUserStory(
-          projectId,
-          entityId,
-          body: UpdateUserStoryRequest(statusId: targetStatusId),
-          etag: fresh!.etag!,
-        );
-      case EntityKind.task:
-        final fresh = (await backlog.getTask(projectId, entityId)).valueOrNull;
-        if (fresh?.etag == null) return;
-        await backlog.updateTask(
-          projectId,
-          entityId,
-          body: UpdateTaskRequest(statusId: targetStatusId),
           etag: fresh!.etag!,
         );
       case EntityKind.issue:
@@ -996,8 +895,6 @@ class _LeftColumn extends StatelessWidget {
             modifyPermission: _modifyPermissionFor(kind),
             lookup: LinksLookup(
               epics: data.epicsById,
-              userStories: data.userStoriesById,
-              tasks: data.tasksById,
               issues: data.issuesById,
             ),
           ),
@@ -1189,31 +1086,27 @@ class _DetailsTable extends StatelessWidget {
             currentIds: issue.components,
             canEdit: canEdit,
           ),
-        ]);
-      case _UsRec(:final us):
-        rows.addAll([
-          _epicRow(context, currentId: us.epicId, canEdit: canEdit),
-          _milestoneRow(context, currentId: us.milestoneId, canEdit: canEdit),
+          _epicRow(context, currentId: issue.epicId, canEdit: canEdit),
+          _milestoneRow(
+            context,
+            currentId: issue.milestoneId,
+            canEdit: canEdit,
+          ),
+          _parentRow(context, currentId: issue.parentId, canEdit: canEdit),
           _taxonomyRow(
             context,
             label: t.detailFieldPoints,
-            currentId: us.pointsId,
+            currentId: issue.pointsId,
             kind: TaxonomyKind.point,
             canEdit: canEdit,
             displayBuilder: (item) => item.value == null
                 ? item.name
                 : '${item.name} (${item.value})',
             patch: (id) => _patchEntity(
-              usPatch: () => UpdateUserStoryRequest(pointsId: id),
+              issuePatch: () => UpdateIssueRequest(pointsId: id),
             ),
           ),
         ]);
-      case _TaskRec(:final task):
-        rows.add(_parentUsRow(
-          context,
-          currentId: task.userStoryId,
-          canEdit: canEdit,
-        ));
       case _EpicRec():
         break;
     }
@@ -1238,9 +1131,7 @@ class _DetailsTable extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final entity = data.entity;
     final taxonomyKind = switch (kind) {
-      EntityKind.epic => TaxonomyKind.usStatus, // epics share US statuses
-      EntityKind.userStory => TaxonomyKind.usStatus,
-      EntityKind.task => TaxonomyKind.taskStatus,
+      EntityKind.epic => TaxonomyKind.issueStatus, // unified issue status
       EntityKind.issue => TaxonomyKind.issueStatus,
     };
     return _taxonomyRow(
@@ -1251,8 +1142,6 @@ class _DetailsTable extends StatelessWidget {
       canEdit: canEdit,
       patch: (id) => _patchEntity(
         epicPatch: () => UpdateEpicRequest(statusId: id),
-        usPatch: () => UpdateUserStoryRequest(statusId: id),
-        taskPatch: () => UpdateTaskRequest(statusId: id),
         issuePatch: () => UpdateIssueRequest(statusId: id),
       ),
     );
@@ -1319,7 +1208,7 @@ class _DetailsTable extends StatelessWidget {
           ),
       ],
       onPicked: (id) => _patchEntity(
-        usPatch: () => UpdateUserStoryRequest(epicId: id),
+        issuePatch: () => UpdateIssueRequest(epicId: id),
       ),
     );
   }
@@ -1345,39 +1234,40 @@ class _DetailsTable extends StatelessWidget {
         for (final m in milestones) _Candidate(id: m.id, label: m.name),
       ],
       onPicked: (id) => _patchEntity(
-        usPatch: () => UpdateUserStoryRequest(milestoneId: id),
+        issuePatch: () => UpdateIssueRequest(milestoneId: id),
       ),
     );
   }
 
-  Widget _parentUsRow(
+  Widget _parentRow(
     BuildContext context, {
     required String? currentId,
     required bool canEdit,
   }) {
     final t = AppLocalizations.of(context);
-    final stories = data.userStoriesById.values.toList()
+    final candidates = data.issuesById.values
+        .where((i) => i.id != entityId && i.parentId == null)
+        .toList()
       ..sort((a, b) => a.reference.compareTo(b.reference));
-    final current =
-        currentId == null ? null : data.userStoriesById[currentId];
+    final current = currentId == null ? null : data.issuesById[currentId];
     return _editableRow(
       context,
       label: t.detailFieldParent,
       displayText: current == null
           ? '—'
-          : 'US-${current.reference} · ${current.subject}',
+          : '#${current.reference} · ${current.subject}',
       currentId: currentId,
       noneLabel: t.taskNoParent,
       canEdit: canEdit,
       candidates: [
-        for (final u in stories)
+        for (final u in candidates)
           _Candidate(
             id: u.id,
-            label: 'US-${u.reference} · ${u.subject}',
+            label: '#${u.reference} · ${u.subject}',
           ),
       ],
       onPicked: (id) => _patchEntity(
-        taskPatch: () => UpdateTaskRequest(userStoryId: id),
+        issuePatch: () => UpdateIssueRequest(parentId: id),
       ),
     );
   }
@@ -1443,8 +1333,6 @@ class _DetailsTable extends StatelessWidget {
   /// on success so the page reloads.
   Future<bool> _patchEntity({
     UpdateEpicRequest Function()? epicPatch,
-    UpdateUserStoryRequest Function()? usPatch,
-    UpdateTaskRequest Function()? taskPatch,
     UpdateIssueRequest Function()? issuePatch,
   }) async {
     final backlog = getIt<BacklogRepository>();
@@ -1459,30 +1347,6 @@ class _DetailsTable extends StatelessWidget {
           projectId,
           entityId,
           body: epicPatch(),
-          etag: fresh!.etag!,
-        );
-        ok = res.isOk;
-      case EntityKind.userStory:
-        if (usPatch == null) return false;
-        final fresh =
-            (await backlog.getUserStory(projectId, entityId)).valueOrNull;
-        if (fresh?.etag == null) return false;
-        final res = await backlog.updateUserStory(
-          projectId,
-          entityId,
-          body: usPatch(),
-          etag: fresh!.etag!,
-        );
-        ok = res.isOk;
-      case EntityKind.task:
-        if (taskPatch == null) return false;
-        final fresh =
-            (await backlog.getTask(projectId, entityId)).valueOrNull;
-        if (fresh?.etag == null) return false;
-        final res = await backlog.updateTask(
-          projectId,
-          entityId,
-          body: taskPatch(),
           etag: fresh!.etag!,
         );
         ok = res.isOk;
@@ -1529,8 +1393,6 @@ class _DetailsTable extends StatelessWidget {
 
   String _kindLabel(AppLocalizations t, _EntityRecord e) => switch (e) {
     _EpicRec() => t.kindLabelEpic,
-    _UsRec() => t.kindLabelUserStory,
-    _TaskRec() => t.kindLabelTask,
     _IssueRec() => t.kindLabelIssue,
   };
 
@@ -2592,28 +2454,6 @@ class _PeopleTable extends StatelessWidget {
           etag: fresh!.etag!,
         );
         ok = res.isOk;
-      case EntityKind.userStory:
-        final fresh =
-            (await backlog.getUserStory(projectId, entityId)).valueOrNull;
-        if (fresh?.etag == null) return false;
-        final res = await backlog.updateUserStory(
-          projectId,
-          entityId,
-          body: UpdateUserStoryRequest(assignedTo: assigneeId),
-          etag: fresh!.etag!,
-        );
-        ok = res.isOk;
-      case EntityKind.task:
-        final fresh =
-            (await backlog.getTask(projectId, entityId)).valueOrNull;
-        if (fresh?.etag == null) return false;
-        final res = await backlog.updateTask(
-          projectId,
-          entityId,
-          body: UpdateTaskRequest(assignedTo: assigneeId),
-          etag: fresh!.etag!,
-        );
-        ok = res.isOk;
       case EntityKind.issue:
         final fresh =
             (await backlog.getIssue(projectId, entityId)).valueOrNull;
@@ -2660,28 +2500,6 @@ class _PeopleTable extends StatelessWidget {
           projectId,
           entityId,
           body: UpdateEpicRequest(ownerId: ownerId),
-          etag: fresh!.etag!,
-        );
-        ok = res.isOk;
-      case EntityKind.userStory:
-        final fresh =
-            (await backlog.getUserStory(projectId, entityId)).valueOrNull;
-        if (fresh?.etag == null) return false;
-        final res = await backlog.updateUserStory(
-          projectId,
-          entityId,
-          body: UpdateUserStoryRequest(ownerId: ownerId),
-          etag: fresh!.etag!,
-        );
-        ok = res.isOk;
-      case EntityKind.task:
-        final fresh =
-            (await backlog.getTask(projectId, entityId)).valueOrNull;
-        if (fresh?.etag == null) return false;
-        final res = await backlog.updateTask(
-          projectId,
-          entityId,
-          body: UpdateTaskRequest(ownerId: ownerId),
           etag: fresh!.etag!,
         );
         ok = res.isOk;
@@ -2784,8 +2602,6 @@ class _KvLabelWidth extends InheritedWidget {
 
 Permission _modifyPermissionFor(EntityKind kind) => switch (kind) {
       EntityKind.epic => Permission.epicModify,
-      EntityKind.userStory => Permission.usModify,
-      EntityKind.task => Permission.taskModify,
       EntityKind.issue => Permission.issueModify,
     };
 
@@ -2799,8 +2615,6 @@ Future<bool> _patchEntityKind({
   required String projectId,
   required String entityId,
   UpdateEpicRequest Function()? epicPatch,
-  UpdateUserStoryRequest Function()? usPatch,
-  UpdateTaskRequest Function()? taskPatch,
   UpdateIssueRequest Function()? issuePatch,
 }) async {
   final backlog = getIt<BacklogRepository>();
@@ -2813,29 +2627,6 @@ Future<bool> _patchEntityKind({
         projectId,
         entityId,
         body: epicPatch(),
-        etag: fresh!.etag!,
-      );
-      return res.isOk;
-    case EntityKind.userStory:
-      if (usPatch == null) return false;
-      final fresh =
-          (await backlog.getUserStory(projectId, entityId)).valueOrNull;
-      if (fresh?.etag == null) return false;
-      final res = await backlog.updateUserStory(
-        projectId,
-        entityId,
-        body: usPatch(),
-        etag: fresh!.etag!,
-      );
-      return res.isOk;
-    case EntityKind.task:
-      if (taskPatch == null) return false;
-      final fresh = (await backlog.getTask(projectId, entityId)).valueOrNull;
-      if (fresh?.etag == null) return false;
-      final res = await backlog.updateTask(
-        projectId,
-        entityId,
-        body: taskPatch(),
         etag: fresh!.etag!,
       );
       return res.isOk;

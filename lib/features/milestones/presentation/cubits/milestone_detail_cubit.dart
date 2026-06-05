@@ -35,19 +35,19 @@ class MilestoneDetailLoaded extends MilestoneDetailState {
   final MilestoneStats stats;
 
   /// User stories already assigned to this milestone.
-  final List<UserStory> scope;
+  final List<Issue> scope;
 
   /// User stories from the project backlog not assigned to any milestone
   /// (candidates for adding to this sprint's scope).
-  final List<UserStory> backlog;
+  final List<Issue> backlog;
 
   final bool busy;
 
   MilestoneDetailLoaded copyWith({
     Milestone? milestone,
     MilestoneStats? stats,
-    List<UserStory>? scope,
-    List<UserStory>? backlog,
+    List<Issue>? scope,
+    List<Issue>? backlog,
     bool? busy,
   }) => MilestoneDetailLoaded(
     milestone: milestone ?? this.milestone,
@@ -58,7 +58,7 @@ class MilestoneDetailLoaded extends MilestoneDetailState {
   );
 
   /// Open stories in scope — used by the close-sprint disposition flow.
-  List<UserStory> get openInScope => scope
+  List<Issue> get openInScope => scope
       .where((s) => s.statusId == null) // best-effort: no status = open
       .toList();
 
@@ -85,7 +85,7 @@ class MilestoneDetailCubit extends Cubit<MilestoneDetailState> {
     if (!isClosed) emit(const MilestoneDetailLoading());
     final ms = await _milestones.get(projectId, milestoneId);
     final st = await _milestones.stats(projectId, milestoneId);
-    final us = await _backlog.listUserStories(projectId);
+    final us = await _backlog.listIssues(projectId);
     final m = ms.valueOrNull;
     final s = st.valueOrNull;
     final stories = us.valueOrNull;
@@ -126,13 +126,13 @@ class MilestoneDetailCubit extends Cubit<MilestoneDetailState> {
   Future<bool> addToScope(String storyId) async {
     final s = state;
     if (s is! MilestoneDetailLoaded) return false;
-    final fresh = await _backlog.getUserStory(projectId, storyId);
+    final fresh = await _backlog.getIssue(projectId, storyId);
     final us = fresh.valueOrNull;
     if (us?.etag == null) return false;
-    final res = await _backlog.updateUserStory(
+    final res = await _backlog.updateIssue(
       projectId,
       storyId,
-      body: UpdateUserStoryRequest(milestoneId: milestoneId),
+      body: UpdateIssueRequest(milestoneId: milestoneId),
       etag: us!.etag!,
     );
     if (res.valueOrNull == null) return false;
@@ -144,13 +144,13 @@ class MilestoneDetailCubit extends Cubit<MilestoneDetailState> {
   Future<bool> removeFromScope(String storyId) async {
     final s = state;
     if (s is! MilestoneDetailLoaded) return false;
-    final fresh = await _backlog.getUserStory(projectId, storyId);
+    final fresh = await _backlog.getIssue(projectId, storyId);
     final us = fresh.valueOrNull;
     if (us?.etag == null) return false;
-    final res = await _backlog.updateUserStory(
+    final res = await _backlog.updateIssue(
       projectId,
       storyId,
-      body: const UpdateUserStoryRequest(milestoneId: null),
+      body: const UpdateIssueRequest(milestoneId: null),
       etag: us!.etag!,
     );
     if (res.valueOrNull == null) return false;
@@ -171,13 +171,13 @@ class MilestoneDetailCubit extends Cubit<MilestoneDetailState> {
     if (moveUnfinishedToBacklog) {
       for (final story in s.openInScope) {
         final fresh =
-            await _backlog.getUserStory(projectId, story.id);
+            await _backlog.getIssue(projectId, story.id);
         final us = fresh.valueOrNull;
         if (us?.etag == null) continue;
-        await _backlog.updateUserStory(
+        await _backlog.updateIssue(
           projectId,
           story.id,
-          body: const UpdateUserStoryRequest(milestoneId: null),
+          body: const UpdateIssueRequest(milestoneId: null),
           etag: us!.etag!,
         );
       }

@@ -72,7 +72,7 @@ void main() {
       );
       final res = await repo.listComments(
         'p1',
-        EntityKind.userStory,
+        EntityKind.issue,
         'u1',
       );
       expect(res.valueOrNull?.single.body, 'hi');
@@ -87,13 +87,13 @@ void main() {
         final repo = ActivityRepositoryImpl(_client(adapter));
         await repo.createComment(
           'p1',
-          EntityKind.userStory,
+          EntityKind.issue,
           'u1',
           const CreateCommentRequest(body: 'hello'),
         );
         expect(
           adapter.lastRequest?.path,
-          '/api/v1/projects/p1/userstories/u1/comments',
+          '/api/v1/projects/p1/issues/u1/comments',
         );
         expect(adapter.lastRequest?.data, {'body': 'hello'});
       },
@@ -116,7 +116,7 @@ void main() {
       );
       final res = await repo.listAttachments(
         'p1',
-        EntityKind.userStory,
+        EntityKind.issue,
         'u1',
       );
       expect(res.valueOrNull?.single.filename, 'logo.png');
@@ -129,7 +129,7 @@ void main() {
       final repo = ActivityRepositoryImpl(_client(adapter));
       await repo.uploadAttachment(
         'p1',
-        EntityKind.userStory,
+        EntityKind.issue,
         'u1',
         filename: 'logo.png',
         bytes: Uint8List.fromList([1, 2, 3, 4]),
@@ -137,7 +137,7 @@ void main() {
       );
       expect(
         adapter.lastRequest?.path,
-        '/api/v1/projects/p1/userstories/u1/attachments',
+        '/api/v1/projects/p1/issues/u1/attachments',
       );
       expect(adapter.lastRequest?.data, isA<FormData>());
       final form = adapter.lastRequest?.data as FormData;

@@ -74,11 +74,11 @@ void main() {
   });
 
   group('BoardRepositoryImpl', () {
-    test('load returns columns with nested user_stories + tasks', () async {
+    test('load returns columns with nested issues + subtasks', () async {
       final adapter = _Adapter(
         (_) async => _ok(
           '{"milestone_id":"m1","columns":[{"status":$_statusJson,'
-          '"user_stories":[$_storyJson]}]}',
+          '"issues":[$_storyJson]}]}',
         ),
       );
       final repo = BoardRepositoryImpl(_client(adapter));
@@ -87,7 +87,7 @@ void main() {
       expect(snap?.milestoneId, 'm1');
       expect(snap?.columns.length, 1);
       expect(snap?.columns.single.status?.name, 'In Progress');
-      expect(snap?.columns.single.userStories.single.story.subject, 'Auth');
+      expect(snap?.columns.single.issues.single.issue.subject, 'Auth');
       expect(
         adapter.lastRequest?.path,
         '/api/v1/projects/p1/milestones/m1/board',
@@ -101,7 +101,7 @@ void main() {
           _Adapter(
             (_) async => _ok(
               '{"milestone_id":"m1","columns":[{"status":null,'
-              '"user_stories":[]}]}',
+              '"issues":[]}]}',
             ),
           ),
         ),

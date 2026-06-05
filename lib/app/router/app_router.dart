@@ -245,7 +245,7 @@ GoRouter buildRouter({required SessionBloc session}) {
           final slug = state.pathParameters['kind']!;
           final kind = EntityKind.values.firstWhere(
             (k) => k.slug == slug,
-            orElse: () => EntityKind.userStory,
+            orElse: () => EntityKind.issue,
           );
           return EntityDetailPage(
             projectId: state.pathParameters['projectId']!,
@@ -261,7 +261,7 @@ GoRouter buildRouter({required SessionBloc session}) {
           final slug = state.pathParameters['kind']!;
           final kind = EntityKind.values.firstWhere(
             (k) => k.slug == slug,
-            orElse: () => EntityKind.userStory,
+            orElse: () => EntityKind.issue,
           );
           return EntityEditPage(
             projectId: state.pathParameters['projectId']!,

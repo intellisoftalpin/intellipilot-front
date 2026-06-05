@@ -1,11 +1,9 @@
-/// The four backlog entity kinds that share comments / history / attachments.
-/// The `slug` is the URL path segment (`epics | userstories | tasks | issues`)
-/// the backend exposes; `wire` is the stored `target_type` value the backend
-/// returns inside DTOs (`epic | user_story | task | issue`).
+/// The backlog entity kinds that share comments / history / attachments.
+/// The `slug` is the URL path segment (`epics | issues`) the backend exposes;
+/// `wire` is the stored `target_type` value the backend returns inside DTOs
+/// (`epic | issue`).
 enum EntityKind {
   epic('epics', 'epic'),
-  userStory('userstories', 'user_story'),
-  task('tasks', 'task'),
   issue('issues', 'issue');
 
   const EntityKind(this.slug, this.wire);

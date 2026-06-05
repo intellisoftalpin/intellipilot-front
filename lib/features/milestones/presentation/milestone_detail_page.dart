@@ -314,7 +314,7 @@ class _ScopeColumn extends StatelessWidget {
     required this.projectId,
   });
   final String title;
-  final List<UserStory> stories;
+  final List<Issue> stories;
   final String actionLabel;
   final IconData actionIcon;
   final Future<bool> Function(String storyId) onAction;
@@ -349,7 +349,7 @@ class _ScopeColumn extends StatelessWidget {
                         onTap: () => context.go(
                           Routes.entityDetailFor(
                             projectId,
-                            EntityKind.userStory,
+                            EntityKind.issue,
                             s.id,
                           ),
                         ),
@@ -415,18 +415,18 @@ class _BoardTab extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                       const Divider(height: 12),
-                      for (final card in col.userStories)
+                      for (final card in col.issues)
                         Card(
                           margin: const EdgeInsets.symmetric(vertical: 4),
                           child: ListTile(
                             dense: true,
-                            title: Text(card.story.subject),
-                            subtitle: Text('US-${card.story.reference}'),
+                            title: Text(card.issue.subject),
+                            subtitle: Text('#${card.issue.reference}'),
                             onTap: () => context.go(
                               Routes.entityDetailFor(
                                 projectId,
-                                EntityKind.userStory,
-                                card.story.id,
+                                EntityKind.issue,
+                                card.issue.id,
                               ),
                             ),
                           ),

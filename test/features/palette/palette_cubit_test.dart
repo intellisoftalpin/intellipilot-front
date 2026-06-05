@@ -107,7 +107,7 @@ void main() {
       final cubit = PaletteCubit(
         projects: _FakeProjects(const []),
         backlog: _FakeBacklog(
-          const ResolvedRef(kind: 'user_story', id: 'u1', ref: 42),
+          const ResolvedRef(kind: 'issue', id: 'u1', ref: 42),
         ),
         wiki: _FakeWiki(const []),
         activeProjectId: 'p1',
@@ -115,14 +115,14 @@ void main() {
       await cubit.setQuery('#42');
       final hit = cubit.state.results.whereType<EntityResult>().firstOrNull;
       expect(hit?.entityId, 'u1');
-      expect(hit?.kind, EntityKind.userStory);
+      expect(hit?.kind, EntityKind.issue);
     });
 
     test('#NNN with no active project falls back to free-text', () async {
       final cubit = PaletteCubit(
         projects: _FakeProjects([_project('p1', 'X', 'x')]),
         backlog: _FakeBacklog(
-          const ResolvedRef(kind: 'task', id: 't', ref: 1),
+          const ResolvedRef(kind: 'issue', id: 't', ref: 1),
         ),
         wiki: _FakeWiki(const []),
         activeProjectId: null,

@@ -49,10 +49,10 @@ void main() {
     test('listTaxonomy URL embeds the kind wire string', () async {
       final adapter = _Adapter((_) async => _ok('{"items":[]}'));
       final repo = CatalogRepositoryImpl(_client(adapter));
-      await repo.listTaxonomy('p1', TaxonomyKind.usStatus);
+      await repo.listTaxonomy('p1', TaxonomyKind.issueStatus);
       expect(
         adapter.lastRequest?.path,
-        '/api/v1/projects/p1/taxonomy/us_status',
+        '/api/v1/projects/p1/taxonomy/issue_status',
       );
     });
 
@@ -68,7 +68,7 @@ void main() {
       final repo = CatalogRepositoryImpl(_client(adapter));
       await repo.createTaxonomyItem(
         'p1',
-        TaxonomyKind.usStatus,
+        TaxonomyKind.issueStatus,
         const CreateTaxonomyItemRequest(
           name: 'Done',
           slug: 'done',
@@ -134,8 +134,8 @@ void main() {
     });
 
     test('TaxonomyKind.hasClosed only true for status kinds', () {
-      expect(TaxonomyKind.usStatus.hasClosed, isTrue);
-      expect(TaxonomyKind.taskStatus.hasClosed, isTrue);
+      expect(TaxonomyKind.issueStatus.hasClosed, isTrue);
+      expect(TaxonomyKind.issueStatus.hasClosed, isTrue);
       expect(TaxonomyKind.issueStatus.hasClosed, isTrue);
       expect(TaxonomyKind.issueType.hasClosed, isFalse);
       expect(TaxonomyKind.priority.hasClosed, isFalse);

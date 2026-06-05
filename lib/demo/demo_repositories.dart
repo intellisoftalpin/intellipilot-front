@@ -790,48 +790,6 @@ class DemoBacklogRepository implements BacklogRepository {
     );
   }
 
-  UserStory _bumpUs(UserStory cur, {required UserStory next}) {
-    final v = cur.version + 1;
-    return UserStory(
-      id: next.id,
-      projectId: next.projectId,
-      reference: next.reference,
-      subject: next.subject,
-      description: next.description,
-      statusId: next.statusId,
-      epicId: next.epicId,
-      milestoneId: next.milestoneId,
-      pointsId: next.pointsId,
-      ownerId: next.ownerId,
-      assignedTo: next.assignedTo,
-      order: next.order,
-      version: v,
-      createdAt: next.createdAt,
-      modifiedAt: DateTime.now().toUtc(),
-      etag: _s.etagOf(next.id, v),
-    );
-  }
-
-  Task _bumpTask(Task cur, {required Task next}) {
-    final v = cur.version + 1;
-    return Task(
-      id: next.id,
-      projectId: next.projectId,
-      reference: next.reference,
-      subject: next.subject,
-      description: next.description,
-      statusId: next.statusId,
-      userStoryId: next.userStoryId,
-      ownerId: next.ownerId,
-      assignedTo: next.assignedTo,
-      order: next.order,
-      version: v,
-      createdAt: next.createdAt,
-      modifiedAt: DateTime.now().toUtc(),
-      etag: _s.etagOf(next.id, v),
-    );
-  }
-
   Issue _bumpIssue(Issue cur, {required Issue next}) {
     final v = cur.version + 1;
     return Issue(
@@ -844,10 +802,15 @@ class DemoBacklogRepository implements BacklogRepository {
       typeId: next.typeId,
       priorityId: next.priorityId,
       severityId: next.severityId,
+      pointsId: next.pointsId,
+      epicId: next.epicId,
+      parentId: next.parentId,
+      milestoneId: next.milestoneId,
       ownerId: next.ownerId,
       assignedTo: next.assignedTo,
       labels: next.labels,
       components: next.components,
+      order: next.order,
       version: v,
       createdAt: next.createdAt,
       modifiedAt: DateTime.now().toUtc(),
@@ -974,272 +937,6 @@ class DemoBacklogRepository implements BacklogRepository {
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
-  // ---- user stories ----
-
-  @override
-  Future<Result<List<UserStory>, AppFailure>> listUserStories(
-    String projectId,
-  ) async {
-    await _tick();
-    final list = _s.userStories
-        .where((u) => u.projectId == projectId)
-        .toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-    return Ok(list);
-  }
-
-  @override
-  Future<Result<UserStory, AppFailure>> getUserStory(
-    String projectId,
-    String id,
-  ) async {
-    await _tick();
-    final us = _s.userStories
-        .where((u) => u.id == id && u.projectId == projectId)
-        .firstOrNull;
-    if (us == null) return const Err(NotFoundFailure());
-    return Ok(us);
-  }
-
-  @override
-  Future<Result<UserStory, AppFailure>> createUserStory(
-    String projectId,
-    CreateUserStoryRequest body,
-  ) async {
-    await _tick();
-    final id = _s.nextId('us');
-    final maxRef = _s.userStories
-        .where((u) => u.projectId == projectId)
-        .fold<int>(10, (m, u) => u.reference > m ? u.reference : m);
-    final maxOrder = _s.userStories
-        .where((u) => u.projectId == projectId)
-        .fold<double>(0, (m, u) => u.order > m ? u.order : m);
-    final us = UserStory(
-      id: id,
-      projectId: projectId,
-      reference: maxRef + 1,
-      subject: body.subject,
-      description: body.description,
-      statusId: body.statusId,
-      epicId: body.epicId,
-      milestoneId: body.milestoneId,
-      pointsId: body.pointsId,
-      assignedTo: body.assignedTo,
-      order: maxOrder + 1,
-      version: 1,
-      createdAt: DateTime.now().toUtc(),
-      modifiedAt: DateTime.now().toUtc(),
-      etag: _s.etagOf(id, 1),
-    );
-    _s.userStories.add(us);
-    return Ok(us);
-  }
-
-  @override
-  Future<Result<UserStory, AppFailure>> updateUserStory(
-    String projectId,
-    String id, {
-    required UpdateUserStoryRequest body,
-    required String etag,
-  }) async {
-    await _tick();
-    final i = _s.userStories.indexWhere(
-      (u) => u.id == id && u.projectId == projectId,
-    );
-    if (i < 0) return const Err(NotFoundFailure());
-    final cur = _s.userStories[i];
-    if (cur.etag != etag) return const Err(ConflictFailure());
-    final patch = body.toJson();
-    final next = UserStory(
-      id: cur.id,
-      projectId: cur.projectId,
-      reference: cur.reference,
-      subject: (patch['subject'] as String?) ?? cur.subject,
-      description: (patch['description'] as String?) ?? cur.description,
-      statusId: patch.containsKey('status_id')
-          ? patch['status_id'] as String?
-          : cur.statusId,
-      epicId: patch.containsKey('epic_id')
-          ? patch['epic_id'] as String?
-          : cur.epicId,
-      milestoneId: patch.containsKey('milestone_id')
-          ? patch['milestone_id'] as String?
-          : cur.milestoneId,
-      pointsId: patch.containsKey('points_id')
-          ? patch['points_id'] as String?
-          : cur.pointsId,
-      ownerId: patch.containsKey('owner_id')
-          ? patch['owner_id'] as String?
-          : cur.ownerId,
-      assignedTo: patch.containsKey('assigned_to')
-          ? patch['assigned_to'] as String?
-          : cur.assignedTo,
-      order: cur.order,
-      version: cur.version,
-      createdAt: cur.createdAt,
-      modifiedAt: cur.modifiedAt,
-    );
-    final bumped = _bumpUs(cur, next: next);
-    _s.userStories[i] = bumped;
-    return Ok(bumped);
-  }
-
-  @override
-  Future<Result<Unit, AppFailure>> deleteUserStory(
-    String projectId,
-    String id, {
-    required String etag,
-  }) async {
-    await _tick();
-    _s.userStories.removeWhere(
-      (u) => u.id == id && u.projectId == projectId,
-    );
-    return const Ok<Unit, AppFailure>(Unit.instance);
-  }
-
-  @override
-  Future<Result<Unit, AppFailure>> moveUserStory(
-    String projectId,
-    String id,
-    ReorderRequest body,
-  ) async {
-    await _tick();
-    return const Ok<Unit, AppFailure>(Unit.instance);
-  }
-
-  @override
-  Future<Result<List<UserStory>, AppFailure>> bulkCreateUserStories(
-    String projectId,
-    BulkCreateUserStoriesRequest body,
-  ) async {
-    final out = <UserStory>[];
-    for (final item in body.items) {
-      final r = await createUserStory(
-        projectId,
-        CreateUserStoryRequest(
-          subject: item.subject,
-          epicId: item.epicId,
-          milestoneId: item.milestoneId,
-        ),
-      );
-      final v = r.valueOrNull;
-      if (v != null) out.add(v);
-    }
-    return Ok(out);
-  }
-
-  // ---- tasks ----
-
-  @override
-  Future<Result<List<Task>, AppFailure>> listTasks(String projectId) async {
-    await _tick();
-    final list = _s.tasks.where((t) => t.projectId == projectId).toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-    return Ok(list);
-  }
-
-  @override
-  Future<Result<Task, AppFailure>> getTask(
-    String projectId,
-    String id,
-  ) async {
-    await _tick();
-    final t = _s.tasks
-        .where((t) => t.id == id && t.projectId == projectId)
-        .firstOrNull;
-    if (t == null) return const Err(NotFoundFailure());
-    return Ok(t);
-  }
-
-  @override
-  Future<Result<Task, AppFailure>> createTask(
-    String projectId,
-    CreateTaskRequest body,
-  ) async {
-    await _tick();
-    final id = _s.nextId('tk');
-    final maxRef = _s.tasks
-        .where((t) => t.projectId == projectId)
-        .fold<int>(100, (m, t) => t.reference > m ? t.reference : m);
-    final maxOrder = _s.tasks
-        .where((t) =>
-            t.projectId == projectId && t.userStoryId == body.userStoryId)
-        .fold<double>(0, (m, t) => t.order > m ? t.order : m);
-    final task = Task(
-      id: id,
-      projectId: projectId,
-      reference: maxRef + 1,
-      subject: body.subject,
-      description: body.description,
-      statusId: body.statusId,
-      userStoryId: body.userStoryId,
-      assignedTo: body.assignedTo,
-      order: maxOrder + 1,
-      version: 1,
-      createdAt: DateTime.now().toUtc(),
-      modifiedAt: DateTime.now().toUtc(),
-      etag: _s.etagOf(id, 1),
-    );
-    _s.tasks.add(task);
-    return Ok(task);
-  }
-
-  @override
-  Future<Result<Task, AppFailure>> updateTask(
-    String projectId,
-    String id, {
-    required UpdateTaskRequest body,
-    required String etag,
-  }) async {
-    await _tick();
-    final i = _s.tasks.indexWhere(
-      (t) => t.id == id && t.projectId == projectId,
-    );
-    if (i < 0) return const Err(NotFoundFailure());
-    final cur = _s.tasks[i];
-    if (cur.etag != etag) return const Err(ConflictFailure());
-    final patch = body.toJson();
-    final next = Task(
-      id: cur.id,
-      projectId: cur.projectId,
-      reference: cur.reference,
-      subject: (patch['subject'] as String?) ?? cur.subject,
-      description: (patch['description'] as String?) ?? cur.description,
-      statusId: patch.containsKey('status_id')
-          ? patch['status_id'] as String?
-          : cur.statusId,
-      userStoryId: patch.containsKey('user_story_id')
-          ? patch['user_story_id'] as String?
-          : cur.userStoryId,
-      ownerId: patch.containsKey('owner_id')
-          ? patch['owner_id'] as String?
-          : cur.ownerId,
-      assignedTo: patch.containsKey('assigned_to')
-          ? patch['assigned_to'] as String?
-          : cur.assignedTo,
-      order: cur.order,
-      version: cur.version,
-      createdAt: cur.createdAt,
-      modifiedAt: cur.modifiedAt,
-    );
-    final bumped = _bumpTask(cur, next: next);
-    _s.tasks[i] = bumped;
-    return Ok(bumped);
-  }
-
-  @override
-  Future<Result<Unit, AppFailure>> deleteTask(
-    String projectId,
-    String id, {
-    required String etag,
-  }) async {
-    await _tick();
-    _s.tasks.removeWhere(
-      (t) => t.id == id && t.projectId == projectId,
-    );
-    return const Ok<Unit, AppFailure>(Unit.instance);
-  }
-
   // ---- issues ----
 
   @override
@@ -1273,6 +970,9 @@ class DemoBacklogRepository implements BacklogRepository {
     final maxRef = _s.issues
         .where((i) => i.projectId == projectId)
         .fold<int>(200, (m, i) => i.reference > m ? i.reference : m);
+    final maxOrder = _s.issues
+        .where((i) => i.projectId == projectId)
+        .fold<double>(0, (m, i) => i.order > m ? i.order : m);
     final issue = Issue(
       id: id,
       projectId: projectId,
@@ -1283,9 +983,14 @@ class DemoBacklogRepository implements BacklogRepository {
       typeId: body.typeId,
       priorityId: body.priorityId,
       severityId: body.severityId,
+      pointsId: body.pointsId,
+      epicId: body.epicId,
+      parentId: body.parentId,
+      milestoneId: body.milestoneId,
       assignedTo: body.assignedTo,
       labels: body.labels,
       components: body.components,
+      order: maxOrder + 1,
       version: 1,
       createdAt: DateTime.now().toUtc(),
       modifiedAt: DateTime.now().toUtc(),
@@ -1293,6 +998,30 @@ class DemoBacklogRepository implements BacklogRepository {
     );
     _s.issues.add(issue);
     return Ok(issue);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> moveIssue(
+    String projectId,
+    String id,
+    ReorderRequest body,
+  ) async {
+    await _tick();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<Issue>, AppFailure>> bulkCreateIssues(
+    String projectId,
+    BulkCreateIssuesRequest body,
+  ) async {
+    final out = <Issue>[];
+    for (final item in body.items) {
+      final r = await createIssue(projectId, item);
+      final v = r.valueOrNull;
+      if (v != null) out.add(v);
+    }
+    return Ok(out);
   }
 
   @override
@@ -1328,6 +1057,18 @@ class DemoBacklogRepository implements BacklogRepository {
       severityId: patch.containsKey('severity_id')
           ? patch['severity_id'] as String?
           : cur.severityId,
+      pointsId: patch.containsKey('points_id')
+          ? patch['points_id'] as String?
+          : cur.pointsId,
+      epicId: patch.containsKey('epic_id')
+          ? patch['epic_id'] as String?
+          : cur.epicId,
+      parentId: patch.containsKey('parent_id')
+          ? patch['parent_id'] as String?
+          : cur.parentId,
+      milestoneId: patch.containsKey('milestone_id')
+          ? patch['milestone_id'] as String?
+          : cur.milestoneId,
       ownerId: patch.containsKey('owner_id')
           ? patch['owner_id'] as String?
           : cur.ownerId,
@@ -1340,6 +1081,7 @@ class DemoBacklogRepository implements BacklogRepository {
       components: patch.containsKey('components')
           ? (patch['components'] as List<dynamic>).cast<String>()
           : cur.components,
+      order: cur.order,
       version: cur.version,
       createdAt: cur.createdAt,
       modifiedAt: cur.modifiedAt,
@@ -1373,16 +1115,6 @@ class DemoBacklogRepository implements BacklogRepository {
     for (final e in _s.epics) {
       if (e.projectId == projectId && e.reference == reference) {
         return Ok(ResolvedRef(kind: 'epic', id: e.id, ref: reference));
-      }
-    }
-    for (final u in _s.userStories) {
-      if (u.projectId == projectId && u.reference == reference) {
-        return Ok(ResolvedRef(kind: 'user_story', id: u.id, ref: reference));
-      }
-    }
-    for (final t in _s.tasks) {
-      if (t.projectId == projectId && t.reference == reference) {
-        return Ok(ResolvedRef(kind: 'task', id: t.id, ref: reference));
       }
     }
     for (final i in _s.issues) {
@@ -1699,7 +1431,7 @@ class DemoMilestonesRepository implements MilestonesRepository {
     String id,
   ) async {
     await _tick();
-    final stories = _s.userStories
+    final issues = _s.issues
         .where((u) => u.projectId == projectId && u.milestoneId == id)
         .toList();
     final taxonomy = _s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[];
@@ -1707,26 +1439,22 @@ class DemoMilestonesRepository implements MilestonesRepository {
 
     var totalPoints = 0.0;
     var donePoints = 0.0;
-    for (final s in stories) {
+    var doneCount = 0;
+    for (final s in issues) {
       final pt = s.pointsId == null ? null : statusById[s.pointsId!]?.value;
       final closed = s.statusId != null &&
           (statusById[s.statusId]?.isClosed ?? false);
       totalPoints += pt ?? 0;
-      if (closed) donePoints += pt ?? 0;
+      if (closed) {
+        donePoints += pt ?? 0;
+        doneCount++;
+      }
     }
-    final usIds = stories.map((s) => s.id).toSet();
-    final tasks = _s.tasks.where((t) =>
-        t.userStoryId != null && usIds.contains(t.userStoryId)).toList();
-    final doneTasks = tasks
-        .where((t) =>
-            t.statusId != null &&
-            (statusById[t.statusId]?.isClosed ?? false))
-        .length;
     return Ok(MilestoneStats(
       totalPoints: totalPoints,
       completedPoints: donePoints,
-      totalTasks: tasks.length,
-      completedTasks: doneTasks,
+      totalTasks: issues.length,
+      completedTasks: doneCount,
     ));
   }
 }
@@ -1742,38 +1470,40 @@ class DemoBoardRepository implements BoardRepository {
   ) async {
     await _tick();
     final statuses = (_s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[])
-        .where((t) => t.kind == TaxonomyKind.usStatus)
+        .where((t) => t.kind == TaxonomyKind.issueStatus)
         .toList()
       ..sort((a, b) => a.order.compareTo(b.order));
-    final stories = _s.userStories
+    final issues = _s.issues
         .where((u) =>
-            u.projectId == projectId && u.milestoneId == milestoneId)
+            u.projectId == projectId &&
+            u.milestoneId == milestoneId &&
+            u.parentId == null)
         .toList();
     final columns = <BoardColumn>[
       for (final s in statuses)
         BoardColumn(
           status: s,
-          userStories: stories
+          issues: issues
               .where((u) => u.statusId == s.id)
-              .map((u) => _card(u))
+              .map(_card)
               .toList(),
         ),
       // Trailing no-status column.
       BoardColumn(
         status: null,
-        userStories: stories
+        issues: issues
             .where((u) => u.statusId == null)
-            .map((u) => _card(u))
+            .map(_card)
             .toList(),
       ),
     ];
     return Ok(BoardSnapshot(milestoneId: milestoneId, columns: columns));
   }
 
-  BoardCard _card(UserStory u) => BoardCard(
-    story: u,
-    tasks: _s.tasks
-        .where((t) => t.userStoryId == u.id)
+  BoardCard _card(Issue u) => BoardCard(
+    issue: u,
+    subtasks: _s.issues
+        .where((t) => t.parentId == u.id)
         .toList()
       ..sort((a, b) => a.order.compareTo(b.order)),
   );

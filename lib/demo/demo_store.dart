@@ -42,8 +42,6 @@ class DemoStore {
 
   // -- backlog entities ----------------------------------------------------
   final List<Epic> epics = [];
-  final List<UserStory> userStories = [];
-  final List<Task> tasks = [];
   final List<Issue> issues = [];
 
   // -- milestones / wiki / activity ---------------------------------------
@@ -181,20 +179,16 @@ void seedDemoStore(DemoStore s) {
       );
 
   final taxonomy = <TaxonomyItem>[
-    // US statuses
-    t('us-st-new', TaxonomyKind.usStatus, 'New', 'new', '#999999', 1, isClosed: false),
-    t('us-st-ready', TaxonomyKind.usStatus, 'Ready', 'ready', '#3b82f6', 2, isClosed: false),
-    t('us-st-progress', TaxonomyKind.usStatus, 'In progress', 'in-progress', '#f59e0b', 3, isClosed: false),
-    t('us-st-done', TaxonomyKind.usStatus, 'Done', 'done', '#10b981', 4, isClosed: true),
-    // Task statuses
-    t('tk-st-todo', TaxonomyKind.taskStatus, 'Todo', 'todo', '#999999', 1, isClosed: false),
-    t('tk-st-done', TaxonomyKind.taskStatus, 'Done', 'done', '#10b981', 2, isClosed: true),
-    // Issue statuses
-    t('is-st-open', TaxonomyKind.issueStatus, 'Open', 'open', '#ef4444', 1, isClosed: false),
-    t('is-st-closed', TaxonomyKind.issueStatus, 'Closed', 'closed', '#10b981', 2, isClosed: true),
+    // Issue statuses (unified)
+    t('us-st-new', TaxonomyKind.issueStatus, 'New', 'new', '#999999', 1, isClosed: false),
+    t('us-st-ready', TaxonomyKind.issueStatus, 'Ready', 'ready', '#3b82f6', 2, isClosed: false),
+    t('us-st-progress', TaxonomyKind.issueStatus, 'In progress', 'in-progress', '#f59e0b', 3, isClosed: false),
+    t('us-st-done', TaxonomyKind.issueStatus, 'Done', 'done', '#10b981', 4, isClosed: true),
     // Issue types
-    t('is-ty-bug', TaxonomyKind.issueType, 'Bug', 'bug', '#ef4444', 1),
-    t('is-ty-question', TaxonomyKind.issueType, 'Question', 'question', '#3b82f6', 2),
+    t('is-ty-story', TaxonomyKind.issueType, 'Story', 'story', '#3b7dd8', 1),
+    t('is-ty-task', TaxonomyKind.issueType, 'Task', 'task', '#669900', 2),
+    t('is-ty-bug', TaxonomyKind.issueType, 'Bug', 'bug', '#ef4444', 3),
+    t('is-ty-question', TaxonomyKind.issueType, 'Question', 'question', '#3b82f6', 4),
     // Priority
     t('pri-low', TaxonomyKind.priority, 'Low', 'low', '#10b981', 1),
     t('pri-high', TaxonomyKind.priority, 'High', 'high', '#ef4444', 2),
@@ -289,72 +283,84 @@ void seedDemoStore(DemoStore s) {
     ),
   ]);
 
-  // ---- user stories ---------------------------------------------------
-  s.userStories.addAll([
-    UserStory(
+  // ---- backlog issues (stories) --------------------------------------
+  s.issues.addAll([
+    Issue(
       id: 'us-login',
       projectId: projectId,
       reference: 10,
       subject: 'User can sign in',
       description: 'Email + password login with refresh on 401.',
       statusId: 'us-st-done',
+      typeId: 'is-ty-story',
       epicId: 'ep-auth',
       milestoneId: milestoneId,
       pointsId: 'pt-3',
       ownerId: userId,
       assignedTo: userId,
+      labels: const [],
+      components: const [],
       order: 1,
       version: 1,
       createdAt: now,
       modifiedAt: now,
       etag: s.etagOf('us-login', 1),
     ),
-    UserStory(
+    Issue(
       id: 'us-register',
       projectId: projectId,
       reference: 11,
       subject: 'User can create an account',
       description: 'Register form posts to /auth/register.',
       statusId: 'us-st-progress',
+      typeId: 'is-ty-story',
       epicId: 'ep-auth',
       milestoneId: milestoneId,
       pointsId: 'pt-5',
       ownerId: userId,
       assignedTo: userId,
+      labels: const [],
+      components: const [],
       order: 2,
       version: 1,
       createdAt: now,
       modifiedAt: now,
       etag: s.etagOf('us-register', 1),
     ),
-    UserStory(
+    Issue(
       id: 'us-backlog',
       projectId: projectId,
       reference: 12,
-      subject: 'Backlog page renders epics + user stories',
+      subject: 'Backlog page renders epics + issues',
       description: '',
       statusId: 'us-st-ready',
+      typeId: 'is-ty-story',
       epicId: 'ep-board',
       milestoneId: milestoneId,
       pointsId: 'pt-3',
       ownerId: userId,
       assignedTo: 'user-alex',
+      labels: const [],
+      components: const [],
       order: 3,
       version: 1,
       createdAt: now,
       modifiedAt: now,
       etag: s.etagOf('us-backlog', 1),
     ),
-    UserStory(
+    Issue(
       id: 'us-wiki',
       projectId: projectId,
       reference: 13,
       subject: 'Wiki editor + revisions',
       description: '',
       statusId: 'us-st-new',
+      typeId: 'is-ty-story',
       epicId: 'ep-board',
       pointsId: 'pt-5',
       ownerId: userId,
+      labels: const [],
+      components: const [],
       order: 4,
       version: 1,
       createdAt: now,
@@ -363,44 +369,53 @@ void seedDemoStore(DemoStore s) {
     ),
   ]);
 
-  // ---- tasks ----------------------------------------------------------
-  s.tasks.addAll([
-    Task(
+  // ---- sub-tasks (issues with a parent) ------------------------------
+  s.issues.addAll([
+    Issue(
       id: 'tk-form',
       projectId: projectId,
       reference: 100,
       subject: 'Build login form widget',
       description: '',
-      statusId: 'tk-st-done',
-      userStoryId: 'us-login',
+      statusId: 'us-st-done',
+      typeId: 'is-ty-task',
+      parentId: 'us-login',
+      labels: const [],
+      components: const [],
       order: 1,
       version: 1,
       createdAt: now,
       modifiedAt: now,
       etag: s.etagOf('tk-form', 1),
     ),
-    Task(
+    Issue(
       id: 'tk-error',
       projectId: projectId,
       reference: 101,
       subject: 'Handle 401 with refresh hook',
       description: '',
-      statusId: 'tk-st-done',
-      userStoryId: 'us-login',
+      statusId: 'us-st-done',
+      typeId: 'is-ty-task',
+      parentId: 'us-login',
+      labels: const [],
+      components: const [],
       order: 2,
       version: 1,
       createdAt: now,
       modifiedAt: now,
       etag: s.etagOf('tk-error', 1),
     ),
-    Task(
+    Issue(
       id: 'tk-register',
       projectId: projectId,
       reference: 102,
       subject: 'Register page validation',
       description: '',
-      statusId: 'tk-st-todo',
-      userStoryId: 'us-register',
+      statusId: 'us-st-new',
+      typeId: 'is-ty-task',
+      parentId: 'us-register',
+      labels: const [],
+      components: const [],
       order: 1,
       version: 1,
       createdAt: now,
@@ -417,7 +432,7 @@ void seedDemoStore(DemoStore s) {
       reference: 200,
       subject: 'Reset password link expires too soon',
       description: 'Customer feedback from beta — 15-minute window is too short.',
-      statusId: 'is-st-open',
+      statusId: 'us-st-progress',
       typeId: 'is-ty-bug',
       priorityId: 'pri-high',
       severityId: 'sev-major',
@@ -425,6 +440,7 @@ void seedDemoStore(DemoStore s) {
       components: const ['cmp-api'],
       ownerId: userId,
       assignedTo: userId,
+      order: 5,
       version: 1,
       createdAt: now,
       modifiedAt: now,
@@ -436,12 +452,13 @@ void seedDemoStore(DemoStore s) {
       reference: 201,
       subject: 'Dark theme contrast on cards',
       description: '',
-      statusId: 'is-st-closed',
+      statusId: 'us-st-done',
       typeId: 'is-ty-bug',
       priorityId: 'pri-low',
       severityId: 'sev-minor',
       labels: const ['lbl-frontend'],
       components: const ['cmp-web'],
+      order: 6,
       version: 1,
       createdAt: now,
       modifiedAt: now,
@@ -458,9 +475,9 @@ void seedDemoStore(DemoStore s) {
     EntityLink(
       id: 'lnk-1',
       projectId: projectId,
-      sourceKind: EntityKind.userStory,
+      sourceKind: EntityKind.issue,
       sourceId: 'us-login',
-      targetKind: EntityKind.userStory,
+      targetKind: EntityKind.issue,
       targetId: 'us-backlog',
       type: LinkType.blocks,
       createdAt: now,
@@ -468,9 +485,9 @@ void seedDemoStore(DemoStore s) {
     EntityLink(
       id: 'lnk-2',
       projectId: projectId,
-      sourceKind: EntityKind.task,
+      sourceKind: EntityKind.issue,
       sourceId: 'tk-form',
-      targetKind: EntityKind.userStory,
+      targetKind: EntityKind.issue,
       targetId: 'us-login',
       type: LinkType.relates,
       createdAt: now,

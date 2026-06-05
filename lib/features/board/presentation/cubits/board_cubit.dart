@@ -26,11 +26,11 @@ class BoardFilter extends Equatable {
 
   static const _sentinel = Object();
 
-  bool matches(UserStory s) {
+  bool matches(Issue s) {
     if (search.isNotEmpty) {
       final needle = search.toLowerCase();
       if (!s.subject.toLowerCase().contains(needle) &&
-          !'us-${s.reference}'.contains(needle)) {
+          !'#${s.reference}'.contains(needle)) {
         return false;
       }
     }
@@ -53,7 +53,7 @@ class BoardLoading extends BoardState {
 }
 
 /// No milestones in this project yet — board can't render. The UI nudges the
-/// user toward creating one (Phase 11 ships the create flow).
+/// user toward creating one.
 class BoardEmpty extends BoardState {
   const BoardEmpty();
 }
@@ -97,9 +97,7 @@ class BoardLoaded extends BoardState {
       .map(
         (col) => BoardColumn(
           status: col.status,
-          userStories: col.userStories
-              .where((c) => filter.matches(c.story))
-              .toList(),
+          issues: col.issues.where((c) => filter.matches(c.issue)).toList(),
         ),
       )
       .toList();
@@ -109,8 +107,8 @@ class BoardLoaded extends BoardState {
   List<String> get knownAssignees {
     final set = <String>{};
     for (final col in snapshot.columns) {
-      for (final c in col.userStories) {
-        final a = c.story.assignedTo;
+      for (final c in col.issues) {
+        final a = c.issue.assignedTo;
         if (a != null) set.add(a);
       }
     }
@@ -199,7 +197,7 @@ class BoardCubit extends Cubit<BoardState> {
     emit(s.copyWith(filter: filter));
   }
 
-  /// Optimistic move of a user-story card to a different column (status).
+  /// Optimistic move of an issue card to a different column (status).
   /// On 409 we set [BoardLoaded.staleData] = true and reload the board.
   Future<void> moveCard({
     required String storyId,
@@ -216,7 +214,7 @@ class BoardCubit extends Cubit<BoardState> {
 
     // Optimistic reorder: pull the card out of its column, push into the
     // target column at the head.
-    final card = origin.userStories.firstWhere((c) => c.story.id == storyId);
+    final card = origin.issues.firstWhere((c) => c.issue.id == storyId);
     final newCols = s.snapshot.columns.map((col) {
       final isOrigin = col.id == origin.id;
       final isTarget = col.status?.id == targetStatusId ||
@@ -225,14 +223,13 @@ class BoardCubit extends Cubit<BoardState> {
       if (isOrigin) {
         return BoardColumn(
           status: col.status,
-          userStories:
-              col.userStories.where((c) => c.story.id != storyId).toList(),
+          issues: col.issues.where((c) => c.issue.id != storyId).toList(),
         );
       }
       if (isTarget) {
         return BoardColumn(
           status: col.status,
-          userStories: [card, ...col.userStories],
+          issues: [card, ...col.issues],
         );
       }
       return col;
@@ -245,17 +242,17 @@ class BoardCubit extends Cubit<BoardState> {
       ),
     );
 
-    // Fetch fresh user-story to get the etag, then PATCH the status.
-    final usRes = await _backlog.getUserStory(projectId, storyId);
+    // Fetch fresh issue to get the etag, then PATCH the status.
+    final usRes = await _backlog.getIssue(projectId, storyId);
     final fresh = usRes.valueOrNull;
     if (fresh == null || fresh.etag == null) {
       await load(preferredMilestoneId: s.milestoneId);
       return;
     }
-    final patch = await _backlog.updateUserStory(
+    final patch = await _backlog.updateIssue(
       projectId,
       storyId,
-      body: UpdateUserStoryRequest(statusId: targetStatusId),
+      body: UpdateIssueRequest(statusId: targetStatusId),
       etag: fresh.etag!,
     );
     if (patch.valueOrNull == null) {
@@ -266,7 +263,7 @@ class BoardCubit extends Cubit<BoardState> {
 
   BoardColumn? _findColumnOf(BoardLoaded s, String storyId) {
     for (final col in s.snapshot.columns) {
-      if (col.userStories.any((c) => c.story.id == storyId)) return col;
+      if (col.issues.any((c) => c.issue.id == storyId)) return col;
     }
     return null;
   }

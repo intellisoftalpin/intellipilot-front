@@ -159,16 +159,16 @@ class _BoardViewState extends State<_BoardView> {
     final body = widget.mode == _BoardViewMode.stories
         ? _StoryBoardBody(
             projectId: widget.projectId,
-            selectedId: _selected?.kind == EntityKind.userStory
+            selectedId: _selected?.kind == EntityKind.issue
                 ? _selected?.id
                 : null,
-            onSelect: (id) => _select(EntityKind.userStory, id),
+            onSelect: (id) => _select(EntityKind.issue, id),
           )
         : _TaskBoardBody(
             projectId: widget.projectId,
             selectedId:
-                _selected?.kind == EntityKind.task ? _selected?.id : null,
-            onSelect: (id) => _select(EntityKind.task, id),
+                _selected?.kind == EntityKind.issue ? _selected?.id : null,
+            onSelect: (id) => _select(EntityKind.issue, id),
           );
     return Scaffold(
       appBar: AppBar(
@@ -448,17 +448,17 @@ class _StoryColumn extends StatelessWidget {
               _ColumnHeader(
                 statusColor: column.status?.color ?? '',
                 title: column.status?.name ?? t.boardColumnNoStatus,
-                count: column.userStories.length,
+                count: column.issues.length,
               ),
               const Divider(height: 12),
-              for (final card in column.userStories)
+              for (final card in column.issues)
                 _StoryCard(
                   card: card,
                   projectId: projectId,
-                  selected: card.story.id == selectedId,
-                  onTap: () => onSelect(card.story.id),
+                  selected: card.issue.id == selectedId,
+                  onTap: () => onSelect(card.issue.id),
                 ),
-              if (column.userStories.isEmpty) _EmptyColumnNote(label: t.boardEmptyColumn),
+              if (column.issues.isEmpty) _EmptyColumnNote(label: t.boardEmptyColumn),
             ],
           ),
         );
@@ -502,16 +502,16 @@ class _StoryCard extends StatelessWidget {
             children: [
               Align(
                 alignment: Alignment.centerLeft,
-                child: IssueKeyChip(text: 'US-${card.story.reference}'),
+                child: IssueKeyChip(text: '#${card.issue.reference}'),
               ),
               const SizedBox(height: 6),
               Text(
-                card.story.subject,
+                card.issue.subject,
                 style: theme.textTheme.bodyMedium,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
-              if (card.tasks.isNotEmpty) ...[
+              if (card.subtasks.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -522,7 +522,7 @@ class _StoryCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      '${card.tasks.length}',
+                      '${card.subtasks.length}',
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
@@ -538,7 +538,7 @@ class _StoryCard extends StatelessWidget {
     // gesture. Flutter's gesture arena disambiguates this from the
     // InkWell's tap, so tap-to-open still works.
     return Draggable<String>(
-      data: card.story.id,
+      data: card.issue.id,
       dragAnchorStrategy: pointerDragAnchorStrategy,
       feedback: Material(
         elevation: 4,
@@ -685,7 +685,7 @@ class _TaskColumn extends StatelessWidget {
 
   /// Null for the trailing "no status" column.
   final TaxonomyItem? status;
-  final List<Task> tasks;
+  final List<Issue> tasks;
   final String projectId;
   final String? selectedId;
   final ValueChanged<String> onSelect;
@@ -745,7 +745,7 @@ class _TaskCard extends StatelessWidget {
     required this.selected,
     required this.onTap,
   });
-  final Task task;
+  final Issue task;
   final String projectId;
   final bool selected;
   final VoidCallback onTap;

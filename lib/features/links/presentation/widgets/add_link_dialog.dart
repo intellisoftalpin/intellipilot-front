@@ -42,8 +42,6 @@ Future<AddLinkResult?> showAddLinkDialog(
 
 String _kindLabel(AppLocalizations t, EntityKind k) => switch (k) {
       EntityKind.epic => t.kindLabelEpic,
-      EntityKind.userStory => t.kindLabelUserStory,
-      EntityKind.task => t.kindLabelTask,
       EntityKind.issue => t.kindLabelIssue,
     };
 
@@ -63,10 +61,8 @@ class _Candidate {
 Future<List<_Candidate>?> _loadCandidates(String projectId) async {
   final backlog = getIt<BacklogRepository>();
   final epics = await backlog.listEpics(projectId);
-  final stories = await backlog.listUserStories(projectId);
-  final tasks = await backlog.listTasks(projectId);
   final issues = await backlog.listIssues(projectId);
-  if (epics.isErr || stories.isErr || tasks.isErr || issues.isErr) return null;
+  if (epics.isErr || issues.isErr) return null;
   final out = <_Candidate>[];
   for (final e in epics.valueOrNull ?? const <Epic>[]) {
     out.add(_Candidate(
@@ -76,27 +72,11 @@ Future<List<_Candidate>?> _loadCandidates(String projectId) async {
       subject: e.subject,
     ));
   }
-  for (final u in stories.valueOrNull ?? const <UserStory>[]) {
-    out.add(_Candidate(
-      kind: EntityKind.userStory,
-      id: u.id,
-      key: 'US-${u.reference}',
-      subject: u.subject,
-    ));
-  }
-  for (final tk in tasks.valueOrNull ?? const <Task>[]) {
-    out.add(_Candidate(
-      kind: EntityKind.task,
-      id: tk.id,
-      key: 'T-${tk.reference}',
-      subject: tk.subject,
-    ));
-  }
   for (final i in issues.valueOrNull ?? const <Issue>[]) {
     out.add(_Candidate(
       kind: EntityKind.issue,
       id: i.id,
-      key: 'ISSUE-${i.reference}',
+      key: '#${i.reference}',
       subject: i.subject,
     ));
   }

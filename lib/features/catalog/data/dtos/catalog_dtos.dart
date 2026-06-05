@@ -1,8 +1,6 @@
-/// Seven taxonomy kinds the backend exposes. Wire format is snake_case;
+/// Taxonomy kinds the backend exposes. Wire format is snake_case;
 /// this enum keeps the strings identical so we round-trip without mapping.
 enum TaxonomyKind {
-  usStatus('us_status'),
-  taskStatus('task_status'),
   issueStatus('issue_status'),
   issueType('issue_type'),
   priority('priority'),
@@ -12,11 +10,8 @@ enum TaxonomyKind {
   const TaxonomyKind(this.wire);
   final String wire;
 
-  /// Kinds that carry an `is_closed` flag (statuses).
-  bool get hasClosed =>
-      this == TaxonomyKind.usStatus ||
-      this == TaxonomyKind.taskStatus ||
-      this == TaxonomyKind.issueStatus;
+  /// Kinds that carry an `is_closed` flag (the status kind).
+  bool get hasClosed => this == TaxonomyKind.issueStatus;
 
   /// Kinds that carry a numeric `value` (points only).
   bool get hasValue => this == TaxonomyKind.point;
@@ -25,7 +20,7 @@ enum TaxonomyKind {
     for (final k in TaxonomyKind.values) {
       if (k.wire == wire) return k;
     }
-    return TaxonomyKind.usStatus;
+    return TaxonomyKind.issueStatus;
   }
 }
 

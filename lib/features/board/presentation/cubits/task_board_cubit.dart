@@ -25,44 +25,44 @@ class TaskBoardFailed extends TaskBoardState {
 class TaskBoardLoaded extends TaskBoardState {
   const TaskBoardLoaded({
     required this.statuses,
-    required this.tasks,
+    required this.issues,
     this.staleData = false,
   });
 
-  /// The `task_status` taxonomy items, ordered.
+  /// The `issue_status` taxonomy items, ordered.
   final List<TaxonomyItem> statuses;
 
-  /// All tasks for the project (no milestone filtering in v1).
-  final List<Task> tasks;
+  /// All issues for the project (no milestone filtering on this view).
+  final List<Issue> issues;
 
   /// Set to true on a 409 from a move — UI surfaces a banner.
   final bool staleData;
 
   TaskBoardLoaded copyWith({
     List<TaxonomyItem>? statuses,
-    List<Task>? tasks,
+    List<Issue>? issues,
     bool? staleData,
   }) => TaskBoardLoaded(
     statuses: statuses ?? this.statuses,
-    tasks: tasks ?? this.tasks,
+    issues: issues ?? this.issues,
     staleData: staleData ?? this.staleData,
   );
 
-  /// Tasks bucketed by `statusId`. Tasks with no status fall into the
+  /// Issues bucketed by `statusId`. Issues with no status fall into the
   /// trailing `null` bucket.
-  Map<String?, List<Task>> get bucketed {
-    final out = <String?, List<Task>>{null: []};
+  Map<String?, List<Issue>> get bucketed {
+    final out = <String?, List<Issue>>{null: []};
     for (final s in statuses) {
       out[s.id] = [];
     }
-    for (final t in tasks) {
+    for (final t in issues) {
       out.putIfAbsent(t.statusId, () => []).add(t);
     }
     return out;
   }
 
   @override
-  List<Object?> get props => [statuses, tasks, staleData];
+  List<Object?> get props => [statuses, issues, staleData];
 }
 
 class TaskBoardCubit extends Cubit<TaskBoardState> {
@@ -82,21 +82,21 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     if (!isClosed) emit(const TaskBoardLoading());
     final statusRes = await _catalog.listTaxonomy(
       projectId,
-      TaxonomyKind.taskStatus,
+      TaxonomyKind.issueStatus,
     );
-    final taskRes = await _repo.listTasks(projectId);
+    final issueRes = await _repo.listIssues(projectId);
     final statuses = statusRes.valueOrNull;
-    final tasks = taskRes.valueOrNull;
-    if (statuses == null || tasks == null) {
+    final issues = issueRes.valueOrNull;
+    if (statuses == null || issues == null) {
       if (!isClosed) emit(const TaskBoardFailed());
       return;
     }
     if (!isClosed) {
-      emit(TaskBoardLoaded(statuses: statuses, tasks: tasks));
+      emit(TaskBoardLoaded(statuses: statuses, issues: issues));
     }
   }
 
-  /// Optimistic move of a task to a different `statusId`. On 409 we set
+  /// Optimistic move of an issue to a different `statusId`. On 409 we set
   /// `staleData = true` and reload to reconcile with the server.
   Future<void> moveTask({
     required String taskId,
@@ -104,21 +104,29 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
   }) async {
     final s = state;
     if (s is! TaskBoardLoaded) return;
-    final i = s.tasks.indexWhere((t) => t.id == taskId);
+    final i = s.issues.indexWhere((t) => t.id == taskId);
     if (i < 0) return;
-    final cur = s.tasks[i];
+    final cur = s.issues[i];
     if (cur.statusId == targetStatusId) return;
 
     // Optimistic local swap.
-    final optimistic = [...s.tasks];
-    optimistic[i] = Task(
+    final optimistic = [...s.issues];
+    optimistic[i] = Issue(
       id: cur.id,
       projectId: cur.projectId,
       reference: cur.reference,
       subject: cur.subject,
       description: cur.description,
+      labels: cur.labels,
+      components: cur.components,
       statusId: targetStatusId,
-      userStoryId: cur.userStoryId,
+      typeId: cur.typeId,
+      priorityId: cur.priorityId,
+      severityId: cur.severityId,
+      pointsId: cur.pointsId,
+      epicId: cur.epicId,
+      parentId: cur.parentId,
+      milestoneId: cur.milestoneId,
       ownerId: cur.ownerId,
       assignedTo: cur.assignedTo,
       order: cur.order,
@@ -127,19 +135,19 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
       modifiedAt: cur.modifiedAt,
       etag: cur.etag,
     );
-    emit(s.copyWith(tasks: optimistic, staleData: false));
+    emit(s.copyWith(issues: optimistic, staleData: false));
 
-    // Fetch fresh task to get a current ETag before PATCH.
-    final freshRes = await _repo.getTask(projectId, taskId);
+    // Fetch fresh issue to get a current ETag before PATCH.
+    final freshRes = await _repo.getIssue(projectId, taskId);
     final fresh = freshRes.valueOrNull;
     if (fresh == null || fresh.etag == null) {
       await load();
       return;
     }
-    final patch = await _repo.updateTask(
+    final patch = await _repo.updateIssue(
       projectId,
       taskId,
-      body: UpdateTaskRequest(statusId: targetStatusId),
+      body: UpdateIssueRequest(statusId: targetStatusId),
       etag: fresh.etag!,
     );
     final updated = patch.valueOrNull;
@@ -148,13 +156,13 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
       await load();
       return;
     }
-    // Refresh just this task with the server-confirmed version.
+    // Refresh just this issue with the server-confirmed version.
     final cur2 = state;
     if (cur2 is! TaskBoardLoaded) return;
-    final j = cur2.tasks.indexWhere((t) => t.id == taskId);
+    final j = cur2.issues.indexWhere((t) => t.id == taskId);
     if (j < 0) return;
-    final next = [...cur2.tasks];
+    final next = [...cur2.issues];
     next[j] = updated;
-    emit(cur2.copyWith(tasks: next));
+    emit(cur2.copyWith(issues: next));
   }
 }

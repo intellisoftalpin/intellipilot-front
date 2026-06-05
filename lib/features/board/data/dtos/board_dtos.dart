@@ -4,25 +4,25 @@ import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 /// One column of the board: a status taxonomy item (or null = "no status")
 /// plus the cards in that column.
 class BoardColumn {
-  const BoardColumn({required this.status, required this.userStories});
+  const BoardColumn({required this.status, required this.issues});
 
   factory BoardColumn.fromJson(Map<String, dynamic> json) {
     final rawStatus = json['status'];
-    final stories =
-        (json['user_stories'] as List<dynamic>? ?? const [])
+    final issues =
+        (json['issues'] as List<dynamic>? ?? const [])
             .map((e) => BoardCard.fromJson(e as Map<String, dynamic>))
             .toList();
     return BoardColumn(
       status: rawStatus is Map<String, dynamic>
           ? TaxonomyItem.fromJson(rawStatus)
           : null,
-      userStories: stories,
+      issues: issues,
     );
   }
 
-  /// `null` for the trailing column that collects stories with no status.
+  /// `null` for the trailing column that collects issues with no status.
   final TaxonomyItem? status;
-  final List<BoardCard> userStories;
+  final List<BoardCard> issues;
 
   /// Column id. Null status uses a stable sentinel so [Map] keys + drag
   /// targets work consistently.
@@ -31,26 +31,26 @@ class BoardColumn {
   static const _noStatusId = '__no_status__';
 }
 
-/// A user-story card on the board, with its nested tasks (the backend
-/// already inlines tasks under each story for this view).
+/// An issue card on the board, with its nested sub-tasks (the backend
+/// already inlines sub-tasks under each issue for this view).
 class BoardCard {
-  const BoardCard({required this.story, required this.tasks});
+  const BoardCard({required this.issue, required this.subtasks});
 
   factory BoardCard.fromJson(Map<String, dynamic> json) {
-    final tasksRaw = json['tasks'] as List<dynamic>? ?? const [];
+    final subtasksRaw = json['subtasks'] as List<dynamic>? ?? const [];
     return BoardCard(
-      story: UserStory.fromJson(json),
-      tasks: tasksRaw
-          .map((e) => Task.fromJson(e as Map<String, dynamic>))
+      issue: Issue.fromJson(json),
+      subtasks: subtasksRaw
+          .map((e) => Issue.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }
 
-  final UserStory story;
-  final List<Task> tasks;
+  final Issue issue;
+  final List<Issue> subtasks;
 
-  int get totalTasks => tasks.length;
-  int get closedTasks => tasks.where((t) => t.statusId != null).length;
+  int get totalSubtasks => subtasks.length;
+  int get closedSubtasks => subtasks.where((t) => t.statusId != null).length;
 }
 
 class BoardSnapshot {

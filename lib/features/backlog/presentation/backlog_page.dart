@@ -11,7 +11,6 @@ import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/backlog_cubit.dart';
 import 'package:intellipilot/features/backlog/presentation/widgets/bulk_paste_dialog.dart';
 import 'package:intellipilot/features/backlog/presentation/widgets/epic_edit_dialog.dart';
-import 'package:intellipilot/features/backlog/presentation/widgets/task_list_dialog.dart';
 import 'package:intellipilot/features/backlog/presentation/widgets/user_story_edit_dialog.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
@@ -133,14 +132,15 @@ class _BacklogView extends StatelessWidget {
     final cubit = context.read<BacklogCubit>();
     final s = cubit.state;
     if (s is! BacklogLoaded) return;
-    final result = await showUserStoryEditDialog(
+    final result = await showBacklogIssueDialog(
       context,
       epics: s.epics,
       statuses: s.statuses,
+      types: s.types,
       points: s.points,
     );
     if (result == null) return;
-    await cubit.createUserStory(result);
+    await cubit.createIssue(result);
   }
 }
 
@@ -310,7 +310,7 @@ class _LoadedState extends State<_Loaded> {
     if (s is! BacklogLoaded) return;
     final picked = await showBulkPasteDialog(context, epics: s.epics);
     if (picked == null || picked.subjects.isEmpty) return;
-    await cubit.bulkCreateUserStories(
+    await cubit.bulkCreateIssues(
       picked.subjects,
       epicId: picked.epicId,
     );
@@ -329,7 +329,7 @@ class _EpicSection extends StatelessWidget {
   });
 
   final Epic? epic;
-  final List<UserStory> stories;
+  final List<Issue> stories;
   final List<TaxonomyItem> statuses;
   final List<TaxonomyItem> points;
   final bool canEditUs;
@@ -348,14 +348,14 @@ class _EpicSection extends StatelessWidget {
         final cubit = context.read<BacklogCubit>();
         final s = cubit.state;
         if (s is! BacklogLoaded) return false;
-        final src = s.userStories
+        final src = s.issues
             .where((u) => u.id == details.data)
-            .cast<UserStory?>()
+            .cast<Issue?>()
             .firstOrNull;
         return src != null && src.epicId != epic?.id;
       },
       onAcceptWithDetails: (details) {
-        context.read<BacklogCubit>().moveUserStoryToEpic(
+        context.read<BacklogCubit>().moveIssueToEpic(
           details.data,
           epic?.id,
         );
@@ -470,7 +470,7 @@ class _UserStoryRow extends StatelessWidget {
     required this.points,
     required this.canEdit,
   });
-  final UserStory story;
+  final Issue story;
   final List<TaxonomyItem> statuses;
   final List<TaxonomyItem> points;
   final bool canEdit;
@@ -511,7 +511,7 @@ class _UserStoryRow extends StatelessWidget {
       onTap: () => context.go(
         Routes.entityDetailFor(
           story.projectId,
-          EntityKind.userStory,
+          EntityKind.issue,
           story.id,
         ),
       ),
@@ -525,20 +525,9 @@ class _UserStoryRow extends StatelessWidget {
                   onPressed: () => context.go(
                     Routes.entityDetailFor(
                       story.projectId,
-                      EntityKind.userStory,
+                      EntityKind.issue,
                       story.id,
                     ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.checklist_outlined),
-                  tooltip: t.tasksOpenTooltip,
-                  onPressed: () => showTaskListDialog(
-                    context,
-                    projectId: story.projectId,
-                    userStoryId: story.id,
-                    userStorySubject: story.subject,
-                    canEdit: canEdit,
                   ),
                 ),
                 _StatusMenu(story: story, statuses: statuses),
@@ -549,17 +538,18 @@ class _UserStoryRow extends StatelessWidget {
                     final cubit = context.read<BacklogCubit>();
                     final s = cubit.state;
                     if (s is! BacklogLoaded) return;
-                    final updated = await showUserStoryEditDialog(
+                    final updated = await showBacklogIssueDialog(
                       context,
                       epics: s.epics,
                       statuses: s.statuses,
+                      types: s.types,
                       points: s.points,
                       existing: story,
                     );
                     if (updated == null || !context.mounted) return;
-                    await cubit.updateUserStory(
+                    await cubit.updateIssue(
                       story.id,
-                      UpdateUserStoryRequest(
+                      UpdateIssueRequest(
                         subject: updated.subject,
                         description: updated.description,
                         statusId: updated.statusId,
@@ -581,7 +571,7 @@ class _UserStoryRow extends StatelessWidget {
                     if ((ok ?? false) && context.mounted) {
                       await context
                           .read<BacklogCubit>()
-                          .deleteUserStory(story.id);
+                          .deleteIssue(story.id);
                     }
                   },
                 ),
@@ -627,7 +617,7 @@ class _UserStoryRow extends StatelessWidget {
 
 class _StatusMenu extends StatelessWidget {
   const _StatusMenu({required this.story, required this.statuses});
-  final UserStory story;
+  final Issue story;
   final List<TaxonomyItem> statuses;
 
   @override
@@ -655,7 +645,7 @@ class _StatusMenu extends StatelessWidget {
         ),
       ],
       onSelected: (v) =>
-          context.read<BacklogCubit>().setUserStoryStatus(story.id, v),
+          context.read<BacklogCubit>().setIssueStatus(story.id, v),
     );
   }
 }

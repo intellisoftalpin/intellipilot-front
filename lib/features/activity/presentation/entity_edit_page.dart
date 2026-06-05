@@ -70,58 +70,14 @@ class _EntityEditPageState extends State<EntityEditPage> {
           profile: profile,
           epic: entity,
         );
-      case EntityKind.userStory:
-        final entity =
-            (await backlog.getUserStory(widget.projectId, widget.entityId))
-                .valueOrNull;
-        if (entity == null) return null;
-        final epics =
-            (await backlog.listEpics(widget.projectId)).valueOrNull ?? [];
-        final ms = (await milestones.list(widget.projectId)).valueOrNull ?? [];
-        final statuses = (await catalog.listTaxonomy(
-                  widget.projectId, TaxonomyKind.usStatus,
-                ))
-                .valueOrNull ??
-            [];
-        final points = (await catalog.listTaxonomy(
-                  widget.projectId, TaxonomyKind.point,
-                ))
-                .valueOrNull ??
-            [];
-        return _EditData(
-          project: project,
-          profile: profile,
-          userStory: entity,
-          epics: epics,
-          milestones: ms,
-          statuses: statuses,
-          points: points,
-        );
-      case EntityKind.task:
-        final entity =
-            (await backlog.getTask(widget.projectId, widget.entityId))
-                .valueOrNull;
-        if (entity == null) return null;
-        final stories =
-            (await backlog.listUserStories(widget.projectId)).valueOrNull ??
-                [];
-        final statuses = (await catalog.listTaxonomy(
-                  widget.projectId, TaxonomyKind.taskStatus,
-                ))
-                .valueOrNull ??
-            [];
-        return _EditData(
-          project: project,
-          profile: profile,
-          task: entity,
-          userStories: stories,
-          statuses: statuses,
-        );
       case EntityKind.issue:
         final entity =
             (await backlog.getIssue(widget.projectId, widget.entityId))
                 .valueOrNull;
         if (entity == null) return null;
+        final epics =
+            (await backlog.listEpics(widget.projectId)).valueOrNull ?? [];
+        final ms = (await milestones.list(widget.projectId)).valueOrNull ?? [];
         final statuses = (await catalog.listTaxonomy(
                   widget.projectId, TaxonomyKind.issueStatus,
                 ))
@@ -142,6 +98,11 @@ class _EntityEditPageState extends State<EntityEditPage> {
                 ))
                 .valueOrNull ??
             [];
+        final points = (await catalog.listTaxonomy(
+                  widget.projectId, TaxonomyKind.point,
+                ))
+                .valueOrNull ??
+            [];
         final labels =
             (await catalog.listLabels(widget.projectId)).valueOrNull ?? [];
         final components =
@@ -151,10 +112,13 @@ class _EntityEditPageState extends State<EntityEditPage> {
           project: project,
           profile: profile,
           issue: entity,
+          epics: epics,
+          milestones: ms,
           statuses: statuses,
           types: types,
           priorities: priorities,
           severities: severities,
+          points: points,
           labels: labels,
           components: components,
         );
@@ -205,11 +169,8 @@ class _EditData {
     required this.project,
     this.profile,
     this.epic,
-    this.userStory,
-    this.task,
     this.issue,
     this.epics = const [],
-    this.userStories = const [],
     this.milestones = const [],
     this.statuses = const [],
     this.points = const [],
@@ -223,11 +184,8 @@ class _EditData {
   final Project project;
   final UserProfile? profile;
   final Epic? epic;
-  final UserStory? userStory;
-  final Task? task;
   final Issue? issue;
   final List<Epic> epics;
-  final List<UserStory> userStories;
   final List<Milestone> milestones;
   final List<TaxonomyItem> statuses;
   final List<TaxonomyItem> points;
@@ -271,7 +229,7 @@ class _EditViewState extends State<_EditView> {
   String? _epicId;
   String? _milestoneId;
   String? _pointsId;
-  String? _userStoryId;
+  String? _parentId;
   String? _typeId;
   String? _priorityId;
   String? _severityId;
@@ -295,19 +253,15 @@ class _EditViewState extends State<_EditView> {
         _color = (d.epic?.color.isNotEmpty ?? false)
             ? d.epic!.color
             : ColorPalette.swatches.first;
-      case EntityKind.userStory:
-        _statusId = d.userStory?.statusId;
-        _epicId = d.userStory?.epicId;
-        _milestoneId = d.userStory?.milestoneId;
-        _pointsId = d.userStory?.pointsId;
-      case EntityKind.task:
-        _statusId = d.task?.statusId;
-        _userStoryId = d.task?.userStoryId;
       case EntityKind.issue:
         _statusId = d.issue?.statusId;
         _typeId = d.issue?.typeId;
         _priorityId = d.issue?.priorityId;
         _severityId = d.issue?.severityId;
+        _pointsId = d.issue?.pointsId;
+        _epicId = d.issue?.epicId;
+        _parentId = d.issue?.parentId;
+        _milestoneId = d.issue?.milestoneId;
         _labels.addAll(d.issue?.labels ?? const []);
         _components.addAll(d.issue?.components ?? const []);
     }
@@ -315,36 +269,26 @@ class _EditViewState extends State<_EditView> {
 
   String? _initialAssignee(_EditData d) => switch (widget.kind) {
     EntityKind.epic => d.epic?.assignedTo,
-    EntityKind.userStory => d.userStory?.assignedTo,
-    EntityKind.task => d.task?.assignedTo,
     EntityKind.issue => d.issue?.assignedTo,
   };
 
   String? _initialReporter(_EditData d) => switch (widget.kind) {
     EntityKind.epic => d.epic?.ownerId,
-    EntityKind.userStory => d.userStory?.ownerId,
-    EntityKind.task => d.task?.ownerId,
     EntityKind.issue => d.issue?.ownerId,
   };
 
   DateTime _createdAt(_EditData d) => switch (widget.kind) {
     EntityKind.epic => d.epic!.createdAt,
-    EntityKind.userStory => d.userStory!.createdAt,
-    EntityKind.task => d.task!.createdAt,
     EntityKind.issue => d.issue!.createdAt,
   };
 
   DateTime _modifiedAt(_EditData d) => switch (widget.kind) {
     EntityKind.epic => d.epic!.modifiedAt,
-    EntityKind.userStory => d.userStory!.modifiedAt,
-    EntityKind.task => d.task!.modifiedAt,
     EntityKind.issue => d.issue!.modifiedAt,
   };
 
   String _kindLabel(AppLocalizations t) => switch (widget.kind) {
     EntityKind.epic => t.kindLabelEpic,
-    EntityKind.userStory => t.kindLabelUserStory,
-    EntityKind.task => t.kindLabelTask,
     EntityKind.issue => t.kindLabelIssue,
   };
 
@@ -358,15 +302,11 @@ class _EditViewState extends State<_EditView> {
 
   String _initialSubject(_EditData d) => switch (widget.kind) {
     EntityKind.epic => d.epic?.subject ?? '',
-    EntityKind.userStory => d.userStory?.subject ?? '',
-    EntityKind.task => d.task?.subject ?? '',
     EntityKind.issue => d.issue?.subject ?? '',
   };
 
   String _initialDescription(_EditData d) => switch (widget.kind) {
     EntityKind.epic => d.epic?.description ?? '',
-    EntityKind.userStory => d.userStory?.description ?? '',
-    EntityKind.task => d.task?.description ?? '',
     EntityKind.issue => d.issue?.description ?? '',
   };
 
@@ -381,15 +321,11 @@ class _EditViewState extends State<_EditView> {
 
   int _reference(_EditData d) => switch (widget.kind) {
     EntityKind.epic => d.epic!.reference,
-    EntityKind.userStory => d.userStory!.reference,
-    EntityKind.task => d.task!.reference,
     EntityKind.issue => d.issue!.reference,
   };
 
   String _prefix() => switch (widget.kind) {
     EntityKind.epic => 'EPIC',
-    EntityKind.userStory => 'US',
-    EntityKind.task => 'T',
     EntityKind.issue => 'ISSUE',
   };
 
@@ -418,40 +354,6 @@ class _EditViewState extends State<_EditView> {
             ),
             etag: etag,
           );
-        case EntityKind.userStory:
-          final etag = widget.data.userStory?.etag;
-          if (etag == null) return;
-          await backlog.updateUserStory(
-            widget.projectId,
-            widget.entityId,
-            body: UpdateUserStoryRequest(
-              subject: subject,
-              description: _descCtrl.text.trim(),
-              statusId: _statusId,
-              epicId: _epicId,
-              milestoneId: _milestoneId,
-              pointsId: _pointsId,
-              assignedTo: assignedTo,
-              ownerId: ownerId,
-            ),
-            etag: etag,
-          );
-        case EntityKind.task:
-          final etag = widget.data.task?.etag;
-          if (etag == null) return;
-          await backlog.updateTask(
-            widget.projectId,
-            widget.entityId,
-            body: UpdateTaskRequest(
-              subject: subject,
-              description: _descCtrl.text.trim(),
-              statusId: _statusId,
-              userStoryId: _userStoryId,
-              assignedTo: assignedTo,
-              ownerId: ownerId,
-            ),
-            etag: etag,
-          );
         case EntityKind.issue:
           final etag = widget.data.issue?.etag;
           if (etag == null) return;
@@ -465,6 +367,10 @@ class _EditViewState extends State<_EditView> {
               typeId: _typeId,
               priorityId: _priorityId,
               severityId: _severityId,
+              pointsId: _pointsId,
+              epicId: _epicId,
+              parentId: _parentId,
+              milestoneId: _milestoneId,
               labels: _labels.toList(),
               components: _components.toList(),
               assignedTo: assignedTo,
@@ -638,10 +544,18 @@ class _EditViewState extends State<_EditView> {
             ),
           ],
         );
-      case EntityKind.userStory:
+      case EntityKind.issue:
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _taxonomyDropdown(
+              label: t.issueFieldStatus,
+              none: t.backlogNoStatus,
+              items: d.statuses,
+              current: _statusId,
+              onChanged: (v) => setState(() => _statusId = v),
+            ),
+            const SizedBox(height: 12),
             _idDropdown<Epic>(
               label: t.backlogFieldEpic,
               none: t.backlogNoEpic,
@@ -663,14 +577,6 @@ class _EditViewState extends State<_EditView> {
             ),
             const SizedBox(height: 12),
             _taxonomyDropdown(
-              label: t.backlogFieldStatus,
-              none: t.backlogNoStatus,
-              items: d.statuses,
-              current: _statusId,
-              onChanged: (v) => setState(() => _statusId = v),
-            ),
-            const SizedBox(height: 12),
-            _taxonomyDropdown(
               label: t.backlogFieldPoints,
               none: t.backlogNoPoints,
               items: d.points,
@@ -678,42 +584,6 @@ class _EditViewState extends State<_EditView> {
               onChanged: (v) => setState(() => _pointsId = v),
               labelBuilder: (p) =>
                   p.value == null ? p.name : '${p.name} (${p.value})',
-            ),
-          ],
-        );
-      case EntityKind.task:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _idDropdown<UserStory>(
-              label: t.taskFieldParent,
-              none: t.taskNoParent,
-              items: d.userStories,
-              idOf: (e) => e.id,
-              labelOf: (e) => 'US-${e.reference} · ${e.subject}',
-              current: _userStoryId,
-              onChanged: (v) => setState(() => _userStoryId = v),
-            ),
-            const SizedBox(height: 12),
-            _taxonomyDropdown(
-              label: t.backlogFieldStatus,
-              none: t.backlogNoStatus,
-              items: d.statuses,
-              current: _statusId,
-              onChanged: (v) => setState(() => _statusId = v),
-            ),
-          ],
-        );
-      case EntityKind.issue:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _taxonomyDropdown(
-              label: t.issueFieldStatus,
-              none: t.backlogNoStatus,
-              items: d.statuses,
-              current: _statusId,
-              onChanged: (v) => setState(() => _statusId = v),
             ),
             const SizedBox(height: 12),
             _taxonomyDropdown(

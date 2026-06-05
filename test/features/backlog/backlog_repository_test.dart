@@ -72,12 +72,11 @@ void main() {
       expect(res.valueOrNull?.single.color, '#cc0000');
     });
 
-    test('listUserStories unwraps the {user_stories: [...]} envelope',
-        () async {
+    test('listIssues unwraps the {issues: [...]} envelope', () async {
       final repo = BacklogRepositoryImpl(
-        _client(_Adapter((_) async => _ok('{"user_stories":[$_usJson]}'))),
+        _client(_Adapter((_) async => _ok('{"issues":[$_usJson]}'))),
       );
-      final res = await repo.listUserStories('p1');
+      final res = await repo.listIssues('p1');
       expect(res.valueOrNull?.single.reference, 42);
       expect(res.valueOrNull?.single.epicId, 'e1');
     });
@@ -109,17 +108,17 @@ void main() {
       expect(adapter.lastRequest?.headers['If-Match'], '"v3"');
     });
 
-    test('moveUserStory posts before/after to /move', () async {
+    test('moveIssue posts before/after to /move', () async {
       final adapter = _Adapter((_) async => _ok('{}'));
       final repo = BacklogRepositoryImpl(_client(adapter));
-      await repo.moveUserStory(
+      await repo.moveIssue(
         'p1',
         'u1',
         const ReorderRequest(beforeId: 'b1', afterId: 'a1'),
       );
       expect(
         adapter.lastRequest?.path,
-        '/api/v1/projects/p1/userstories/u1/move',
+        '/api/v1/projects/p1/issues/u1/move',
       );
       expect(adapter.lastRequest?.data, {
         'before_id': 'b1',
@@ -127,22 +126,33 @@ void main() {
       });
     });
 
-    test('bulkCreateUserStories serialises {items: [...]}', () async {
+    test('bulkCreateIssues serialises {items: [...]}', () async {
       final adapter = _Adapter(
-        (_) async => _ok('{"user_stories":[$_usJson]}', status: 201),
+        (_) async => _ok('{"issues":[$_usJson]}', status: 201),
       );
       final repo = BacklogRepositoryImpl(_client(adapter));
-      await repo.bulkCreateUserStories(
+      await repo.bulkCreateIssues(
         'p1',
-        const BulkCreateUserStoriesRequest([
-          BulkCreateUserStoryItem(subject: 'A'),
-          BulkCreateUserStoryItem(subject: 'B', epicId: 'e1'),
+        const BulkCreateIssuesRequest([
+          CreateIssueRequest(subject: 'A'),
+          CreateIssueRequest(subject: 'B', epicId: 'e1'),
         ]),
       );
       expect(adapter.lastRequest?.data, {
         'items': [
-          {'subject': 'A'},
-          {'subject': 'B', 'epic_id': 'e1'},
+          {
+            'subject': 'A',
+            'description': '',
+            'labels': <String>[],
+            'components': <String>[],
+          },
+          {
+            'subject': 'B',
+            'description': '',
+            'epic_id': 'e1',
+            'labels': <String>[],
+            'components': <String>[],
+          },
         ],
       });
     });
