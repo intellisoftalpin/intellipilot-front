@@ -441,6 +441,43 @@ class DemoProjectsRepository implements ProjectsRepository {
   }
 
   @override
+  Future<Result<Unit, AppFailure>> addMember(
+    String projectId, {
+    required String roleSlug,
+    String? userId,
+    String? identifier,
+  }) async {
+    await _tick();
+    final ident = identifier?.trim();
+    final user = userId != null
+        ? _s.users.where((u) => u.id == userId).firstOrNull
+        : _s.users
+            .where((u) =>
+                u.email == ident?.toLowerCase() || u.username == ident)
+            .firstOrNull;
+    if (user == null) return const Err(NotFoundFailure());
+    final roles = _s.rolesByProject[projectId] ?? const <Role>[];
+    final role = roles.where((r) => r.slug == roleSlug).firstOrNull;
+    if (role == null) return const Err(UnknownFailure());
+    final members = _s.membersByProject[projectId] ?? const <Membership>[];
+    if (members.any((m) => m.userId == user.id)) {
+      return const Err(ConflictFailure());
+    }
+    _s.membersByProject[projectId] = [
+      ...members,
+      Membership(
+        id: _s.nextId('mbr'),
+        projectId: projectId,
+        userId: user.id,
+        roleId: role.id,
+        roleSlug: role.slug,
+        createdAt: DateTime.now().toUtc(),
+      ),
+    ];
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
   Future<Result<List<Invitation>, AppFailure>> listInvitations(
     String projectId,
   ) async {

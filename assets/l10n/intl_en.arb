@@ -844,6 +844,8 @@
   "@boardNeedsMilestone": { "description": "Empty state when the project has no milestones yet." },
   "boardColumnNoStatus": "No status",
   "@boardColumnNoStatus": { "description": "Trailing column header for cards with no status." },
+  "boardSprintAll": "All sprints",
+  "@boardSprintAll": { "description": "Default option in the board's optional sprint filter — no milestone scoping." },
   "boardEmptyColumn": "Empty",
   "@boardEmptyColumn": { "description": "Placeholder inside a column with no cards." },
   "boardFiltersTooltip": "Filters",

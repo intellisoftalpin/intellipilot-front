@@ -106,4 +106,29 @@ class MembersCubit extends Cubit<MembersState> {
     }
     await load();
   }
+
+  /// Add an existing user (by id from the picker, or by exact email/username).
+  /// Returns the failure on error (so the dialog can surface "no such user"),
+  /// or `null` on success.
+  Future<AppFailure?> addMember({
+    required String roleSlug,
+    String? userId,
+    String? identifier,
+  }) async {
+    final s = state;
+    if (s is! MembersLoaded) return null;
+    emit(s.copyWith(busy: true, lastError: null));
+    final res = await _repo.addMember(
+      projectId,
+      userId: userId,
+      identifier: identifier,
+      roleSlug: roleSlug,
+    );
+    if (res.isErr) {
+      emit(s.copyWith(busy: false, lastError: res.failureOrNull));
+      return res.failureOrNull;
+    }
+    await load();
+    return null;
+  }
 }

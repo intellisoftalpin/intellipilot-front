@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
+import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/components_tab.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/labels_tab.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/taxonomy_tab.dart';
@@ -277,6 +279,11 @@ class _MembersTab extends StatelessWidget {
             const PermissionGate(
               permission: Permission.memberAdd,
               child: _InviteCard(),
+            ),
+            const SizedBox(height: 8),
+            PermissionGate(
+              permission: Permission.memberAdd,
+              child: _AddExistingMemberCard(roles: m.roles),
             ),
             const SizedBox(height: 16),
             Text(
@@ -859,6 +866,244 @@ class _DangerZoneTabState extends State<_DangerZoneTab> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Card that opens the "add an existing user directly" dialog (no email
+/// invitation). Gated by `member.add`.
+class _AddExistingMemberCard extends StatelessWidget {
+  const _AddExistingMemberCard({required this.roles});
+  final List<Role> roles;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.person_add_alt_1_outlined),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Add an existing user to this project directly — no email '
+                'invitation needed.',
+              ),
+            ),
+            FilledButton.tonalIcon(
+              icon: const Icon(Icons.add),
+              onPressed: roles.isEmpty
+                  ? null
+                  : () => showDialog<void>(
+                        context: context,
+                        builder: (_) => BlocProvider.value(
+                          value: context.read<MembersCubit>(),
+                          child: _AddMemberDialog(roles: roles),
+                        ),
+                      ),
+              label: const Text('Add user'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AddMemberDialog extends StatefulWidget {
+  const _AddMemberDialog({required this.roles});
+  final List<Role> roles;
+
+  @override
+  State<_AddMemberDialog> createState() => _AddMemberDialogState();
+}
+
+class _AddMemberDialogState extends State<_AddMemberDialog> {
+  final _searchCtrl = TextEditingController();
+  List<UserProfile> _results = const [];
+  UserProfile? _picked;
+  String? _roleSlug;
+  bool _searching = false;
+
+  /// True once the admin user search returns Forbidden (caller isn't a
+  /// superadmin) — we then fall back to adding by exact email/username.
+  bool _searchUnavailable = false;
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _roleSlug = widget.roles
+        .firstWhere(
+          (r) => r.slug == 'dev',
+          orElse: () => widget.roles.first,
+        )
+        .slug;
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search(String q) async {
+    setState(() => _picked = null);
+    if (q.trim().length < 2) {
+      setState(() => _results = const []);
+      return;
+    }
+    setState(() => _searching = true);
+    final res = await getIt<AdminRepository>().listUsers(q: q.trim(), limit: 8);
+    if (!mounted) return;
+    res.when(
+      ok: (list) => setState(() {
+        _results = list.items;
+        _searching = false;
+        _searchUnavailable = false;
+      }),
+      err: (_) => setState(() {
+        _results = const [];
+        _searching = false;
+        _searchUnavailable = true;
+      }),
+    );
+  }
+
+  Future<void> _add() async {
+    final slug = _roleSlug;
+    if (slug == null) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final cubit = context.read<MembersCubit>();
+    final failure = _picked != null
+        ? await cubit.addMember(userId: _picked!.id, roleSlug: slug)
+        : await cubit.addMember(
+            identifier: _searchCtrl.text.trim(),
+            roleSlug: slug,
+          );
+    if (!mounted) return;
+    if (failure != null) {
+      setState(() {
+        _busy = false;
+        _error = switch (failure) {
+          NotFoundFailure() =>
+            'No user found with that email or username.',
+          ConflictFailure() => 'That user is already a member.',
+          _ => 'Could not add the user. Please try again.',
+        };
+      });
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return AlertDialog(
+      title: const Text('Add existing user'),
+      content: SizedBox(
+        width: 460,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _searchCtrl,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'Search by email, username or name',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searching
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : null,
+              ),
+              onChanged: _search,
+            ),
+            if (_searchUnavailable)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'Enter an exact email or username to add the user.',
+                  style: theme.textTheme.bodySmall,
+                ),
+              ),
+            if (_results.isNotEmpty)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 220),
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final u in _results)
+                      ListTile(
+                        dense: true,
+                        selected: _picked?.id == u.id,
+                        leading: Icon(
+                          _picked?.id == u.id
+                              ? Icons.check_circle
+                              : Icons.person_outline,
+                        ),
+                        title: Text(
+                          u.fullName.isEmpty ? u.username : u.fullName,
+                        ),
+                        subtitle: Text('${u.email} · @${u.username}'),
+                        onTap: () => setState(() => _picked = u),
+                      ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _roleSlug,
+              decoration: const InputDecoration(labelText: 'Role'),
+              items: [
+                for (final r in widget.roles)
+                  DropdownMenuItem(value: r.slug, child: Text(r.name)),
+              ],
+              onChanged: (v) => setState(() => _roleSlug = v),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: Text(t.actionCancel),
+        ),
+        FilledButton(
+          onPressed:
+              _busy || (_picked == null && _searchCtrl.text.trim().isEmpty)
+                  ? null
+                  : _add,
+          child: _busy
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Add'),
+        ),
+      ],
     );
   }
 }

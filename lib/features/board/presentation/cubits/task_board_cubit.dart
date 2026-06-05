@@ -7,6 +7,8 @@ import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
+import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
 
 sealed class TaskBoardState extends Equatable {
   const TaskBoardState();
@@ -26,14 +28,27 @@ class TaskBoardLoaded extends TaskBoardState {
   const TaskBoardLoaded({
     required this.statuses,
     required this.issues,
+    required this.milestones,
+    this.sprintFilter,
+    this.search = '',
     this.staleData = false,
   });
 
-  /// The `issue_status` taxonomy items, ordered.
+  /// The `issue_status` taxonomy items, ordered — these are the board columns.
   final List<TaxonomyItem> statuses;
 
-  /// All issues for the project (no milestone filtering on this view).
+  /// All issues for the project.
   final List<Issue> issues;
+
+  /// Project milestones — populate the optional Sprint filter.
+  final List<Milestone> milestones;
+
+  /// Optional sprint filter: when set, only issues in this milestone show.
+  /// `null` = all sprints (the board needs no milestone to render).
+  final String? sprintFilter;
+
+  /// Free-text filter over subject / `#ref`.
+  final String search;
 
   /// Set to true on a 409 from a move — UI surfaces a banner.
   final bool staleData;
@@ -41,41 +56,68 @@ class TaskBoardLoaded extends TaskBoardState {
   TaskBoardLoaded copyWith({
     List<TaxonomyItem>? statuses,
     List<Issue>? issues,
+    List<Milestone>? milestones,
+    Object? sprintFilter = _absent,
+    String? search,
     bool? staleData,
   }) => TaskBoardLoaded(
     statuses: statuses ?? this.statuses,
     issues: issues ?? this.issues,
+    milestones: milestones ?? this.milestones,
+    sprintFilter:
+        sprintFilter == _absent ? this.sprintFilter : sprintFilter as String?,
+    search: search ?? this.search,
     staleData: staleData ?? this.staleData,
   );
 
-  /// Issues bucketed by `statusId`. Issues with no status fall into the
-  /// trailing `null` bucket.
+  static const _absent = Object();
+
+  bool _matches(Issue it) {
+    // Only top-level issues are cards; sub-tasks live under their parent.
+    if (it.parentId != null) return false;
+    if (sprintFilter != null && it.milestoneId != sprintFilter) return false;
+    if (search.trim().isEmpty) return true;
+    final q = search.toLowerCase();
+    return it.subject.toLowerCase().contains(q) ||
+        '#${it.reference}'.contains(q);
+  }
+
+  /// Issues bucketed by `statusId`, after filters. Columns always come from the
+  /// status taxonomy (so the board renders even with zero issues). Issues with
+  /// no status fall into the trailing `null` bucket.
   Map<String?, List<Issue>> get bucketed {
     final out = <String?, List<Issue>>{null: []};
     for (final s in statuses) {
       out[s.id] = [];
     }
-    for (final t in issues) {
+    for (final t in issues.where(_matches)) {
       out.putIfAbsent(t.statusId, () => []).add(t);
+    }
+    for (final list in out.values) {
+      list.sort((a, b) => a.order.compareTo(b.order));
     }
     return out;
   }
 
   @override
-  List<Object?> get props => [statuses, issues, staleData];
+  List<Object?> get props =>
+      [statuses, issues, milestones, sprintFilter, search, staleData];
 }
 
 class TaskBoardCubit extends Cubit<TaskBoardState> {
   TaskBoardCubit({
     required BacklogRepository repo,
     required CatalogRepository catalog,
+    required MilestonesRepository milestones,
     required this.projectId,
   }) : _repo = repo,
        _catalog = catalog,
+       _milestones = milestones,
        super(const TaskBoardLoading());
 
   final BacklogRepository _repo;
   final CatalogRepository _catalog;
+  final MilestonesRepository _milestones;
   final String projectId;
 
   Future<void> load() async {
@@ -85,6 +127,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
       TaxonomyKind.issueStatus,
     );
     final issueRes = await _repo.listIssues(projectId);
+    final msRes = await _milestones.list(projectId);
     final statuses = statusRes.valueOrNull;
     final issues = issueRes.valueOrNull;
     if (statuses == null || issues == null) {
@@ -92,8 +135,24 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
       return;
     }
     if (!isClosed) {
-      emit(TaskBoardLoaded(statuses: statuses, issues: issues));
+      emit(
+        TaskBoardLoaded(
+          statuses: statuses,
+          issues: issues,
+          milestones: msRes.valueOrNull ?? const [],
+        ),
+      );
     }
+  }
+
+  void setSprintFilter(String? milestoneId) {
+    final s = state;
+    if (s is TaskBoardLoaded) emit(s.copyWith(sprintFilter: milestoneId));
+  }
+
+  void setSearch(String q) {
+    final s = state;
+    if (s is TaskBoardLoaded) emit(s.copyWith(search: q));
   }
 
   /// Optimistic move of an issue to a different `statusId`. On 409 we set
@@ -156,7 +215,6 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
       await load();
       return;
     }
-    // Refresh just this issue with the server-confirmed version.
     final cur2 = state;
     if (cur2 is! TaskBoardLoaded) return;
     final j = cur2.issues.indexWhere((t) => t.id == taskId);

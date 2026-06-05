@@ -42,6 +42,15 @@ abstract interface class ProjectsRepository {
     String userId,
   );
 
+  /// Add an existing user to the project directly. Provide [userId] (from the
+  /// user picker) or [identifier] (exact email / username), plus a [roleSlug].
+  Future<Result<Unit, AppFailure>> addMember(
+    String projectId, {
+    required String roleSlug,
+    String? userId,
+    String? identifier,
+  });
+
   // ---- invitations ----
   Future<Result<List<Invitation>, AppFailure>> listInvitations(
     String projectId,
