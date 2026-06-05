@@ -123,7 +123,7 @@ jobs:
           set -euo pipefail
           flutter build web --release \
             --pwa-strategy=offline-first \
-            --dart-define=INTELLIPILOT_API_BASE=/api \
+            --dart-define=INTELLIPILOT_API_BASE= \
             --dart-define=INTELLIPILOT_VERSION=${{ needs.verify-tag.outputs.version }} \
             --dart-define=INTELLIPILOT_BUILD=${{ needs.verify-tag.outputs.build }} \
             --dart-define=INTELLIPILOT_FLAVOR=prod
