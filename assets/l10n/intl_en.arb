@@ -1166,6 +1166,8 @@
   "@aboutDialogTitle": { "description": "Title of the About dialog." },
   "aboutFieldVersion": "Version",
   "@aboutFieldVersion": { "description": "About dialog: version label." },
+  "aboutFieldServerVersion": "Server version",
+  "@aboutFieldServerVersion": { "description": "About dialog: backend service version label." },
   "aboutFieldBuild": "Build",
   "@aboutFieldBuild": { "description": "About dialog: build number label." },
   "aboutFieldFlavor": "Flavor",
