@@ -12,6 +12,7 @@ class UserProfile {
     required this.isSuperadmin,
     required this.mustChangePassword,
     required this.createdAt,
+    this.authSource = 'local',
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -26,8 +27,13 @@ class UserProfile {
       isSuperadmin: json['is_superadmin'] as bool? ?? false,
       mustChangePassword: json['must_change_password'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
+      authSource: (json['auth_source'] as String?) ?? 'local',
     );
   }
+
+  /// `'local'` (password) or `'ldap'` (directory). LDAP accounts manage their
+  /// password in the directory, not in IntelliPilot.
+  bool get isLdap => authSource == 'ldap';
 
   final String id;
   final String email;
@@ -43,6 +49,7 @@ class UserProfile {
   /// password is required before any other navigation.
   final bool mustChangePassword;
   final DateTime createdAt;
+  final String authSource;
 
   UserProfile copyWith({
     String? fullName,
@@ -61,6 +68,7 @@ class UserProfile {
     isSuperadmin: isSuperadmin ?? this.isSuperadmin,
     mustChangePassword: mustChangePassword ?? this.mustChangePassword,
     createdAt: createdAt,
+    authSource: authSource,
   );
 }
 

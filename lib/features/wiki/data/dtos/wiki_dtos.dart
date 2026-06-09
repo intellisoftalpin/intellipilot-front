@@ -1,5 +1,7 @@
-/// A wiki page. `etag` is populated from the response header so callers can
-/// round-trip it as `If-Match` for conflict detection on PATCH/DELETE.
+import 'package:intellipilot/core/network/etag.dart';
+
+/// A wiki page. `etag` is the canonical `"<id>:<version>"` revision token,
+/// round-tripped as `If-Match` for conflict detection on PATCH/DELETE.
 class WikiPage {
   const WikiPage({
     required this.id,
@@ -27,7 +29,7 @@ class WikiPage {
         editorId: json['editor_id'] as String?,
         createdAt: DateTime.parse(json['created_at'] as String),
         modifiedAt: DateTime.parse(json['modified_at'] as String),
-        etag: etag,
+        etag: canonicalEtag(json, etag),
       );
 
   final String id;

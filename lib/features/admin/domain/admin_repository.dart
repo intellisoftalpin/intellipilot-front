@@ -37,4 +37,18 @@ abstract interface class AdminRepository {
   Future<Result<PlatformSettings, AppFailure>> updateOpenRegistration(
     bool value,
   );
+
+  // ---- LDAP ----
+  Future<Result<LdapSettings, AppFailure>> getLdapSettings();
+
+  Future<Result<LdapSettings, AppFailure>> updateLdapSettings(
+    UpdateLdapSettingsRequest req,
+  );
+
+  /// Attempt a real bind with the given (possibly unsaved) settings + creds.
+  Future<Result<LdapTestResult, AppFailure>> testLdapSettings({
+    required UpdateLdapSettingsRequest settings,
+    required String username,
+    required String password,
+  });
 }

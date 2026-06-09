@@ -144,4 +144,49 @@ class AdminRepositoryImpl implements AdminRepository {
       return Err(mapDioExceptionToFailure(e));
     }
   }
+
+  @override
+  Future<Result<LdapSettings, AppFailure>> getLdapSettings() async {
+    final res = await _api.get('$_base/ldap-settings');
+    return res.when(
+      ok: (r) => Ok(LdapSettings.fromJson(r.data as Map<String, dynamic>)),
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<LdapSettings, AppFailure>> updateLdapSettings(
+    UpdateLdapSettingsRequest req,
+  ) async {
+    try {
+      final r = await _api.dio.put<dynamic>(
+        '$_base/ldap-settings',
+        data: req.toJson(),
+      );
+      return Ok(LdapSettings.fromJson(r.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<LdapTestResult, AppFailure>> testLdapSettings({
+    required UpdateLdapSettingsRequest settings,
+    required String username,
+    required String password,
+  }) async {
+    try {
+      final r = await _api.dio.post<dynamic>(
+        '$_base/ldap-settings/test',
+        data: {
+          'settings': settings.toJson(),
+          'username': username,
+          'password': password,
+        },
+      );
+      return Ok(LdapTestResult.fromJson(r.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
 }

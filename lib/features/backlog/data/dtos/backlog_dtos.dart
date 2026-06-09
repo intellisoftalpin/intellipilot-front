@@ -1,5 +1,7 @@
-/// Backend epic. `etag` is filled from the response header when available so
-/// callers can round-trip it as `If-Match` on subsequent updates.
+import 'package:intellipilot/core/network/etag.dart';
+
+/// Backend epic. `etag` is the canonical `"<id>:<version>"` revision token,
+/// round-tripped as `If-Match` on subsequent updates.
 class Epic {
   const Epic({
     required this.id,
@@ -33,7 +35,7 @@ class Epic {
       assignedTo: json['assigned_to'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       modifiedAt: DateTime.parse(json['modified_at'] as String),
-      etag: etag,
+      etag: canonicalEtag(json, etag),
     );
   }
 
@@ -109,7 +111,7 @@ class Issue {
       version: (json['version'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(json['created_at'] as String),
       modifiedAt: DateTime.parse(json['modified_at'] as String),
-      etag: etag,
+      etag: canonicalEtag(json, etag),
     );
   }
 

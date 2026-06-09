@@ -181,3 +181,155 @@ class PlatformSettings {
   final DateTime updatedAt;
   final String? updatedBy;
 }
+
+// ---------------------------------------------------------------------------
+// LDAP settings — mirror `crate::admin::dto::*Ldap*`.
+// ---------------------------------------------------------------------------
+
+/// Current LDAP configuration as returned by `GET /admin/ldap-settings`.
+class LdapSettings {
+  const LdapSettings({
+    required this.enabled,
+    required this.serverUrl,
+    required this.useStartTls,
+    required this.skipTlsVerify,
+    required this.baseDn,
+    required this.defaultDomain,
+    required this.bindDnFormat,
+    required this.userSearchFilter,
+    required this.superadminGroup,
+    required this.attrEmail,
+    required this.attrDisplayName,
+    required this.attrUsername,
+    required this.connectionTimeoutSecs,
+    required this.updatedAt,
+    this.updatedBy,
+  });
+
+  factory LdapSettings.fromJson(Map<String, dynamic> j) => LdapSettings(
+    enabled: j['enabled'] as bool? ?? false,
+    serverUrl: j['server_url'] as String? ?? '',
+    useStartTls: j['use_start_tls'] as bool? ?? false,
+    skipTlsVerify: j['skip_tls_verify'] as bool? ?? false,
+    baseDn: j['base_dn'] as String? ?? '',
+    defaultDomain: j['default_domain'] as String? ?? '',
+    bindDnFormat: j['bind_dn_format'] as String? ?? '%s',
+    userSearchFilter: j['user_search_filter'] as String? ?? '(sAMAccountName=%s)',
+    superadminGroup: j['superadmin_group'] as String? ?? '',
+    attrEmail: j['attr_email'] as String? ?? 'mail',
+    attrDisplayName: j['attr_display_name'] as String? ?? 'displayName',
+    attrUsername: j['attr_username'] as String? ?? 'sAMAccountName',
+    connectionTimeoutSecs: (j['connection_timeout_secs'] as num?)?.toInt() ?? 10,
+    updatedAt: DateTime.parse(j['updated_at'] as String),
+    updatedBy: j['updated_by'] as String?,
+  );
+
+  final bool enabled;
+  final String serverUrl;
+  final bool useStartTls;
+  final bool skipTlsVerify;
+  final String baseDn;
+  final String defaultDomain;
+  final String bindDnFormat;
+  final String userSearchFilter;
+  final String superadminGroup;
+  final String attrEmail;
+  final String attrDisplayName;
+  final String attrUsername;
+  final int connectionTimeoutSecs;
+  final DateTime updatedAt;
+  final String? updatedBy;
+
+  UpdateLdapSettingsRequest toUpdate() => UpdateLdapSettingsRequest(
+    enabled: enabled,
+    serverUrl: serverUrl,
+    useStartTls: useStartTls,
+    skipTlsVerify: skipTlsVerify,
+    baseDn: baseDn,
+    defaultDomain: defaultDomain,
+    bindDnFormat: bindDnFormat,
+    userSearchFilter: userSearchFilter,
+    superadminGroup: superadminGroup,
+    attrEmail: attrEmail,
+    attrDisplayName: attrDisplayName,
+    attrUsername: attrUsername,
+    connectionTimeoutSecs: connectionTimeoutSecs,
+  );
+}
+
+/// Body for `PUT /admin/ldap-settings` (and embedded in the test request).
+class UpdateLdapSettingsRequest {
+  const UpdateLdapSettingsRequest({
+    required this.enabled,
+    required this.serverUrl,
+    required this.useStartTls,
+    required this.skipTlsVerify,
+    required this.baseDn,
+    required this.defaultDomain,
+    required this.bindDnFormat,
+    required this.userSearchFilter,
+    required this.superadminGroup,
+    required this.attrEmail,
+    required this.attrDisplayName,
+    required this.attrUsername,
+    required this.connectionTimeoutSecs,
+  });
+
+  final bool enabled;
+  final String serverUrl;
+  final bool useStartTls;
+  final bool skipTlsVerify;
+  final String baseDn;
+  final String defaultDomain;
+  final String bindDnFormat;
+  final String userSearchFilter;
+  final String superadminGroup;
+  final String attrEmail;
+  final String attrDisplayName;
+  final String attrUsername;
+  final int connectionTimeoutSecs;
+
+  Map<String, dynamic> toJson() => {
+    'enabled': enabled,
+    'server_url': serverUrl,
+    'use_start_tls': useStartTls,
+    'skip_tls_verify': skipTlsVerify,
+    'base_dn': baseDn,
+    'default_domain': defaultDomain,
+    'bind_dn_format': bindDnFormat,
+    'user_search_filter': userSearchFilter,
+    'superadmin_group': superadminGroup,
+    'attr_email': attrEmail,
+    'attr_display_name': attrDisplayName,
+    'attr_username': attrUsername,
+    'connection_timeout_secs': connectionTimeoutSecs,
+  };
+}
+
+/// Result of `POST /admin/ldap-settings/test`.
+class LdapTestResult {
+  const LdapTestResult({
+    required this.ok,
+    required this.message,
+    this.email,
+    this.username,
+    this.displayName,
+    this.wouldBeSuperadmin,
+  });
+
+  factory LdapTestResult.fromJson(Map<String, dynamic> j) => LdapTestResult(
+    ok: j['ok'] as bool? ?? false,
+    message: j['message'] as String? ?? '',
+    email: j['email'] as String?,
+    username: j['username'] as String?,
+    displayName: j['display_name'] as String?,
+    wouldBeSuperadmin: j['would_be_superadmin'] as bool?,
+  );
+
+  final bool ok;
+  final String message;
+  final String? email;
+  final String? username;
+  final String? displayName;
+  final bool? wouldBeSuperadmin;
+}

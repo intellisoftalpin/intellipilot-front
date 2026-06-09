@@ -81,18 +81,22 @@ void main() {
       expect(res.valueOrNull?.single.epicId, 'e1');
     });
 
-    test('getEpic captures the ETag header for round-trip', () async {
+    test('getEpic derives the canonical ETag from the body, ignoring a '
+        'proxy-weakened response header', () async {
       final adapter = _Adapter(
         (_) async => _ok(
           _epicJson,
+          // A reverse proxy (nginx gzip) weakens a strong ETag to W/"...".
+          // Round-tripping that form fails the backend's strong If-Match
+          // check (412), so we reconstruct "<id>:<version>" from the body.
           extraHeaders: {
-            'etag': ['"v3"'],
+            'etag': ['W/"e1:3"'],
           },
         ),
       );
       final repo = BacklogRepositoryImpl(_client(adapter));
       final res = await repo.getEpic('p1', 'e1');
-      expect(res.valueOrNull?.etag, '"v3"');
+      expect(res.valueOrNull?.etag, '"e1:3"');
     });
 
     test('updateEpic sends If-Match from the supplied ETag', () async {

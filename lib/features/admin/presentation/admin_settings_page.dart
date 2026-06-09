@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
+import 'package:intellipilot/features/admin/presentation/admin_ldap_page.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_settings_cubit.dart';
 
 class AdminSettingsPage extends StatelessWidget {
@@ -43,6 +44,20 @@ class _SettingsView extends StatelessWidget {
                 onChanged: (v) => context
                     .read<AdminSettingsCubit>()
                     .setOpenRegistration(v),
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.account_tree_outlined),
+                title: const Text('LDAP / Directory'),
+                subtitle: const Text(
+                  'Authenticate users against an LDAP/Active Directory server.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AdminLdapPage(),
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
               Text(

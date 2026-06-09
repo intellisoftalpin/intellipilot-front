@@ -1992,4 +1992,68 @@ class DemoAdminRepository implements AdminRepository {
     );
     return Ok(_settings);
   }
+
+  LdapSettings _ldap = LdapSettings(
+    enabled: false,
+    serverUrl: '',
+    useStartTls: false,
+    skipTlsVerify: false,
+    baseDn: '',
+    defaultDomain: '',
+    bindDnFormat: '%s',
+    userSearchFilter: '(sAMAccountName=%s)',
+    superadminGroup: '',
+    attrEmail: 'mail',
+    attrDisplayName: 'displayName',
+    attrUsername: 'sAMAccountName',
+    connectionTimeoutSecs: 10,
+    updatedAt: DateTime(2026),
+  );
+
+  @override
+  Future<Result<LdapSettings, AppFailure>> getLdapSettings() async {
+    await _tick();
+    return Ok(_ldap);
+  }
+
+  @override
+  Future<Result<LdapSettings, AppFailure>> updateLdapSettings(
+    UpdateLdapSettingsRequest req,
+  ) async {
+    await _tick();
+    _ldap = LdapSettings(
+      enabled: req.enabled,
+      serverUrl: req.serverUrl,
+      useStartTls: req.useStartTls,
+      skipTlsVerify: req.skipTlsVerify,
+      baseDn: req.baseDn,
+      defaultDomain: req.defaultDomain,
+      bindDnFormat: req.bindDnFormat,
+      userSearchFilter: req.userSearchFilter,
+      superadminGroup: req.superadminGroup,
+      attrEmail: req.attrEmail,
+      attrDisplayName: req.attrDisplayName,
+      attrUsername: req.attrUsername,
+      connectionTimeoutSecs: req.connectionTimeoutSecs,
+      updatedAt: DateTime.now().toUtc(),
+      updatedBy: _s.currentUser.id,
+    );
+    return Ok(_ldap);
+  }
+
+  @override
+  Future<Result<LdapTestResult, AppFailure>> testLdapSettings({
+    required UpdateLdapSettingsRequest settings,
+    required String username,
+    required String password,
+  }) async {
+    await _tick();
+    // Demo mode has no directory — report a clear, harmless failure.
+    return const Ok(
+      LdapTestResult(
+        ok: false,
+        message: 'Demo mode: no directory is configured.',
+      ),
+    );
+  }
 }
