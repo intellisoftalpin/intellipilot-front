@@ -15,7 +15,10 @@ class FakeAuthRepository implements AuthRepository {
     this.requestResetHandler,
     this.confirmResetHandler,
     this.verifyMfaHandler,
+    this.authConfigHandler,
   });
+
+  Future<Result<AuthConfig, AppFailure>> Function()? authConfigHandler;
 
   Future<Result<LoginResult, AppFailure>> Function(String email, String pw)?
   loginHandler;
@@ -32,6 +35,15 @@ class FakeAuthRepository implements AuthRepository {
   int loginCalls = 0;
   int refreshCalls = 0;
   int logoutCalls = 0;
+
+  @override
+  Future<Result<AuthConfig, AppFailure>> authConfig() async =>
+      authConfigHandler?.call() ??
+      Future.value(
+        const Ok<AuthConfig, AppFailure>(
+          AuthConfig(openRegistration: true, passwordResetEnabled: true),
+        ),
+      );
 
   @override
   Future<Result<LoginResult, AppFailure>> login({
@@ -96,7 +108,5 @@ class FakeAuthRepository implements AuthRepository {
     required String code,
   }) async =>
       verifyMfaHandler?.call() ??
-      Future.value(
-        const Err<TokenResponse, AppFailure>(UnauthorizedFailure()),
-      );
+      Future.value(const Err<TokenResponse, AppFailure>(UnauthorizedFailure()));
 }

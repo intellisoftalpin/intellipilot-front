@@ -45,6 +45,32 @@ class _RegisterViewState extends State<_RegisterView> {
       'fullName': FormControl<String>(validators: AuthValidators.fullName),
       'password': FormControl<String>(validators: AuthValidators.password),
     });
+    // Invitation links bypass the open-registration check; otherwise bounce to
+    // login when self-service signup is disabled so a closed instance has no
+    // reachable registration form.
+    if (widget.invitationToken == null) {
+      _guardOpenRegistration();
+    }
+  }
+
+  Future<void> _guardOpenRegistration() async {
+    final res = await getIt<AuthRepository>().authConfig();
+    if (!mounted) return;
+    res.when(
+      ok: (c) {
+        if (!c.openRegistration) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context).registrationClosedNotice,
+              ),
+            ),
+          );
+          context.goNamed('login');
+        }
+      },
+      err: (_) {},
+    );
   }
 
   void _submit() {

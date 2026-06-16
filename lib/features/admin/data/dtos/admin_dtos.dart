@@ -333,3 +333,215 @@ class LdapTestResult {
   final String? displayName;
   final bool? wouldBeSuperadmin;
 }
+
+// ---------------------------------------------------------------------------
+// Notification settings
+// ---------------------------------------------------------------------------
+
+/// Current notification config. Secrets are never returned by the API — only
+/// the `*Set` booleans indicate whether a value is stored.
+class NotificationSettings {
+  const NotificationSettings({
+    required this.mailEnabled,
+    required this.mailProvider,
+    required this.mailFromAddress,
+    required this.mailFromName,
+    required this.smtpHost,
+    required this.smtpPort,
+    required this.smtpUsername,
+    required this.smtpPasswordSet,
+    required this.smtpUseStarttls,
+    required this.smtpSkipTlsVerify,
+    required this.mailgunApiKeySet,
+    required this.mailgunDomain,
+    required this.mailgunBaseUrl,
+    required this.matrixEnabled,
+    required this.matrixHomeserver,
+    required this.matrixRoomId,
+    required this.matrixAccessTokenSet,
+    required this.telegramEnabled,
+    required this.telegramBotTokenSet,
+    required this.telegramChatId,
+    required this.mailOnLogin,
+    required this.mailOnIssueCreated,
+    required this.mailOnIssueResolved,
+    required this.mailOnDailyReport,
+    required this.msgOnLogin,
+    required this.msgOnIssueCreated,
+    required this.msgOnIssueResolved,
+    required this.msgOnDailyReport,
+  });
+
+  factory NotificationSettings.fromJson(Map<String, dynamic> j) {
+    bool b(String k) => j[k] as bool? ?? false;
+    String s(String k) => j[k] as String? ?? '';
+    return NotificationSettings(
+      mailEnabled: b('mail_enabled'),
+      mailProvider: j['mail_provider'] as String? ?? 'smtp',
+      mailFromAddress: s('mail_from_address'),
+      mailFromName: s('mail_from_name'),
+      smtpHost: s('smtp_host'),
+      smtpPort: (j['smtp_port'] as num?)?.toInt() ?? 587,
+      smtpUsername: s('smtp_username'),
+      smtpPasswordSet: b('smtp_password_set'),
+      smtpUseStarttls: j['smtp_use_starttls'] as bool? ?? true,
+      smtpSkipTlsVerify: b('smtp_skip_tls_verify'),
+      mailgunApiKeySet: b('mailgun_api_key_set'),
+      mailgunDomain: s('mailgun_domain'),
+      mailgunBaseUrl: s('mailgun_base_url'),
+      matrixEnabled: b('matrix_enabled'),
+      matrixHomeserver: s('matrix_homeserver'),
+      matrixRoomId: s('matrix_room_id'),
+      matrixAccessTokenSet: b('matrix_access_token_set'),
+      telegramEnabled: b('telegram_enabled'),
+      telegramBotTokenSet: b('telegram_bot_token_set'),
+      telegramChatId: s('telegram_chat_id'),
+      mailOnLogin: b('mail_on_login'),
+      mailOnIssueCreated: b('mail_on_issue_created'),
+      mailOnIssueResolved: b('mail_on_issue_resolved'),
+      mailOnDailyReport: b('mail_on_daily_report'),
+      msgOnLogin: b('msg_on_login'),
+      msgOnIssueCreated: b('msg_on_issue_created'),
+      msgOnIssueResolved: b('msg_on_issue_resolved'),
+      msgOnDailyReport: b('msg_on_daily_report'),
+    );
+  }
+
+  final bool mailEnabled;
+  final String mailProvider;
+  final String mailFromAddress;
+  final String mailFromName;
+  final String smtpHost;
+  final int smtpPort;
+  final String smtpUsername;
+  final bool smtpPasswordSet;
+  final bool smtpUseStarttls;
+  final bool smtpSkipTlsVerify;
+  final bool mailgunApiKeySet;
+  final String mailgunDomain;
+  final String mailgunBaseUrl;
+  final bool matrixEnabled;
+  final String matrixHomeserver;
+  final String matrixRoomId;
+  final bool matrixAccessTokenSet;
+  final bool telegramEnabled;
+  final bool telegramBotTokenSet;
+  final String telegramChatId;
+  final bool mailOnLogin;
+  final bool mailOnIssueCreated;
+  final bool mailOnIssueResolved;
+  final bool mailOnDailyReport;
+  final bool msgOnLogin;
+  final bool msgOnIssueCreated;
+  final bool msgOnIssueResolved;
+  final bool msgOnDailyReport;
+}
+
+/// Update payload. Secret fields carry the raw value the admin typed; an empty
+/// string means "keep the stored secret" (the backend treats blank as unchanged).
+class NotificationSettingsUpdate {
+  const NotificationSettingsUpdate({
+    required this.mailEnabled,
+    required this.mailProvider,
+    required this.mailFromAddress,
+    required this.mailFromName,
+    required this.smtpHost,
+    required this.smtpPort,
+    required this.smtpUsername,
+    required this.smtpPassword,
+    required this.smtpUseStarttls,
+    required this.smtpSkipTlsVerify,
+    required this.mailgunApiKey,
+    required this.mailgunDomain,
+    required this.mailgunBaseUrl,
+    required this.matrixEnabled,
+    required this.matrixHomeserver,
+    required this.matrixRoomId,
+    required this.matrixAccessToken,
+    required this.telegramEnabled,
+    required this.telegramBotToken,
+    required this.telegramChatId,
+    required this.mailOnLogin,
+    required this.mailOnIssueCreated,
+    required this.mailOnIssueResolved,
+    required this.mailOnDailyReport,
+    required this.msgOnLogin,
+    required this.msgOnIssueCreated,
+    required this.msgOnIssueResolved,
+    required this.msgOnDailyReport,
+  });
+
+  final bool mailEnabled;
+  final String mailProvider;
+  final String mailFromAddress;
+  final String mailFromName;
+  final String smtpHost;
+  final int smtpPort;
+  final String smtpUsername;
+  final String smtpPassword;
+  final bool smtpUseStarttls;
+  final bool smtpSkipTlsVerify;
+  final String mailgunApiKey;
+  final String mailgunDomain;
+  final String mailgunBaseUrl;
+  final bool matrixEnabled;
+  final String matrixHomeserver;
+  final String matrixRoomId;
+  final String matrixAccessToken;
+  final bool telegramEnabled;
+  final String telegramBotToken;
+  final String telegramChatId;
+  final bool mailOnLogin;
+  final bool mailOnIssueCreated;
+  final bool mailOnIssueResolved;
+  final bool mailOnDailyReport;
+  final bool msgOnLogin;
+  final bool msgOnIssueCreated;
+  final bool msgOnIssueResolved;
+  final bool msgOnDailyReport;
+
+  Map<String, dynamic> toJson() => {
+    'mail_enabled': mailEnabled,
+    'mail_provider': mailProvider,
+    'mail_from_address': mailFromAddress,
+    'mail_from_name': mailFromName,
+    'smtp_host': smtpHost,
+    'smtp_port': smtpPort,
+    'smtp_username': smtpUsername,
+    'smtp_password': smtpPassword,
+    'smtp_use_starttls': smtpUseStarttls,
+    'smtp_skip_tls_verify': smtpSkipTlsVerify,
+    'mailgun_api_key': mailgunApiKey,
+    'mailgun_domain': mailgunDomain,
+    'mailgun_base_url': mailgunBaseUrl,
+    'matrix_enabled': matrixEnabled,
+    'matrix_homeserver': matrixHomeserver,
+    'matrix_room_id': matrixRoomId,
+    'matrix_access_token': matrixAccessToken,
+    'telegram_enabled': telegramEnabled,
+    'telegram_bot_token': telegramBotToken,
+    'telegram_chat_id': telegramChatId,
+    'mail_on_login': mailOnLogin,
+    'mail_on_issue_created': mailOnIssueCreated,
+    'mail_on_issue_resolved': mailOnIssueResolved,
+    'mail_on_daily_report': mailOnDailyReport,
+    'msg_on_login': msgOnLogin,
+    'msg_on_issue_created': msgOnIssueCreated,
+    'msg_on_issue_resolved': msgOnIssueResolved,
+    'msg_on_daily_report': msgOnDailyReport,
+  };
+}
+
+/// Result of a "send test" action.
+class NotificationTestResult {
+  const NotificationTestResult({required this.ok, required this.message});
+
+  factory NotificationTestResult.fromJson(Map<String, dynamic> j) =>
+      NotificationTestResult(
+        ok: j['ok'] as bool? ?? false,
+        message: j['message'] as String? ?? '',
+      );
+
+  final bool ok;
+  final String message;
+}

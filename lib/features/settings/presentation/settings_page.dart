@@ -257,6 +257,10 @@ class _LocaleSection extends StatelessWidget {
                       value: 'en',
                       child: Text('English'),
                     ),
+                    const DropdownMenuItem<String?>(
+                      value: 'de',
+                      child: Text('Deutsch'),
+                    ),
                   ],
                   onChanged: (code) {
                     context.read<LocaleCubit>().setLocale(

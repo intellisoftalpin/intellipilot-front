@@ -58,10 +58,7 @@ class LoginCubit extends Cubit<LoginState> {
   final AuthRepository _repo;
   final SessionBloc _session;
 
-  Future<void> submit({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> submit({required String email, required String password}) async {
     emit(const LoginSubmitting());
     final result = await _repo.login(email: email, password: password);
     result.when(

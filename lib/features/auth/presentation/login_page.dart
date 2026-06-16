@@ -39,10 +39,8 @@ class _LoginViewState extends State<_LoginView> {
   void initState() {
     super.initState();
     _form = FormGroup({
-      'email': FormControl<String>(validators: AuthValidators.email),
-      'password': FormControl<String>(
-        validators: AuthValidators.password,
-      ),
+      'email': FormControl<String>(validators: AuthValidators.loginIdentifier),
+      'password': FormControl<String>(validators: AuthValidators.password),
     });
   }
 
@@ -77,6 +75,17 @@ class _LoginViewState extends State<_LoginView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    Center(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: Image.asset(
+                          'assets/images/app-logo.png',
+                          width: 88,
+                          height: 88,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Text(
                       t.appTitle,
                       style: Theme.of(context).textTheme.headlineMedium,
@@ -91,15 +100,13 @@ class _LoginViewState extends State<_LoginView> {
                     const SizedBox(height: 24),
                     ReactiveTextField<String>(
                       formControlName: 'email',
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
+                      autofillHints: const [AutofillHints.username],
                       decoration: InputDecoration(
-                        labelText: t.fieldEmail,
-                        prefixIcon: const Icon(Icons.alternate_email),
+                        labelText: t.fieldEmailOrUsername,
+                        prefixIcon: const Icon(Icons.person_outline),
                       ),
                       validationMessages: {
                         ValidationMessage.required: (_) => t.errFieldRequired,
-                        ValidationMessage.email: (_) => t.errEmailInvalid,
                         ValidationMessage.maxLength: (_) => t.errTooLong,
                       },
                     ),
@@ -122,8 +129,7 @@ class _LoginViewState extends State<_LoginView> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () =>
-                            context.goNamed('forgot_password'),
+                        onPressed: () => context.goNamed('forgot_password'),
                         child: Text(t.linkForgotPassword),
                       ),
                     ),
@@ -163,10 +169,7 @@ class _LoginViewState extends State<_LoginView> {
                       label: Text(t.linkSignInWithPasskey),
                     ),
                     const SizedBox(height: 4),
-                    TextButton(
-                      onPressed: () => context.goNamed('register'),
-                      child: Text(t.linkCreateAccount),
-                    ),
+                    const _RegisterLink(),
                   ],
                 ),
               ),
@@ -174,6 +177,45 @@ class _LoginViewState extends State<_LoginView> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Self-service signup link, shown only when the server reports open
+/// registration is enabled. Hidden while loading or on error, so a closed
+/// instance never advertises a signup path that the backend would reject.
+class _RegisterLink extends StatefulWidget {
+  const _RegisterLink();
+
+  @override
+  State<_RegisterLink> createState() => _RegisterLinkState();
+}
+
+class _RegisterLinkState extends State<_RegisterLink> {
+  bool _open = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final res = await getIt<AuthRepository>().authConfig();
+    if (!mounted) return;
+    res.when(
+      ok: (c) => setState(() => _open = c.openRegistration),
+      err: (_) {},
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_open) return const SizedBox.shrink();
+    final t = AppLocalizations.of(context);
+    return TextButton(
+      onPressed: () => context.goNamed('register'),
+      child: Text(t.linkCreateAccount),
     );
   }
 }

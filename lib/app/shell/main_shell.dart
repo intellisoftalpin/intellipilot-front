@@ -195,17 +195,13 @@ class _BrandMark extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Row(
           children: [
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Icon(
-                Icons.flight_takeoff,
-                size: 16,
-                color: theme.colorScheme.onPrimary,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: Image.asset(
+                'assets/images/app-logo.png',
+                width: 24,
+                height: 24,
+                fit: BoxFit.cover,
               ),
             ),
             if (!compact) ...[

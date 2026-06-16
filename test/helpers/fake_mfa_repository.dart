@@ -81,11 +81,10 @@ class FakeMfaRepository implements MfaRepository {
       Future.value(const Ok<List<PasskeyListItem>, AppFailure>([]));
 
   @override
-  Future<Result<PasskeyCeremony, AppFailure>> startPasskeyRegistration() async =>
+  Future<Result<PasskeyCeremony, AppFailure>>
+  startPasskeyRegistration() async =>
       startPasskeyRegHandler?.call() ??
-      Future.value(
-        const Err<PasskeyCeremony, AppFailure>(NetworkFailure()),
-      );
+      Future.value(const Err<PasskeyCeremony, AppFailure>(NetworkFailure()));
 
   @override
   Future<Result<Unit, AppFailure>> finishPasskeyRegistration({
@@ -116,13 +115,17 @@ class FakeMfaRepository implements MfaRepository {
     required Map<String, dynamic> credential,
   }) async =>
       finishPasskeyAuthHandler?.call() ??
-      Future.value(
-        const Err<TokenResponse, AppFailure>(UnauthorizedFailure()),
-      );
+      Future.value(const Err<TokenResponse, AppFailure>(UnauthorizedFailure()));
 }
 
 class StubPasskeyService implements PasskeyService {
-  StubPasskeyService({this.supported = true, this.registerResult, this.authResult, this.throwOnRegister = false, this.throwOnAuth = false});
+  StubPasskeyService({
+    this.supported = true,
+    this.registerResult,
+    this.authResult,
+    this.throwOnRegister = false,
+    this.throwOnAuth = false,
+  });
   bool supported;
   bool throwOnRegister;
   bool throwOnAuth;

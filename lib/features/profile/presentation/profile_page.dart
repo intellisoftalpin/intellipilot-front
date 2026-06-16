@@ -59,9 +59,9 @@ class _ProfileViewState extends State<_ProfileView> {
         listenWhen: (prev, next) =>
             next is ProfileLoaded && next.savedAt != null,
         listener: (context, state) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(t.profileSavedSnack)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(t.profileSavedSnack)));
         },
         builder: (context, state) {
           if (state is ProfileLoading) {

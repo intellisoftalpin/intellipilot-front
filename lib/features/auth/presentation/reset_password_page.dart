@@ -93,8 +93,7 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
                           prefixIcon: const Icon(Icons.vpn_key_outlined),
                         ),
                         validationMessages: {
-                          ValidationMessage.required: (_) =>
-                              t.errFieldRequired,
+                          ValidationMessage.required: (_) => t.errFieldRequired,
                         },
                       ),
                       const SizedBox(height: 12),
@@ -107,8 +106,7 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
                           helperText: t.fieldPasswordHint,
                         ),
                         validationMessages: {
-                          ValidationMessage.required: (_) =>
-                              t.errFieldRequired,
+                          ValidationMessage.required: (_) => t.errFieldRequired,
                           ValidationMessage.minLength: (_) =>
                               t.errPasswordMinLength,
                         },

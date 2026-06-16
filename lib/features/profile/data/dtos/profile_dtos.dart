@@ -42,9 +42,11 @@ class UserProfile {
   final String lang;
   final String timezone;
   final bool isActive;
+
   /// Platform-wide admin flag (V011). Distinct from project-level admin —
   /// gates the `/admin/*` surface in the SPA.
   final bool isSuperadmin;
+
   /// True when the account was created or reset by an admin and a fresh
   /// password is required before any other navigation.
   final bool mustChangePassword;
@@ -87,7 +89,10 @@ class ProfileUpdateRequest {
 }
 
 class AccountErasureResponse {
-  const AccountErasureResponse({required this.status, required this.graceUntil});
+  const AccountErasureResponse({
+    required this.status,
+    required this.graceUntil,
+  });
 
   factory AccountErasureResponse.fromJson(Map<String, dynamic> json) {
     return AccountErasureResponse(

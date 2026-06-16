@@ -55,40 +55,34 @@ final class ProfileLoadFailed extends ProfileState {
 }
 
 class ProfileCubit extends Cubit<ProfileState> {
-  ProfileCubit({
-    required ProfileRepository repo,
-    required LocaleCubit locale,
-  }) : _repo = repo,
-       _locale = locale,
-       super(const ProfileLoading());
+  ProfileCubit({required ProfileRepository repo, required LocaleCubit locale})
+    : _repo = repo,
+      _locale = locale,
+      super(const ProfileLoading());
 
   final ProfileRepository _repo;
   final LocaleCubit _locale;
 
   Future<void> load() async {
     emit(const ProfileLoading());
-    final res = await _repo.getProfile();
-    res.when(
-      ok: (p) => emit(ProfileLoaded(profile: p)),
-      err: (f) => emit(ProfileLoadFailed(f)),
-    );
+    try {
+      final res = await _repo.getProfile();
+      res.when(
+        ok: (p) => emit(ProfileLoaded(profile: p)),
+        err: (f) => emit(ProfileLoadFailed(f)),
+      );
+    } on Object catch (e) {
+      emit(ProfileLoadFailed(UnknownFailure(cause: e)));
+    }
   }
 
-  Future<void> save({
-    String? fullName,
-    String? lang,
-    String? timezone,
-  }) async {
+  Future<void> save({String? fullName, String? lang, String? timezone}) async {
     final current = state;
     if (current is! ProfileLoaded) return;
     emit(current.copyWith(saving: true, lastError: null));
 
     final res = await _repo.updateProfile(
-      ProfileUpdateRequest(
-        fullName: fullName,
-        lang: lang,
-        timezone: timezone,
-      ),
+      ProfileUpdateRequest(fullName: fullName, lang: lang, timezone: timezone),
     );
     res.when(
       ok: (updated) {
@@ -97,12 +91,7 @@ class ProfileCubit extends Cubit<ProfileState> {
         if (lang != null && lang != current.profile.lang) {
           _locale.setLocale(Locale(lang));
         }
-        emit(
-          ProfileLoaded(
-            profile: updated,
-            savedAt: DateTime.now(),
-          ),
-        );
+        emit(ProfileLoaded(profile: updated, savedAt: DateTime.now()));
       },
       err: (f) => emit(current.copyWith(saving: false, lastError: f)),
     );

@@ -26,13 +26,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
     ProfileUpdateRequest patch,
   ) async {
     try {
-      final response = await _api.dio.patch<dynamic>(
-        _me,
-        data: patch.toJson(),
-      );
-      return Ok(
-        UserProfile.fromJson(response.data as Map<String, dynamic>),
-      );
+      final response = await _api.dio.patch<dynamic>(_me, data: patch.toJson());
+      return Ok(UserProfile.fromJson(response.data as Map<String, dynamic>));
     } on DioException catch (e) {
       return Err(mapDioExceptionToFailure(e));
     }
@@ -62,9 +57,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
     try {
       final response = await _api.dio.delete<dynamic>(_me);
       return Ok(
-        AccountErasureResponse.fromJson(
-          response.data as Map<String, dynamic>,
-        ),
+        AccountErasureResponse.fromJson(response.data as Map<String, dynamic>),
       );
     } on DioException catch (e) {
       return Err(mapDioExceptionToFailure(e));

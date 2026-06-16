@@ -62,6 +62,14 @@ class DemoAuthRepository implements AuthRepository {
   );
 
   @override
+  Future<Result<AuthConfig, AppFailure>> authConfig() async {
+    await _tick();
+    return const Ok(
+      AuthConfig(openRegistration: true, passwordResetEnabled: true),
+    );
+  }
+
+  @override
   Future<Result<LoginResult, AppFailure>> login({
     required String email,
     required String password,
@@ -95,13 +103,16 @@ class DemoAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<Result<PasswordResetRequestResponse, AppFailure>>
-      requestPasswordReset(String email) async {
+  Future<Result<PasswordResetRequestResponse, AppFailure>> requestPasswordReset(
+    String email,
+  ) async {
     await _tick();
-    return const Ok(PasswordResetRequestResponse(
-      status: 'ok',
-      resetToken: 'demo-reset-token',
-    ));
+    return const Ok(
+      PasswordResetRequestResponse(
+        status: 'ok',
+        resetToken: 'demo-reset-token',
+      ),
+    );
   }
 
   @override
@@ -150,10 +161,12 @@ class DemoProfileRepository implements ProfileRepository {
   @override
   Future<Result<AccountErasureResponse, AppFailure>> deleteAccount() async {
     await _tick();
-    return Ok(AccountErasureResponse(
-      status: 'scheduled_for_erasure',
-      graceUntil: DateTime.now().add(const Duration(days: 30)),
-    ));
+    return Ok(
+      AccountErasureResponse(
+        status: 'scheduled_for_erasure',
+        graceUntil: DateTime.now().add(const Duration(days: 30)),
+      ),
+    );
   }
 
   @override
@@ -187,11 +200,10 @@ class DemoMfaRepository implements MfaRepository {
   DemoMfaRepository(DemoStore _);
 
   @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError(
-        'DemoMfaRepository.${invocation.memberName} '
-        '(MFA flows are no-op in demo mode)',
-      );
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    'DemoMfaRepository.${invocation.memberName} '
+    '(MFA flows are no-op in demo mode)',
+  );
 }
 
 class DemoPasskeyService implements PasskeyService {
@@ -302,10 +314,8 @@ class DemoProjectsRepository implements ProjectsRepository {
       visibility: patch.containsKey('visibility')
           ? ProjectVisibility.fromWire(patch['visibility'] as String)
           : cur.visibility,
-      kanbanEnabled:
-          (patch['kanban_enabled'] as bool?) ?? cur.kanbanEnabled,
-      backlogEnabled:
-          (patch['backlog_enabled'] as bool?) ?? cur.backlogEnabled,
+      kanbanEnabled: (patch['kanban_enabled'] as bool?) ?? cur.kanbanEnabled,
+      backlogEnabled: (patch['backlog_enabled'] as bool?) ?? cur.backlogEnabled,
       wikiEnabled: (patch['wiki_enabled'] as bool?) ?? cur.wikiEnabled,
       epicsEnabled: (patch['epics_enabled'] as bool?) ?? cur.epicsEnabled,
       createdAt: cur.createdAt,
@@ -393,8 +403,7 @@ class DemoProjectsRepository implements ProjectsRepository {
   ) async {
     await _tick();
     final roles = _s.rolesByProject[projectId] ?? const <Role>[];
-    _s.rolesByProject[projectId] =
-        roles.where((r) => r.id != roleId).toList();
+    _s.rolesByProject[projectId] = roles.where((r) => r.id != roleId).toList();
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
@@ -403,9 +412,9 @@ class DemoProjectsRepository implements ProjectsRepository {
     String projectId,
   ) async {
     await _tick();
-    return Ok(List.unmodifiable(
-      _s.membersByProject[projectId] ?? const <Membership>[],
-    ));
+    return Ok(
+      List.unmodifiable(_s.membersByProject[projectId] ?? const <Membership>[]),
+    );
   }
 
   @override
@@ -444,8 +453,9 @@ class DemoProjectsRepository implements ProjectsRepository {
   ) async {
     await _tick();
     final members = _s.membersByProject[projectId] ?? const <Membership>[];
-    _s.membersByProject[projectId] =
-        members.where((m) => m.userId != userId).toList();
+    _s.membersByProject[projectId] = members
+        .where((m) => m.userId != userId)
+        .toList();
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
@@ -461,9 +471,10 @@ class DemoProjectsRepository implements ProjectsRepository {
     final user = userId != null
         ? _s.users.where((u) => u.id == userId).firstOrNull
         : _s.users
-            .where((u) =>
-                u.email == ident?.toLowerCase() || u.username == ident)
-            .firstOrNull;
+              .where(
+                (u) => u.email == ident?.toLowerCase() || u.username == ident,
+              )
+              .firstOrNull;
     if (user == null) return const Err(NotFoundFailure());
     final roles = _s.rolesByProject[projectId] ?? const <Role>[];
     final role = roles.where((r) => r.slug == roleSlug).firstOrNull;
@@ -491,9 +502,11 @@ class DemoProjectsRepository implements ProjectsRepository {
     String projectId,
   ) async {
     await _tick();
-    return Ok(List.unmodifiable(
-      _s.invitationsByProject[projectId] ?? const <Invitation>[],
-    ));
+    return Ok(
+      List.unmodifiable(
+        _s.invitationsByProject[projectId] ?? const <Invitation>[],
+      ),
+    );
   }
 
   @override
@@ -516,9 +529,7 @@ class DemoProjectsRepository implements ProjectsRepository {
       ..._s.invitationsByProject[projectId]!,
       inv,
     ];
-    return Ok(
-      InviteResponse(invitationId: id, inviteToken: 'demo-token-$id'),
-    );
+    return Ok(InviteResponse(invitationId: id, inviteToken: 'demo-token-$id'));
   }
 
   @override
@@ -543,10 +554,11 @@ class DemoCatalogRepository implements CatalogRepository {
     TaxonomyKind kind,
   ) async {
     await _tick();
-    final items = (_s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[])
-        .where((i) => i.kind == kind)
-        .toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
+    final items =
+        (_s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[])
+            .where((i) => i.kind == kind)
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
     return Ok(items);
   }
 
@@ -624,8 +636,9 @@ class DemoCatalogRepository implements CatalogRepository {
   ) async {
     await _tick();
     final list = _s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[];
-    _s.taxonomyByProject[projectId] =
-        list.where((x) => x.id != itemId).toList();
+    _s.taxonomyByProject[projectId] = list
+        .where((x) => x.id != itemId)
+        .toList();
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
@@ -649,8 +662,7 @@ class DemoCatalogRepository implements CatalogRepository {
     final afterIdx = body.afterId == null
         ? sameKind.length
         : sameKind.indexWhere((x) => x.id == body.afterId);
-    final insertAt =
-        body.beforeId != null ? beforeIdx + 1 : afterIdx;
+    final insertAt = body.beforeId != null ? beforeIdx + 1 : afterIdx;
     sameKind.insert(insertAt.clamp(0, sameKind.length), moved);
     for (var idx = 0; idx < sameKind.length; idx++) {
       final reordered = sameKind[idx];
@@ -692,10 +704,7 @@ class DemoCatalogRepository implements CatalogRepository {
       createdAt: DateTime.now().toUtc(),
     );
     _s.labelsByProject.putIfAbsent(projectId, () => []);
-    _s.labelsByProject[projectId] = [
-      ..._s.labelsByProject[projectId]!,
-      label,
-    ];
+    _s.labelsByProject[projectId] = [..._s.labelsByProject[projectId]!, label];
     return Ok(label);
   }
 
@@ -729,8 +738,7 @@ class DemoCatalogRepository implements CatalogRepository {
   ) async {
     await _tick();
     final list = _s.labelsByProject[projectId] ?? const <Label>[];
-    _s.labelsByProject[projectId] =
-        list.where((l) => l.id != labelId).toList();
+    _s.labelsByProject[projectId] = list.where((l) => l.id != labelId).toList();
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
@@ -739,9 +747,11 @@ class DemoCatalogRepository implements CatalogRepository {
     String projectId,
   ) async {
     await _tick();
-    return Ok(List.unmodifiable(
-      _s.componentsByProject[projectId] ?? const <Component>[],
-    ));
+    return Ok(
+      List.unmodifiable(
+        _s.componentsByProject[projectId] ?? const <Component>[],
+      ),
+    );
   }
 
   @override
@@ -774,8 +784,7 @@ class DemoCatalogRepository implements CatalogRepository {
   ) async {
     await _tick();
     final patch = body.toJson();
-    final list =
-        _s.componentsByProject[projectId] ?? const <Component>[];
+    final list = _s.componentsByProject[projectId] ?? const <Component>[];
     final i = list.indexWhere((c) => c.id == componentId);
     if (i < 0) return const Err(NotFoundFailure());
     final cur = list[i];
@@ -801,8 +810,9 @@ class DemoCatalogRepository implements CatalogRepository {
   ) async {
     await _tick();
     final list = _s.componentsByProject[projectId] ?? const <Component>[];
-    _s.componentsByProject[projectId] =
-        list.where((c) => c.id != componentId).toList();
+    _s.componentsByProject[projectId] = list
+        .where((c) => c.id != componentId)
+        .toList();
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 }
@@ -964,9 +974,7 @@ class DemoBacklogRepository implements BacklogRepository {
     required String etag,
   }) async {
     await _tick();
-    _s.epics.removeWhere(
-      (e) => e.id == id && e.projectId == projectId,
-    );
+    _s.epics.removeWhere((e) => e.id == id && e.projectId == projectId);
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
@@ -1144,9 +1152,7 @@ class DemoBacklogRepository implements BacklogRepository {
     required String etag,
   }) async {
     await _tick();
-    _s.issues.removeWhere(
-      (i) => i.id == id && i.projectId == projectId,
-    );
+    _s.issues.removeWhere((i) => i.id == id && i.projectId == projectId);
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
@@ -1270,10 +1276,12 @@ class DemoActivityRepository implements ActivityRepository {
   ) async {
     await _tick();
     final out = _s.attachments
-        .where((a) =>
-            a.projectId == projectId &&
-            a.targetType == kind.wire &&
-            a.targetId == entityId)
+        .where(
+          (a) =>
+              a.projectId == projectId &&
+              a.targetType == kind.wire &&
+              a.targetId == entityId,
+        )
         .toList();
     return Ok(out);
   }
@@ -1325,17 +1333,19 @@ class DemoActivityRepository implements ActivityRepository {
     String attachmentId,
   ) async {
     await _tick();
-    final a = _s.attachments
-        .where((a) => a.id == attachmentId)
-        .firstOrNull;
+    final a = _s.attachments.where((a) => a.id == attachmentId).firstOrNull;
     if (a == null) return const Err(NotFoundFailure());
-    return Ok(SignedDownload(
-      url: 'about:blank#demo-${a.filename}',
-      expiresAt:
-          DateTime.now().add(const Duration(minutes: 15)).millisecondsSinceEpoch ~/
-              1000,
-      filename: a.filename,
-    ));
+    return Ok(
+      SignedDownload(
+        url: 'about:blank#demo-${a.filename}',
+        expiresAt:
+            DateTime.now()
+                .add(const Duration(minutes: 15))
+                .millisecondsSinceEpoch ~/
+            1000,
+        filename: a.filename,
+      ),
+    );
   }
 }
 
@@ -1357,10 +1367,7 @@ class DemoMilestonesRepository implements MilestonesRepository {
   }
 
   @override
-  Future<Result<Milestone, AppFailure>> get(
-    String projectId,
-    String id,
-  ) async {
+  Future<Result<Milestone, AppFailure>> get(String projectId, String id) async {
     await _tick();
     final m = _s.milestones
         .where((m) => m.id == id && m.projectId == projectId)
@@ -1415,13 +1422,13 @@ class DemoMilestonesRepository implements MilestonesRepository {
       slug: cur.slug,
       startDate: patch.containsKey('start_date')
           ? (patch['start_date'] == null
-              ? null
-              : DateTime.tryParse(patch['start_date'] as String))
+                ? null
+                : DateTime.tryParse(patch['start_date'] as String))
           : cur.startDate,
       endDate: patch.containsKey('end_date')
           ? (patch['end_date'] == null
-              ? null
-              : DateTime.tryParse(patch['end_date'] as String))
+                ? null
+                : DateTime.tryParse(patch['end_date'] as String))
           : cur.endDate,
       closed: cur.closed,
       closedAt: cur.closedAt,
@@ -1435,14 +1442,9 @@ class DemoMilestonesRepository implements MilestonesRepository {
   }
 
   @override
-  Future<Result<Unit, AppFailure>> delete(
-    String projectId,
-    String id,
-  ) async {
+  Future<Result<Unit, AppFailure>> delete(String projectId, String id) async {
     await _tick();
-    _s.milestones.removeWhere(
-      (m) => m.id == id && m.projectId == projectId,
-    );
+    _s.milestones.removeWhere((m) => m.id == id && m.projectId == projectId);
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
@@ -1488,20 +1490,22 @@ class DemoMilestonesRepository implements MilestonesRepository {
     var doneCount = 0;
     for (final s in issues) {
       final pt = s.pointsId == null ? null : statusById[s.pointsId!]?.value;
-      final closed = s.statusId != null &&
-          (statusById[s.statusId]?.isClosed ?? false);
+      final closed =
+          s.statusId != null && (statusById[s.statusId]?.isClosed ?? false);
       totalPoints += pt ?? 0;
       if (closed) {
         donePoints += pt ?? 0;
         doneCount++;
       }
     }
-    return Ok(MilestoneStats(
-      totalPoints: totalPoints,
-      completedPoints: donePoints,
-      totalTasks: issues.length,
-      completedTasks: doneCount,
-    ));
+    return Ok(
+      MilestoneStats(
+        totalPoints: totalPoints,
+        completedPoints: donePoints,
+        totalTasks: issues.length,
+        completedTasks: doneCount,
+      ),
+    );
   }
 }
 
@@ -1515,32 +1519,29 @@ class DemoBoardRepository implements BoardRepository {
     String milestoneId,
   ) async {
     await _tick();
-    final statuses = (_s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[])
-        .where((t) => t.kind == TaxonomyKind.issueStatus)
-        .toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
+    final statuses =
+        (_s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[])
+            .where((t) => t.kind == TaxonomyKind.issueStatus)
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
     final issues = _s.issues
-        .where((u) =>
-            u.projectId == projectId &&
-            u.milestoneId == milestoneId &&
-            u.parentId == null)
+        .where(
+          (u) =>
+              u.projectId == projectId &&
+              u.milestoneId == milestoneId &&
+              u.parentId == null,
+        )
         .toList();
     final columns = <BoardColumn>[
       for (final s in statuses)
         BoardColumn(
           status: s,
-          issues: issues
-              .where((u) => u.statusId == s.id)
-              .map(_card)
-              .toList(),
+          issues: issues.where((u) => u.statusId == s.id).map(_card).toList(),
         ),
       // Trailing no-status column.
       BoardColumn(
         status: null,
-        issues: issues
-            .where((u) => u.statusId == null)
-            .map(_card)
-            .toList(),
+        issues: issues.where((u) => u.statusId == null).map(_card).toList(),
       ),
     ];
     return Ok(BoardSnapshot(milestoneId: milestoneId, columns: columns));
@@ -1548,9 +1549,7 @@ class DemoBoardRepository implements BoardRepository {
 
   BoardCard _card(Issue u) => BoardCard(
     issue: u,
-    subtasks: _s.issues
-        .where((t) => t.parentId == u.id)
-        .toList()
+    subtasks: _s.issues.where((t) => t.parentId == u.id).toList()
       ..sort((a, b) => a.order.compareTo(b.order)),
   );
 }
@@ -1566,9 +1565,7 @@ class DemoWikiRepository implements WikiRepository {
   @override
   Future<Result<List<WikiPage>, AppFailure>> list(String projectId) async {
     await _tick();
-    return Ok(
-      _s.wikiPages.where((p) => p.projectId == projectId).toList(),
-    );
+    return Ok(_s.wikiPages.where((p) => p.projectId == projectId).toList());
   }
 
   @override
@@ -1708,8 +1705,7 @@ class DemoWikiRepository implements WikiRepository {
   }) async {
     await _tick();
     final revs = _s.revisionsByPage[pageId] ?? const <WikiRevision>[];
-    final fromBody =
-        revs.where((r) => r.rev == from).firstOrNull?.body ?? '';
+    final fromBody = revs.where((r) => r.rev == from).firstOrNull?.body ?? '';
     final toBody = to == null
         ? (_s.wikiPages.where((p) => p.id == pageId).firstOrNull?.body ?? '')
         : revs.where((r) => r.rev == to).firstOrNull?.body ?? '';
@@ -1779,9 +1775,9 @@ class DemoLinksRepository implements LinksRepository {
     // sane backend would.
     if (body.sourceKind == body.targetKind && body.sourceId == body.targetId) {
       return const Err(
-        ValidationFailure(fieldErrors: [
-          FieldError(field: 'target_id', code: 'self_link'),
-        ]),
+        ValidationFailure(
+          fieldErrors: [FieldError(field: 'target_id', code: 'self_link')],
+        ),
       );
     }
     final duplicate = _s.links.any(
@@ -1860,12 +1856,14 @@ class DemoAdminRepository implements AdminRepository {
     }
     final all = filtered.toList(growable: false);
     final page = all.skip(offset).take(limit).toList(growable: false);
-    return Ok(AdminUserList(
-      items: page,
-      total: all.length,
-      limit: limit,
-      offset: offset,
-    ));
+    return Ok(
+      AdminUserList(
+        items: page,
+        total: all.length,
+        limit: limit,
+        offset: offset,
+      ),
+    );
   }
 
   @override
@@ -1889,10 +1887,14 @@ class DemoAdminRepository implements AdminRepository {
       createdAt: DateTime.now().toUtc(),
     );
     _s.users.add(user);
-    return Ok(CreateUserResponse(
-      user: user,
-      generatedPassword: body.password == null ? 'demo-generated-password' : null,
-    ));
+    return Ok(
+      CreateUserResponse(
+        user: user,
+        generatedPassword: body.password == null
+            ? 'demo-generated-password'
+            : null,
+      ),
+    );
   }
 
   @override
@@ -1937,10 +1939,12 @@ class DemoAdminRepository implements AdminRepository {
     if (!_s.users.any((u) => u.id == id)) {
       return const Err(NotFoundFailure());
     }
-    return Ok(PasswordResetIssued(
-      resetToken: 'demo-reset-token',
-      expiresAt: DateTime.now().toUtc().add(const Duration(hours: 24)),
-    ));
+    return Ok(
+      PasswordResetIssued(
+        resetToken: 'demo-reset-token',
+        expiresAt: DateTime.now().toUtc().add(const Duration(hours: 24)),
+      ),
+    );
   }
 
   @override
@@ -1951,21 +1955,25 @@ class DemoAdminRepository implements AdminRepository {
     final id = _s.nextId('inv');
     final now = DateTime.now().toUtc();
     final expires = now.add(const Duration(days: 7));
-    _invitations.add(PendingInvitation(
-      id: id,
-      email: body.email,
-      role: body.role,
-      invitedBy: _s.currentUser.id,
-      expiresAt: expires,
-      createdAt: now,
-    ));
-    return Ok(CreateInvitationResponse(
-      invitationId: id,
-      email: body.email,
-      role: body.role,
-      expiresAt: expires,
-      inviteToken: 'demo-invite-token-$id',
-    ));
+    _invitations.add(
+      PendingInvitation(
+        id: id,
+        email: body.email,
+        role: body.role,
+        invitedBy: _s.currentUser.id,
+        expiresAt: expires,
+        createdAt: now,
+      ),
+    );
+    return Ok(
+      CreateInvitationResponse(
+        invitationId: id,
+        email: body.email,
+        role: body.role,
+        expiresAt: expires,
+        inviteToken: 'demo-invite-token-$id',
+      ),
+    );
   }
 
   @override
@@ -2062,6 +2070,98 @@ class DemoAdminRepository implements AdminRepository {
       LdapTestResult(
         ok: false,
         message: 'Demo mode: no directory is configured.',
+      ),
+    );
+  }
+
+  NotificationSettings _notif = const NotificationSettings(
+    mailEnabled: false,
+    mailProvider: 'smtp',
+    mailFromAddress: '',
+    mailFromName: 'IntelliPilot',
+    smtpHost: '',
+    smtpPort: 587,
+    smtpUsername: '',
+    smtpPasswordSet: false,
+    smtpUseStarttls: true,
+    smtpSkipTlsVerify: false,
+    mailgunApiKeySet: false,
+    mailgunDomain: '',
+    mailgunBaseUrl: 'https://api.mailgun.net',
+    matrixEnabled: false,
+    matrixHomeserver: '',
+    matrixRoomId: '',
+    matrixAccessTokenSet: false,
+    telegramEnabled: false,
+    telegramBotTokenSet: false,
+    telegramChatId: '',
+    mailOnLogin: false,
+    mailOnIssueCreated: false,
+    mailOnIssueResolved: false,
+    mailOnDailyReport: false,
+    msgOnLogin: false,
+    msgOnIssueCreated: false,
+    msgOnIssueResolved: false,
+    msgOnDailyReport: false,
+  );
+
+  @override
+  Future<Result<NotificationSettings, AppFailure>>
+  getNotificationSettings() async {
+    await _tick();
+    return Ok(_notif);
+  }
+
+  @override
+  Future<Result<NotificationSettings, AppFailure>> updateNotificationSettings(
+    NotificationSettingsUpdate req,
+  ) async {
+    await _tick();
+    _notif = NotificationSettings(
+      mailEnabled: req.mailEnabled,
+      mailProvider: req.mailProvider,
+      mailFromAddress: req.mailFromAddress,
+      mailFromName: req.mailFromName,
+      smtpHost: req.smtpHost,
+      smtpPort: req.smtpPort,
+      smtpUsername: req.smtpUsername,
+      smtpPasswordSet: req.smtpPassword.isNotEmpty || _notif.smtpPasswordSet,
+      smtpUseStarttls: req.smtpUseStarttls,
+      smtpSkipTlsVerify: req.smtpSkipTlsVerify,
+      mailgunApiKeySet: req.mailgunApiKey.isNotEmpty || _notif.mailgunApiKeySet,
+      mailgunDomain: req.mailgunDomain,
+      mailgunBaseUrl: req.mailgunBaseUrl,
+      matrixEnabled: req.matrixEnabled,
+      matrixHomeserver: req.matrixHomeserver,
+      matrixRoomId: req.matrixRoomId,
+      matrixAccessTokenSet:
+          req.matrixAccessToken.isNotEmpty || _notif.matrixAccessTokenSet,
+      telegramEnabled: req.telegramEnabled,
+      telegramBotTokenSet:
+          req.telegramBotToken.isNotEmpty || _notif.telegramBotTokenSet,
+      telegramChatId: req.telegramChatId,
+      mailOnLogin: req.mailOnLogin,
+      mailOnIssueCreated: req.mailOnIssueCreated,
+      mailOnIssueResolved: req.mailOnIssueResolved,
+      mailOnDailyReport: req.mailOnDailyReport,
+      msgOnLogin: req.msgOnLogin,
+      msgOnIssueCreated: req.msgOnIssueCreated,
+      msgOnIssueResolved: req.msgOnIssueResolved,
+      msgOnDailyReport: req.msgOnDailyReport,
+    );
+    return Ok(_notif);
+  }
+
+  @override
+  Future<Result<NotificationTestResult, AppFailure>> testNotification({
+    required String channel,
+    String? to,
+  }) async {
+    await _tick();
+    return const Ok(
+      NotificationTestResult(
+        ok: false,
+        message: 'Demo mode: no transport is configured.',
       ),
     );
   }

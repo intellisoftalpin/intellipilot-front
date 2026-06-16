@@ -15,6 +15,14 @@ abstract final class AuthValidators {
     Validators.maxLength(254),
   ];
 
+  /// Login identifier: email OR username. The backend's `LoginRequest` only
+  /// length-checks this field (1..254) and resolves which one it is, so the
+  /// client mirrors that rather than forcing an email format.
+  static final List<Validator<dynamic>> loginIdentifier = [
+    Validators.required,
+    Validators.maxLength(254),
+  ];
+
   /// Username: `^[a-zA-Z0-9_.-]+$`, length 3..64.
   static final List<Validator<dynamic>> username = [
     Validators.required,
@@ -31,9 +39,7 @@ abstract final class AuthValidators {
   ];
 
   /// Permissive single-field length cap (used for full_name).
-  static final List<Validator<dynamic>> fullName = [
-    Validators.maxLength(256),
-  ];
+  static final List<Validator<dynamic>> fullName = [Validators.maxLength(256)];
 
   /// Reset token: 1..512 chars. Trim whitespace at the call site.
   static final List<Validator<dynamic>> resetToken = [

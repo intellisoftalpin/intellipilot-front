@@ -14,6 +14,7 @@ class RegisterRequest {
   final String username;
   final String password;
   final String fullName;
+
   /// Platform-invitation token (V011). Required by the server when
   /// `open_registration=false`; ignored otherwise.
   final String? invitationToken;
@@ -129,6 +130,24 @@ final class LoginMfaRequired extends LoginResult {
 
   final String mfaToken;
   final List<String> methods;
+}
+
+/// Public auth configuration from `GET /api/v1/auth/config`. Drives which
+/// unauthenticated entry points to show: self-service signup and email-based
+/// password reset.
+class AuthConfig {
+  const AuthConfig({
+    required this.openRegistration,
+    required this.passwordResetEnabled,
+  });
+
+  factory AuthConfig.fromJson(Map<String, dynamic> json) => AuthConfig(
+    openRegistration: json['open_registration'] == true,
+    passwordResetEnabled: json['password_reset_enabled'] == true,
+  );
+
+  final bool openRegistration;
+  final bool passwordResetEnabled;
 }
 
 class TwoFactorVerifyRequest {

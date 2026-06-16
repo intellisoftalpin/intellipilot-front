@@ -40,6 +40,17 @@ Future<void> showIntelliPilotAboutDialog(BuildContext context) async {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.asset(
+                    'assets/images/app-logo-colored.png',
+                    width: 72,
+                    height: 72,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               _row(theme, t.aboutFieldVersion, BuildInfo.version),
               const SizedBox(height: 8),
               _row(theme, t.aboutFieldBuild, BuildInfo.build),
@@ -60,19 +71,21 @@ Future<void> showIntelliPilotAboutDialog(BuildContext context) async {
               _row(theme, t.aboutFieldChannel, _channelName(t)),
               const SizedBox(height: 16),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(6),
-                  border:
-                      Border.all(color: theme.colorScheme.outlineVariant),
+                  border: Border.all(color: theme.colorScheme.outlineVariant),
                 ),
                 child: SelectableText(
                   BuildInfo.clientIdentifier,
-                  style: AppTheme.mono(ctx, size: 12).copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  style: AppTheme.mono(
+                    ctx,
+                    size: 12,
+                  ).copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ),
             ],
@@ -86,9 +99,9 @@ Future<void> showIntelliPilotAboutDialog(BuildContext context) async {
                 ClipboardData(text: BuildInfo.clientIdentifier),
               );
               if (!ctx.mounted) return;
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                SnackBar(content: Text(t.aboutCopiedToClipboard)),
-              );
+              ScaffoldMessenger.of(
+                ctx,
+              ).showSnackBar(SnackBar(content: Text(t.aboutCopiedToClipboard)));
             },
             label: Text(t.actionCopyBuildInfo),
           ),
@@ -115,12 +128,7 @@ Widget _row(ThemeData theme, String label, String value) {
           ),
         ),
       ),
-      Expanded(
-        child: SelectableText(
-          value,
-          style: theme.textTheme.bodyMedium,
-        ),
-      ),
+      Expanded(child: SelectableText(value, style: theme.textTheme.bodyMedium)),
     ],
   );
 }

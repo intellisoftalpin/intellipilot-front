@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/admin_ldap_page.dart';
+import 'package:intellipilot/features/admin/presentation/admin_notifications_page.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_settings_cubit.dart';
 
 class AdminSettingsPage extends StatelessWidget {
@@ -56,6 +57,19 @@ class _SettingsView extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const AdminLdapPage(),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.notifications_outlined),
+                title: const Text('Notifications'),
+                subtitle: const Text(
+                  'Email (SMTP / Mailgun), Matrix and Telegram delivery.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AdminNotificationsPage(),
                   ),
                 ),
               ),

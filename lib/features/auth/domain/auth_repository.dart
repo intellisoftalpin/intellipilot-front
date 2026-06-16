@@ -5,6 +5,10 @@ import 'package:intellipilot/features/auth/data/dtos/auth_dtos.dart';
 /// Domain contract for the auth endpoints. The bloc/cubit layer talks only to
 /// this interface; the data implementation owns the wire shape.
 abstract interface class AuthRepository {
+  /// Public config (no auth): whether self-service registration is open and
+  /// whether email password reset is available. Drives unauthenticated UI.
+  Future<Result<AuthConfig, AppFailure>> authConfig();
+
   Future<Result<LoginResult, AppFailure>> login({
     required String email,
     required String password,

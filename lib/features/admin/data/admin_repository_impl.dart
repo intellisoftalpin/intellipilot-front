@@ -209,4 +209,48 @@ class AdminRepositoryImpl implements AdminRepository {
       return Err(UnknownFailure(cause: e));
     }
   }
+
+  static const _notif = '$_base/notification-settings';
+
+  @override
+  Future<Result<NotificationSettings, AppFailure>>
+  getNotificationSettings() async {
+    final res = await _api.get(_notif);
+    return _mapOk(
+      res,
+      (r) => NotificationSettings.fromJson(r.data as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  Future<Result<NotificationSettings, AppFailure>> updateNotificationSettings(
+    NotificationSettingsUpdate req,
+  ) async {
+    try {
+      final r = await _api.dio.put<dynamic>(_notif, data: req.toJson());
+      return Ok(NotificationSettings.fromJson(r.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
+    }
+  }
+
+  @override
+  Future<Result<NotificationTestResult, AppFailure>> testNotification({
+    required String channel,
+    String? to,
+  }) async {
+    try {
+      final r = await _api.dio.post<dynamic>(
+        '$_notif/test-$channel',
+        data: channel == 'mail' ? {'to': to ?? ''} : null,
+      );
+      return Ok(NotificationTestResult.fromJson(r.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
+    }
+  }
 }

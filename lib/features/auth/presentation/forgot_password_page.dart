@@ -31,12 +31,27 @@ class _ForgotPasswordView extends StatefulWidget {
 class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
   late final FormGroup _form;
 
+  /// null = still loading the server config; true/false once known. Email reset
+  /// is only offered when a mailer is configured server-side.
+  bool? _resetEnabled;
+
   @override
   void initState() {
     super.initState();
     _form = FormGroup({
       'email': FormControl<String>(validators: AuthValidators.email),
     });
+    _loadConfig();
+  }
+
+  Future<void> _loadConfig() async {
+    final res = await getIt<AuthRepository>().authConfig();
+    if (!mounted) return;
+    res.when(
+      // On error, fall back to showing the form rather than blocking reset.
+      ok: (c) => setState(() => _resetEnabled = c.passwordResetEnabled),
+      err: (_) => setState(() => _resetEnabled = true),
+    );
   }
 
   void _submit() {
@@ -59,64 +74,99 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
           constraints: const BoxConstraints(maxWidth: 420),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: BlocBuilder<ForgotPasswordCubit, ForgotPasswordState>(
-              builder: (context, state) {
-                final busy = state is ForgotPasswordSubmitting;
-                if (state is ForgotPasswordSucceeded) {
-                  return _SuccessPanel(devToken: state.devToken);
-                }
-                return ReactiveForm(
-                  formGroup: _form,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        t.forgotPasswordBody,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      ReactiveTextField<String>(
-                        formControlName: 'email',
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: InputDecoration(
-                          labelText: t.fieldEmail,
-                          prefixIcon: const Icon(Icons.alternate_email),
-                        ),
-                        validationMessages: {
-                          ValidationMessage.required: (_) =>
-                              t.errFieldRequired,
-                          ValidationMessage.email: (_) => t.errEmailInvalid,
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton(
-                        onPressed: busy ? null : _submit,
-                        child: busy
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+            child: _resetEnabled == null
+                ? const Center(child: CircularProgressIndicator())
+                : !_resetEnabled!
+                ? const _ResetUnavailablePanel()
+                : BlocBuilder<ForgotPasswordCubit, ForgotPasswordState>(
+                    builder: (context, state) {
+                      final busy = state is ForgotPasswordSubmitting;
+                      if (state is ForgotPasswordSucceeded) {
+                        return _SuccessPanel(devToken: state.devToken);
+                      }
+                      return ReactiveForm(
+                        formGroup: _form,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              t.forgotPasswordBody,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 16),
+                            ReactiveTextField<String>(
+                              formControlName: 'email',
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: InputDecoration(
+                                labelText: t.fieldEmail,
+                                prefixIcon: const Icon(Icons.alternate_email),
+                              ),
+                              validationMessages: {
+                                ValidationMessage.required: (_) =>
+                                    t.errFieldRequired,
+                                ValidationMessage.email: (_) =>
+                                    t.errEmailInvalid,
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            FilledButton(
+                              onPressed: busy ? null : _submit,
+                              child: busy
+                                  ? const SizedBox.square(
+                                      dimension: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(t.actionSendResetLink),
+                            ),
+                            if (state is ForgotPasswordFailed) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                t.errUnknown,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
                                 ),
-                              )
-                            : Text(t.actionSendResetLink),
-                      ),
-                      if (state is ForgotPasswordFailed) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          t.errUnknown,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
+                              ),
+                            ],
+                          ],
                         ),
-                      ],
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Shown when the server has no mailer configured: there's no way to send a
+/// reset link, so direct the user to an administrator instead of a dead form.
+class _ResetUnavailablePanel extends StatelessWidget {
+  const _ResetUnavailablePanel();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Icon(Icons.mark_email_unread_outlined, size: 56),
+        const SizedBox(height: 16),
+        Text(
+          t.passwordResetUnavailableTitle,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 8),
+        Text(t.passwordResetUnavailableBody, textAlign: TextAlign.center),
+        const SizedBox(height: 24),
+        TextButton(
+          onPressed: () => context.goNamed('login'),
+          child: Text(t.actionBackToLogin),
+        ),
+      ],
     );
   }
 }
@@ -147,7 +197,9 @@ class _SuccessPanel extends StatelessWidget {
         const SizedBox(height: 24),
         FilledButton(
           onPressed: () {
-            final params = devToken == null ? <String, String>{} : {'token': devToken!};
+            final params = devToken == null
+                ? <String, String>{}
+                : {'token': devToken!};
             context.goNamed('reset_password', queryParameters: params);
           },
           child: Text(t.actionContinueToReset),
@@ -181,7 +233,10 @@ class _DevTokenCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.bug_report_outlined, color: colors.onTertiaryContainer),
+              Icon(
+                Icons.bug_report_outlined,
+                color: colors.onTertiaryContainer,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -211,9 +266,9 @@ class _DevTokenCard extends StatelessWidget {
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: token));
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(t.copiedToClipboard)),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(t.copiedToClipboard)));
                 }
               },
             ),

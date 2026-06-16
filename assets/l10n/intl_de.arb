@@ -23,6 +23,7 @@
   "resetPasswordTitle": "Passwort zurücksetzen",
 
   "fieldEmail": "E-Mail",
+  "fieldEmailOrUsername": "E-Mail oder Benutzername",
   "fieldPassword": "Passwort",
   "fieldUsername": "Benutzername",
   "fieldFullName": "Vollständiger Name (optional)",
@@ -83,6 +84,10 @@
   "requestAccessTitle": "Sie haben keinen Zugriff auf diesen Bereich.",
   "requestAccessBody": "Bitten Sie einen Projektadministrator um die Berechtigung „{permission}“.",
   "requestAccessCopied": "E-Mail in die Zwischenablage kopiert.",
+  "securitySectionPassword": "Passwort",
+  "registrationClosedNotice": "Die Selbstregistrierung ist deaktiviert. Bitten Sie einen Administrator um eine Einladung.",
+  "passwordResetUnavailableTitle": "Passwort-Zurücksetzung nicht verfügbar",
+  "passwordResetUnavailableBody": "Auf diesem Server ist keine E-Mail konfiguriert, daher können keine Links zum Zurücksetzen des Passworts gesendet werden. Wenden Sie sich an einen Administrator, um Ihr Passwort zurückzusetzen.",
   "changePasswordTitle": "Passwort ändern",
   "changePasswordBody": "Ändern Sie das Passwort, mit dem Sie sich anmelden.",
   "fieldCurrentPassword": "Aktuelles Passwort",

@@ -51,4 +51,18 @@ abstract interface class AdminRepository {
     required String username,
     required String password,
   });
+
+  Future<Result<NotificationSettings, AppFailure>> getNotificationSettings();
+
+  Future<Result<NotificationSettings, AppFailure>> updateNotificationSettings(
+    NotificationSettingsUpdate req,
+  );
+
+  /// Send a test message over a channel using the saved configuration.
+  /// `channel` is one of `mail` | `matrix` | `telegram`; `to` is the recipient
+  /// for the mail channel (ignored otherwise).
+  Future<Result<NotificationTestResult, AppFailure>> testNotification({
+    required String channel,
+    String? to,
+  });
 }

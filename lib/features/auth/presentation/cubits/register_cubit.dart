@@ -55,8 +55,7 @@ class RegisterCubit extends Cubit<RegisterState> {
       err: (f) => emit(
         RegisterFailed(
           failure: f,
-          fieldErrors:
-              (f is ValidationFailure) ? f.fieldErrors : const [],
+          fieldErrors: (f is ValidationFailure) ? f.fieldErrors : const [],
         ),
       ),
     );

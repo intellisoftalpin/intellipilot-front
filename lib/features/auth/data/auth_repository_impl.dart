@@ -13,6 +13,21 @@ class AuthRepositoryImpl implements AuthRepository {
   final ApiClient _api;
 
   @override
+  Future<Result<AuthConfig, AppFailure>> authConfig() async {
+    final res = await _api.get('$_basePath/config');
+    return res.when(
+      ok: (r) {
+        try {
+          return Ok(AuthConfig.fromJson(r.data as Map<String, dynamic>));
+        } on Object catch (e) {
+          return Err(UnknownFailure(cause: e));
+        }
+      },
+      err: Err.new,
+    );
+  }
+
+  @override
   Future<Result<LoginResult, AppFailure>> login({
     required String email,
     required String password,
@@ -30,9 +45,7 @@ class AuthRepositoryImpl implements AuthRepository {
           }
           return Ok(LoginTokens(TokenResponse.fromJson(data)));
         }
-        return const Err(
-          UnknownFailure(cause: 'login: unexpected body shape'),
-        );
+        return const Err(UnknownFailure(cause: 'login: unexpected body shape'));
       },
       err: Err.new,
     );
@@ -56,7 +69,10 @@ class AuthRepositoryImpl implements AuthRepository {
         invitationToken: invitationToken,
       ).toJson(),
     );
-    return res.when(ok: (_) => const Ok<Unit, AppFailure>(Unit.instance), err: Err.new);
+    return res.when(
+      ok: (_) => const Ok<Unit, AppFailure>(Unit.instance),
+      err: Err.new,
+    );
   }
 
   @override
@@ -121,7 +137,10 @@ class AuthRepositoryImpl implements AuthRepository {
         newPassword: newPassword,
       ).toJson(),
     );
-    return res.when(ok: (_) => const Ok<Unit, AppFailure>(Unit.instance), err: Err.new);
+    return res.when(
+      ok: (_) => const Ok<Unit, AppFailure>(Unit.instance),
+      err: Err.new,
+    );
   }
 
   @override
@@ -144,9 +163,7 @@ class AuthRepositoryImpl implements AuthRepository {
         if (data is Map<String, dynamic>) {
           return Ok(TokenResponse.fromJson(data));
         }
-        return const Err(
-          UnknownFailure(cause: '2fa: unexpected body shape'),
-        );
+        return const Err(UnknownFailure(cause: '2fa: unexpected body shape'));
       },
       err: Err.new,
     );

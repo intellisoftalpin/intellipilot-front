@@ -55,7 +55,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sign in'), findsWidgets);
-    expect(find.text('Email'), findsOneWidget);
+    expect(find.text('Email or username'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
 
     // Trigger validation by submitting empty.
@@ -65,7 +65,7 @@ void main() {
 
     // Try with credentials; FakeAuthRepository defaults to Unauthorized.
     await tester.enterText(
-      find.widgetWithText(TextField, 'Email').first,
+      find.widgetWithText(TextField, 'Email or username').first,
       'u@e.com',
     );
     await tester.enterText(
@@ -88,7 +88,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(
-      find.widgetWithText(TextField, 'Email').first,
+      find.widgetWithText(TextField, 'Email or username').first,
       'u@e.com',
     );
     await tester.enterText(
