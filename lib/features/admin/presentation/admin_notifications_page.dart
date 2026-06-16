@@ -12,19 +12,18 @@ class AdminNotificationsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider<AdminNotificationsCubit>(
       create: (_) => AdminNotificationsCubit(getIt<AdminRepository>())..load(),
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Notifications')),
-        body: BlocBuilder<AdminNotificationsCubit, AdminNotificationsState>(
-          builder: (context, state) => switch (state) {
-            AdminNotificationsLoading() => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            AdminNotificationsFailed(:final failure) => Center(
-              child: Text('Failed: ${failure.debugLabel}'),
-            ),
-            AdminNotificationsLoaded() => _NotificationsForm(state: state),
-          },
-        ),
+      child: BlocBuilder<AdminNotificationsCubit, AdminNotificationsState>(
+        builder: (context, state) => switch (state) {
+          AdminNotificationsLoading() => Scaffold(
+            appBar: AppBar(title: const Text('Notifications')),
+            body: const Center(child: CircularProgressIndicator()),
+          ),
+          AdminNotificationsFailed(:final failure) => Scaffold(
+            appBar: AppBar(title: const Text('Notifications')),
+            body: Center(child: Text('Failed: ${failure.debugLabel}')),
+          ),
+          AdminNotificationsLoaded() => _NotificationsForm(state: state),
+        },
       ),
     );
   }
@@ -129,6 +128,9 @@ class _NotificationsFormState extends State<_NotificationsForm> {
     super.dispose();
   }
 
+  /// All settings always travel together: the backend update is one PUT of the
+  /// full object, and blank secrets are preserved server-side. So a per-tab
+  /// "Save" persists the whole form — the other tabs keep their loaded values.
   NotificationSettingsUpdate _build() => NotificationSettingsUpdate(
     mailEnabled: _mailEnabled,
     mailProvider: _mailProvider,
@@ -160,12 +162,18 @@ class _NotificationsFormState extends State<_NotificationsForm> {
     msgOnDailyReport: _msgDaily,
   );
 
-  Future<void> _save() async {
-    final failure = await context.read<AdminNotificationsCubit>().save(_build());
+  Future<void> _save(String label) async {
+    final failure = await context.read<AdminNotificationsCubit>().save(
+      _build(),
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(failure == null ? 'Saved.' : 'Save failed: ${failure.debugLabel}'),
+        content: Text(
+          failure == null
+              ? '$label saved.'
+              : 'Save failed: ${failure.debugLabel}',
+        ),
       ),
     );
   }
@@ -222,53 +230,65 @@ class _NotificationsFormState extends State<_NotificationsForm> {
 
   @override
   Widget build(BuildContext context) {
-    final saving = widget.state.saving;
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 640),
-        child: ListView(
-          padding: const EdgeInsets.all(24),
+    return DefaultTabController(
+      length: 4,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Notifications'),
+          bottom: const TabBar(
+            isScrollable: true,
+            tabs: [
+              Tab(text: 'Email'),
+              Tab(text: 'Matrix'),
+              Tab(text: 'Telegram'),
+              Tab(text: 'Events'),
+            ],
+          ),
+        ),
+        body: TabBarView(
           children: [
-            const Text(
-              'Test buttons use the saved configuration — save before testing.',
-              style: TextStyle(fontStyle: FontStyle.italic),
-            ),
-            const SizedBox(height: 16),
-            _mailCard(),
-            const SizedBox(height: 16),
-            _matrixCard(),
-            const SizedBox(height: 16),
-            _telegramCard(),
-            const SizedBox(height: 16),
-            _eventsCard(),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: saving ? null : _save,
-              icon: saving
-                  ? const SizedBox.square(
-                      dimension: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_outlined),
-              label: const Text('Save'),
-            ),
+            _tab(_emailChildren()),
+            _tab(_matrixChildren()),
+            _tab(_telegramChildren()),
+            _tab(_eventChildren()),
           ],
         ),
       ),
     );
   }
 
-  Widget _section(String title, List<Widget> children) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ...children,
-        ],
+  /// A scrollable, width-constrained tab body.
+  Widget _tab(List<Widget> children) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 640),
+      child: ListView(padding: const EdgeInsets.all(24), children: children),
+    ),
+  );
+
+  Widget _saveButton(String label) {
+    final saving = widget.state.saving;
+    return Align(
+      alignment: Alignment.centerRight,
+      child: FilledButton.icon(
+        onPressed: saving ? null : () => _save(label),
+        icon: saving
+            ? const SizedBox.square(
+                dimension: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.save_outlined),
+        label: Text('Save $label'),
       ),
+    );
+  }
+
+  Widget _testNote() => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      'Tests use the saved configuration — save before testing.',
+      style: Theme.of(
+        context,
+      ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
     ),
   );
 
@@ -293,27 +313,34 @@ class _NotificationsFormState extends State<_NotificationsForm> {
     ),
   );
 
-  Widget _mailCard() {
+  // -------------------------------------------------------------------------
+  // Email tab
+  // -------------------------------------------------------------------------
+  List<Widget> _emailChildren() {
     final s = widget.state.settings;
-    return _section('Email', [
+    return [
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
         title: const Text('Enable email notifications'),
         value: _mailEnabled,
         onChanged: (v) => setState(() => _mailEnabled = v),
       ),
-      DropdownButtonFormField<String>(
-        initialValue: _mailProvider,
-        decoration: const InputDecoration(labelText: 'Provider'),
-        items: const [
-          DropdownMenuItem(value: 'smtp', child: Text('SMTP')),
-          DropdownMenuItem(value: 'mailgun', child: Text('Mailgun')),
+      const SizedBox(height: 8),
+      Text('Provider', style: Theme.of(context).textTheme.labelLarge),
+      const SizedBox(height: 8),
+      SegmentedButton<String>(
+        segments: const [
+          ButtonSegment(value: 'smtp', label: Text('SMTP')),
+          ButtonSegment(value: 'mailgun', label: Text('Mailgun')),
         ],
-        onChanged: (v) => setState(() => _mailProvider = v ?? 'smtp'),
+        selected: {_mailProvider},
+        onSelectionChanged: (sel) => setState(() => _mailProvider = sel.first),
       ),
       _field(_fromAddr, 'From address', keyboard: TextInputType.emailAddress),
       _field(_fromName, 'From name'),
+      const SizedBox(height: 16),
       if (_mailProvider == 'smtp') ...[
+        Text('SMTP', style: Theme.of(context).textTheme.titleSmall),
         _field(_smtpHost, 'SMTP host'),
         _field(_smtpPort, 'SMTP port', keyboard: TextInputType.number),
         _field(_smtpUser, 'SMTP username'),
@@ -338,8 +365,9 @@ class _NotificationsFormState extends State<_NotificationsForm> {
           onChanged: (v) => setState(() => _smtpSkipVerify = v),
         ),
       ] else ...[
+        Text('Mailgun', style: Theme.of(context).textTheme.titleSmall),
         _field(_mgDomain, 'Mailgun domain'),
-        _field(_mgBase, 'Mailgun base URL'),
+        _field(_mgBase, 'Mailgun base URL (e.g. https://api.eu.mailgun.net)'),
         _field(
           _mgKey,
           'Mailgun API key',
@@ -347,24 +375,35 @@ class _NotificationsFormState extends State<_NotificationsForm> {
           isSet: s.mailgunApiKeySet,
         ),
       ],
-      const SizedBox(height: 12),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: OutlinedButton.icon(
-          onPressed: () => _test('mail'),
-          icon: const Icon(Icons.send_outlined),
-          label: const Text('Send test email'),
-        ),
+      const SizedBox(height: 16),
+      _testNote(),
+      Row(
+        children: [
+          OutlinedButton.icon(
+            onPressed: () => _test('mail'),
+            icon: const Icon(Icons.send_outlined),
+            label: const Text('Send test email'),
+          ),
+          const Spacer(),
+          _saveButton('Email'),
+        ],
       ),
-    ]);
+    ];
   }
 
-  Widget _matrixCard() {
+  // -------------------------------------------------------------------------
+  // Matrix tab
+  // -------------------------------------------------------------------------
+  List<Widget> _matrixChildren() {
     final s = widget.state.settings;
-    return _section('Matrix', [
+    return [
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
         title: const Text('Enable Matrix'),
+        subtitle: const Text(
+          'Only gates automatic notifications — the test '
+          'button works regardless.',
+        ),
         value: _matrixEnabled,
         onChanged: (v) => setState(() => _matrixEnabled = v),
       ),
@@ -376,42 +415,65 @@ class _NotificationsFormState extends State<_NotificationsForm> {
         secret: true,
         isSet: s.matrixAccessTokenSet,
       ),
-      const SizedBox(height: 12),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: OutlinedButton.icon(
-          onPressed: () => _test('matrix'),
-          icon: const Icon(Icons.send_outlined),
-          label: const Text('Send test to Matrix'),
-        ),
+      const SizedBox(height: 16),
+      _testNote(),
+      Row(
+        children: [
+          OutlinedButton.icon(
+            onPressed: () => _test('matrix'),
+            icon: const Icon(Icons.send_outlined),
+            label: const Text('Send test to Matrix'),
+          ),
+          const Spacer(),
+          _saveButton('Matrix'),
+        ],
       ),
-    ]);
+    ];
   }
 
-  Widget _telegramCard() {
+  // -------------------------------------------------------------------------
+  // Telegram tab
+  // -------------------------------------------------------------------------
+  List<Widget> _telegramChildren() {
     final s = widget.state.settings;
-    return _section('Telegram', [
+    return [
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
         title: const Text('Enable Telegram'),
+        subtitle: const Text(
+          'Only gates automatic notifications — the test '
+          'button works regardless.',
+        ),
         value: _tgEnabled,
         onChanged: (v) => setState(() => _tgEnabled = v),
       ),
       _field(_tgToken, 'Bot token', secret: true, isSet: s.telegramBotTokenSet),
       _field(_tgChat, 'Chat ID'),
-      const SizedBox(height: 12),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: OutlinedButton.icon(
-          onPressed: () => _test('telegram'),
-          icon: const Icon(Icons.send_outlined),
-          label: const Text('Send test to Telegram'),
-        ),
+      const SizedBox(height: 16),
+      _testNote(),
+      Row(
+        children: [
+          OutlinedButton.icon(
+            onPressed: () => _test('telegram'),
+            icon: const Icon(Icons.send_outlined),
+            label: const Text('Send test to Telegram'),
+          ),
+          const Spacer(),
+          _saveButton('Telegram'),
+        ],
       ),
-    ]);
+    ];
   }
 
-  Widget _eventsCard() => _section('Events to notify', [
+  // -------------------------------------------------------------------------
+  // Events tab
+  // -------------------------------------------------------------------------
+  List<Widget> _eventChildren() => [
+    Text(
+      'Choose which events trigger a notification, per channel.',
+      style: Theme.of(context).textTheme.bodyMedium,
+    ),
+    const SizedBox(height: 16),
     const Row(
       children: [
         Expanded(flex: 3, child: Text('')),
@@ -447,7 +509,9 @@ class _NotificationsFormState extends State<_NotificationsForm> {
       onMail: (v) => setState(() => _mailDaily = v),
       onMsg: (v) => setState(() => _msgDaily = v),
     ),
-  ]);
+    const SizedBox(height: 24),
+    _saveButton('Events'),
+  ];
 
   Widget _eventRow(
     String label, {

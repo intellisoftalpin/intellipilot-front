@@ -1,3 +1,4 @@
+import 'package:intellipilot/app/branding/branding_cubit.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
@@ -28,9 +29,7 @@ import 'package:logger/logger.dart';
 
 /// Read at bootstrap to decide whether to run the demo wire-up. Flip on with
 /// `--dart-define=INTELLIPILOT_DEMO=true`.
-bool get isDemoMode => const bool.fromEnvironment(
-  'INTELLIPILOT_DEMO',
-);
+bool get isDemoMode => const bool.fromEnvironment('INTELLIPILOT_DEMO');
 
 /// Wire the same DI seams as [configureDependencies], but every repository
 /// points at in-memory implementations driven by a single [DemoStore]. The
@@ -68,14 +67,12 @@ Future<void> configureDemoDependencies() async {
     )
     ..registerSingleton<CookieSetup>(CookieSetup.inMemory())
     ..registerLazySingleton<ThemeCubit>(
-      () => ThemeCubit(
-        getIt<KeyValueStorage>(instanceName: HiveBoxes.settings),
-      ),
+      () =>
+          ThemeCubit(getIt<KeyValueStorage>(instanceName: HiveBoxes.settings)),
     )
     ..registerLazySingleton<LocaleCubit>(
-      () => LocaleCubit(
-        getIt<KeyValueStorage>(instanceName: HiveBoxes.settings),
-      ),
+      () =>
+          LocaleCubit(getIt<KeyValueStorage>(instanceName: HiveBoxes.settings)),
     );
 
   getIt.registerLazySingleton<ApiClient>(() {
@@ -107,20 +104,17 @@ Future<void> configureDemoDependencies() async {
     ..registerLazySingleton<MilestonesRepository>(
       () => DemoMilestonesRepository(store),
     )
-    ..registerLazySingleton<BoardRepository>(
-      () => DemoBoardRepository(store),
-    )
+    ..registerLazySingleton<BoardRepository>(() => DemoBoardRepository(store))
     ..registerLazySingleton<WikiRepository>(() => DemoWikiRepository(store))
-    ..registerLazySingleton<LinksRepository>(
-      () => DemoLinksRepository(store),
-    )
-    ..registerLazySingleton<AdminRepository>(
-      () => DemoAdminRepository(store),
-    )
+    ..registerLazySingleton<LinksRepository>(() => DemoLinksRepository(store))
+    ..registerLazySingleton<AdminRepository>(() => DemoAdminRepository(store))
     ..registerLazySingleton<PasskeyService>(DemoPasskeyService.new)
     ..registerLazySingleton<FileDownloader>(FileDownloader.new)
     ..registerLazySingleton<FilePicker>(FilePicker.new)
     ..registerLazySingleton<SessionBloc>(
       () => SessionBloc(repository: getIt<AuthRepository>()),
+    )
+    ..registerLazySingleton<BrandingCubit>(
+      () => BrandingCubit(getIt<AuthRepository>(), getIt<ApiConfig>()),
     );
 }

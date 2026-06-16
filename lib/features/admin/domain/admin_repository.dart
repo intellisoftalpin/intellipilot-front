@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
@@ -37,6 +39,25 @@ abstract interface class AdminRepository {
   Future<Result<PlatformSettings, AppFailure>> updateOpenRegistration(
     bool value,
   );
+
+  // ---- White-label branding ----
+
+  /// Sets the custom name and/or login message. Pass `null` (or an empty
+  /// string) for a field to clear it and revert to the bundled default.
+  Future<Result<PlatformSettings, AppFailure>> updateBranding({
+    String? appName,
+    String? appMessage,
+  });
+
+  /// Uploads a custom app icon (an image). Replaces any existing one.
+  Future<Result<PlatformSettings, AppFailure>> uploadBrandingIcon({
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  });
+
+  /// Removes the custom app icon, reverting to the bundled default.
+  Future<Result<PlatformSettings, AppFailure>> deleteBrandingIcon();
 
   // ---- LDAP ----
   Future<Result<LdapSettings, AppFailure>> getLdapSettings();

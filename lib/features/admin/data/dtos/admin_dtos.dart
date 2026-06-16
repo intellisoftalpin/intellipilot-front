@@ -39,6 +39,7 @@ class CreateUserRequest {
   final String email;
   final String username;
   final String fullName;
+
   /// When null, the server generates a 24-char temporary password and returns
   /// it ONCE in [CreateUserResponse.generatedPassword].
   final String? password;
@@ -64,6 +65,7 @@ class CreateUserResponse {
   }
 
   final UserProfile user;
+
   /// Present only when the server generated the password — display once.
   final String? generatedPassword;
 }
@@ -128,6 +130,7 @@ class CreateInvitationResponse {
   final String email;
   final String role;
   final DateTime expiresAt;
+
   /// Raw token, present only when the mailer is not configured (dev). Display
   /// to the admin so they can copy-paste an invite link.
   final String? inviteToken;
@@ -167,6 +170,10 @@ class PlatformSettings {
     required this.openRegistration,
     required this.updatedAt,
     this.updatedBy,
+    this.appName,
+    this.appMessage,
+    this.hasCustomIcon = false,
+    this.appIconUpdatedAt,
   });
 
   factory PlatformSettings.fromJson(Map<String, dynamic> json) {
@@ -174,12 +181,28 @@ class PlatformSettings {
       openRegistration: json['open_registration'] as bool? ?? false,
       updatedAt: DateTime.parse(json['updated_at'] as String),
       updatedBy: json['updated_by'] as String?,
+      appName: json['app_name'] as String?,
+      appMessage: json['app_message'] as String?,
+      hasCustomIcon: json['has_custom_icon'] as bool? ?? false,
+      appIconUpdatedAt: json['app_icon_updated_at'] as String?,
     );
   }
 
   final bool openRegistration;
   final DateTime updatedAt;
   final String? updatedBy;
+
+  /// White-label name override; null means the bundled default is in use.
+  final String? appName;
+
+  /// Optional login-screen notice.
+  final String? appMessage;
+
+  /// Whether a custom app icon is stored.
+  final bool hasCustomIcon;
+
+  /// Opaque cache-busting token (RFC3339) for the custom icon URL.
+  final String? appIconUpdatedAt;
 }
 
 // ---------------------------------------------------------------------------
@@ -204,6 +227,12 @@ class LdapSettings {
     required this.connectionTimeoutSecs,
     required this.updatedAt,
     this.updatedBy,
+    this.bindMode = 'direct',
+    this.serviceBindDn = '',
+    this.serviceBindPasswordSet = false,
+    this.userSearchBase = '',
+    this.groupSearchBase = '',
+    this.groupSearchFilter = '(member=%s)',
   });
 
   factory LdapSettings.fromJson(Map<String, dynamic> j) => LdapSettings(
@@ -214,14 +243,22 @@ class LdapSettings {
     baseDn: j['base_dn'] as String? ?? '',
     defaultDomain: j['default_domain'] as String? ?? '',
     bindDnFormat: j['bind_dn_format'] as String? ?? '%s',
-    userSearchFilter: j['user_search_filter'] as String? ?? '(sAMAccountName=%s)',
+    userSearchFilter:
+        j['user_search_filter'] as String? ?? '(sAMAccountName=%s)',
     superadminGroup: j['superadmin_group'] as String? ?? '',
     attrEmail: j['attr_email'] as String? ?? 'mail',
     attrDisplayName: j['attr_display_name'] as String? ?? 'displayName',
     attrUsername: j['attr_username'] as String? ?? 'sAMAccountName',
-    connectionTimeoutSecs: (j['connection_timeout_secs'] as num?)?.toInt() ?? 10,
+    connectionTimeoutSecs:
+        (j['connection_timeout_secs'] as num?)?.toInt() ?? 10,
     updatedAt: DateTime.parse(j['updated_at'] as String),
     updatedBy: j['updated_by'] as String?,
+    bindMode: j['bind_mode'] as String? ?? 'direct',
+    serviceBindDn: j['service_bind_dn'] as String? ?? '',
+    serviceBindPasswordSet: j['service_bind_password_set'] as bool? ?? false,
+    userSearchBase: j['user_search_base'] as String? ?? '',
+    groupSearchBase: j['group_search_base'] as String? ?? '',
+    groupSearchFilter: j['group_search_filter'] as String? ?? '(member=%s)',
   );
 
   final bool enabled;
@@ -240,6 +277,16 @@ class LdapSettings {
   final DateTime updatedAt;
   final String? updatedBy;
 
+  /// `direct` or `search`.
+  final String bindMode;
+  final String serviceBindDn;
+
+  /// Whether a service-account password is stored (the value is never returned).
+  final bool serviceBindPasswordSet;
+  final String userSearchBase;
+  final String groupSearchBase;
+  final String groupSearchFilter;
+
   UpdateLdapSettingsRequest toUpdate() => UpdateLdapSettingsRequest(
     enabled: enabled,
     serverUrl: serverUrl,
@@ -254,6 +301,11 @@ class LdapSettings {
     attrDisplayName: attrDisplayName,
     attrUsername: attrUsername,
     connectionTimeoutSecs: connectionTimeoutSecs,
+    bindMode: bindMode,
+    serviceBindDn: serviceBindDn,
+    userSearchBase: userSearchBase,
+    groupSearchBase: groupSearchBase,
+    groupSearchFilter: groupSearchFilter,
   );
 }
 
@@ -273,6 +325,12 @@ class UpdateLdapSettingsRequest {
     required this.attrDisplayName,
     required this.attrUsername,
     required this.connectionTimeoutSecs,
+    this.bindMode = 'direct',
+    this.serviceBindDn = '',
+    this.serviceBindPassword,
+    this.userSearchBase = '',
+    this.groupSearchBase = '',
+    this.groupSearchFilter = '(member=%s)',
   });
 
   final bool enabled;
@@ -289,6 +347,16 @@ class UpdateLdapSettingsRequest {
   final String attrUsername;
   final int connectionTimeoutSecs;
 
+  /// `direct` (bind as the user) or `search` (service-account search then bind).
+  final String bindMode;
+  final String serviceBindDn;
+
+  /// `null` keeps the stored service password; a non-null value replaces it.
+  final String? serviceBindPassword;
+  final String userSearchBase;
+  final String groupSearchBase;
+  final String groupSearchFilter;
+
   Map<String, dynamic> toJson() => {
     'enabled': enabled,
     'server_url': serverUrl,
@@ -303,6 +371,13 @@ class UpdateLdapSettingsRequest {
     'attr_display_name': attrDisplayName,
     'attr_username': attrUsername,
     'connection_timeout_secs': connectionTimeoutSecs,
+    'bind_mode': bindMode,
+    'service_bind_dn': serviceBindDn,
+    if (serviceBindPassword != null)
+      'service_bind_password': serviceBindPassword,
+    'user_search_base': userSearchBase,
+    'group_search_base': groupSearchBase,
+    'group_search_filter': groupSearchFilter,
   };
 }
 

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intellipilot/app/branding/brand_logo.dart';
+import 'package:intellipilot/app/branding/branding_cubit.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
@@ -28,53 +31,60 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // SessionBloc is a process-wide singleton — read it from the service
-    // locator rather than the widget tree. ShellRoute's inner Navigator
-    // creates a subtree where provider inheritance behaves differently from
-    // direct routes, so this side-steps the scoping issue cleanly.
-    // The router's redirect guard already bounces away when the session
-    // ends, so we just need the *current* state at build time.
-    final session = getIt<SessionBloc>().state;
-    // Under a [ShellRoute] so [GoRouterState.of] is available and rebuilds
-    // on every navigation.
-    final route = GoRouterState.of(context).uri.toString();
-    final hide = _shouldHide(session, route);
-    if (hide) return child;
+    // SessionBloc is a process-wide singleton — drive the shell off the bloc
+    // instance directly rather than the widget tree. ShellRoute's inner
+    // Navigator creates a subtree where provider inheritance behaves
+    // differently from direct routes, so passing the instance side-steps the
+    // scoping issue cleanly.
+    //
+    // We must *subscribe* (BlocBuilder), not just snapshot the current state:
+    // on a hard page load of an authenticated deep link, the session is still
+    // SessionUnknown while the startup cookie-refresh runs. A snapshot would
+    // build chrome-less and never recover (nothing re-triggers a build until
+    // the next navigation). Subscribing rebuilds the shell when the session
+    // settles to SessionAuthenticated.
+    return BlocBuilder<SessionBloc, SessionState>(
+      bloc: getIt<SessionBloc>(),
+      builder: (context, session) {
+        // Under a [ShellRoute] so [GoRouterState.of] is available and rebuilds
+        // on every navigation.
+        final route = GoRouterState.of(context).uri.toString();
+        final hide = _shouldHide(session, route);
+        if (hide) return child;
 
-    final scope = _projectScopeOf(route);
-    final showRail =
-        scope != null && Breakpoints.of(context).isAtLeastMedium;
+        final scope = _projectScopeOf(route);
+        final showRail =
+            scope != null && Breakpoints.of(context).isAtLeastMedium;
 
-    // Project-scoped layout: full-height rail on the left (toggle pinned
-    // at the top), and the top bar shows the current project's icon +
-    // name first — matching Jira's project sidebar.
-    if (showRail) {
-      return Scaffold(
-        body: Row(
-          children: [
-            _ProjectRail(projectId: scope, currentRoute: route),
-            const VerticalDivider(width: 1),
-            Expanded(
-              child: Column(
-                children: [
-                  _TopBar(
-                    activeProjectId: scope,
-                    showBrandMark: false,
+        // Project-scoped layout: full-height rail on the left (toggle pinned
+        // at the top), and the top bar shows the current project's icon +
+        // name first — matching Jira's project sidebar.
+        if (showRail) {
+          return Scaffold(
+            body: Row(
+              children: [
+                _ProjectRail(projectId: scope, currentRoute: route),
+                const VerticalDivider(width: 1),
+                Expanded(
+                  child: Column(
+                    children: [
+                      _TopBar(activeProjectId: scope, showBrandMark: false),
+                      Expanded(child: child),
+                    ],
                   ),
-                  Expanded(child: child),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      );
-    }
+          );
+        }
 
-    // Non-project routes (projects list, account, settings): single
-    // column with the brand mark on the top bar, no rail.
-    return Scaffold(
-      appBar: _TopBar(activeProjectId: scope),
-      body: child,
+        // Non-project routes (projects list, account, settings): single
+        // column with the brand mark on the top bar, no rail.
+        return Scaffold(
+          appBar: _TopBar(activeProjectId: scope),
+          body: child,
+        );
+      },
     );
   }
 
@@ -164,10 +174,7 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                   activeProjectId: activeProjectId,
                 ),
                 const SizedBox(width: 8),
-                _CreateMenu(
-                  compact: compact,
-                  activeProjectId: activeProjectId,
-                ),
+                _CreateMenu(compact: compact, activeProjectId: activeProjectId),
                 const SizedBox(width: 8),
                 const _AvatarMenu(),
                 const SizedBox(width: 12),
@@ -195,19 +202,11 @@ class _BrandMark extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: Image.asset(
-                'assets/images/app-logo.png',
-                width: 24,
-                height: 24,
-                fit: BoxFit.cover,
-              ),
-            ),
+            const BrandLogo(size: 24),
             if (!compact) ...[
               const SizedBox(width: 8),
               Text(
-                'IntelliPilot',
+                context.watch<BrandingCubit>().state.appName ?? 'IntelliPilot',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -248,23 +247,17 @@ class _SearchButton extends StatelessWidget {
     final theme = Theme.of(context);
     if (compact) {
       return IconButton(
-        onPressed: () => openCmdKDialog(
-          context,
-          activeProjectId: activeProjectId,
-        ),
+        onPressed: () =>
+            openCmdKDialog(context, activeProjectId: activeProjectId),
         icon: const Icon(Icons.search),
         tooltip: AppLocalizations.of(context).topNavSearchPlaceholder,
       );
     }
     return InkWell(
-      onTap: () => openCmdKDialog(
-        context,
-        activeProjectId: activeProjectId,
-      ),
+      onTap: () => openCmdKDialog(context, activeProjectId: activeProjectId),
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(8),
@@ -287,19 +280,17 @@ class _SearchButton extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 1,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
                 color: theme.colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 '⌘K',
-                style: AppTheme.mono(context, size: 11).copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+                style: AppTheme.mono(
+                  context,
+                  size: 11,
+                ).copyWith(color: theme.colorScheme.onSurfaceVariant),
               ),
             ),
           ],
@@ -359,8 +350,10 @@ class _CreateMenu extends StatelessWidget {
                   controller.isOpen ? controller.close() : controller.open(),
               label: Text(t.topCreateAction),
               style: FilledButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
             ),
     );
@@ -457,8 +450,9 @@ class _ProjectRailState extends State<_ProjectRail> {
   /// viewport default on the first build.
   bool? _userExpanded;
 
-  late final KeyValueStorage _storage =
-      getIt<KeyValueStorage>(instanceName: HiveBoxes.ui);
+  late final KeyValueStorage _storage = getIt<KeyValueStorage>(
+    instanceName: HiveBoxes.ui,
+  );
 
   @override
   void initState() {
@@ -566,9 +560,8 @@ class _ProjectRailState extends State<_ProjectRail> {
 
   int _selectedIndexFor(String route, List<_RailItem> items) {
     // Walk longest path first so /projects/:id/settings doesn't match /:id.
-    final sorted = [...items]..sort(
-      (a, b) => b.path.length.compareTo(a.path.length),
-    );
+    final sorted = [...items]
+      ..sort((a, b) => b.path.length.compareTo(a.path.length));
     for (final item in sorted) {
       if (route == item.path || route.startsWith('${item.path}/')) {
         return items.indexOf(item);
@@ -621,16 +614,10 @@ class _RailHeader extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8),
         child: Row(
           children: [
-            Icon(
-              expanded ? Icons.menu_open : Icons.menu,
-              size: 20,
-              color: fg,
-            ),
+            Icon(expanded ? Icons.menu_open : Icons.menu, size: 20, color: fg),
             if (expanded) ...[
               const SizedBox(width: 12),
-              Expanded(
-                child: _ProjectName(projectId: projectId),
-              ),
+              Expanded(child: _ProjectName(projectId: projectId)),
             ],
           ],
         ),
@@ -689,8 +676,7 @@ class _RailRow extends StatelessWidget {
                 child: DefaultTextStyle.merge(
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: fg,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),
                   child: label!,
                 ),
@@ -700,11 +686,10 @@ class _RailRow extends StatelessWidget {
         ),
       ),
     );
-    final tappable = InkWell(
-      onTap: onTap,
-      child: row,
-    );
-    return label == null ? Tooltip(message: tooltip, child: tappable) : tappable;
+    final tappable = InkWell(onTap: onTap, child: row);
+    return label == null
+        ? Tooltip(message: tooltip, child: tappable)
+        : tappable;
   }
 }
 
@@ -741,9 +726,8 @@ class _ProjectNameState extends State<_ProjectName> {
   static Future<Project?> _resolve(String id) {
     return _cache.putIfAbsent(
       id,
-      () => getIt<ProjectsRepository>()
-          .getProject(id)
-          .then((r) => r.valueOrNull),
+      () =>
+          getIt<ProjectsRepository>().getProject(id).then((r) => r.valueOrNull),
     );
   }
 

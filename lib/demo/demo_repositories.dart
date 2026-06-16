@@ -2002,11 +2002,66 @@ class DemoAdminRepository implements AdminRepository {
     bool value,
   ) async {
     await _tick();
-    _settings = PlatformSettings(
-      openRegistration: value,
+    _settings = _copySettings(openRegistration: value);
+    return Ok(_settings);
+  }
+
+  /// Rebuilds [_settings] preserving the unspecified fields (PlatformSettings
+  /// is immutable and has no copyWith). `clearName`/`clearMessage`/`clearIcon`
+  /// force the corresponding field back to its default.
+  PlatformSettings _copySettings({
+    bool? openRegistration,
+    String? appName,
+    String? appMessage,
+    bool clearName = false,
+    bool clearMessage = false,
+    bool? hasCustomIcon,
+  }) {
+    return PlatformSettings(
+      openRegistration: openRegistration ?? _settings.openRegistration,
       updatedAt: DateTime.now().toUtc(),
       updatedBy: _s.currentUser.id,
+      appName: clearName ? null : (appName ?? _settings.appName),
+      appMessage: clearMessage ? null : (appMessage ?? _settings.appMessage),
+      hasCustomIcon: hasCustomIcon ?? _settings.hasCustomIcon,
+      appIconUpdatedAt: (hasCustomIcon ?? _settings.hasCustomIcon)
+          ? DateTime.now().toUtc().toIso8601String()
+          : null,
     );
+  }
+
+  @override
+  Future<Result<PlatformSettings, AppFailure>> updateBranding({
+    String? appName,
+    String? appMessage,
+  }) async {
+    await _tick();
+    final name = appName?.trim();
+    final message = appMessage?.trim();
+    _settings = _copySettings(
+      appName: name,
+      appMessage: message,
+      clearName: name == null || name.isEmpty,
+      clearMessage: message == null || message.isEmpty,
+    );
+    return Ok(_settings);
+  }
+
+  @override
+  Future<Result<PlatformSettings, AppFailure>> uploadBrandingIcon({
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  }) async {
+    await _tick();
+    _settings = _copySettings(hasCustomIcon: true);
+    return Ok(_settings);
+  }
+
+  @override
+  Future<Result<PlatformSettings, AppFailure>> deleteBrandingIcon() async {
+    await _tick();
+    _settings = _copySettings(hasCustomIcon: false);
     return Ok(_settings);
   }
 

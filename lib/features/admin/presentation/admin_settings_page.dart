@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
+import 'package:intellipilot/features/admin/presentation/admin_branding_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_ldap_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_notifications_page.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_settings_cubit.dart';
@@ -27,8 +28,9 @@ class _SettingsView extends StatelessWidget {
       appBar: AppBar(title: const Text('Platform settings')),
       body: BlocBuilder<AdminSettingsCubit, AdminSettingsState>(
         builder: (context, state) => switch (state) {
-          AdminSettingsLoading() =>
-            const Center(child: CircularProgressIndicator()),
+          AdminSettingsLoading() => const Center(
+            child: CircularProgressIndicator(),
+          ),
           AdminSettingsFailed(:final failure) => Center(
             child: Text('Failed: ${failure.debugLabel}'),
           ),
@@ -42,11 +44,23 @@ class _SettingsView extends StatelessWidget {
                   'platform invitation token. Default: off.',
                 ),
                 value: settings.openRegistration,
-                onChanged: (v) => context
-                    .read<AdminSettingsCubit>()
-                    .setOpenRegistration(v),
+                onChanged: (v) =>
+                    context.read<AdminSettingsCubit>().setOpenRegistration(v),
               ),
               const Divider(),
+              ListTile(
+                leading: const Icon(Icons.palette_outlined),
+                title: const Text('Branding'),
+                subtitle: const Text(
+                  'White-label the app name, icon and login message.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AdminBrandingPage(),
+                  ),
+                ),
+              ),
               ListTile(
                 leading: const Icon(Icons.account_tree_outlined),
                 title: const Text('LDAP / Directory'),

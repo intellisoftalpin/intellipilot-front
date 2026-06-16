@@ -1,6 +1,7 @@
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intellipilot/app/branding/branding_cubit.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
 import 'package:intellipilot/app/router/app_router.dart';
@@ -21,11 +22,21 @@ class _IntelliPilotAppState extends State<IntelliPilotApp> {
   late final _router = buildRouter(session: getIt<SessionBloc>());
 
   @override
+  void initState() {
+    super.initState();
+    // Best-effort: fetch white-label branding from the public config endpoint.
+    // The UI rebuilds with custom name/icon once it resolves; defaults hold
+    // until then.
+    getIt<BrandingCubit>().load();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
         BlocProvider<ThemeCubit>.value(value: getIt<ThemeCubit>()),
         BlocProvider<LocaleCubit>.value(value: getIt<LocaleCubit>()),
+        BlocProvider<BrandingCubit>.value(value: getIt<BrandingCubit>()),
       ],
       child: BlocBuilder<ThemeCubit, ThemeState>(
         builder: (context, themeState) {
@@ -34,8 +45,13 @@ class _IntelliPilotAppState extends State<IntelliPilotApp> {
               return DynamicColorBuilder(
                 builder: (lightDynamic, darkDynamic) {
                   final useDynamic = themeState.useDynamic;
+                  final brandName = context
+                      .watch<BrandingCubit>()
+                      .state
+                      .appName;
                   return MaterialApp.router(
-                    onGenerateTitle: (ctx) => AppLocalizations.of(ctx).appTitle,
+                    onGenerateTitle: (ctx) =>
+                        brandName ?? AppLocalizations.of(ctx).appTitle,
                     debugShowCheckedModeBanner: false,
                     theme: AppTheme.light(
                       seedColor: themeState.seedColor,

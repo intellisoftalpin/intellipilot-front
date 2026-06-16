@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/error/failure_mapper.dart';
@@ -162,6 +164,67 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   @override
+  Future<Result<PlatformSettings, AppFailure>> updateBranding({
+    String? appName,
+    String? appMessage,
+  }) async {
+    try {
+      final r = await _api.dio.patch<dynamic>(
+        '$_base/branding',
+        data: {'app_name': appName, 'app_message': appMessage},
+      );
+      return Ok(PlatformSettings.fromJson(r.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
+    }
+  }
+
+  @override
+  Future<Result<PlatformSettings, AppFailure>> uploadBrandingIcon({
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  }) async {
+    try {
+      final form = FormData.fromMap({
+        'file': MultipartFile.fromBytes(
+          bytes,
+          filename: filename,
+          contentType: contentType == null
+              ? null
+              : DioMediaType.parse(contentType),
+        ),
+      });
+      final r = await _api.dio.put<dynamic>(
+        '$_base/branding/icon',
+        data: form,
+        // Let dio compute the multipart boundary; otherwise ApiClient's default
+        // application/json header would clobber it.
+        options: Options(contentType: 'multipart/form-data'),
+      );
+      return Ok(PlatformSettings.fromJson(r.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
+    }
+  }
+
+  @override
+  Future<Result<PlatformSettings, AppFailure>> deleteBrandingIcon() async {
+    try {
+      final r = await _api.dio.delete<dynamic>('$_base/branding/icon');
+      return Ok(PlatformSettings.fromJson(r.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
+    }
+  }
+
+  @override
   Future<Result<LdapSettings, AppFailure>> getLdapSettings() async {
     final res = await _api.get('$_base/ldap-settings');
     return _mapOk(
@@ -246,7 +309,9 @@ class AdminRepositoryImpl implements AdminRepository {
         '$_notif/test-$channel',
         data: channel == 'mail' ? {'to': to ?? ''} : null,
       );
-      return Ok(NotificationTestResult.fromJson(r.data as Map<String, dynamic>));
+      return Ok(
+        NotificationTestResult.fromJson(r.data as Map<String, dynamic>),
+      );
     } on DioException catch (e) {
       return Err(mapDioExceptionToFailure(e));
     } on Object catch (e) {

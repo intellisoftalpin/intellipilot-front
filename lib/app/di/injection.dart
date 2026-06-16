@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:intellipilot/app/branding/branding_cubit.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
@@ -147,6 +148,9 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<AdminRepository>(
     () => AdminRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<BrandingCubit>(
+    () => BrandingCubit(getIt<AuthRepository>(), getIt<ApiConfig>()),
+  );
   getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
   getIt.registerLazySingleton<FileDownloader>(FileDownloader.new);
   getIt.registerLazySingleton<FilePicker>(FilePicker.new);
@@ -198,9 +202,7 @@ Future<void> configureForTests({
     )
     ..registerSingleton<CookieSetup>(CookieSetup.inMemory())
     ..registerSingleton<AuthRepository>(authRepository)
-    ..registerSingleton<MfaRepository>(
-      mfaRepository ?? _NoopMfaRepository(),
-    )
+    ..registerSingleton<MfaRepository>(mfaRepository ?? _NoopMfaRepository())
     ..registerSingleton<PasskeyService>(
       passkeyService ?? const _StubPasskeyService(),
     )
@@ -225,9 +227,7 @@ Future<void> configureForTests({
     ..registerSingleton<BoardRepository>(
       boardRepository ?? _NoopBoardRepository(),
     )
-    ..registerSingleton<WikiRepository>(
-      wikiRepository ?? _NoopWikiRepository(),
-    )
+    ..registerSingleton<WikiRepository>(wikiRepository ?? _NoopWikiRepository())
     ..registerSingleton<LinksRepository>(
       linksRepository ?? _NoopLinksRepository(),
     )
@@ -237,7 +237,10 @@ Future<void> configureForTests({
     ..registerSingleton<FilePicker>(filePicker ?? const _StubFilePicker())
     ..registerSingleton<SessionBloc>(SessionBloc(repository: authRepository))
     ..registerSingleton<ThemeCubit>(ThemeCubit(settingsStorage))
-    ..registerSingleton<LocaleCubit>(LocaleCubit(settingsStorage));
+    ..registerSingleton<LocaleCubit>(LocaleCubit(settingsStorage))
+    ..registerSingleton<BrandingCubit>(
+      BrandingCubit(authRepository, getIt<ApiConfig>()),
+    );
 
   getIt.registerSingleton<ApiClient>(
     ApiClient(
@@ -278,74 +281,62 @@ class _StubPasskeyService implements PasskeyService {
 
 class _NoopProfileRepository implements ProfileRepository {
   @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError(
-        '_NoopProfileRepository.${invocation.memberName}',
-      );
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    '_NoopProfileRepository.${invocation.memberName}',
+  );
 }
 
 class _NoopProjectsRepository implements ProjectsRepository {
   @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError(
-        '_NoopProjectsRepository.${invocation.memberName}',
-      );
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    '_NoopProjectsRepository.${invocation.memberName}',
+  );
 }
 
 class _NoopCatalogRepository implements CatalogRepository {
   @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError(
-        '_NoopCatalogRepository.${invocation.memberName}',
-      );
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    '_NoopCatalogRepository.${invocation.memberName}',
+  );
 }
 
 class _NoopBacklogRepository implements BacklogRepository {
   @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError(
-        '_NoopBacklogRepository.${invocation.memberName}',
-      );
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    '_NoopBacklogRepository.${invocation.memberName}',
+  );
 }
 
 class _NoopActivityRepository implements ActivityRepository {
   @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError(
-        '_NoopActivityRepository.${invocation.memberName}',
-      );
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    '_NoopActivityRepository.${invocation.memberName}',
+  );
 }
 
 class _NoopMilestonesRepository implements MilestonesRepository {
   @override
-  dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError(
-        '_NoopMilestonesRepository.${invocation.memberName}',
-      );
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    '_NoopMilestonesRepository.${invocation.memberName}',
+  );
 }
 
 class _NoopBoardRepository implements BoardRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError(
-        '_NoopBoardRepository.${invocation.memberName}',
-      );
+      throw UnimplementedError('_NoopBoardRepository.${invocation.memberName}');
 }
 
 class _NoopWikiRepository implements WikiRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError(
-        '_NoopWikiRepository.${invocation.memberName}',
-      );
+      throw UnimplementedError('_NoopWikiRepository.${invocation.memberName}');
 }
 
 class _NoopLinksRepository implements LinksRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
-      throw UnimplementedError(
-        '_NoopLinksRepository.${invocation.memberName}',
-      );
+      throw UnimplementedError('_NoopLinksRepository.${invocation.memberName}');
 }
 
 class _InMemoryDownloader implements FileDownloader {

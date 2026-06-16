@@ -133,21 +133,42 @@ final class LoginMfaRequired extends LoginResult {
 }
 
 /// Public auth configuration from `GET /api/v1/auth/config`. Drives which
-/// unauthenticated entry points to show: self-service signup and email-based
-/// password reset.
+/// unauthenticated entry points to show (self-service signup, email-based
+/// password reset) and the white-label branding shown pre-login.
 class AuthConfig {
   const AuthConfig({
     required this.openRegistration,
     required this.passwordResetEnabled,
+    this.appName,
+    this.appMessage,
+    this.hasCustomIcon = false,
+    this.appIconUpdatedAt,
   });
 
   factory AuthConfig.fromJson(Map<String, dynamic> json) => AuthConfig(
     openRegistration: json['open_registration'] == true,
     passwordResetEnabled: json['password_reset_enabled'] == true,
+    appName: json['app_name'] as String?,
+    appMessage: json['app_message'] as String?,
+    hasCustomIcon: json['has_custom_icon'] == true,
+    appIconUpdatedAt: json['app_icon_updated_at'] as String?,
   );
 
   final bool openRegistration;
   final bool passwordResetEnabled;
+
+  /// White-label name override. `null` means the bundled default is in use.
+  final String? appName;
+
+  /// Optional notice shown to users on the login screen.
+  final String? appMessage;
+
+  /// Whether a custom app icon is served from `GET /api/v1/branding/icon`.
+  final bool hasCustomIcon;
+
+  /// Raw RFC3339 timestamp of the last icon change — used only as an opaque
+  /// cache-busting token on the icon URL.
+  final String? appIconUpdatedAt;
 }
 
 class TwoFactorVerifyRequest {
