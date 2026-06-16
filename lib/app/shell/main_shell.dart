@@ -205,10 +205,13 @@ class _BrandMark extends StatelessWidget {
             const BrandLogo(size: 24),
             if (!compact) ...[
               const SizedBox(width: 8),
-              Text(
-                context.watch<BrandingCubit>().state.appName ?? 'IntelliPilot',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+              BlocBuilder<BrandingCubit, Branding>(
+                bloc: getIt<BrandingCubit>(),
+                builder: (context, branding) => Text(
+                  branding.appName ?? 'IntelliPilot',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],

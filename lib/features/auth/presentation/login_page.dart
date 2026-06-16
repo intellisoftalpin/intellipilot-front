@@ -61,131 +61,139 @@ class _LoginViewState extends State<_LoginView> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final branding = context.watch<BrandingCubit>().state;
-    return Scaffold(
-      body: BlocListener<LoginCubit, LoginState>(
-        listener: (context, state) {
-          if (state is LoginSucceeded) {
-            // Router guard redirects automatically; no-op.
-          }
-        },
-        child: Column(
-          children: [
-            Expanded(
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: ReactiveForm(
-                      formGroup: _form,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Center(
-                            child: BrandLogo(size: 88, borderRadius: 18),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            branding.appName ?? t.appTitle,
-                            style: Theme.of(context).textTheme.headlineMedium,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            t.loginSubtitle,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          if (branding.appMessage != null) ...[
+    return BlocBuilder<BrandingCubit, Branding>(
+      bloc: getIt<BrandingCubit>(),
+      builder: (context, branding) => Scaffold(
+        body: BlocListener<LoginCubit, LoginState>(
+          listener: (context, state) {
+            if (state is LoginSucceeded) {
+              // Router guard redirects automatically; no-op.
+            }
+          },
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: ReactiveForm(
+                        formGroup: _form,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Center(
+                              child: BrandLogo(size: 88, borderRadius: 18),
+                            ),
                             const SizedBox(height: 16),
-                            _AuthInfoBanner(text: branding.appMessage!),
-                          ],
-                          const SizedBox(height: 24),
-                          ReactiveTextField<String>(
-                            formControlName: 'email',
-                            autofillHints: const [AutofillHints.username],
-                            decoration: InputDecoration(
-                              labelText: t.fieldEmailOrUsername,
-                              prefixIcon: const Icon(Icons.person_outline),
+                            Text(
+                              branding.appName ?? t.appTitle,
+                              style: Theme.of(context).textTheme.headlineMedium,
+                              textAlign: TextAlign.center,
                             ),
-                            validationMessages: {
-                              ValidationMessage.required: (_) =>
-                                  t.errFieldRequired,
-                              ValidationMessage.maxLength: (_) => t.errTooLong,
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          ReactiveTextField<String>(
-                            formControlName: 'password',
-                            obscureText: true,
-                            autofillHints: const [AutofillHints.password],
-                            decoration: InputDecoration(
-                              labelText: t.fieldPassword,
-                              prefixIcon: const Icon(Icons.lock_outline),
+                            const SizedBox(height: 8),
+                            Text(
+                              t.loginSubtitle,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodyMedium,
                             ),
-                            validationMessages: {
-                              ValidationMessage.required: (_) =>
-                                  t.errFieldRequired,
-                              ValidationMessage.minLength: (_) =>
-                                  t.errPasswordMinLength,
-                            },
-                          ),
-                          const SizedBox(height: 8),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
+                            if (branding.appMessage != null) ...[
+                              const SizedBox(height: 16),
+                              _AuthInfoBanner(text: branding.appMessage!),
+                            ],
+                            const SizedBox(height: 24),
+                            ReactiveTextField<String>(
+                              formControlName: 'email',
+                              autofillHints: const [AutofillHints.username],
+                              decoration: InputDecoration(
+                                labelText: t.fieldEmailOrUsername,
+                                prefixIcon: const Icon(Icons.person_outline),
+                              ),
+                              validationMessages: {
+                                ValidationMessage.required: (_) =>
+                                    t.errFieldRequired,
+                                ValidationMessage.maxLength: (_) =>
+                                    t.errTooLong,
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            ReactiveTextField<String>(
+                              formControlName: 'password',
+                              obscureText: true,
+                              autofillHints: const [AutofillHints.password],
+                              decoration: InputDecoration(
+                                labelText: t.fieldPassword,
+                                prefixIcon: const Icon(Icons.lock_outline),
+                              ),
+                              validationMessages: {
+                                ValidationMessage.required: (_) =>
+                                    t.errFieldRequired,
+                                ValidationMessage.minLength: (_) =>
+                                    t.errPasswordMinLength,
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () =>
+                                    context.goNamed('forgot_password'),
+                                child: Text(t.linkForgotPassword),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            BlocBuilder<LoginCubit, LoginState>(
+                              builder: (context, state) {
+                                final busy = state is LoginSubmitting;
+                                return FilledButton(
+                                  onPressed: busy ? null : _submit,
+                                  child: busy
+                                      ? const SizedBox.square(
+                                          dimension: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : Text(t.actionSignIn),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            BlocBuilder<LoginCubit, LoginState>(
+                              builder: (_, state) {
+                                if (state is LoginFailed) {
+                                  return _AuthErrorBanner(
+                                    failure: state.failure,
+                                  );
+                                }
+                                if (state is LoginMfaChallenged) {
+                                  return _AuthInfoBanner(
+                                    text: t.loginMfaNotice,
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            TextButton.icon(
+                              icon: const Icon(Icons.fingerprint, size: 18),
                               onPressed: () =>
-                                  context.goNamed('forgot_password'),
-                              child: Text(t.linkForgotPassword),
+                                  context.goNamed('passkey_sign_in'),
+                              label: Text(t.linkSignInWithPasskey),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          BlocBuilder<LoginCubit, LoginState>(
-                            builder: (context, state) {
-                              final busy = state is LoginSubmitting;
-                              return FilledButton(
-                                onPressed: busy ? null : _submit,
-                                child: busy
-                                    ? const SizedBox.square(
-                                        dimension: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      )
-                                    : Text(t.actionSignIn),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          BlocBuilder<LoginCubit, LoginState>(
-                            builder: (_, state) {
-                              if (state is LoginFailed) {
-                                return _AuthErrorBanner(failure: state.failure);
-                              }
-                              if (state is LoginMfaChallenged) {
-                                return _AuthInfoBanner(text: t.loginMfaNotice);
-                              }
-                              return const SizedBox.shrink();
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          TextButton.icon(
-                            icon: const Icon(Icons.fingerprint, size: 18),
-                            onPressed: () => context.goNamed('passkey_sign_in'),
-                            label: Text(t.linkSignInWithPasskey),
-                          ),
-                          const SizedBox(height: 4),
-                          const _RegisterLink(),
-                        ],
+                            const SizedBox(height: 4),
+                            const _RegisterLink(),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-            const _LoginFooter(),
-          ],
+              const _LoginFooter(),
+            ],
+          ),
         ),
       ),
     );
