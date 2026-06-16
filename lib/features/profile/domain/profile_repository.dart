@@ -9,6 +9,14 @@ abstract interface class ProfileRepository {
     ProfileUpdateRequest patch,
   );
 
+  /// Change the current user's password (local accounts only). On success the
+  /// backend revokes every session, so the caller must send the user back to
+  /// the login screen. LDAP accounts are rejected by the backend (409).
+  Future<Result<Unit, AppFailure>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+
   Future<Result<AccountErasureResponse, AppFailure>> deleteAccount();
 
   /// GDPR export — returns the raw decoded JSON body. UI layer is responsible

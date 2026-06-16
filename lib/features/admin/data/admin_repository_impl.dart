@@ -13,6 +13,25 @@ class AdminRepositoryImpl implements AdminRepository {
   AdminRepositoryImpl(this._api);
   final ApiClient _api;
 
+  /// Maps a successful response body, converting ANY parse error (e.g. a
+  /// malformed/non-RFC3339 date the DTO can't decode) into an [AppFailure]
+  /// instead of letting it throw. A throw here would propagate out of the
+  /// awaiting cubit and leave its loading state stuck forever (infinite
+  /// spinner) rather than surfacing an error to the user.
+  Result<T, AppFailure> _mapOk<T>(
+    Result<Response<dynamic>, AppFailure> res,
+    T Function(Response<dynamic> r) parse,
+  ) => res.when(
+    ok: (r) {
+      try {
+        return Ok(parse(r));
+      } on Object catch (e) {
+        return Err(UnknownFailure(cause: e));
+      }
+    },
+    err: Err.new,
+  );
+
   @override
   Future<Result<AdminUserList, AppFailure>> listUsers({
     String? q,
@@ -22,9 +41,9 @@ class AdminRepositoryImpl implements AdminRepository {
     final params = <String, dynamic>{'limit': limit, 'offset': offset};
     if (q != null && q.isNotEmpty) params['q'] = q;
     final res = await _api.get('$_base/users', query: params);
-    return res.when(
-      ok: (r) => Ok(AdminUserList.fromJson(r.data as Map<String, dynamic>)),
-      err: Err.new,
+    return _mapOk(
+      res,
+      (r) => AdminUserList.fromJson(r.data as Map<String, dynamic>),
     );
   }
 
@@ -33,10 +52,9 @@ class AdminRepositoryImpl implements AdminRepository {
     CreateUserRequest body,
   ) async {
     final res = await _api.post('$_base/users', body: body.toJson());
-    return res.when(
-      ok: (r) =>
-          Ok(CreateUserResponse.fromJson(r.data as Map<String, dynamic>)),
-      err: Err.new,
+    return _mapOk(
+      res,
+      (r) => CreateUserResponse.fromJson(r.data as Map<String, dynamic>),
     );
   }
 
@@ -53,6 +71,8 @@ class AdminRepositoryImpl implements AdminRepository {
       return Ok(UserProfile.fromJson(r.data as Map<String, dynamic>));
     } on DioException catch (e) {
       return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
     }
   }
 
@@ -74,10 +94,9 @@ class AdminRepositoryImpl implements AdminRepository {
     String id,
   ) async {
     final res = await _api.post('$_base/users/$id/reset-password');
-    return res.when(
-      ok: (r) =>
-          Ok(PasswordResetIssued.fromJson(r.data as Map<String, dynamic>)),
-      err: Err.new,
+    return _mapOk(
+      res,
+      (r) => PasswordResetIssued.fromJson(r.data as Map<String, dynamic>),
     );
   }
 
@@ -86,25 +105,20 @@ class AdminRepositoryImpl implements AdminRepository {
     CreateInvitationRequest body,
   ) async {
     final res = await _api.post('$_base/invitations', body: body.toJson());
-    return res.when(
-      ok: (r) => Ok(
-        CreateInvitationResponse.fromJson(r.data as Map<String, dynamic>),
-      ),
-      err: Err.new,
+    return _mapOk(
+      res,
+      (r) => CreateInvitationResponse.fromJson(r.data as Map<String, dynamic>),
     );
   }
 
   @override
   Future<Result<List<PendingInvitation>, AppFailure>> listInvitations() async {
     final res = await _api.get('$_base/invitations');
-    return res.when(
-      ok: (r) {
-        final list = (r.data as List<dynamic>? ?? const [])
-            .map((e) => PendingInvitation.fromJson(e as Map<String, dynamic>))
-            .toList(growable: false);
-        return Ok(list);
-      },
-      err: Err.new,
+    return _mapOk(
+      res,
+      (r) => (r.data as List<dynamic>? ?? const [])
+          .map((e) => PendingInvitation.fromJson(e as Map<String, dynamic>))
+          .toList(growable: false),
     );
   }
 
@@ -124,9 +138,9 @@ class AdminRepositoryImpl implements AdminRepository {
   @override
   Future<Result<PlatformSettings, AppFailure>> getSettings() async {
     final res = await _api.get('$_base/settings');
-    return res.when(
-      ok: (r) => Ok(PlatformSettings.fromJson(r.data as Map<String, dynamic>)),
-      err: Err.new,
+    return _mapOk(
+      res,
+      (r) => PlatformSettings.fromJson(r.data as Map<String, dynamic>),
     );
   }
 
@@ -142,15 +156,17 @@ class AdminRepositoryImpl implements AdminRepository {
       return Ok(PlatformSettings.fromJson(r.data as Map<String, dynamic>));
     } on DioException catch (e) {
       return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
     }
   }
 
   @override
   Future<Result<LdapSettings, AppFailure>> getLdapSettings() async {
     final res = await _api.get('$_base/ldap-settings');
-    return res.when(
-      ok: (r) => Ok(LdapSettings.fromJson(r.data as Map<String, dynamic>)),
-      err: Err.new,
+    return _mapOk(
+      res,
+      (r) => LdapSettings.fromJson(r.data as Map<String, dynamic>),
     );
   }
 
@@ -166,6 +182,8 @@ class AdminRepositoryImpl implements AdminRepository {
       return Ok(LdapSettings.fromJson(r.data as Map<String, dynamic>));
     } on DioException catch (e) {
       return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
     }
   }
 
@@ -187,6 +205,8 @@ class AdminRepositoryImpl implements AdminRepository {
       return Ok(LdapTestResult.fromJson(r.data as Map<String, dynamic>));
     } on DioException catch (e) {
       return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
     }
   }
 }

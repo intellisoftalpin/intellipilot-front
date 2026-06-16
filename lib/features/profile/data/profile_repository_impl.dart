@@ -39,6 +39,25 @@ class ProfileRepositoryImpl implements ProfileRepository {
   }
 
   @override
+  Future<Result<Unit, AppFailure>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _api.dio.post<dynamic>(
+        '$_me/password',
+        data: {
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        },
+      );
+      return const Ok<Unit, AppFailure>(Unit.instance);
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
   Future<Result<AccountErasureResponse, AppFailure>> deleteAccount() async {
     try {
       final response = await _api.dio.delete<dynamic>(_me);

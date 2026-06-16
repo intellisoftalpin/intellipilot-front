@@ -96,6 +96,14 @@ class FakeProfileRepository implements ProfileRepository {
           }),
         );
   }
+
+  @override
+  Future<Result<Unit, AppFailure>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
 }
 
 class RecordingDownloader implements FileDownloader {

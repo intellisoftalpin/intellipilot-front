@@ -1250,5 +1250,21 @@
   "boardViewStories": "Stories",
   "@boardViewStories": { "description": "Toggle label on the board page showing user-story columns." },
   "boardViewTasks": "Tasks",
-  "@boardViewTasks": { "description": "Toggle label on the board page showing task columns." }
+  "@boardViewTasks": { "description": "Toggle label on the board page showing task columns." },
+  "changePasswordTitle": "Change password",
+  "@changePasswordTitle": { "description": "Section and dialog title for self-service password change." },
+  "changePasswordBody": "Update the password you use to sign in.",
+  "@changePasswordBody": { "description": "Body copy for the change-password section." },
+  "fieldCurrentPassword": "Current password",
+  "@fieldCurrentPassword": { "description": "Field label." },
+  "fieldConfirmPassword": "Confirm new password",
+  "@fieldConfirmPassword": { "description": "Field label." },
+  "actionChangePassword": "Change password",
+  "@actionChangePassword": { "description": "Submit button for the change-password dialog." },
+  "changePasswordSuccessSnack": "Password changed. Sign in again to continue.",
+  "@changePasswordSuccessSnack": { "description": "Snackbar after a successful password change; all sessions are revoked." },
+  "errCurrentPasswordIncorrect": "Current password is incorrect.",
+  "@errCurrentPasswordIncorrect": { "description": "Inline error when the current password does not match." },
+  "errPasswordsDoNotMatch": "Passwords do not match.",
+  "@errPasswordsDoNotMatch": { "description": "Inline error when the new password and its confirmation differ." }
 }

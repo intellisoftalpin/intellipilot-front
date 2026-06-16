@@ -157,6 +157,15 @@ class DemoProfileRepository implements ProfileRepository {
   }
 
   @override
+  Future<Result<Unit, AppFailure>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _tick();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
   Future<Result<Map<String, dynamic>, AppFailure>> exportData() async {
     await _tick();
     return Ok({

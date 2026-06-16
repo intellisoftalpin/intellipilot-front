@@ -82,5 +82,13 @@
 
   "requestAccessTitle": "Sie haben keinen Zugriff auf diesen Bereich.",
   "requestAccessBody": "Bitten Sie einen Projektadministrator um die Berechtigung „{permission}“.",
-  "requestAccessCopied": "E-Mail in die Zwischenablage kopiert."
+  "requestAccessCopied": "E-Mail in die Zwischenablage kopiert.",
+  "changePasswordTitle": "Passwort ändern",
+  "changePasswordBody": "Ändern Sie das Passwort, mit dem Sie sich anmelden.",
+  "fieldCurrentPassword": "Aktuelles Passwort",
+  "fieldConfirmPassword": "Neues Passwort bestätigen",
+  "actionChangePassword": "Passwort ändern",
+  "changePasswordSuccessSnack": "Passwort geändert. Bitte melden Sie sich erneut an.",
+  "errCurrentPasswordIncorrect": "Aktuelles Passwort ist falsch.",
+  "errPasswordsDoNotMatch": "Passwörter stimmen nicht überein."
 }
