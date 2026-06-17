@@ -7,6 +7,7 @@ import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// White-label branding admin page: override the app name, the login-screen
 /// message and the app icon, each resettable to the bundled default.
@@ -73,7 +74,10 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
         });
         _toast(okMessage);
       },
-      err: (_) async => _toast('Update failed.', isError: true),
+      err: (_) async => _toast(
+        AppLocalizations.of(context).adminBrandingUpdateFailed,
+        isError: true,
+      ),
     );
     if (mounted) setState(() => _busy = false);
   }
@@ -93,21 +97,24 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
       appName: _name.text.trim(),
       appMessage: _message.text.trim(),
     ),
-    'Branding saved.',
+    AppLocalizations.of(context).adminBrandingSaved,
   );
 
   Future<void> _resetName() {
     _name.clear();
     return _run(
       () => _repo.updateBranding(appName: '', appMessage: _message.text.trim()),
-      'Name reset to default.',
+      AppLocalizations.of(context).adminBrandingNameReset,
     );
   }
 
   Future<void> _pickIcon() async {
     final picker = getIt<FilePicker>();
     if (!picker.isSupported) {
-      _toast('File upload is not supported on this platform.', isError: true);
+      _toast(
+        AppLocalizations.of(context).adminBrandingUploadUnsupported,
+        isError: true,
+      );
       return;
     }
     final picked = await picker.pickSingleFile();
@@ -118,17 +125,21 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
         bytes: picked.bytes,
         contentType: picked.contentType,
       ),
-      'Icon updated.',
+      AppLocalizations.of(context).adminBrandingIconUpdated,
     );
   }
 
-  Future<void> _resetIcon() =>
-      _run(_repo.deleteBrandingIcon, 'Icon reset to default.');
+  Future<void> _resetIcon() => _run(
+    _repo.deleteBrandingIcon,
+    AppLocalizations.of(context).adminBrandingIconReset,
+  );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Branding')),
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context).adminBrandingTitle),
+      ),
       body: _buildBody(),
     );
   }
@@ -136,7 +147,13 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
   Widget _buildBody() {
     if (_settings == null) {
       if (_loadError != null) {
-        return Center(child: Text('Failed: ${_loadError!.debugLabel}'));
+        return Center(
+          child: Text(
+            AppLocalizations.of(
+              context,
+            ).adminBrandingLoadFailed(_loadError!.debugLabel),
+          ),
+        );
       }
       return const Center(child: CircularProgressIndicator());
     }
@@ -149,14 +166,16 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
           padding: const EdgeInsets.all(16),
           children: [
             Text(
-              'White-label these surfaces — the login screen, the top bar and '
-              'the browser tab. Empty fields fall back to the bundled defaults.',
+              AppLocalizations.of(context).adminBrandingIntro,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
 
             // ---- App icon ----
-            Text('App icon', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              AppLocalizations.of(context).adminBrandingAppIcon,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -173,21 +192,24 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
                           FilledButton.tonalIcon(
                             icon: const Icon(Icons.upload_file),
                             onPressed: _pickIcon,
-                            label: const Text('Upload icon'),
+                            label: Text(
+                              AppLocalizations.of(context).adminBrandingUploadIcon,
+                            ),
                           ),
                           OutlinedButton.icon(
                             icon: const Icon(Icons.restart_alt),
                             onPressed: settings.hasCustomIcon
                                 ? _resetIcon
                                 : null,
-                            label: const Text('Reset to default icon'),
+                            label: Text(
+                              AppLocalizations.of(context).adminBrandingResetIcon,
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'PNG or other image, up to 1 MB. A square image works '
-                        'best.',
+                        AppLocalizations.of(context).adminBrandingIconHint,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -198,16 +220,17 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
             const Divider(height: 40),
 
             // ---- App name ----
-            Text('App name', style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              AppLocalizations.of(context).adminBrandingAppName,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: _name,
               maxLength: 64,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'IntelliPilot',
-                helperText:
-                    'Shown on login, in the top bar and the browser '
-                    'tab. Leave empty for the default.',
+                helperText: AppLocalizations.of(context).adminBrandingNameHelper,
               ),
             ),
             Align(
@@ -215,14 +238,16 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
               child: TextButton.icon(
                 icon: const Icon(Icons.restart_alt, size: 18),
                 onPressed: settings.appName == null ? null : _resetName,
-                label: const Text('Reset to default name'),
+                label: Text(
+                  AppLocalizations.of(context).adminBrandingResetName,
+                ),
               ),
             ),
             const Divider(height: 40),
 
             // ---- Message ----
             Text(
-              'Message to users (optional)',
+              AppLocalizations.of(context).adminBrandingMessageTitle,
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
@@ -230,9 +255,10 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
               controller: _message,
               maxLength: 500,
               maxLines: 4,
-              decoration: const InputDecoration(
-                hintText: 'e.g. a welcome note or maintenance notice',
-                helperText: 'Shown on the login screen. Leave empty to hide.',
+              decoration: InputDecoration(
+                hintText: AppLocalizations.of(context).adminBrandingMessageHint,
+                helperText:
+                    AppLocalizations.of(context).adminBrandingMessageHelper,
                 alignLabelWithHint: true,
               ),
             ),
@@ -242,7 +268,9 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
               child: FilledButton.icon(
                 icon: const Icon(Icons.save_outlined),
                 onPressed: _saveText,
-                label: const Text('Save name & message'),
+                label: Text(
+                  AppLocalizations.of(context).adminBrandingSaveButton,
+                ),
               ),
             ),
           ],

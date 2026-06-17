@@ -6,6 +6,7 @@ import 'package:intellipilot/features/admin/presentation/admin_branding_page.dar
 import 'package:intellipilot/features/admin/presentation/admin_ldap_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_notifications_page.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_settings_cubit.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class AdminSettingsPage extends StatelessWidget {
   const AdminSettingsPage({super.key});
@@ -24,25 +25,23 @@ class _SettingsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Platform settings')),
+      appBar: AppBar(title: Text(l10n.adminSettingsTitle)),
       body: BlocBuilder<AdminSettingsCubit, AdminSettingsState>(
         builder: (context, state) => switch (state) {
           AdminSettingsLoading() => const Center(
             child: CircularProgressIndicator(),
           ),
           AdminSettingsFailed(:final failure) => Center(
-            child: Text('Failed: ${failure.debugLabel}'),
+            child: Text(l10n.adminSettingsFailed(failure.debugLabel)),
           ),
           AdminSettingsLoaded(:final settings, :final lastError) => ListView(
             padding: const EdgeInsets.all(16),
             children: [
               SwitchListTile(
-                title: const Text('Open registration'),
-                subtitle: const Text(
-                  'When off, the public /register endpoint requires a valid '
-                  'platform invitation token. Default: off.',
-                ),
+                title: Text(l10n.adminSettingsOpenRegistration),
+                subtitle: Text(l10n.adminSettingsOpenRegistrationDesc),
                 value: settings.openRegistration,
                 onChanged: (v) =>
                     context.read<AdminSettingsCubit>().setOpenRegistration(v),
@@ -50,10 +49,8 @@ class _SettingsView extends StatelessWidget {
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.palette_outlined),
-                title: const Text('Branding'),
-                subtitle: const Text(
-                  'White-label the app name, icon and login message.',
-                ),
+                title: Text(l10n.adminSettingsBranding),
+                subtitle: Text(l10n.adminSettingsBrandingDesc),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -63,23 +60,17 @@ class _SettingsView extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.account_tree_outlined),
-                title: const Text('LDAP / Directory'),
-                subtitle: const Text(
-                  'Authenticate users against an LDAP/Active Directory server.',
-                ),
+                title: Text(l10n.adminSettingsLdap),
+                subtitle: Text(l10n.adminSettingsLdapDesc),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const AdminLdapPage(),
-                  ),
+                  MaterialPageRoute<void>(builder: (_) => const AdminLdapPage()),
                 ),
               ),
               ListTile(
                 leading: const Icon(Icons.notifications_outlined),
-                title: const Text('Notifications'),
-                subtitle: const Text(
-                  'Email (SMTP / Mailgun), Matrix and Telegram delivery.',
-                ),
+                title: Text(l10n.adminSettingsNotifications),
+                subtitle: Text(l10n.adminSettingsNotificationsDesc),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -89,14 +80,16 @@ class _SettingsView extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Last updated: ${settings.updatedAt.toLocal()}',
+                l10n.adminSettingsLastUpdated(
+                  settings.updatedAt.toLocal().toString(),
+                ),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               if (lastError != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
                   child: Text(
-                    'Last update failed.',
+                    l10n.adminSettingsUpdateFailed,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),

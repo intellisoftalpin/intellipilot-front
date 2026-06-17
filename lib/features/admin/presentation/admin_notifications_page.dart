@@ -4,6 +4,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_notifications_cubit.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class AdminNotificationsPage extends StatelessWidget {
   const AdminNotificationsPage({super.key});
@@ -15,12 +16,22 @@ class AdminNotificationsPage extends StatelessWidget {
       child: BlocBuilder<AdminNotificationsCubit, AdminNotificationsState>(
         builder: (context, state) => switch (state) {
           AdminNotificationsLoading() => Scaffold(
-            appBar: AppBar(title: const Text('Notifications')),
+            appBar: AppBar(
+              title: Text(AppLocalizations.of(context).adminNotifTitle),
+            ),
             body: const Center(child: CircularProgressIndicator()),
           ),
           AdminNotificationsFailed(:final failure) => Scaffold(
-            appBar: AppBar(title: const Text('Notifications')),
-            body: Center(child: Text('Failed: ${failure.debugLabel}')),
+            appBar: AppBar(
+              title: Text(AppLocalizations.of(context).adminNotifTitle),
+            ),
+            body: Center(
+              child: Text(
+                AppLocalizations.of(context).adminNotifLoadFailed(
+                  failure.debugLabel,
+                ),
+              ),
+            ),
           ),
           AdminNotificationsLoaded() => _NotificationsForm(state: state),
         },
@@ -163,6 +174,7 @@ class _NotificationsFormState extends State<_NotificationsForm> {
   );
 
   Future<void> _save(String label) async {
+    final l10n = AppLocalizations.of(context);
     final failure = await context.read<AdminNotificationsCubit>().save(
       _build(),
     );
@@ -171,14 +183,15 @@ class _NotificationsFormState extends State<_NotificationsForm> {
       SnackBar(
         content: Text(
           failure == null
-              ? '$label saved.'
-              : 'Save failed: ${failure.debugLabel}',
+              ? l10n.adminNotifSavedSnack(label)
+              : l10n.adminNotifSaveFailed(failure.debugLabel),
         ),
       ),
     );
   }
 
   Future<void> _test(String channel) async {
+    final l10n = AppLocalizations.of(context);
     final cubit = context.read<AdminNotificationsCubit>();
     String? to;
     if (channel == 'mail') {
@@ -190,12 +203,16 @@ class _NotificationsFormState extends State<_NotificationsForm> {
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text((result?.ok ?? false) ? 'Test sent' : 'Test failed'),
-        content: Text(result?.message ?? 'The request failed.'),
+        title: Text(
+          (result?.ok ?? false)
+              ? l10n.adminNotifTestSent
+              : l10n.adminNotifTestFailed,
+        ),
+        content: Text(result?.message ?? l10n.adminNotifRequestFailed),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Close'),
+            child: Text(l10n.adminNotifClose),
           ),
         ],
       ),
@@ -203,25 +220,28 @@ class _NotificationsFormState extends State<_NotificationsForm> {
   }
 
   Future<String?> _askRecipient() {
+    final l10n = AppLocalizations.of(context);
     final ctrl = TextEditingController();
     return showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Send test email'),
+        title: Text(l10n.adminNotifSendTestEmail),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(labelText: 'Recipient email'),
+          decoration: InputDecoration(
+            labelText: l10n.adminNotifRecipientEmail,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.adminNotifCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
-            child: const Text('Send'),
+            child: Text(l10n.adminNotifSend),
           ),
         ],
       ),
@@ -230,18 +250,19 @@ class _NotificationsFormState extends State<_NotificationsForm> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return DefaultTabController(
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Notifications'),
-          bottom: const TabBar(
+          title: Text(l10n.adminNotifTitle),
+          bottom: TabBar(
             isScrollable: true,
             tabs: [
-              Tab(text: 'Email'),
-              Tab(text: 'Matrix'),
-              Tab(text: 'Telegram'),
-              Tab(text: 'Events'),
+              Tab(text: l10n.adminNotifTabEmail),
+              Tab(text: l10n.adminNotifTabMatrix),
+              Tab(text: l10n.adminNotifTabTelegram),
+              Tab(text: l10n.adminNotifTabEvents),
             ],
           ),
         ),
@@ -266,6 +287,7 @@ class _NotificationsFormState extends State<_NotificationsForm> {
   );
 
   Widget _saveButton(String label) {
+    final l10n = AppLocalizations.of(context);
     final saving = widget.state.saving;
     return Align(
       alignment: Alignment.centerRight,
@@ -277,7 +299,7 @@ class _NotificationsFormState extends State<_NotificationsForm> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.save_outlined),
-        label: Text('Save $label'),
+        label: Text(l10n.adminNotifSaveButton(label)),
       ),
     );
   }
@@ -285,7 +307,7 @@ class _NotificationsFormState extends State<_NotificationsForm> {
   Widget _testNote() => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Text(
-      'Tests use the saved configuration — save before testing.',
+      AppLocalizations.of(context).adminNotifTestNote,
       style: Theme.of(
         context,
       ).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
@@ -298,79 +320,105 @@ class _NotificationsFormState extends State<_NotificationsForm> {
     bool secret = false,
     bool isSet = false,
     TextInputType? keyboard,
-  }) => Padding(
-    padding: const EdgeInsets.only(top: 8),
-    child: TextField(
-      controller: c,
-      obscureText: secret,
-      keyboardType: keyboard,
-      decoration: InputDecoration(
-        labelText: label,
-        helperText: secret
-            ? (isSet ? 'Stored — leave blank to keep' : 'Not set')
-            : null,
+  }) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: TextField(
+        controller: c,
+        obscureText: secret,
+        keyboardType: keyboard,
+        decoration: InputDecoration(
+          labelText: label,
+          helperText: secret
+              ? (isSet
+                    ? l10n.adminNotifSecretStored
+                    : l10n.adminNotifSecretNotSet)
+              : null,
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   // -------------------------------------------------------------------------
   // Email tab
   // -------------------------------------------------------------------------
   List<Widget> _emailChildren() {
+    final l10n = AppLocalizations.of(context);
     final s = widget.state.settings;
     return [
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
-        title: const Text('Enable email notifications'),
+        title: Text(l10n.adminNotifEnableEmail),
         value: _mailEnabled,
         onChanged: (v) => setState(() => _mailEnabled = v),
       ),
       const SizedBox(height: 8),
-      Text('Provider', style: Theme.of(context).textTheme.labelLarge),
+      Text(
+        l10n.adminNotifProvider,
+        style: Theme.of(context).textTheme.labelLarge,
+      ),
       const SizedBox(height: 8),
       SegmentedButton<String>(
-        segments: const [
-          ButtonSegment(value: 'smtp', label: Text('SMTP')),
-          ButtonSegment(value: 'mailgun', label: Text('Mailgun')),
+        segments: [
+          ButtonSegment(value: 'smtp', label: Text(l10n.adminNotifProviderSmtp)),
+          ButtonSegment(
+            value: 'mailgun',
+            label: Text(l10n.adminNotifProviderMailgun),
+          ),
         ],
         selected: {_mailProvider},
         onSelectionChanged: (sel) => setState(() => _mailProvider = sel.first),
       ),
-      _field(_fromAddr, 'From address', keyboard: TextInputType.emailAddress),
-      _field(_fromName, 'From name'),
+      _field(
+        _fromAddr,
+        l10n.adminNotifFromAddress,
+        keyboard: TextInputType.emailAddress,
+      ),
+      _field(_fromName, l10n.adminNotifFromName),
       const SizedBox(height: 16),
       if (_mailProvider == 'smtp') ...[
-        Text('SMTP', style: Theme.of(context).textTheme.titleSmall),
-        _field(_smtpHost, 'SMTP host'),
-        _field(_smtpPort, 'SMTP port', keyboard: TextInputType.number),
-        _field(_smtpUser, 'SMTP username'),
+        Text(
+          l10n.adminNotifSmtpHeader,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        _field(_smtpHost, l10n.adminNotifSmtpHost),
+        _field(
+          _smtpPort,
+          l10n.adminNotifSmtpPort,
+          keyboard: TextInputType.number,
+        ),
+        _field(_smtpUser, l10n.adminNotifSmtpUsername),
         _field(
           _smtpPass,
-          'SMTP password',
+          l10n.adminNotifSmtpPassword,
           secret: true,
           isSet: s.smtpPasswordSet,
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Use STARTTLS (port 587)'),
-          subtitle: const Text('Off = implicit TLS (port 465)'),
+          title: Text(l10n.adminNotifUseStartTls),
+          subtitle: Text(l10n.adminNotifUseStartTlsSubtitle),
           value: _smtpStartTls,
           onChanged: (v) => setState(() => _smtpStartTls = v),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('Skip TLS verification'),
-          subtitle: const Text('Self-signed certificates only'),
+          title: Text(l10n.adminNotifSkipTlsVerify),
+          subtitle: Text(l10n.adminNotifSkipTlsVerifySubtitle),
           value: _smtpSkipVerify,
           onChanged: (v) => setState(() => _smtpSkipVerify = v),
         ),
       ] else ...[
-        Text('Mailgun', style: Theme.of(context).textTheme.titleSmall),
-        _field(_mgDomain, 'Mailgun domain'),
-        _field(_mgBase, 'Mailgun base URL (e.g. https://api.eu.mailgun.net)'),
+        Text(
+          l10n.adminNotifMailgunHeader,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        _field(_mgDomain, l10n.adminNotifMailgunDomain),
+        _field(_mgBase, l10n.adminNotifMailgunBaseUrl),
         _field(
           _mgKey,
-          'Mailgun API key',
+          l10n.adminNotifMailgunApiKey,
           secret: true,
           isSet: s.mailgunApiKeySet,
         ),
@@ -382,10 +430,10 @@ class _NotificationsFormState extends State<_NotificationsForm> {
           OutlinedButton.icon(
             onPressed: () => _test('mail'),
             icon: const Icon(Icons.send_outlined),
-            label: const Text('Send test email'),
+            label: Text(l10n.adminNotifSendTestEmail),
           ),
           const Spacer(),
-          _saveButton('Email'),
+          _saveButton(l10n.adminNotifChannelEmail),
         ],
       ),
     ];
@@ -395,23 +443,21 @@ class _NotificationsFormState extends State<_NotificationsForm> {
   // Matrix tab
   // -------------------------------------------------------------------------
   List<Widget> _matrixChildren() {
+    final l10n = AppLocalizations.of(context);
     final s = widget.state.settings;
     return [
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
-        title: const Text('Enable Matrix'),
-        subtitle: const Text(
-          'Only gates automatic notifications — the test '
-          'button works regardless.',
-        ),
+        title: Text(l10n.adminNotifEnableMatrix),
+        subtitle: Text(l10n.adminNotifGatesSubtitle),
         value: _matrixEnabled,
         onChanged: (v) => setState(() => _matrixEnabled = v),
       ),
-      _field(_matrixHs, 'Homeserver URL (https://chat.example.com)'),
-      _field(_matrixRoom, 'Room ID (!room:example.com)'),
+      _field(_matrixHs, l10n.adminNotifHomeserverUrl),
+      _field(_matrixRoom, l10n.adminNotifRoomId),
       _field(
         _matrixToken,
-        'Access token',
+        l10n.adminNotifAccessToken,
         secret: true,
         isSet: s.matrixAccessTokenSet,
       ),
@@ -422,10 +468,10 @@ class _NotificationsFormState extends State<_NotificationsForm> {
           OutlinedButton.icon(
             onPressed: () => _test('matrix'),
             icon: const Icon(Icons.send_outlined),
-            label: const Text('Send test to Matrix'),
+            label: Text(l10n.adminNotifSendTestMatrix),
           ),
           const Spacer(),
-          _saveButton('Matrix'),
+          _saveButton(l10n.adminNotifChannelMatrix),
         ],
       ),
     ];
@@ -435,20 +481,23 @@ class _NotificationsFormState extends State<_NotificationsForm> {
   // Telegram tab
   // -------------------------------------------------------------------------
   List<Widget> _telegramChildren() {
+    final l10n = AppLocalizations.of(context);
     final s = widget.state.settings;
     return [
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
-        title: const Text('Enable Telegram'),
-        subtitle: const Text(
-          'Only gates automatic notifications — the test '
-          'button works regardless.',
-        ),
+        title: Text(l10n.adminNotifEnableTelegram),
+        subtitle: Text(l10n.adminNotifGatesSubtitle),
         value: _tgEnabled,
         onChanged: (v) => setState(() => _tgEnabled = v),
       ),
-      _field(_tgToken, 'Bot token', secret: true, isSet: s.telegramBotTokenSet),
-      _field(_tgChat, 'Chat ID'),
+      _field(
+        _tgToken,
+        l10n.adminNotifBotToken,
+        secret: true,
+        isSet: s.telegramBotTokenSet,
+      ),
+      _field(_tgChat, l10n.adminNotifChatId),
       const SizedBox(height: 16),
       _testNote(),
       Row(
@@ -456,10 +505,10 @@ class _NotificationsFormState extends State<_NotificationsForm> {
           OutlinedButton.icon(
             onPressed: () => _test('telegram'),
             icon: const Icon(Icons.send_outlined),
-            label: const Text('Send test to Telegram'),
+            label: Text(l10n.adminNotifSendTestTelegram),
           ),
           const Spacer(),
-          _saveButton('Telegram'),
+          _saveButton(l10n.adminNotifChannelTelegram),
         ],
       ),
     ];
@@ -468,50 +517,53 @@ class _NotificationsFormState extends State<_NotificationsForm> {
   // -------------------------------------------------------------------------
   // Events tab
   // -------------------------------------------------------------------------
-  List<Widget> _eventChildren() => [
-    Text(
-      'Choose which events trigger a notification, per channel.',
-      style: Theme.of(context).textTheme.bodyMedium,
-    ),
-    const SizedBox(height: 16),
-    const Row(
-      children: [
-        Expanded(flex: 3, child: Text('')),
-        Expanded(child: Center(child: Text('Email'))),
-        Expanded(child: Center(child: Text('Messengers'))),
-      ],
-    ),
-    _eventRow(
-      'Login',
-      mail: _mailLogin,
-      msg: _msgLogin,
-      onMail: (v) => setState(() => _mailLogin = v),
-      onMsg: (v) => setState(() => _msgLogin = v),
-    ),
-    _eventRow(
-      'Issue created',
-      mail: _mailIssueCreated,
-      msg: _msgIssueCreated,
-      onMail: (v) => setState(() => _mailIssueCreated = v),
-      onMsg: (v) => setState(() => _msgIssueCreated = v),
-    ),
-    _eventRow(
-      'Issue resolved',
-      mail: _mailIssueResolved,
-      msg: _msgIssueResolved,
-      onMail: (v) => setState(() => _mailIssueResolved = v),
-      onMsg: (v) => setState(() => _msgIssueResolved = v),
-    ),
-    _eventRow(
-      'Daily status report',
-      mail: _mailDaily,
-      msg: _msgDaily,
-      onMail: (v) => setState(() => _mailDaily = v),
-      onMsg: (v) => setState(() => _msgDaily = v),
-    ),
-    const SizedBox(height: 24),
-    _saveButton('Events'),
-  ];
+  List<Widget> _eventChildren() {
+    final l10n = AppLocalizations.of(context);
+    return [
+      Text(
+        l10n.adminNotifEventsIntro,
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
+      const SizedBox(height: 16),
+      Row(
+        children: [
+          const Expanded(flex: 3, child: Text('')),
+          Expanded(child: Center(child: Text(l10n.adminNotifColumnEmail))),
+          Expanded(child: Center(child: Text(l10n.adminNotifColumnMessengers))),
+        ],
+      ),
+      _eventRow(
+        l10n.adminNotifEventLogin,
+        mail: _mailLogin,
+        msg: _msgLogin,
+        onMail: (v) => setState(() => _mailLogin = v),
+        onMsg: (v) => setState(() => _msgLogin = v),
+      ),
+      _eventRow(
+        l10n.adminNotifEventIssueCreated,
+        mail: _mailIssueCreated,
+        msg: _msgIssueCreated,
+        onMail: (v) => setState(() => _mailIssueCreated = v),
+        onMsg: (v) => setState(() => _msgIssueCreated = v),
+      ),
+      _eventRow(
+        l10n.adminNotifEventIssueResolved,
+        mail: _mailIssueResolved,
+        msg: _msgIssueResolved,
+        onMail: (v) => setState(() => _mailIssueResolved = v),
+        onMsg: (v) => setState(() => _msgIssueResolved = v),
+      ),
+      _eventRow(
+        l10n.adminNotifEventDailyReport,
+        mail: _mailDaily,
+        msg: _msgDaily,
+        onMail: (v) => setState(() => _mailDaily = v),
+        onMsg: (v) => setState(() => _msgDaily = v),
+      ),
+      const SizedBox(height: 24),
+      _saveButton(l10n.adminNotifChannelEvents),
+    ];
+  }
 
   Widget _eventRow(
     String label, {

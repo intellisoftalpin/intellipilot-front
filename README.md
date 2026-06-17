@@ -1,7 +1,15 @@
-# IntelliPilot Frontend
+# IntelliPilot — Flutter client for the free, self-hosted Jira alternative
 
-Flutter client for the IntelliPilot project management platform. Targets
-web, macOS, Linux, Windows, Android, and iOS from a single codebase.
+Cross-platform [Flutter](https://flutter.dev) client for **IntelliPilot**, a
+**free, open-source, self-hosted Jira alternative** with built-in **LDAP /
+Active Directory / OpenLDAP single sign-on**. One codebase targets **web,
+macOS, Linux, Windows, Android, and iOS**.
+
+It pairs with the Rust + PostgreSQL backend and REST API →
+[github.com/intellisoftalpin/intellipilot](https://github.com/intellisoftalpin/intellipilot).
+Project management for agile/scrum teams: Kanban board, backlog (epics, user
+stories, tasks, issues), sprints/milestones, wiki, roles & permissions, 2FA /
+passkeys, and directory SSO. MIT-licensed · [intellisoftalpin.com](https://intellisoftalpin.com).
 
 - Architecture overview → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Phased delivery plan → [`docs/ROADMAP.md`](docs/ROADMAP.md)

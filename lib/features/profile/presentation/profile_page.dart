@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
+import 'package:intellipilot/core/datetime/timezones.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/profile/presentation/cubits/profile_cubit.dart';
@@ -32,7 +33,6 @@ class _ProfileView extends StatefulWidget {
 class _ProfileViewState extends State<_ProfileView> {
   final _fullNameController = TextEditingController();
   final _timezoneController = TextEditingController();
-  String _lang = 'en';
   bool _seeded = false;
 
   @override
@@ -46,7 +46,6 @@ class _ProfileViewState extends State<_ProfileView> {
     if (_seeded) return;
     _fullNameController.text = state.profile.fullName;
     _timezoneController.text = state.profile.timezone;
-    _lang = state.profile.lang;
     _seeded = true;
   }
 
@@ -76,12 +75,12 @@ class _ProfileViewState extends State<_ProfileView> {
               state: state,
               fullNameController: _fullNameController,
               timezoneController: _timezoneController,
-              lang: _lang,
-              onLangChanged: (l) => setState(() => _lang = l),
               onSave: () {
                 context.read<ProfileCubit>().save(
                   fullName: _fullNameController.text.trim(),
-                  lang: _lang,
+                  // Language is driven by the app-wide selector in Settings;
+                  // preserve whatever the account already had.
+                  lang: state.profile.lang,
                   timezone: _timezoneController.text.trim(),
                 );
               },
@@ -122,15 +121,11 @@ class _ProfileForm extends StatelessWidget {
     required this.state,
     required this.fullNameController,
     required this.timezoneController,
-    required this.lang,
-    required this.onLangChanged,
     required this.onSave,
   });
   final ProfileLoaded state;
   final TextEditingController fullNameController;
   final TextEditingController timezoneController;
-  final String lang;
-  final ValueChanged<String> onLangChanged;
   final VoidCallback onSave;
 
   @override
@@ -158,27 +153,22 @@ class _ProfileForm extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: lang,
-              decoration: InputDecoration(
-                labelText: t.profileLanguageLabel,
-                prefixIcon: const Icon(Icons.language),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'en', child: Text('English')),
-              ],
-              onChanged: (v) {
-                if (v != null) onLangChanged(v);
-              },
-            ),
-            const SizedBox(height: 12),
-            TextField(
+            DropdownMenu<String>(
               controller: timezoneController,
-              decoration: InputDecoration(
-                labelText: t.profileTimezoneLabel,
-                helperText: t.profileTimezoneHint,
-                prefixIcon: const Icon(Icons.public),
-              ),
+              initialSelection: kTimezones.contains(timezoneController.text)
+                  ? timezoneController.text
+                  : null,
+              enableFilter: true,
+              requestFocusOnTap: true,
+              expandedInsets: EdgeInsets.zero,
+              menuHeight: 320,
+              leadingIcon: const Icon(Icons.public),
+              label: Text(t.profileTimezoneLabel),
+              helperText: t.profileTimezoneHint,
+              dropdownMenuEntries: [
+                for (final tz in kTimezones)
+                  DropdownMenuEntry<String>(value: tz, label: tz),
+              ],
             ),
             const SizedBox(height: 24),
             FilledButton(

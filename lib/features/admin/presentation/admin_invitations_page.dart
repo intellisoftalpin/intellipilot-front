@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_invitations_cubit.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class AdminInvitationsPage extends StatelessWidget {
   const AdminInvitationsPage({super.key});
@@ -11,8 +12,7 @@ class AdminInvitationsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<AdminInvitationsCubit>(
-      create: (_) =>
-          AdminInvitationsCubit(getIt<AdminRepository>())..load(),
+      create: (_) => AdminInvitationsCubit(getIt<AdminRepository>())..load(),
       child: const _InvitationsView(),
     );
   }
@@ -36,6 +36,7 @@ class _InvitationsViewState extends State<_InvitationsView> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     final email = _email.text.trim();
     if (email.isEmpty) return;
     setState(() => _busy = true);
@@ -47,7 +48,7 @@ class _InvitationsViewState extends State<_InvitationsView> {
     setState(() => _busy = false);
     if (created == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not create invitation')),
+        SnackBar(content: Text(l10n.adminInviteCreateError)),
       );
       return;
     }
@@ -62,15 +63,16 @@ class _InvitationsViewState extends State<_InvitationsView> {
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invitation emailed to ${created.email}')),
+        SnackBar(content: Text(l10n.adminInviteEmailedSnack(created.email))),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Invitations')),
+      appBar: AppBar(title: Text(l10n.adminInviteTitle)),
       body: Column(
         children: [
           Padding(
@@ -80,20 +82,23 @@ class _InvitationsViewState extends State<_InvitationsView> {
                 Expanded(
                   child: TextField(
                     controller: _email,
-                    decoration: const InputDecoration(
-                      prefixIcon: Icon(Icons.email_outlined),
-                      hintText: 'Email to invite',
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.email_outlined),
+                      hintText: l10n.adminInviteEmailHint,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 DropdownButton<String>(
                   value: _role,
-                  items: const [
-                    DropdownMenuItem(value: 'user', child: Text('user')),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'user',
+                      child: Text(l10n.adminInviteRoleUser),
+                    ),
                     DropdownMenuItem(
                       value: 'superadmin',
-                      child: Text('superadmin'),
+                      child: Text(l10n.adminInviteRoleSuperadmin),
                     ),
                   ],
                   onChanged: (v) => setState(() => _role = v ?? 'user'),
@@ -106,7 +111,7 @@ class _InvitationsViewState extends State<_InvitationsView> {
                           dimension: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Invite'),
+                      : Text(l10n.adminInviteButton),
                 ),
               ],
             ),
@@ -114,23 +119,26 @@ class _InvitationsViewState extends State<_InvitationsView> {
           Expanded(
             child: BlocBuilder<AdminInvitationsCubit, AdminInvitationsState>(
               builder: (context, state) => switch (state) {
-                AdminInvitationsLoading() =>
-                  const Center(child: CircularProgressIndicator()),
+                AdminInvitationsLoading() => const Center(
+                  child: CircularProgressIndicator(),
+                ),
                 AdminInvitationsFailed(:final failure) => Center(
-                  child: Text('Failed: ${failure.debugLabel}'),
+                  child: Text(l10n.adminInviteLoadFailed(failure.debugLabel)),
                 ),
                 AdminInvitationsLoaded(:final items) => items.isEmpty
-                    ? const Center(child: Text('No pending invitations'))
+                    ? Center(child: Text(l10n.adminInviteEmpty))
                     : ListView.separated(
                         itemBuilder: (_, i) => ListTile(
                           title: Text(items[i].email),
                           subtitle: Text(
-                            'role: ${items[i].role} · expires '
-                            '${items[i].expiresAt.toLocal()}',
+                            l10n.adminInviteRoleExpires(
+                              items[i].role,
+                              items[i].expiresAt.toLocal().toString(),
+                            ),
                           ),
                           trailing: IconButton(
                             icon: const Icon(Icons.delete_outline),
-                            tooltip: 'Revoke',
+                            tooltip: l10n.adminInviteRevoke,
                             onPressed: () => context
                                 .read<AdminInvitationsCubit>()
                                 .revoke(items[i].id),
@@ -160,17 +168,15 @@ class _InviteLinkDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final link = _link(context);
     return AlertDialog(
-      title: const Text('Invitation created'),
+      title: Text(l10n.adminInviteCreatedTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Send this link to $email. They must register using exactly that '
-            'email address for the token to be accepted.',
-          ),
+          Text(l10n.adminInviteLinkInstructions(email)),
           const SizedBox(height: 12),
           SelectableText(link),
         ],
@@ -180,14 +186,14 @@ class _InviteLinkDialog extends StatelessWidget {
           onPressed: () {
             Clipboard.setData(ClipboardData(text: link));
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Link copied')),
+              SnackBar(content: Text(l10n.adminInviteLinkCopied)),
             );
           },
-          child: const Text('Copy link'),
+          child: Text(l10n.adminInviteCopyLink),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Done'),
+          child: Text(l10n.adminInviteDone),
         ),
       ],
     );

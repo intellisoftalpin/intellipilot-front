@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,17 @@ import 'package:intellipilot/features/auth/presentation/auth_validators.dart';
 import 'package:intellipilot/features/auth/presentation/cubits/login_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 import 'package:reactive_forms/reactive_forms.dart';
+
+/// Width at/above which the two-pane "split hero" layout is shown.
+const double _kWideBreakpoint = 840;
+
+/// Whether to run the continuous (looping) background/logo animations.
+///
+/// Suppressed under the widget-test binding, where an always-scheduled frame
+/// would make `pumpAndSettle` time out. One-shot and implicit animations are
+/// unaffected. In the real app the binding is a [WidgetsFlutterBinding].
+final bool _kContinuousAnimations =
+    WidgetsBinding.instance is WidgetsFlutterBinding;
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -35,8 +48,10 @@ class _LoginView extends StatefulWidget {
   State<_LoginView> createState() => _LoginViewState();
 }
 
-class _LoginViewState extends State<_LoginView> {
+class _LoginViewState extends State<_LoginView>
+    with SingleTickerProviderStateMixin {
   late final FormGroup _form;
+  late final AnimationController _entrance;
 
   @override
   void initState() {
@@ -45,6 +60,20 @@ class _LoginViewState extends State<_LoginView> {
       'email': FormControl<String>(validators: AuthValidators.loginIdentifier),
       'password': FormControl<String>(validators: AuthValidators.password),
     });
+    _entrance = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    // Kick off the staggered entrance after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _entrance.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _entrance.dispose();
+    super.dispose();
   }
 
   void _submit() {
@@ -58,139 +87,233 @@ class _LoginViewState extends State<_LoginView> {
     );
   }
 
+  /// Fade + slide-up entrance for [child], staggered by [order]. A no-op when
+  /// the OS requests reduced motion.
+  Widget _entranceItem(int order, bool reduceMotion, Widget child) {
+    if (reduceMotion) return child;
+    final start = (order * 0.09).clamp(0.0, 0.5);
+    final anim = CurvedAnimation(
+      parent: _entrance,
+      curve: Interval(
+        start,
+        (start + 0.5).clamp(0.0, 1.0),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+    return FadeTransition(
+      opacity: anim,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0, 0.08),
+          end: Offset.zero,
+        ).animate(anim),
+        child: child,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final reduceMotion = MediaQuery.of(context).disableAnimations;
+    if (reduceMotion) _entrance.value = 1;
     return BlocBuilder<BrandingCubit, Branding>(
       bloc: getIt<BrandingCubit>(),
-      builder: (context, branding) => Scaffold(
-        body: BlocListener<LoginCubit, LoginState>(
-          listener: (context, state) {
-            if (state is LoginSucceeded) {
-              // Router guard redirects automatically; no-op.
-            }
-          },
-          child: Column(
-            children: [
-              Expanded(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(24),
-                      child: ReactiveForm(
-                        formGroup: _form,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const Center(
-                              child: BrandLogo(size: 88, borderRadius: 18),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              branding.appName ?? t.appTitle,
-                              style: Theme.of(context).textTheme.headlineMedium,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              t.loginSubtitle,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                            if (branding.appMessage != null) ...[
-                              const SizedBox(height: 16),
-                              _AuthInfoBanner(text: branding.appMessage!),
-                            ],
-                            const SizedBox(height: 24),
-                            ReactiveTextField<String>(
-                              formControlName: 'email',
-                              autofillHints: const [AutofillHints.username],
-                              decoration: InputDecoration(
-                                labelText: t.fieldEmailOrUsername,
-                                prefixIcon: const Icon(Icons.person_outline),
-                              ),
-                              validationMessages: {
-                                ValidationMessage.required: (_) =>
-                                    t.errFieldRequired,
-                                ValidationMessage.maxLength: (_) =>
-                                    t.errTooLong,
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            ReactiveTextField<String>(
-                              formControlName: 'password',
-                              obscureText: true,
-                              autofillHints: const [AutofillHints.password],
-                              decoration: InputDecoration(
-                                labelText: t.fieldPassword,
-                                prefixIcon: const Icon(Icons.lock_outline),
-                              ),
-                              validationMessages: {
-                                ValidationMessage.required: (_) =>
-                                    t.errFieldRequired,
-                                ValidationMessage.minLength: (_) =>
-                                    t.errPasswordMinLength,
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () =>
-                                    context.goNamed('forgot_password'),
-                                child: Text(t.linkForgotPassword),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            BlocBuilder<LoginCubit, LoginState>(
-                              builder: (context, state) {
-                                final busy = state is LoginSubmitting;
-                                return FilledButton(
-                                  onPressed: busy ? null : _submit,
-                                  child: busy
-                                      ? const SizedBox.square(
-                                          dimension: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : Text(t.actionSignIn),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            BlocBuilder<LoginCubit, LoginState>(
-                              builder: (_, state) {
-                                if (state is LoginFailed) {
-                                  return _AuthErrorBanner(
-                                    failure: state.failure,
-                                  );
-                                }
-                                if (state is LoginMfaChallenged) {
-                                  return _AuthInfoBanner(
-                                    text: t.loginMfaNotice,
-                                  );
-                                }
-                                return const SizedBox.shrink();
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            TextButton.icon(
-                              icon: const Icon(Icons.fingerprint, size: 18),
-                              onPressed: () =>
-                                  context.goNamed('passkey_sign_in'),
-                              label: Text(t.linkSignInWithPasskey),
-                            ),
-                            const SizedBox(height: 4),
-                            const _RegisterLink(),
-                          ],
-                        ),
-                      ),
+      builder: (context, branding) {
+        final title = branding.appName ?? t.appTitle;
+        return Scaffold(
+          body: BlocListener<LoginCubit, LoginState>(
+            listener: (context, state) {
+              if (state is LoginSucceeded) {
+                // Router guard redirects automatically; no-op.
+              }
+            },
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: _AnimatedBlobBackground(reduceMotion: reduceMotion),
+                ),
+                Positioned.fill(
+                  child: ReactiveForm(
+                    formGroup: _form,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final wide = constraints.maxWidth >= _kWideBreakpoint;
+                        return wide
+                            ? _wideLayout(
+                                context,
+                                t,
+                                branding,
+                                title,
+                                reduceMotion,
+                              )
+                            : _narrowLayout(
+                                context,
+                                t,
+                                branding,
+                                title,
+                                reduceMotion,
+                              );
+                      },
                     ),
                   ),
                 ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ---- Wide: two-pane split hero --------------------------------------------
+  Widget _wideLayout(
+    BuildContext context,
+    AppLocalizations t,
+    Branding branding,
+    String title,
+    bool reduceMotion,
+  ) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(48),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _entranceItem(
+                    0,
+                    reduceMotion,
+                    _FloatingLogo(size: 104, reduceMotion: reduceMotion),
+                  ),
+                  const SizedBox(height: 28),
+                  _entranceItem(
+                    1,
+                    reduceMotion,
+                    Text(
+                      title,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _entranceItem(
+                    2,
+                    reduceMotion,
+                    Text(
+                      t.loginSubtitle,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
+          ),
+        ),
+        // Form panel: opaque surface so the form stays crisp over the blobs.
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 32,
+                offset: const Offset(-8, 0),
+              ),
+            ],
+          ),
+          child: SizedBox(
+            width: 460,
+            height: double.infinity,
+            child: _ScrollableCenter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _entranceItem(
+                    2,
+                    reduceMotion,
+                    Text(
+                      t.actionSignIn,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ..._formChildren(context, t, branding, reduceMotion),
+                  const SizedBox(height: 24),
+                  const _LoginFooter(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ---- Narrow: centered card over the blobs ---------------------------------
+  Widget _narrowLayout(
+    BuildContext context,
+    AppLocalizations t,
+    Branding branding,
+    String title,
+    bool reduceMotion,
+  ) {
+    final theme = Theme.of(context);
+    return _ScrollableCenter(
+      maxWidth: 440,
+      child: _entranceItem(
+        0,
+        reduceMotion,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface.withValues(alpha: 0.92),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 28,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: _FloatingLogo(size: 84, reduceMotion: reduceMotion),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                t.loginSubtitle,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 24),
+              ..._formChildren(context, t, branding, reduceMotion),
+              const SizedBox(height: 16),
               const _LoginFooter(),
             ],
           ),
@@ -198,67 +321,365 @@ class _LoginViewState extends State<_LoginView> {
       ),
     );
   }
+
+  /// The shared form fields (email, password, actions). Each row is wrapped in
+  /// the staggered entrance so it cascades in on open.
+  List<Widget> _formChildren(
+    BuildContext context,
+    AppLocalizations t,
+    Branding branding,
+    bool reduceMotion,
+  ) {
+    return [
+      if (branding.appMessage != null) ...[
+        _entranceItem(
+          3,
+          reduceMotion,
+          _AuthInfoBanner(text: branding.appMessage!),
+        ),
+        const SizedBox(height: 16),
+      ],
+      _entranceItem(
+        3,
+        reduceMotion,
+        _GlowField(
+          child: ReactiveTextField<String>(
+            formControlName: 'email',
+            autofillHints: const [AutofillHints.username],
+            decoration: InputDecoration(
+              labelText: t.fieldEmailOrUsername,
+              prefixIcon: const Icon(Icons.person_outline),
+            ),
+            validationMessages: {
+              ValidationMessage.required: (_) => t.errFieldRequired,
+              ValidationMessage.maxLength: (_) => t.errTooLong,
+            },
+          ),
+        ),
+      ),
+      const SizedBox(height: 12),
+      _entranceItem(
+        4,
+        reduceMotion,
+        _GlowField(
+          child: ReactiveTextField<String>(
+            formControlName: 'password',
+            obscureText: true,
+            autofillHints: const [AutofillHints.password],
+            decoration: InputDecoration(
+              labelText: t.fieldPassword,
+              prefixIcon: const Icon(Icons.lock_outline),
+            ),
+            validationMessages: {
+              ValidationMessage.required: (_) => t.errFieldRequired,
+              ValidationMessage.minLength: (_) => t.errPasswordMinLength,
+            },
+          ),
+        ),
+      ),
+      _entranceItem(
+        4,
+        reduceMotion,
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () => context.goNamed('forgot_password'),
+            child: Text(t.linkForgotPassword),
+          ),
+        ),
+      ),
+      const SizedBox(height: 8),
+      _entranceItem(
+        5,
+        reduceMotion,
+        BlocBuilder<LoginCubit, LoginState>(
+          builder: (context, state) => _SubmitButton(
+            busy: state is LoginSubmitting,
+            label: t.actionSignIn,
+            onPressed: _submit,
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+      BlocBuilder<LoginCubit, LoginState>(
+        builder: (_, state) {
+          if (state is LoginFailed) {
+            return _AuthErrorBanner(failure: state.failure);
+          }
+          if (state is LoginMfaChallenged) {
+            return _AuthInfoBanner(text: t.loginMfaNotice);
+          }
+          return const SizedBox.shrink();
+        },
+      ),
+      const SizedBox(height: 8),
+      _entranceItem(
+        6,
+        reduceMotion,
+        TextButton.icon(
+          icon: const Icon(Icons.fingerprint, size: 18),
+          onPressed: () => context.goNamed('passkey_sign_in'),
+          label: Text(t.linkSignInWithPasskey),
+        ),
+      ),
+      const SizedBox(height: 4),
+      _entranceItem(6, reduceMotion, const _RegisterLink()),
+    ];
+  }
 }
 
-/// Developer attribution footer, shown on the login screen only. Links open in
-/// a new tab via [openExternalUrl]; native targets degrade to a no-op.
-class _LoginFooter extends StatelessWidget {
-  const _LoginFooter();
-
-  static const _website = 'https://intellisoftalpin.com';
-  static const _repo = 'https://github.com/intellisoftalpin/intellipilot';
-  static const _license =
-      'https://github.com/intellisoftalpin/intellipilot/blob/main/LICENSE';
+/// A vertically-centered, scrollable column for one of the login panels.
+class _ScrollableCenter extends StatelessWidget {
+  const _ScrollableCenter({required this.child, this.maxWidth = 360});
+  final Widget child;
+  final double maxWidth;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final muted = theme.textTheme.bodySmall?.copyWith(
-      color: theme.colorScheme.onSurfaceVariant,
-    );
-    final year = DateTime.now().year;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 12,
-        runSpacing: 4,
-        children: [
-          Text('© 2025–$year IntelliSoftAlpin', style: muted),
-          _FooterLink(
-            label: 'intellisoftalpin.com',
-            onTap: () => openExternalUrl(_website),
-          ),
-          _FooterLink(label: 'GitHub', onTap: () => openExternalUrl(_repo)),
-          _FooterLink(
-            label: 'MIT License',
-            onTap: () => openExternalUrl(_license),
-          ),
-        ],
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          child: child,
+        ),
       ),
     );
   }
 }
 
-class _FooterLink extends StatelessWidget {
-  const _FooterLink({required this.label, required this.onTap});
+/// Slowly drifting, theme-coloured radial "blobs". CPU-cheap: three filled
+/// radial gradients on a single slow loop, isolated in a [RepaintBoundary] and
+/// with no backdrop blur. Renders statically when reduced motion is requested.
+class _AnimatedBlobBackground extends StatefulWidget {
+  const _AnimatedBlobBackground({required this.reduceMotion});
+  final bool reduceMotion;
 
-  final String label;
-  final VoidCallback onTap;
+  @override
+  State<_AnimatedBlobBackground> createState() =>
+      _AnimatedBlobBackgroundState();
+}
+
+class _AnimatedBlobBackgroundState extends State<_AnimatedBlobBackground>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+  bool get _animate => !widget.reduceMotion && _kContinuousAnimations;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 24),
+    );
+    if (_animate) _c.repeat();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(4),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-        child: Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.primary,
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final a = dark ? 0.34 : 0.28;
+    final colors = [
+      scheme.primary.withValues(alpha: a),
+      scheme.tertiary.withValues(alpha: a * 0.9),
+      scheme.secondary.withValues(alpha: a * 0.8),
+    ];
+    final painter = _BlobPainter(t: _animate ? _c.value : 0.12, colors: colors);
+    return RepaintBoundary(
+      child: _animate
+          ? AnimatedBuilder(
+              animation: _c,
+              builder: (context, _) => CustomPaint(
+                painter: _BlobPainter(t: _c.value, colors: colors),
+                size: Size.infinite,
+              ),
+            )
+          : CustomPaint(painter: painter, size: Size.infinite),
+    );
+  }
+}
+
+class _BlobPainter extends CustomPainter {
+  _BlobPainter({required this.t, required this.colors});
+  final double t;
+  final List<Color> colors;
+
+  // baseX, baseY (fraction of size), radius factor (× shortest side), phase.
+  static const _base = [
+    [0.18, 0.22, 0.95, 0.0],
+    [0.84, 0.30, 0.85, 2.1],
+    [0.55, 0.85, 1.05, 4.2],
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final shortest = math.min(size.width, size.height);
+    final tau = t * 2 * math.pi;
+    for (var i = 0; i < _base.length; i++) {
+      final b = _base[i];
+      final cx = (b[0] + 0.06 * math.sin(tau + b[3])) * size.width;
+      final cy = (b[1] + 0.06 * math.cos(tau * 0.8 + b[3])) * size.height;
+      final radius = b[2] * shortest * (0.55 + 0.05 * math.sin(tau + b[3]));
+      final center = Offset(cx, cy);
+      final color = colors[i % colors.length];
+      final paint = Paint()
+        ..shader = RadialGradient(
+          colors: [color, color.withValues(alpha: 0)],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+      canvas.drawCircle(center, radius, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BlobPainter old) => old.t != t || old.colors != colors;
+}
+
+/// The app logo with a gentle, continuous "float" (tiny vertical bob + scale).
+/// Static when reduced motion is requested.
+class _FloatingLogo extends StatefulWidget {
+  const _FloatingLogo({required this.size, required this.reduceMotion});
+  final double size;
+  final bool reduceMotion;
+
+  @override
+  State<_FloatingLogo> createState() => _FloatingLogoState();
+}
+
+class _FloatingLogoState extends State<_FloatingLogo>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+  bool get _animate => !widget.reduceMotion && _kContinuousAnimations;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3600),
+    );
+    if (_animate) _c.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final logo = BrandLogo(size: widget.size, borderRadius: 20);
+    if (!_animate) return logo;
+    return AnimatedBuilder(
+      animation: CurvedAnimation(parent: _c, curve: Curves.easeInOut),
+      builder: (context, child) {
+        final v = Curves.easeInOut.transform(_c.value);
+        return Transform.translate(
+          offset: Offset(0, -3 + v * 6),
+          child: Transform.scale(scale: 1.0 + v * 0.03, child: child),
+        );
+      },
+      child: logo,
+    );
+  }
+}
+
+/// Wraps an input field with a soft accent glow while any descendant is focused.
+class _GlowField extends StatefulWidget {
+  const _GlowField({required this.child});
+  final Widget child;
+
+  @override
+  State<_GlowField> createState() => _GlowFieldState();
+}
+
+class _GlowFieldState extends State<_GlowField> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (f) {
+        if (f != _focused) setState(() => _focused = f);
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: _focused
+              ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.26),
+                    blurRadius: 16,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : const [],
+        ),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+/// Primary sign-in button: scales slightly on press and cross-fades into a
+/// spinner while submitting.
+class _SubmitButton extends StatefulWidget {
+  const _SubmitButton({
+    required this.busy,
+    required this.label,
+    required this.onPressed,
+  });
+  final bool busy;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  State<_SubmitButton> createState() => _SubmitButtonState();
+}
+
+class _SubmitButtonState extends State<_SubmitButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) {
+        if (!widget.busy) setState(() => _pressed = true);
+      },
+      onPointerUp: (_) {
+        if (_pressed) setState(() => _pressed = false);
+      },
+      onPointerCancel: (_) {
+        if (_pressed) setState(() => _pressed = false);
+      },
+      child: AnimatedScale(
+        scale: _pressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 90),
+        curve: Curves.easeOut,
+        child: FilledButton(
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          onPressed: widget.busy ? null : widget.onPressed,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: widget.busy
+                ? const SizedBox.square(
+                    key: ValueKey('busy'),
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Text(widget.label, key: const ValueKey('label')),
           ),
         ),
       ),
@@ -367,6 +788,69 @@ class _AuthInfoBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Developer attribution footer, shown on the login screen only. Links open in
+/// a new tab via [openExternalUrl]; native targets degrade to a no-op.
+class _LoginFooter extends StatelessWidget {
+  const _LoginFooter();
+
+  static const _website = 'https://intellisoftalpin.com';
+  static const _repo = 'https://github.com/intellisoftalpin/intellipilot';
+  static const _license =
+      'https://github.com/intellisoftalpin/intellipilot/blob/main/LICENSE';
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    final year = DateTime.now().year;
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 12,
+      runSpacing: 4,
+      children: [
+        Text('© 2025–$year IntelliSoftAlpin', style: muted),
+        _FooterLink(
+          label: 'intellisoftalpin.com',
+          onTap: () => openExternalUrl(_website),
+        ),
+        _FooterLink(label: 'GitHub', onTap: () => openExternalUrl(_repo)),
+        _FooterLink(
+          label: 'MIT License',
+          onTap: () => openExternalUrl(_license),
+        ),
+      ],
+    );
+  }
+}
+
+class _FooterLink extends StatelessWidget {
+  const _FooterLink({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+        child: Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.primary,
+          ),
+        ),
       ),
     );
   }

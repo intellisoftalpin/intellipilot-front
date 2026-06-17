@@ -4,6 +4,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_ldap_cubit.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class AdminLdapPage extends StatelessWidget {
   const AdminLdapPage({super.key});
@@ -13,14 +14,20 @@ class AdminLdapPage extends StatelessWidget {
     return BlocProvider<AdminLdapCubit>(
       create: (_) => AdminLdapCubit(getIt<AdminRepository>())..load(),
       child: Scaffold(
-        appBar: AppBar(title: const Text('LDAP / Directory')),
+        appBar: AppBar(
+          title: Text(AppLocalizations.of(context).adminLdapTitle),
+        ),
         body: BlocBuilder<AdminLdapCubit, AdminLdapState>(
           builder: (context, state) => switch (state) {
             AdminLdapLoading() => const Center(
               child: CircularProgressIndicator(),
             ),
             AdminLdapFailed(:final failure) => Center(
-              child: Text('Failed to load: ${failure.debugLabel}'),
+              child: Text(
+                AppLocalizations.of(context).adminLdapLoadFailed(
+                  failure.debugLabel,
+                ),
+              ),
             ),
             AdminLdapLoaded(:final settings, :final saving) => _LdapForm(
               key: ValueKey(settings.updatedAt),
@@ -142,12 +149,13 @@ class _LdapFormState extends State<_LdapForm> {
   );
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
     final failure = await context.read<AdminLdapCubit>().save(_build());
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          failure == null ? 'LDAP settings saved.' : 'Save failed.',
+          failure == null ? l10n.adminLdapSaved : l10n.adminLdapSaveFailed,
         ),
       ),
     );
@@ -167,68 +175,83 @@ class _LdapFormState extends State<_LdapForm> {
     if (!mounted) return;
     await showDialog<void>(
       context: context,
-      builder: (dialogCtx) => AlertDialog(
-        title: Text((result?.ok ?? false) ? 'Bind succeeded' : 'Bind failed'),
-        content: Text(
-          result == null
-              ? 'The request failed.'
-              : [
-                  result.message,
-                  if (result.email != null) 'Email: ${result.email}',
-                  if (result.username != null) 'Username: ${result.username}',
-                  if (result.displayName != null) 'Name: ${result.displayName}',
-                  if (result.wouldBeSuperadmin != null)
-                    'Superadmin: ${result.wouldBeSuperadmin}',
-                ].join('\n'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogCtx).pop(),
-            child: const Text('Close'),
+      builder: (dialogCtx) {
+        final l10n = AppLocalizations.of(dialogCtx);
+        return AlertDialog(
+          title: Text(
+            (result?.ok ?? false)
+                ? l10n.adminLdapBindSucceeded
+                : l10n.adminLdapBindFailed,
           ),
-        ],
-      ),
+          content: Text(
+            result == null
+                ? l10n.adminLdapRequestFailed
+                : [
+                    result.message,
+                    if (result.email != null)
+                      l10n.adminLdapEmailLine(result.email!),
+                    if (result.username != null)
+                      l10n.adminLdapUsernameLine(result.username!),
+                    if (result.displayName != null)
+                      l10n.adminLdapNameLine(result.displayName!),
+                    if (result.wouldBeSuperadmin != null)
+                      l10n.adminLdapSuperadminLine(
+                        result.wouldBeSuperadmin.toString(),
+                      ),
+                  ].join('\n'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              child: Text(l10n.adminLdapClose),
+            ),
+          ],
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         SwitchListTile(
-          title: const Text('Enable LDAP authentication'),
-          subtitle: const Text(
-            'When enabled, all users EXCEPT local superadmins must sign in '
-            'through the directory. Keep at least one local superadmin so you '
-            'can always reach this page.',
-          ),
+          title: Text(l10n.adminLdapEnable),
+          subtitle: Text(l10n.adminLdapEnableHelp),
           value: _enabled,
           onChanged: (v) => setState(() => _enabled = v),
         ),
         const Divider(),
-        _field(_serverUrl, 'Server URL', hint: 'ldap://dc.example.com:389'),
+        _field(_serverUrl, l10n.adminLdapServerUrl, hint: 'ldap://dc.example.com:389'),
         SwitchListTile(
-          title: const Text('Use StartTLS'),
+          title: Text(l10n.adminLdapUseStartTls),
           value: _startTls,
           onChanged: (v) => setState(() => _startTls = v),
         ),
         SwitchListTile(
-          title: const Text('Skip TLS certificate verification'),
-          subtitle: const Text('Lab / self-signed only.'),
+          title: Text(l10n.adminLdapSkipTlsVerify),
+          subtitle: Text(l10n.adminLdapSkipTlsVerifyHelp),
           value: _skipVerify,
           onChanged: (v) => setState(() => _skipVerify = v),
         ),
-        _field(_baseDn, 'Base DN', hint: 'dc=example,dc=com'),
-        _field(_defaultDomain, 'Default domain', hint: 'example.com'),
+        _field(_baseDn, l10n.adminLdapBaseDn, hint: 'dc=example,dc=com'),
+        _field(_defaultDomain, l10n.adminLdapDefaultDomain, hint: 'example.com'),
         const SizedBox(height: 12),
-        Text('Bind mode', style: theme.textTheme.titleSmall),
+        Text(l10n.adminLdapBindMode, style: theme.textTheme.titleSmall),
         const SizedBox(height: 8),
         SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(value: 'direct', label: Text('Direct bind')),
-            ButtonSegment(value: 'search', label: Text('Service account')),
+          segments: [
+            ButtonSegment(
+              value: 'direct',
+              label: Text(l10n.adminLdapBindModeDirect),
+            ),
+            ButtonSegment(
+              value: 'search',
+              label: Text(l10n.adminLdapBindModeService),
+            ),
           ],
           selected: {_bindMode},
           onSelectionChanged: (sel) => setState(() => _bindMode = sel.first),
@@ -236,68 +259,65 @@ class _LdapFormState extends State<_LdapForm> {
         const SizedBox(height: 4),
         Text(
           _bindMode == 'search'
-              ? 'A service account searches for the user, then we bind as the '
-                    'found DN. Use this for OpenLDAP where the login name is not '
-                    'the entry RDN.'
-              : 'Bind directly as the user via the Bind DN format below. Use '
-                    'this for Active Directory (user@domain).',
+              ? l10n.adminLdapBindModeSearchHelp
+              : l10n.adminLdapBindModeDirectHelp,
           style: theme.textTheme.bodySmall,
         ),
         const SizedBox(height: 8),
         if (_bindMode == 'direct')
-          _field(_bindDnFormat, 'Bind DN format', hint: '%s')
+          _field(_bindDnFormat, l10n.adminLdapBindDnFormat, hint: '%s')
         else ...[
           _field(
             _serviceBindDn,
-            'Service bind DN',
+            l10n.adminLdapServiceBindDn,
             hint: 'cn=svc-search,dc=example,dc=com',
           ),
           _field(
             _serviceBindPassword,
-            'Service bind password',
+            l10n.adminLdapServiceBindPassword,
             hint: widget.settings.serviceBindPasswordSet
-                ? 'Stored — leave blank to keep'
-                : 'Not set',
+                ? l10n.adminLdapServiceBindPasswordStored
+                : l10n.adminLdapServiceBindPasswordNotSet,
             obscure: true,
           ),
           _field(
             _userSearchBase,
-            'User search base',
-            hint: 'leave empty to use Base DN',
+            l10n.adminLdapUserSearchBase,
+            hint: l10n.adminLdapUserSearchBaseHint,
           ),
         ],
         _field(
           _userFilter,
-          'User search filter',
+          l10n.adminLdapUserSearchFilter,
           hint: _bindMode == 'search'
               ? '(userPrincipalName=%s)'
               : '(sAMAccountName=%s)',
         ),
         _field(
           _superadminGroup,
-          'Superadmin group (CN or DN)',
-          hint: 'leave empty to disable',
+          l10n.adminLdapSuperadminGroup,
+          hint: l10n.adminLdapSuperadminGroupHint,
         ),
         if (_bindMode == 'search') ...[
           _field(
             _groupSearchBase,
-            'Group search base',
-            hint: 'ou=groups,dc=example,dc=com (empty disables group search)',
+            l10n.adminLdapGroupSearchBase,
+            hint: l10n.adminLdapGroupSearchBaseHint,
           ),
           _field(
             _groupSearchFilter,
-            'Group search filter',
-            hint: '(member=%s)  — %s is the user DN',
+            l10n.adminLdapGroupSearchFilter,
+            hint: l10n.adminLdapGroupSearchFilterHint,
           ),
         ],
         const SizedBox(height: 8),
-        Text('Attribute mapping', style: theme.textTheme.titleSmall),
-        _field(_attrEmail, 'Email attribute'),
-        _field(_attrDisplayName, 'Display-name attribute'),
-        _field(_attrUsername, 'Username attribute'),
+        Text(l10n.adminLdapAttributeMapping, style: theme.textTheme.titleSmall),
+        _field(_attrEmail, l10n.adminLdapAttrEmail),
+        _field(_attrDisplayName, l10n.adminLdapAttrDisplayName),
+        _field(_attrUsername, l10n.adminLdapAttrUsername),
         _field(
           _timeout,
-          'Connection timeout (seconds)',
+          l10n.adminLdapConnectionTimeout,
           keyboardType: TextInputType.number,
         ),
         const SizedBox(height: 16),
@@ -306,7 +326,7 @@ class _LdapFormState extends State<_LdapForm> {
             OutlinedButton.icon(
               onPressed: _test,
               icon: const Icon(Icons.network_check),
-              label: const Text('Test connection'),
+              label: Text(l10n.adminLdapTestConnection),
             ),
             const Spacer(),
             FilledButton(
@@ -317,7 +337,7 @@ class _LdapFormState extends State<_LdapForm> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Save'),
+                  : Text(l10n.adminLdapSave),
             ),
           ],
         ),
@@ -367,34 +387,37 @@ class _TestCredentialsDialogState extends State<_TestCredentialsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Test bind'),
+      title: Text(l10n.adminLdapTestBind),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           TextField(
             controller: _user,
             autofocus: true,
-            decoration: const InputDecoration(labelText: 'Username or email'),
+            decoration: InputDecoration(
+              labelText: l10n.adminLdapUsernameOrEmail,
+            ),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _pw,
             obscureText: true,
-            decoration: const InputDecoration(labelText: 'Password'),
+            decoration: InputDecoration(labelText: l10n.adminLdapPassword),
           ),
         ],
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(l10n.adminLdapCancel),
         ),
         FilledButton(
           onPressed: () => Navigator.of(
             context,
           ).pop((user: _user.text.trim(), pw: _pw.text)),
-          child: const Text('Test'),
+          child: Text(l10n.adminLdapTest),
         ),
       ],
     );

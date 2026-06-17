@@ -7,6 +7,7 @@ import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_users_cubit.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class AdminUsersPage extends StatelessWidget {
   const AdminUsersPage({super.key});
@@ -37,15 +38,16 @@ class _UsersViewState extends State<_UsersView> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final cubit = context.read<AdminUsersCubit>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Users'),
+        title: Text(l10n.adminUsersTitle),
         actions: [
           IconButton(
             onPressed: () => _openCreateDialog(cubit),
             icon: const Icon(Icons.person_add_alt_1),
-            tooltip: 'Create user',
+            tooltip: l10n.adminUsersCreateTooltip,
           ),
         ],
       ),
@@ -55,9 +57,9 @@ class _UsersViewState extends State<_UsersView> {
             padding: const EdgeInsets.all(12),
             child: TextField(
               controller: _search,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
-                hintText: 'Search by email, username, or full name',
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
+                hintText: l10n.adminUsersSearchHint,
               ),
               onSubmitted: (v) => cubit.load(q: v.trim()),
             ),
@@ -65,10 +67,11 @@ class _UsersViewState extends State<_UsersView> {
           Expanded(
             child: BlocBuilder<AdminUsersCubit, AdminUsersState>(
               builder: (context, state) => switch (state) {
-                AdminUsersLoading() =>
-                  const Center(child: CircularProgressIndicator()),
+                AdminUsersLoading() => const Center(
+                  child: CircularProgressIndicator(),
+                ),
                 AdminUsersFailed(:final failure) => Center(
-                  child: Text('Failed: ${failure.debugLabel}'),
+                  child: Text(l10n.adminUsersLoadFailed(failure.debugLabel)),
                 ),
                 AdminUsersLoaded(:final items, :final total, :final lastError) =>
                   _UsersList(
@@ -105,22 +108,20 @@ class _UsersViewState extends State<_UsersView> {
   }
 
   Future<void> _confirmDelete(UserProfile u, AdminUsersCubit cubit) async {
+    final l10n = AppLocalizations.of(context);
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete user?'),
-        content: Text(
-          'This will soft-delete ${u.email}. They will be removed after a '
-          '30-day grace period.',
-        ),
+        title: Text(l10n.adminUsersDeleteTitle),
+        content: Text(l10n.adminUsersDeleteBody(u.email)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.adminUsersCancel),
           ),
           FilledButton.tonal(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete'),
+            child: Text(l10n.adminUsersDelete),
           ),
         ],
       ),
@@ -131,11 +132,12 @@ class _UsersViewState extends State<_UsersView> {
   }
 
   Future<void> _resetPasswordFlow(UserProfile u, AdminUsersCubit cubit) async {
+    final l10n = AppLocalizations.of(context);
     final issued = await cubit.resetPasswordFor(u.id);
     if (!mounted) return;
     if (issued == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not issue reset token')),
+        SnackBar(content: Text(l10n.adminUsersResetError)),
       );
       return;
     }
@@ -143,15 +145,17 @@ class _UsersViewState extends State<_UsersView> {
       await showDialog<void>(
         context: context,
         builder: (_) => _OneTimeTokenDialog(
-          title: 'Password reset token',
-          subtitle:
-              'Send this to ${u.email}. Valid until ${issued.expiresAt.toLocal()}.',
+          title: l10n.adminUsersResetTokenTitle,
+          subtitle: l10n.adminUsersResetTokenSubtitle(
+            u.email,
+            issued.expiresAt.toLocal().toString(),
+          ),
           token: issued.resetToken!,
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Reset email sent to ${u.email}')),
+        SnackBar(content: Text(l10n.adminUsersResetEmailSent(u.email))),
       );
     }
   }
@@ -176,6 +180,7 @@ class _UsersList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       children: [
         if (lastError != null)
@@ -183,7 +188,7 @@ class _UsersList extends StatelessWidget {
             color: Theme.of(context).colorScheme.errorContainer,
             padding: const EdgeInsets.all(8),
             child: Text(
-              'Last action failed — see backend logs for details.',
+              l10n.adminUsersLastActionFailed,
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onErrorContainer,
               ),
@@ -193,7 +198,7 @@ class _UsersList extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text('$total user${total == 1 ? '' : 's'}'),
+            child: Text(l10n.adminUsersCount(total)),
           ),
         ),
         Expanded(
@@ -233,24 +238,25 @@ class _UserTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return ListTile(
       title: Row(
         children: [
           Expanded(child: Text(user.email)),
           if (user.isSuperadmin)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Chip(label: Text('superadmin')),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Chip(label: Text(l10n.adminUsersChipSuperadmin)),
             ),
           if (!user.isActive)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Chip(label: Text('inactive')),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Chip(label: Text(l10n.adminUsersChipInactive)),
             ),
           if (user.mustChangePassword)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 4),
-              child: Chip(label: Text('temp pw')),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Chip(label: Text(l10n.adminUsersChipTempPw)),
             ),
         ],
       ),
@@ -271,19 +277,25 @@ class _UserTile extends StatelessWidget {
         itemBuilder: (_) => [
           PopupMenuItem(
             value: 'toggle_active',
-            child: Text(user.isActive ? 'Deactivate' : 'Reactivate'),
+            child: Text(
+              user.isActive
+                  ? l10n.adminUsersDeactivate
+                  : l10n.adminUsersReactivate,
+            ),
           ),
           PopupMenuItem(
             value: 'toggle_superadmin',
             child: Text(
-              user.isSuperadmin ? 'Revoke superadmin' : 'Promote to superadmin',
+              user.isSuperadmin
+                  ? l10n.adminUsersRevokeSuperadmin
+                  : l10n.adminUsersPromoteSuperadmin,
             ),
           ),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'reset',
-            child: Text('Issue password reset…'),
+            child: Text(l10n.adminUsersIssueReset),
           ),
-          const PopupMenuItem(value: 'delete', child: Text('Delete…')),
+          PopupMenuItem(value: 'delete', child: Text(l10n.adminUsersDeleteMenu)),
         ],
       ),
     );
@@ -316,6 +328,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _busy = true;
       _error = null;
@@ -335,7 +348,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
       final failure = st is AdminUsersLoaded ? st.lastError : null;
       setState(() {
         _busy = false;
-        _error = _failureMessage(failure);
+        _error = _failureMessage(l10n, failure);
       });
       return;
     }
@@ -343,37 +356,41 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
   }
 
   /// Turn a backend failure into a human-readable message. Validation failures
-  /// surface the exact per-field reasons returned by the API (e.g. "Username:
-  /// length is lower than 3") instead of a generic catch-all line.
-  String _failureMessage(AppFailure? failure) {
+  /// surface the exact per-field reasons returned by the API instead of a
+  /// generic catch-all line.
+  String _failureMessage(AppLocalizations l10n, AppFailure? failure) {
     switch (failure) {
       case ValidationFailure(:final fieldErrors) when fieldErrors.isNotEmpty:
         return fieldErrors
-            .map((e) => '${_fieldLabel(e.field)}: ${e.message ?? 'invalid'}')
+            .map(
+              (e) =>
+                  '${_fieldLabel(l10n, e.field)}: ${e.message ?? 'invalid'}',
+            )
             .join('\n');
       case ConflictFailure():
-        return 'That email or username is already taken.';
+        return l10n.adminUsersErrConflict;
       case ForbiddenFailure():
-        return 'You do not have permission to create users.';
+        return l10n.adminUsersErrForbidden;
       case NetworkFailure():
-        return 'Network error. Check your connection and try again.';
+        return l10n.adminUsersErrNetwork;
       case _:
-        return 'Could not create user. Please try again.';
+        return l10n.adminUsersErrGeneric;
     }
   }
 
-  String _fieldLabel(String field) => switch (field) {
-    'email' => 'Email',
-    'username' => 'Username',
-    'full_name' => 'Full name',
-    'password' => 'Password',
+  String _fieldLabel(AppLocalizations l10n, String field) => switch (field) {
+    'email' => l10n.adminUsersEmail,
+    'username' => l10n.adminUsersUsername,
+    'full_name' => l10n.adminUsersFullName,
+    'password' => l10n.adminUsersPasswordField,
     _ => field,
   };
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Create user'),
+      title: Text(l10n.adminUsersCreateTitle),
       content: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Column(
@@ -381,26 +398,26 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
           children: [
             TextField(
               controller: _email,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: l10n.adminUsersEmail),
             ),
             TextField(
               controller: _username,
-              decoration: const InputDecoration(labelText: 'Username'),
+              decoration: InputDecoration(labelText: l10n.adminUsersUsername),
             ),
             TextField(
               controller: _fullName,
-              decoration: const InputDecoration(labelText: 'Full name'),
+              decoration: InputDecoration(labelText: l10n.adminUsersFullName),
             ),
             TextField(
               controller: _password,
               obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password (leave blank to auto-generate)',
+              decoration: InputDecoration(
+                labelText: l10n.adminUsersPasswordHint,
               ),
             ),
             const SizedBox(height: 8),
             SwitchListTile(
-              title: const Text('Superadmin'),
+              title: Text(l10n.adminUsersSuperadmin),
               value: _isSuperadmin,
               onChanged: (v) => setState(() => _isSuperadmin = v),
             ),
@@ -415,7 +432,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
       actions: [
         TextButton(
           onPressed: _busy ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(l10n.adminUsersCancel),
         ),
         FilledButton(
           onPressed: _busy ? null : _submit,
@@ -424,7 +441,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
                   dimension: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Create'),
+              : Text(l10n.adminUsersCreate),
         ),
       ],
     );
@@ -438,19 +455,17 @@ class _TempCredentialDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
-      title: const Text('Temporary password'),
+      title: Text(l10n.adminUsersTempPwTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Hand the following one-time credentials to $email. The user '
-            'will be forced to change the password on first login.',
-          ),
+          Text(l10n.adminUsersTempPwBody(email)),
           const SizedBox(height: 12),
-          SelectableText('Email:    $email'),
-          SelectableText('Password: $password'),
+          SelectableText(l10n.adminUsersTempEmailLine(email)),
+          SelectableText(l10n.adminUsersTempPasswordLine(password)),
         ],
       ),
       actions: [
@@ -458,14 +473,14 @@ class _TempCredentialDialog extends StatelessWidget {
           onPressed: () {
             Clipboard.setData(ClipboardData(text: password));
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Password copied')),
+              SnackBar(content: Text(l10n.adminUsersPasswordCopied)),
             );
           },
-          child: const Text('Copy password'),
+          child: Text(l10n.adminUsersCopyPassword),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Done'),
+          child: Text(l10n.adminUsersDone),
         ),
       ],
     );
@@ -484,6 +499,7 @@ class _OneTimeTokenDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AlertDialog(
       title: Text(title),
       content: Column(
@@ -500,14 +516,14 @@ class _OneTimeTokenDialog extends StatelessWidget {
           onPressed: () {
             Clipboard.setData(ClipboardData(text: token));
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Token copied')),
+              SnackBar(content: Text(l10n.adminUsersTokenCopied)),
             );
           },
-          child: const Text('Copy'),
+          child: Text(l10n.adminUsersCopy),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Done'),
+          child: Text(l10n.adminUsersDone),
         ),
       ],
     );

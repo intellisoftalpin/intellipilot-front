@@ -4,6 +4,36 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.3.4] - 2026-06-17
+
+### Changed
+- Redesigned the login screen: a modern two-pane "split hero" layout (branding
+  panel + sign-in form) that collapses to a centered card on narrow screens. A
+  gentle, low-cost animated backdrop (slowly drifting theme-coloured gradient
+  blobs, no blur, isolated in a RepaintBoundary) plus polish touches: staggered
+  fade/slide entrance, focus glow on inputs, a press-scale sign-in button that
+  cross-fades into its spinner, and a softly floating logo. Honours the OS
+  "reduce motion" setting and the white-label name/icon.
+
+## [0.3.3] - 2026-06-17
+
+### Added
+- **Russian (Русский)** and **Belarusian (Беларуская)** UI translations, in
+  addition to completing the **German** translation. All app strings — including
+  the entire admin area (settings, branding, LDAP, notifications, users,
+  invitations) — are now localised across English, German, Russian and
+  Belarusian. The language picker in Settings offers all four.
+- Profile: the timezone field is now a searchable dropdown of IANA timezones
+  instead of a free-text field.
+
+### Changed
+- The whole admin area was moved off hardcoded English onto the localisation
+  system, so it follows the selected language like the rest of the app.
+
+### Removed
+- The non-functional language dropdown on the Profile page. Language is chosen
+  in **Settings** (it drives the whole app); the profile field did nothing.
+
 ## [0.3.2] - 2026-06-16
 
 ### Added
