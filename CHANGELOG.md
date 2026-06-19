@@ -32,6 +32,8 @@ and this project adheres to Semantic Versioning.
     unlink supported. Many repositories can link to one component.
 
 ### Changed
+- Web **favicon and PWA icons** now use the IntelliPilot app icon instead of the
+  default Flutter logo.
 - A single **Priority** field (Low/Medium/High/Critical/Blocker) replaces the
   separate priority + severity pickers; **Size** replaces points across the
   board, backlog and editors.
