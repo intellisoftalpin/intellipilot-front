@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,7 +17,11 @@ class AdminUsersPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<AdminUsersCubit>(
-      create: (_) => AdminUsersCubit(getIt<AdminRepository>())..load(),
+      create: (_) {
+        final c = AdminUsersCubit(getIt<AdminRepository>());
+        unawaited(c.load());
+        return c;
+      },
       child: const _UsersView(),
     );
   }
@@ -471,7 +477,7 @@ class _TempCredentialDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () {
-            Clipboard.setData(ClipboardData(text: password));
+            unawaited(Clipboard.setData(ClipboardData(text: password)));
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.adminUsersPasswordCopied)),
             );
@@ -514,7 +520,7 @@ class _OneTimeTokenDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () {
-            Clipboard.setData(ClipboardData(text: token));
+            unawaited(Clipboard.setData(ClipboardData(text: token)));
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.adminUsersTokenCopied)),
             );

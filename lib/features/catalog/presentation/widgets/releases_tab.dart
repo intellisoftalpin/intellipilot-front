@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -21,9 +23,14 @@ class ReleasesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<ReleasesCubit>(
-      create: (_) =>
-          ReleasesCubit(repo: getIt<CatalogRepository>(), projectId: projectId)
-            ..load(),
+      create: (_) {
+        final c = ReleasesCubit(
+          repo: getIt<CatalogRepository>(),
+          projectId: projectId,
+        );
+        unawaited(c.load());
+        return c;
+      },
       child: _ReleasesView(projectId: projectId),
     );
   }
@@ -112,7 +119,9 @@ class _ReleaseCard extends StatelessWidget {
             ? Text(release.description!)
             : null,
         onExpansionChanged: (open) {
-          if (open) context.read<ReleasesCubit>().loadVersions(release.id);
+          if (open) {
+            unawaited(context.read<ReleasesCubit>().loadVersions(release.id));
+          }
         },
         children: [
           if (canEdit)

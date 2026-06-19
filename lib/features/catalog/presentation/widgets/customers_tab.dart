@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -18,9 +20,14 @@ class CustomersTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<CustomersCubit>(
-      create: (_) =>
-          CustomersCubit(repo: getIt<CatalogRepository>(), projectId: projectId)
-            ..load(),
+      create: (_) {
+        final c = CustomersCubit(
+          repo: getIt<CatalogRepository>(),
+          projectId: projectId,
+        );
+        unawaited(c.load());
+        return c;
+      },
       child: const _CustomersView(),
     );
   }

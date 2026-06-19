@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -97,14 +99,14 @@ class _GlobalShortcutsShellState extends State<GlobalShortcutsShell> {
             HardwareKeyboard.instance.isControlPressed);
     if (isCmdK) {
       _awaitingChord = false;
-      _openPalette(ctx);
+      unawaited(_openPalette(ctx));
       return true;
     }
 
     if (event.logicalKey == LogicalKeyboardKey.slash &&
         HardwareKeyboard.instance.isShiftPressed) {
       _awaitingChord = false;
-      _showHelp(ctx);
+      unawaited(_showHelp(ctx));
       return true;
     }
 

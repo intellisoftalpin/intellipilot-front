@@ -82,7 +82,7 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
   @override
   void initState() {
     super.initState();
-    _initialLoad();
+    unawaited(_initialLoad());
   }
 
   Future<void> _initialLoad() async {
@@ -127,36 +127,52 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
     return MultiBlocProvider(
       providers: [
         BlocProvider<ProjectDetailCubit>(
-          create: (_) => ProjectDetailCubit(
-            repo: getIt<ProjectsRepository>(),
-            projectId: widget.projectId,
-            currentUserId: data.profile.id,
-          )..load(),
+          create: (_) {
+            final c = ProjectDetailCubit(
+              repo: getIt<ProjectsRepository>(),
+              projectId: widget.projectId,
+              currentUserId: data.profile.id,
+            );
+            unawaited(c.load());
+            return c;
+          },
         ),
         BlocProvider<ActivityStreamCubit>(
-          create: (_) => ActivityStreamCubit(
-            repo: getIt<ActivityRepository>(),
-            projectId: widget.projectId,
-            kind: widget.kind,
-            entityId: widget.entityId,
-          )..load(),
+          create: (_) {
+            final c = ActivityStreamCubit(
+              repo: getIt<ActivityRepository>(),
+              projectId: widget.projectId,
+              kind: widget.kind,
+              entityId: widget.entityId,
+            );
+            unawaited(c.load());
+            return c;
+          },
         ),
         BlocProvider<AttachmentsCubit>(
-          create: (_) => AttachmentsCubit(
-            repo: getIt<ActivityRepository>(),
-            projectId: widget.projectId,
-            kind: widget.kind,
-            entityId: widget.entityId,
-            maxBytes: _maxBytes,
-          )..load(),
+          create: (_) {
+            final c = AttachmentsCubit(
+              repo: getIt<ActivityRepository>(),
+              projectId: widget.projectId,
+              kind: widget.kind,
+              entityId: widget.entityId,
+              maxBytes: _maxBytes,
+            );
+            unawaited(c.load());
+            return c;
+          },
         ),
         BlocProvider<LinksCubit>(
-          create: (_) => LinksCubit(
-            repo: getIt<LinksRepository>(),
-            projectId: widget.projectId,
-            kind: widget.kind,
-            entityId: widget.entityId,
-          )..load(),
+          create: (_) {
+            final c = LinksCubit(
+              repo: getIt<LinksRepository>(),
+              projectId: widget.projectId,
+              kind: widget.kind,
+              entityId: widget.entityId,
+            );
+            unawaited(c.load());
+            return c;
+          },
         ),
       ],
       child: _DetailView(
@@ -2232,7 +2248,7 @@ class _MultiSelectCellState extends State<_MultiSelectCell> {
 
   void _removeOne(String id) {
     final current = _optimistic ?? widget.selectedIds;
-    _commit(current.where((x) => x != id).toList());
+    unawaited(_commit(current.where((x) => x != id).toList()));
   }
 
   void _showReadOnlyToast() {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -27,9 +29,14 @@ class SecurityPage extends StatelessWidget {
       providers: [
         // Loaded so the password card can tell local accounts from LDAP ones.
         BlocProvider<ProfileCubit>(
-          create: (_) =>
-              ProfileCubit(repo: profileRepo, locale: getIt<LocaleCubit>())
-                ..load(),
+          create: (_) {
+            final c = ProfileCubit(
+              repo: profileRepo,
+              locale: getIt<LocaleCubit>(),
+            );
+            unawaited(c.load());
+            return c;
+          },
         ),
         BlocProvider<PasswordChangeCubit>(
           create: (_) => PasswordChangeCubit(

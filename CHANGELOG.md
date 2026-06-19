@@ -4,7 +4,7 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
-## [0.4.0] - 2026-06-18
+## [0.4.2] - 2026-06-19
 
 ### Added
 - **Issue fields**: a scaled **Size** badge (XS–XXL) replacing points; a

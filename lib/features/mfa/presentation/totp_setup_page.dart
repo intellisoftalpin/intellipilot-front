@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -17,7 +18,11 @@ class TotpSetupPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<TotpSetupCubit>(
-      create: (_) => TotpSetupCubit(getIt<MfaRepository>())..start(),
+      create: (_) {
+        final c = TotpSetupCubit(getIt<MfaRepository>());
+        unawaited(c.start());
+        return c;
+      },
       child: const _TotpSetupView(),
     );
   }

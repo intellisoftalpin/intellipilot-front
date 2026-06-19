@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -12,7 +14,11 @@ class AdminLdapPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<AdminLdapCubit>(
-      create: (_) => AdminLdapCubit(getIt<AdminRepository>())..load(),
+      create: (_) {
+        final c = AdminLdapCubit(getIt<AdminRepository>());
+        unawaited(c.load());
+        return c;
+      },
       child: Scaffold(
         appBar: AppBar(
           title: Text(AppLocalizations.of(context).adminLdapTitle),

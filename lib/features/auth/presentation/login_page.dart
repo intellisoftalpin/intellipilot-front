@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -66,7 +67,7 @@ class _LoginViewState extends State<_LoginView>
     );
     // Kick off the staggered entrance after the first frame.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _entrance.forward();
+      if (mounted) unawaited(_entrance.forward());
     });
   }
 
@@ -81,9 +82,11 @@ class _LoginViewState extends State<_LoginView>
       _form.markAllAsTouched();
       return;
     }
-    context.read<LoginCubit>().submit(
-      email: _form.control('email').value as String,
-      password: _form.control('password').value as String,
+    unawaited(
+      context.read<LoginCubit>().submit(
+        email: _form.control('email').value as String,
+        password: _form.control('password').value as String,
+      ),
     );
   }
 
@@ -472,7 +475,7 @@ class _AnimatedBlobBackgroundState extends State<_AnimatedBlobBackground>
       vsync: this,
       duration: const Duration(seconds: 24),
     );
-    if (_animate) _c.repeat();
+    if (_animate) unawaited(_c.repeat());
   }
 
   @override
@@ -564,7 +567,7 @@ class _FloatingLogoState extends State<_FloatingLogo>
       vsync: this,
       duration: const Duration(milliseconds: 3600),
     );
-    if (_animate) _c.repeat(reverse: true);
+    if (_animate) unawaited(_c.repeat(reverse: true));
   }
 
   @override
@@ -703,7 +706,7 @@ class _RegisterLinkState extends State<_RegisterLink> {
   @override
   void initState() {
     super.initState();
-    _load();
+    unawaited(_load());
   }
 
   Future<void> _load() async {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -56,27 +58,40 @@ class ProjectSettingsPage extends StatelessWidget {
         return MultiBlocProvider(
           providers: [
             BlocProvider<ProjectDetailCubit>(
-              create: (_) => ProjectDetailCubit(
-                repo: repo,
-                projectId: projectId,
-                currentUserId: profile.id,
-              )..load(),
+              create: (_) {
+                final c = ProjectDetailCubit(
+                  repo: repo,
+                  projectId: projectId,
+                  currentUserId: profile.id,
+                );
+                unawaited(c.load());
+                return c;
+              },
             ),
             BlocProvider<ProjectSettingsCubit>(
               create: (_) =>
                   ProjectSettingsCubit(repo: repo, projectId: projectId),
             ),
             BlocProvider<MembersCubit>(
-              create: (_) =>
-                  MembersCubit(repo: repo, projectId: projectId)..load(),
+              create: (_) {
+                final c = MembersCubit(repo: repo, projectId: projectId);
+                unawaited(c.load());
+                return c;
+              },
             ),
             BlocProvider<RolesCubit>(
-              create: (_) =>
-                  RolesCubit(repo: repo, projectId: projectId)..load(),
+              create: (_) {
+                final c = RolesCubit(repo: repo, projectId: projectId);
+                unawaited(c.load());
+                return c;
+              },
             ),
             BlocProvider<InvitationsCubit>(
-              create: (_) =>
-                  InvitationsCubit(repo: repo, projectId: projectId)..load(),
+              create: (_) {
+                final c = InvitationsCubit(repo: repo, projectId: projectId);
+                unawaited(c.load());
+                return c;
+              },
             ),
           ],
           child: _SettingsView(projectId: projectId),
@@ -514,7 +529,7 @@ class _PendingInvitations extends StatelessWidget {
           next is InvitationsLoaded && next.lastInviteToken != null,
       listener: (context, state) {
         if (state is InvitationsLoaded && state.lastInviteToken != null) {
-          showDialog<void>(
+          unawaited(showDialog<void>(
             context: context,
             builder: (ctx) => AlertDialog(
               title: Text(t.invitationTokenDialogTitle),
@@ -535,7 +550,7 @@ class _PendingInvitations extends StatelessWidget {
                 ),
               ],
             ),
-          );
+          ));
         }
       },
       builder: (context, state) {

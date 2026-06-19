@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,7 +14,11 @@ class AdminInvitationsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<AdminInvitationsCubit>(
-      create: (_) => AdminInvitationsCubit(getIt<AdminRepository>())..load(),
+      create: (_) {
+        final c = AdminInvitationsCubit(getIt<AdminRepository>());
+        unawaited(c.load());
+        return c;
+      },
       child: const _InvitationsView(),
     );
   }
@@ -184,7 +190,7 @@ class _InviteLinkDialog extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () {
-            Clipboard.setData(ClipboardData(text: link));
+            unawaited(Clipboard.setData(ClipboardData(text: link)));
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.adminInviteLinkCopied)),
             );

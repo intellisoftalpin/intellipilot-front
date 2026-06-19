@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -22,9 +24,14 @@ class AccountPage extends StatelessWidget {
         // Reuse ProfileCubit so we have the username available for the
         // delete confirmation; loads on entry.
         BlocProvider<ProfileCubit>(
-          create: (_) =>
-              ProfileCubit(repo: profileRepo, locale: getIt<LocaleCubit>())
-                ..load(),
+          create: (_) {
+            final c = ProfileCubit(
+              repo: profileRepo,
+              locale: getIt<LocaleCubit>(),
+            );
+            unawaited(c.load());
+            return c;
+          },
         ),
         BlocProvider<AccountDeletionCubit>(
           create: (_) => AccountDeletionCubit(

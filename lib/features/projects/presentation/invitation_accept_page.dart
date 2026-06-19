@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -16,8 +18,11 @@ class InvitationAcceptPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<AcceptInvitationCubit>(
-      create: (_) =>
-          AcceptInvitationCubit(getIt<ProjectsRepository>())..accept(token),
+      create: (_) {
+        final c = AcceptInvitationCubit(getIt<ProjectsRepository>());
+        unawaited(c.accept(token));
+        return c;
+      },
       child: const _AcceptView(),
     );
   }

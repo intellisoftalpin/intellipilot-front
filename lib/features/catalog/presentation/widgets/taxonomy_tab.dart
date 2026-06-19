@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -47,11 +49,15 @@ class _TaxonomyTabState extends State<TaxonomyTab> {
         Expanded(
           child: BlocProvider<TaxonomyCubit>(
             key: ValueKey(_kind),
-            create: (_) => TaxonomyCubit(
-              repo: getIt<CatalogRepository>(),
-              projectId: widget.projectId,
-              kind: _kind,
-            )..load(),
+            create: (_) {
+              final c = TaxonomyCubit(
+                repo: getIt<CatalogRepository>(),
+                projectId: widget.projectId,
+                kind: _kind,
+              );
+              unawaited(c.load());
+              return c;
+            },
             child: _TaxonomyKindView(kind: _kind),
           ),
         ),
@@ -115,9 +121,11 @@ class _TaxonomyKindView extends StatelessWidget {
                               // when moving downward; the cubit's reorder
                               // applies the same shift internally so we can
                               // pass the raw index through.
-                              context
-                                  .read<TaxonomyCubit>()
-                                  .reorder(moved.id, newIndex);
+                              unawaited(
+                                context
+                                    .read<TaxonomyCubit>()
+                                    .reorder(moved.id, newIndex),
+                              );
                             }
                           : (_, _) {},
                       itemBuilder: (context, i) {

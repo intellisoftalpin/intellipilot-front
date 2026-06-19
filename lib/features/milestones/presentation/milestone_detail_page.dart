@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -47,19 +49,27 @@ class MilestoneDetailPage extends StatelessWidget {
         return MultiBlocProvider(
           providers: [
             BlocProvider<ProjectDetailCubit>(
-              create: (_) => ProjectDetailCubit(
-                repo: getIt<ProjectsRepository>(),
-                projectId: projectId,
-                currentUserId: profile.id,
-              )..load(),
+              create: (_) {
+                final c = ProjectDetailCubit(
+                  repo: getIt<ProjectsRepository>(),
+                  projectId: projectId,
+                  currentUserId: profile.id,
+                );
+                unawaited(c.load());
+                return c;
+              },
             ),
             BlocProvider<MilestoneDetailCubit>(
-              create: (_) => MilestoneDetailCubit(
-                milestones: getIt<MilestonesRepository>(),
-                backlog: getIt<BacklogRepository>(),
-                projectId: projectId,
-                milestoneId: milestoneId,
-              )..load(),
+              create: (_) {
+                final c = MilestoneDetailCubit(
+                  milestones: getIt<MilestonesRepository>(),
+                  backlog: getIt<BacklogRepository>(),
+                  projectId: projectId,
+                  milestoneId: milestoneId,
+                );
+                unawaited(c.load());
+                return c;
+              },
             ),
           ],
           child: _DetailView(projectId: projectId),

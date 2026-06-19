@@ -779,7 +779,7 @@ class CatalogRepositoryImpl implements CatalogRepository {
   }) async {
     final res = await _api.post(
       '$_base/$projectId/issues/$issueId/watchers',
-      body: {if (userId != null) 'user_id': userId},
+      body: {'user_id': ?userId},
     );
     return res.when(
       ok: (_) => const Ok<Unit, AppFailure>(Unit.instance),

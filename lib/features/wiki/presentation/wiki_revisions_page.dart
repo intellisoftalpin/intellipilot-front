@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -24,18 +26,26 @@ class WikiRevisionsPage extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<WikiPageCubit>(
-          create: (_) => WikiPageCubit(
-            repo: getIt<WikiRepository>(),
-            projectId: projectId,
-            pageId: pageId,
-          )..load(),
+          create: (_) {
+            final c = WikiPageCubit(
+              repo: getIt<WikiRepository>(),
+              projectId: projectId,
+              pageId: pageId,
+            );
+            unawaited(c.load());
+            return c;
+          },
         ),
         BlocProvider<WikiRevisionsCubit>(
-          create: (_) => WikiRevisionsCubit(
-            repo: getIt<WikiRepository>(),
-            projectId: projectId,
-            pageId: pageId,
-          )..load(),
+          create: (_) {
+            final c = WikiRevisionsCubit(
+              repo: getIt<WikiRepository>(),
+              projectId: projectId,
+              pageId: pageId,
+            );
+            unawaited(c.load());
+            return c;
+          },
         ),
       ],
       child: _View(projectId: projectId),

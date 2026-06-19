@@ -1,5 +1,6 @@
 // Keep field names readable in the public constructor.
 // ignore_for_file: prefer_initializing_formals
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:equatable/equatable.dart';
@@ -89,7 +90,7 @@ class ProfileCubit extends Cubit<ProfileState> {
         // Reflect the new lang in the app's live locale so the UI changes
         // without waiting for the next cold-start fetch.
         if (lang != null && lang != current.profile.lang) {
-          _locale.setLocale(Locale(lang));
+          unawaited(_locale.setLocale(Locale(lang)));
         }
         emit(ProfileLoaded(profile: updated, savedAt: DateTime.now()));
       },

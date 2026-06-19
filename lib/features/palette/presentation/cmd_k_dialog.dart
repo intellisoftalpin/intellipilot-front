@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -21,12 +23,16 @@ Future<void> openCmdKDialog(
     context: context,
     barrierColor: Colors.black54,
     builder: (ctx) => BlocProvider<PaletteCubit>(
-      create: (_) => PaletteCubit(
-        projects: getIt<ProjectsRepository>(),
-        backlog: getIt<BacklogRepository>(),
-        wiki: getIt<WikiRepository>(),
-        activeProjectId: activeProjectId,
-      )..prime(),
+      create: (_) {
+        final c = PaletteCubit(
+          projects: getIt<ProjectsRepository>(),
+          backlog: getIt<BacklogRepository>(),
+          wiki: getIt<WikiRepository>(),
+          activeProjectId: activeProjectId,
+        );
+        unawaited(c.prime());
+        return c;
+      },
       child: const _CmdK(),
     ),
   );
@@ -128,7 +134,7 @@ class _CmdKState extends State<_CmdK> {
                       ),
                       onChanged: (v) {
                         setState(() => _selected = 0);
-                        context.read<PaletteCubit>().setQuery(v);
+                        unawaited(context.read<PaletteCubit>().setQuery(v));
                       },
                       onSubmitted: (_) {
                         if (results.isNotEmpty) {

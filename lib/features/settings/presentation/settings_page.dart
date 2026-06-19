@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -271,9 +273,9 @@ class _LocaleSection extends StatelessWidget {
                     ),
                   ],
                   onChanged: (code) {
-                    context.read<LocaleCubit>().setLocale(
+                    unawaited(context.read<LocaleCubit>().setLocale(
                       code == null ? null : Locale(code),
-                    );
+                    ));
                   },
                 ),
               ],

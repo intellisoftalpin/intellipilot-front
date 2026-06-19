@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -44,10 +46,12 @@ class _MfaVerifyViewState extends State<_MfaVerifyView> {
     if (session is! SessionMfaRequired) return;
     final code = _codeController.text.trim();
     if (code.isEmpty) return;
-    context.read<MfaVerifyCubit>().submit(
-      mfaToken: session.mfaToken,
-      method: _method,
-      code: code,
+    unawaited(
+      context.read<MfaVerifyCubit>().submit(
+        mfaToken: session.mfaToken,
+        method: _method,
+        code: code,
+      ),
     );
   }
 

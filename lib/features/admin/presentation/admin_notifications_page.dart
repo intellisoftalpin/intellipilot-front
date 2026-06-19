@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -12,7 +14,11 @@ class AdminNotificationsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<AdminNotificationsCubit>(
-      create: (_) => AdminNotificationsCubit(getIt<AdminRepository>())..load(),
+      create: (_) {
+        final c = AdminNotificationsCubit(getIt<AdminRepository>());
+        unawaited(c.load());
+        return c;
+      },
       child: BlocBuilder<AdminNotificationsCubit, AdminNotificationsState>(
         builder: (context, state) => switch (state) {
           AdminNotificationsLoading() => Scaffold(

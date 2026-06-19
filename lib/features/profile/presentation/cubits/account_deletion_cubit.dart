@@ -5,7 +5,6 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
-import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 
 sealed class AccountDeletionState extends Equatable {
@@ -63,7 +62,7 @@ class AccountDeletionCubit extends Cubit<AccountDeletionState> {
 
     final res = await _repo.deleteAccount();
     res.when(
-      ok: (AccountErasureResponse r) {
+      ok: (r) {
         // Backend revokes our sessions on success, but the access token in
         // memory survives — push the session machine to Unauthenticated so
         // the router redirects to /login.

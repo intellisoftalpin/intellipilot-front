@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -48,18 +50,26 @@ class IssuesPage extends StatelessWidget {
         return MultiBlocProvider(
           providers: [
             BlocProvider<ProjectDetailCubit>(
-              create: (_) => ProjectDetailCubit(
-                repo: getIt<ProjectsRepository>(),
-                projectId: projectId,
-                currentUserId: profile.id,
-              )..load(),
+              create: (_) {
+                final c = ProjectDetailCubit(
+                  repo: getIt<ProjectsRepository>(),
+                  projectId: projectId,
+                  currentUserId: profile.id,
+                );
+                unawaited(c.load());
+                return c;
+              },
             ),
             BlocProvider<IssuesCubit>(
-              create: (_) => IssuesCubit(
-                repo: getIt<BacklogRepository>(),
-                catalog: getIt<CatalogRepository>(),
-                projectId: projectId,
-              )..load(),
+              create: (_) {
+                final c = IssuesCubit(
+                  repo: getIt<BacklogRepository>(),
+                  catalog: getIt<CatalogRepository>(),
+                  projectId: projectId,
+                );
+                unawaited(c.load());
+                return c;
+              },
             ),
           ],
           child: _IssuesView(projectId: projectId),

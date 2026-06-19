@@ -68,9 +68,9 @@ class _CommentComposerState extends State<CommentComposer> {
   void _flush() {
     final body = _ctrl.text;
     if (body.trim().isEmpty) {
-      _store.remove(widget.draftKey);
+      unawaited(_store.remove(widget.draftKey));
     } else {
-      _store.set<String>(widget.draftKey, body);
+      unawaited(_store.set<String>(widget.draftKey, body));
     }
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intellipilot/app/branding/brand_logo.dart';
 import 'package:intellipilot/app/branding/branding_cubit.dart';
@@ -30,7 +32,7 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
   @override
   void initState() {
     super.initState();
-    _load();
+    unawaited(_load());
   }
 
   @override

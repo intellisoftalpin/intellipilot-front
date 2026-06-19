@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -21,10 +23,14 @@ class ComponentsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<ComponentsCubit>(
-      create: (_) => ComponentsCubit(
-        repo: getIt<CatalogRepository>(),
-        projectId: projectId,
-      )..load(),
+      create: (_) {
+        final c = ComponentsCubit(
+          repo: getIt<CatalogRepository>(),
+          projectId: projectId,
+        );
+        unawaited(c.load());
+        return c;
+      },
       child: const _ComponentsView(),
     );
   }
@@ -237,18 +243,26 @@ class _ComponentLinksDialog extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<ComponentReposCubit>(
-          create: (_) => ComponentReposCubit(
-            repo: repo,
-            projectId: projectId,
-            componentId: component.id,
-          )..load(),
+          create: (_) {
+            final c = ComponentReposCubit(
+              repo: repo,
+              projectId: projectId,
+              componentId: component.id,
+            );
+            unawaited(c.load());
+            return c;
+          },
         ),
         BlocProvider<ComponentReleasesCubit>(
-          create: (_) => ComponentReleasesCubit(
-            repo: repo,
-            projectId: projectId,
-            componentId: component.id,
-          )..load(),
+          create: (_) {
+            final c = ComponentReleasesCubit(
+              repo: repo,
+              projectId: projectId,
+              componentId: component.id,
+            );
+            unawaited(c.load());
+            return c;
+          },
         ),
       ],
       child: _ComponentLinksView(

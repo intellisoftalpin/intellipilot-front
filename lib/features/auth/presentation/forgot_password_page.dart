@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -41,7 +43,7 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
     _form = FormGroup({
       'email': FormControl<String>(validators: AuthValidators.email),
     });
-    _loadConfig();
+    unawaited(_loadConfig());
   }
 
   Future<void> _loadConfig() async {
@@ -59,8 +61,10 @@ class _ForgotPasswordViewState extends State<_ForgotPasswordView> {
       _form.markAllAsTouched();
       return;
     }
-    context.read<ForgotPasswordCubit>().submit(
-      _form.control('email').value as String,
+    unawaited(
+      context.read<ForgotPasswordCubit>().submit(
+        _form.control('email').value as String,
+      ),
     );
   }
 

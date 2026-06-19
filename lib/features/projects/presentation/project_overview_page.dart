@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -39,11 +41,15 @@ class ProjectOverviewPage extends StatelessWidget {
           );
         }
         return BlocProvider<ProjectDetailCubit>(
-          create: (_) => ProjectDetailCubit(
-            repo: getIt<ProjectsRepository>(),
-            projectId: projectId,
-            currentUserId: profile.id,
-          )..load(),
+          create: (_) {
+            final c = ProjectDetailCubit(
+              repo: getIt<ProjectsRepository>(),
+              projectId: projectId,
+              currentUserId: profile.id,
+            );
+            unawaited(c.load());
+            return c;
+          },
           child: const _ProjectOverviewView(),
         );
       },

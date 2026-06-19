@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -26,12 +28,18 @@ class RepositoriesTab extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider<SshKeysCubit>(
-          create: (_) =>
-              SshKeysCubit(repo: repo, projectId: projectId)..load(),
+          create: (_) {
+            final c = SshKeysCubit(repo: repo, projectId: projectId);
+            unawaited(c.load());
+            return c;
+          },
         ),
         BlocProvider<RepositoriesCubit>(
-          create: (_) =>
-              RepositoriesCubit(repo: repo, projectId: projectId)..load(),
+          create: (_) {
+            final c = RepositoriesCubit(repo: repo, projectId: projectId);
+            unawaited(c.load());
+            return c;
+          },
         ),
       ],
       child: const _RepositoriesView(),

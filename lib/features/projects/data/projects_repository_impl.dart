@@ -185,8 +185,8 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
       await _api.dio.post<dynamic>(
         '$_basePath/$projectId/members',
         data: {
-          if (userId != null) 'user_id': userId,
-          if (identifier != null) 'identifier': identifier,
+          'user_id': ?userId,
+          'identifier': ?identifier,
           'role': roleSlug,
         },
       );

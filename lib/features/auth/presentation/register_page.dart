@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -49,7 +51,7 @@ class _RegisterViewState extends State<_RegisterView> {
     // login when self-service signup is disabled so a closed instance has no
     // reachable registration form.
     if (widget.invitationToken == null) {
-      _guardOpenRegistration();
+      unawaited(_guardOpenRegistration());
     }
   }
 
@@ -78,12 +80,14 @@ class _RegisterViewState extends State<_RegisterView> {
       _form.markAllAsTouched();
       return;
     }
-    context.read<RegisterCubit>().submit(
-      email: _form.control('email').value as String,
-      username: _form.control('username').value as String,
-      fullName: (_form.control('fullName').value as String?) ?? '',
-      password: _form.control('password').value as String,
-      invitationToken: widget.invitationToken,
+    unawaited(
+      context.read<RegisterCubit>().submit(
+        email: _form.control('email').value as String,
+        username: _form.control('username').value as String,
+        fullName: (_form.control('fullName').value as String?) ?? '',
+        password: _form.control('password').value as String,
+        invitationToken: widget.invitationToken,
+      ),
     );
   }
 

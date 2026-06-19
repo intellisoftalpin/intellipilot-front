@@ -1,6 +1,5 @@
 // Repo-level wire-format tests for Phase 9. Broader BLoC / page tests are
 // intentionally skipped per the paused coverage gate.
-// ignore_for_file: avoid_dynamic_calls
 
 import 'dart:typed_data';
 

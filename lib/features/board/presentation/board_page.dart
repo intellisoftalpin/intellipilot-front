@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -47,19 +49,27 @@ class BoardPage extends StatelessWidget {
         return MultiBlocProvider(
           providers: [
             BlocProvider<ProjectDetailCubit>(
-              create: (_) => ProjectDetailCubit(
-                repo: getIt<ProjectsRepository>(),
-                projectId: projectId,
-                currentUserId: profile.id,
-              )..load(),
+              create: (_) {
+                final c = ProjectDetailCubit(
+                  repo: getIt<ProjectsRepository>(),
+                  projectId: projectId,
+                  currentUserId: profile.id,
+                );
+                unawaited(c.load());
+                return c;
+              },
             ),
             BlocProvider<TaskBoardCubit>(
-              create: (_) => TaskBoardCubit(
-                repo: getIt<BacklogRepository>(),
-                catalog: getIt<CatalogRepository>(),
-                milestones: getIt<MilestonesRepository>(),
-                projectId: projectId,
-              )..load(),
+              create: (_) {
+                final c = TaskBoardCubit(
+                  repo: getIt<BacklogRepository>(),
+                  catalog: getIt<CatalogRepository>(),
+                  milestones: getIt<MilestonesRepository>(),
+                  projectId: projectId,
+                );
+                unawaited(c.load());
+                return c;
+              },
             ),
           ],
           child: _BoardView(projectId: projectId),
@@ -319,9 +329,11 @@ class _TaskColumn extends StatelessWidget {
     final theme = Theme.of(context);
     return DragTarget<String>(
       onAcceptWithDetails: (details) {
-        context.read<TaskBoardCubit>().moveTask(
-          taskId: details.data,
-          targetStatusId: status?.id,
+        unawaited(
+          context.read<TaskBoardCubit>().moveTask(
+            taskId: details.data,
+            targetStatusId: status?.id,
+          ),
         );
       },
       builder: (context, candidate, rejected) {

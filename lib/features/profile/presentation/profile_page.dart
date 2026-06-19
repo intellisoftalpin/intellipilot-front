@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -14,10 +16,14 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<ProfileCubit>(
-      create: (_) => ProfileCubit(
-        repo: getIt<ProfileRepository>(),
-        locale: getIt<LocaleCubit>(),
-      )..load(),
+      create: (_) {
+        final c = ProfileCubit(
+          repo: getIt<ProfileRepository>(),
+          locale: getIt<LocaleCubit>(),
+        );
+        unawaited(c.load());
+        return c;
+      },
       child: const _ProfileView(),
     );
   }
@@ -76,12 +82,14 @@ class _ProfileViewState extends State<_ProfileView> {
               fullNameController: _fullNameController,
               timezoneController: _timezoneController,
               onSave: () {
-                context.read<ProfileCubit>().save(
-                  fullName: _fullNameController.text.trim(),
-                  // Language is driven by the app-wide selector in Settings;
-                  // preserve whatever the account already had.
-                  lang: state.profile.lang,
-                  timezone: _timezoneController.text.trim(),
+                unawaited(
+                  context.read<ProfileCubit>().save(
+                    fullName: _fullNameController.text.trim(),
+                    // Language is driven by the app-wide selector in Settings;
+                    // preserve whatever the account already had.
+                    lang: state.profile.lang,
+                    timezone: _timezoneController.text.trim(),
+                  ),
                 );
               },
             );

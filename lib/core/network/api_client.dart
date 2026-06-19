@@ -98,10 +98,9 @@ class ApiClient {
         cancelToken: cancelToken,
         options: Options(
           extra: <String, dynamic>{
-            if (idempotencyKey != null)
-              IdempotencyInterceptor.header.toLowerCase(): idempotencyKey,
-            if (idempotencyKey != null) 'idempotency_key': idempotencyKey,
-            if (etag != null) EtagInterceptor.etagExtra: etag,
+            IdempotencyInterceptor.header.toLowerCase(): ?idempotencyKey,
+            'idempotency_key': ?idempotencyKey,
+            EtagInterceptor.etagExtra: ?etag,
           },
         ),
       );

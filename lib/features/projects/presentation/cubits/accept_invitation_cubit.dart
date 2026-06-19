@@ -1,6 +1,3 @@
-// Underscore-prefixed fields are clearer than `{required this._repo}` in
-// the public constructor — silence the lint at file scope.
-// ignore_for_file: prefer_initializing_formals
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/core/error/app_failure.dart';

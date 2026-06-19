@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -43,18 +45,26 @@ class WikiPageView extends StatelessWidget {
         return MultiBlocProvider(
           providers: [
             BlocProvider<ProjectDetailCubit>(
-              create: (_) => ProjectDetailCubit(
-                repo: getIt<ProjectsRepository>(),
-                projectId: projectId,
-                currentUserId: profile.id,
-              )..load(),
+              create: (_) {
+                final c = ProjectDetailCubit(
+                  repo: getIt<ProjectsRepository>(),
+                  projectId: projectId,
+                  currentUserId: profile.id,
+                );
+                unawaited(c.load());
+                return c;
+              },
             ),
             BlocProvider<WikiPageCubit>(
-              create: (_) => WikiPageCubit(
-                repo: getIt<WikiRepository>(),
-                projectId: projectId,
-                pageId: pageId,
-              )..load(),
+              create: (_) {
+                final c = WikiPageCubit(
+                  repo: getIt<WikiRepository>(),
+                  projectId: projectId,
+                  pageId: pageId,
+                );
+                unawaited(c.load());
+                return c;
+              },
             ),
           ],
           child: _PageView(projectId: projectId, pageId: pageId),

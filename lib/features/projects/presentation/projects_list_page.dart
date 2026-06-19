@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -16,7 +18,11 @@ class ProjectsListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<ProjectsListCubit>(
-      create: (_) => ProjectsListCubit(getIt<ProjectsRepository>())..load(),
+      create: (_) {
+        final c = ProjectsListCubit(getIt<ProjectsRepository>());
+        unawaited(c.load());
+        return c;
+      },
       child: const _ProjectsListView(),
     );
   }

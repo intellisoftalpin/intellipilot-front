@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,7 +29,7 @@ class _IntelliPilotAppState extends State<IntelliPilotApp> {
     // Best-effort: fetch white-label branding from the public config endpoint.
     // The UI rebuilds with custom name/icon once it resolves; defaults hold
     // until then.
-    getIt<BrandingCubit>().load();
+    unawaited(getIt<BrandingCubit>().load());
   }
 
   @override

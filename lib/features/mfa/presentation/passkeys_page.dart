@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -13,10 +15,14 @@ class PasskeysPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<PasskeysCubit>(
-      create: (_) => PasskeysCubit(
-        repo: getIt<MfaRepository>(),
-        passkeys: getIt<PasskeyService>(),
-      )..load(),
+      create: (_) {
+        final c = PasskeysCubit(
+          repo: getIt<MfaRepository>(),
+          passkeys: getIt<PasskeyService>(),
+        );
+        unawaited(c.load());
+        return c;
+      },
       child: const _PasskeysView(),
     );
   }

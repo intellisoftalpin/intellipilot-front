@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -52,9 +54,11 @@ class _ResetPasswordViewState extends State<_ResetPasswordView> {
       _form.markAllAsTouched();
       return;
     }
-    context.read<ResetPasswordCubit>().submit(
-      token: (_form.control('token').value as String).trim(),
-      newPassword: _form.control('password').value as String,
+    unawaited(
+      context.read<ResetPasswordCubit>().submit(
+        token: (_form.control('token').value as String).trim(),
+        newPassword: _form.control('password').value as String,
+      ),
     );
   }
 

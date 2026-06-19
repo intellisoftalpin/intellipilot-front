@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -50,18 +52,26 @@ class BacklogPage extends StatelessWidget {
         return MultiBlocProvider(
           providers: [
             BlocProvider<ProjectDetailCubit>(
-              create: (_) => ProjectDetailCubit(
-                repo: getIt<ProjectsRepository>(),
-                projectId: projectId,
-                currentUserId: profile.id,
-              )..load(),
+              create: (_) {
+                final c = ProjectDetailCubit(
+                  repo: getIt<ProjectsRepository>(),
+                  projectId: projectId,
+                  currentUserId: profile.id,
+                );
+                unawaited(c.load());
+                return c;
+              },
             ),
             BlocProvider<BacklogCubit>(
-              create: (_) => BacklogCubit(
-                repo: getIt<BacklogRepository>(),
-                catalog: getIt<CatalogRepository>(),
-                projectId: projectId,
-              )..load(),
+              create: (_) {
+                final c = BacklogCubit(
+                  repo: getIt<BacklogRepository>(),
+                  catalog: getIt<CatalogRepository>(),
+                  projectId: projectId,
+                );
+                unawaited(c.load());
+                return c;
+              },
             ),
           ],
           child: _BacklogView(projectId: projectId),
@@ -356,9 +366,11 @@ class _EpicSection extends StatelessWidget {
         return src != null && src.epicId != epic?.id;
       },
       onAcceptWithDetails: (details) {
-        context.read<BacklogCubit>().moveIssueToEpic(
-          details.data,
-          epic?.id,
+        unawaited(
+          context.read<BacklogCubit>().moveIssueToEpic(
+            details.data,
+            epic?.id,
+          ),
         );
       },
       builder: (context, candidate, rejected) {

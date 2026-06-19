@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -49,8 +51,10 @@ class _PasskeySignInViewState extends State<_PasskeySignInView> {
       _form.markAllAsTouched();
       return;
     }
-    context.read<PasskeySignInCubit>().signIn(
-      _form.control('email').value as String,
+    unawaited(
+      context.read<PasskeySignInCubit>().signIn(
+        _form.control('email').value as String,
+      ),
     );
   }
 
