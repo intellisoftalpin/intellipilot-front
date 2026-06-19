@@ -4,6 +4,40 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.4.0] - 2026-06-18
+
+### Added
+- **Issue fields**: a scaled **Size** badge (XS–XXL) replacing points; a
+  **Category** dropdown; a **Customer** picker (shown for customer-request
+  issues); **start/due** dates with overdue styling; a **Resolution** field; a
+  **fix-version** field (a dropdown of versions from the issue's components'
+  linked releases, or free text); an issue **Relationships** panel
+  (blocks/relates/duplicates, in/out) and a **Watchers** control on the issue
+  detail page; and **comment-level attachments**.
+- **Customers** management tab and **Releases** management tab (releases +
+  versions, with optional per-version repository/git-tag and component links) in
+  Project Settings, mirroring the Repositories tab.
+- **Git repositories & SSH keys management** in Project Settings (new
+  *Repositories* tab):
+  - **SSH keys**: generate per-project Ed25519 deploy keys (name + read-only
+    toggle), view the public key/fingerprint with copy-to-clipboard, rename,
+    flip read-only, and delete. Deleting a key in use warns that it will be
+    detached from its repositories.
+  - **Repositories**: add/edit (name, SSH URL, pick an existing key or create one
+    inline), a **Fetch branches** action that lists the real remote branches to
+    pick a default branch, reachability/host-fingerprint display, key
+    reassignment for keyless repos, and delete.
+  - **Per-component linking**: each component manages its linked repositories,
+    each pinned to a branch chosen from the live branch list; change branch and
+    unlink supported. Many repositories can link to one component.
+
+### Changed
+- A single **Priority** field (Low/Medium/High/Critical/Blocker) replaces the
+  separate priority + severity pickers; **Size** replaces points across the
+  board, backlog and editors.
+- Removed the free-text git-repository field from the component editor —
+  repositories are now structured and linked per branch.
+
 ## [0.3.4] - 2026-06-17
 
 ### Changed

@@ -93,13 +93,8 @@ class _EntityEditPageState extends State<EntityEditPage> {
                 ))
                 .valueOrNull ??
             [];
-        final severities = (await catalog.listTaxonomy(
-                  widget.projectId, TaxonomyKind.severity,
-                ))
-                .valueOrNull ??
-            [];
-        final points = (await catalog.listTaxonomy(
-                  widget.projectId, TaxonomyKind.point,
+        final sizes = (await catalog.listTaxonomy(
+                  widget.projectId, TaxonomyKind.size,
                 ))
                 .valueOrNull ??
             [];
@@ -107,6 +102,16 @@ class _EntityEditPageState extends State<EntityEditPage> {
             (await catalog.listLabels(widget.projectId)).valueOrNull ?? [];
         final components =
             (await catalog.listComponents(widget.projectId)).valueOrNull ??
+                [];
+        final customers =
+            (await catalog.listCustomers(widget.projectId)).valueOrNull ?? [];
+        // Fix-version options for the issue's currently-selected components.
+        final fixVersions = entity.components.isEmpty
+            ? <ReleaseVersionRef>[]
+            : (await catalog.versionsForComponents(
+                        widget.projectId, entity.components,
+                      ))
+                    .valueOrNull ??
                 [];
         return _EditData(
           project: project,
@@ -117,10 +122,11 @@ class _EntityEditPageState extends State<EntityEditPage> {
           statuses: statuses,
           types: types,
           priorities: priorities,
-          severities: severities,
-          points: points,
+          sizes: sizes,
           labels: labels,
           components: components,
+          customers: customers,
+          fixVersions: fixVersions,
         );
     }
   }
@@ -173,12 +179,13 @@ class _EditData {
     this.epics = const [],
     this.milestones = const [],
     this.statuses = const [],
-    this.points = const [],
+    this.sizes = const [],
     this.types = const [],
     this.priorities = const [],
-    this.severities = const [],
     this.labels = const [],
     this.components = const [],
+    this.customers = const [],
+    this.fixVersions = const [],
   });
 
   final Project project;
@@ -188,12 +195,13 @@ class _EditData {
   final List<Epic> epics;
   final List<Milestone> milestones;
   final List<TaxonomyItem> statuses;
-  final List<TaxonomyItem> points;
+  final List<TaxonomyItem> sizes;
   final List<TaxonomyItem> types;
   final List<TaxonomyItem> priorities;
-  final List<TaxonomyItem> severities;
   final List<Label> labels;
   final List<Component> components;
+  final List<Customer> customers;
+  final List<ReleaseVersionRef> fixVersions;
 }
 
 class _EditView extends StatefulWidget {
@@ -228,11 +236,17 @@ class _EditViewState extends State<_EditView> {
   String? _statusId;
   String? _epicId;
   String? _milestoneId;
-  String? _pointsId;
+  String? _sizeId;
   String? _parentId;
   String? _typeId;
   String? _priorityId;
-  String? _severityId;
+  String? _category;
+  String? _customerId;
+  String? _resolution;
+  String? _releaseVersionId;
+  late final TextEditingController _releaseTextCtrl;
+  late final TextEditingController _startDateCtrl;
+  late final TextEditingController _dueDateCtrl;
   String _color = '';
   final _labels = <String>{};
   final _components = <String>{};
@@ -247,6 +261,10 @@ class _EditViewState extends State<_EditView> {
         TextEditingController(text: _initialAssignee(d) ?? '');
     _reporterCtrl =
         TextEditingController(text: _initialReporter(d) ?? '');
+    _releaseTextCtrl =
+        TextEditingController(text: d.issue?.releaseText ?? '');
+    _startDateCtrl = TextEditingController(text: d.issue?.startDate ?? '');
+    _dueDateCtrl = TextEditingController(text: d.issue?.dueDate ?? '');
     switch (widget.kind) {
       case EntityKind.epic:
         _statusId = d.epic?.statusId;
@@ -257,11 +275,14 @@ class _EditViewState extends State<_EditView> {
         _statusId = d.issue?.statusId;
         _typeId = d.issue?.typeId;
         _priorityId = d.issue?.priorityId;
-        _severityId = d.issue?.severityId;
-        _pointsId = d.issue?.pointsId;
+        _sizeId = d.issue?.sizeId;
         _epicId = d.issue?.epicId;
         _parentId = d.issue?.parentId;
         _milestoneId = d.issue?.milestoneId;
+        _category = d.issue?.category;
+        _customerId = d.issue?.customerId;
+        _resolution = d.issue?.resolution;
+        _releaseVersionId = d.issue?.releaseVersionId;
         _labels.addAll(d.issue?.labels ?? const []);
         _components.addAll(d.issue?.components ?? const []);
     }
@@ -300,6 +321,12 @@ class _EditViewState extends State<_EditView> {
     return v.isEmpty ? null : v;
   }
 
+  /// Returns the trimmed `YYYY-MM-DD` text or `null` when empty.
+  String? _dateOrNull(TextEditingController c) {
+    final v = c.text.trim();
+    return v.isEmpty ? null : v;
+  }
+
   String _initialSubject(_EditData d) => switch (widget.kind) {
     EntityKind.epic => d.epic?.subject ?? '',
     EntityKind.issue => d.issue?.subject ?? '',
@@ -316,6 +343,9 @@ class _EditViewState extends State<_EditView> {
     _descCtrl.dispose();
     _assigneeCtrl.dispose();
     _reporterCtrl.dispose();
+    _releaseTextCtrl.dispose();
+    _startDateCtrl.dispose();
+    _dueDateCtrl.dispose();
     super.dispose();
   }
 
@@ -366,11 +396,23 @@ class _EditViewState extends State<_EditView> {
               statusId: _statusId,
               typeId: _typeId,
               priorityId: _priorityId,
-              severityId: _severityId,
-              pointsId: _pointsId,
+              sizeId: _sizeId,
               epicId: _epicId,
               parentId: _parentId,
               milestoneId: _milestoneId,
+              category: _category,
+              // Customer is only meaningful when category == customer_request.
+              customerId: _category == IssueCategory.customerRequest.wire
+                  ? _customerId
+                  : null,
+              startDate: _dateOrNull(_startDateCtrl),
+              dueDate: _dateOrNull(_dueDateCtrl),
+              resolution: _resolution,
+              // At most one fix-version representation; structured wins.
+              releaseVersionId: _releaseVersionId,
+              releaseText: _releaseVersionId == null
+                  ? _textOrNull(_releaseTextCtrl)
+                  : null,
               labels: _labels.toList(),
               components: _components.toList(),
               assignedTo: assignedTo,
@@ -577,11 +619,11 @@ class _EditViewState extends State<_EditView> {
             ),
             const SizedBox(height: 12),
             _taxonomyDropdown(
-              label: t.backlogFieldPoints,
-              none: t.backlogNoPoints,
-              items: d.points,
-              current: _pointsId,
-              onChanged: (v) => setState(() => _pointsId = v),
+              label: 'Size',
+              none: t.backlogNoStatus,
+              items: d.sizes,
+              current: _sizeId,
+              onChanged: (v) => setState(() => _sizeId = v),
               labelBuilder: (p) =>
                   p.value == null ? p.name : '${p.name} (${p.value})',
             ),
@@ -602,13 +644,84 @@ class _EditViewState extends State<_EditView> {
               onChanged: (v) => setState(() => _priorityId = v),
             ),
             const SizedBox(height: 12),
-            _taxonomyDropdown(
-              label: t.issueFieldSeverity,
-              none: t.backlogNoStatus,
-              items: d.severities,
-              current: _severityId,
-              onChanged: (v) => setState(() => _severityId = v),
+            DropdownButtonFormField<String?>(
+              initialValue: _category,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Category'),
+              items: [
+                const DropdownMenuItem<String?>(child: Text('—')),
+                for (final c in IssueCategory.values)
+                  DropdownMenuItem<String?>(
+                    value: c.wire,
+                    child: Text(c.label),
+                  ),
+              ],
+              onChanged: (v) => setState(() {
+                _category = v;
+                // Customer only applies to customer requests.
+                if (v != IssueCategory.customerRequest.wire) {
+                  _customerId = null;
+                }
+              }),
             ),
+            if (_category == IssueCategory.customerRequest.wire) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String?>(
+                initialValue: _customerId,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Customer'),
+                items: [
+                  const DropdownMenuItem<String?>(child: Text('—')),
+                  for (final c in d.customers)
+                    DropdownMenuItem<String?>(
+                      value: c.id,
+                      child: Text(c.name),
+                    ),
+                ],
+                onChanged: (v) => setState(() => _customerId = v),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _startDateCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Start date',
+                      hintText: 'YYYY-MM-DD',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _dueDateCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Due date',
+                      hintText: 'YYYY-MM-DD',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              initialValue: _resolution,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Resolution'),
+              items: [
+                const DropdownMenuItem<String?>(child: Text('—')),
+                for (final r in IssueResolution.values)
+                  DropdownMenuItem<String?>(
+                    value: r.wire,
+                    child: Text(r.label),
+                  ),
+              ],
+              onChanged: (v) => setState(() => _resolution = v),
+            ),
+            const SizedBox(height: 12),
+            _fixVersionField(d),
             const SizedBox(height: 16),
             Text(t.issueFieldLabels),
             const SizedBox(height: 6),
@@ -774,6 +887,32 @@ class _EditViewState extends State<_EditView> {
             child: child,
           ),
         ],
+      ),
+    );
+  }
+
+  /// Fix-version field: when the issue's components link releases, the
+  /// available versions (`for-components`) drive a dropdown that sets
+  /// `release_version_id`; otherwise a free-text field sets `release_text`.
+  Widget _fixVersionField(_EditData d) {
+    if (d.fixVersions.isNotEmpty) {
+      return DropdownButtonFormField<String?>(
+        initialValue: _releaseVersionId,
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'Fix version'),
+        items: [
+          const DropdownMenuItem<String?>(child: Text('—')),
+          for (final v in d.fixVersions)
+            DropdownMenuItem<String?>(value: v.id, child: Text(v.label)),
+        ],
+        onChanged: (v) => setState(() => _releaseVersionId = v),
+      );
+    }
+    return TextField(
+      controller: _releaseTextCtrl,
+      decoration: const InputDecoration(
+        labelText: 'Fix version',
+        hintText: 'Free text (no linked releases)',
       ),
     );
   }

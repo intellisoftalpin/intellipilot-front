@@ -765,7 +765,6 @@ class DemoCatalogRepository implements CatalogRepository {
       projectId: projectId,
       name: body.name,
       color: body.color,
-      gitRepository: body.gitRepository,
       createdAt: DateTime.now().toUtc(),
     );
     _s.componentsByProject.putIfAbsent(projectId, () => []);
@@ -794,9 +793,6 @@ class DemoCatalogRepository implements CatalogRepository {
       projectId: cur.projectId,
       name: (patch['name'] as String?) ?? cur.name,
       color: (patch['color'] as String?) ?? cur.color,
-      gitRepository: patch.containsKey('git_repository')
-          ? patch['git_repository'] as String?
-          : cur.gitRepository,
       createdAt: cur.createdAt,
     );
     _s.componentsByProject[projectId] = next;
@@ -813,6 +809,536 @@ class DemoCatalogRepository implements CatalogRepository {
     _s.componentsByProject[projectId] = list
         .where((c) => c.id != componentId)
         .toList();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  // ---- git: SSH keys, repositories, component links (demo stubs) ----
+
+  @override
+  Future<Result<List<SshKey>, AppFailure>> listSshKeys(
+    String projectId,
+  ) async {
+    await _tick();
+    return const Ok(<SshKey>[]);
+  }
+
+  @override
+  Future<Result<SshKey, AppFailure>> createSshKey(
+    String projectId,
+    CreateSshKeyRequest body,
+  ) async {
+    await _tick();
+    return Ok(
+      SshKey(
+        id: _s.nextId('key'),
+        projectId: projectId,
+        name: body.name,
+        readOnly: body.readOnly,
+        keyType: 'ed25519',
+        publicKey: 'ssh-ed25519 AAAADEMOKEY ${body.name}',
+        fingerprint: 'SHA256:demo',
+        usedByRepoCount: 0,
+        createdAt: DateTime.now().toUtc(),
+      ),
+    );
+  }
+
+  @override
+  Future<Result<SshKey, AppFailure>> updateSshKey(
+    String projectId,
+    String keyId,
+    UpdateSshKeyRequest body,
+  ) async {
+    await _tick();
+    return const Err(NotFoundFailure());
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteSshKey(
+    String projectId,
+    String keyId,
+  ) async {
+    await _tick();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<Repository>, AppFailure>> listRepositories(
+    String projectId,
+  ) async {
+    await _tick();
+    return const Ok(<Repository>[]);
+  }
+
+  @override
+  Future<Result<Repository, AppFailure>> createRepository(
+    String projectId,
+    CreateRepositoryRequest body,
+  ) async {
+    await _tick();
+    return Ok(
+      Repository(
+        id: _s.nextId('repo'),
+        projectId: projectId,
+        name: body.name,
+        sshUrl: body.sshUrl,
+        sshKeyId: body.sshKeyId,
+        defaultBranch: body.defaultBranch,
+        createdAt: DateTime.now().toUtc(),
+      ),
+    );
+  }
+
+  @override
+  Future<Result<Repository, AppFailure>> updateRepository(
+    String projectId,
+    String repositoryId,
+    UpdateRepositoryRequest body,
+  ) async {
+    await _tick();
+    return const Err(NotFoundFailure());
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteRepository(
+    String projectId,
+    String repositoryId,
+  ) async {
+    await _tick();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<RemoteBranches, AppFailure>> previewBranches(
+    String projectId,
+    String sshUrl,
+    String sshKeyId,
+  ) async {
+    await _tick();
+    return const Ok(
+      RemoteBranches(branches: ['main', 'develop'], defaultBranch: 'main'),
+    );
+  }
+
+  @override
+  Future<Result<RemoteBranches, AppFailure>> repositoryBranches(
+    String projectId,
+    String repositoryId,
+  ) async {
+    await _tick();
+    return const Ok(
+      RemoteBranches(branches: ['main', 'develop'], defaultBranch: 'main'),
+    );
+  }
+
+  @override
+  Future<Result<List<ComponentRepositoryLink>, AppFailure>>
+  listComponentRepositories(String projectId, String componentId) async {
+    await _tick();
+    return const Ok(<ComponentRepositoryLink>[]);
+  }
+
+  @override
+  Future<Result<ComponentRepositoryLink, AppFailure>> linkComponentRepository(
+    String projectId,
+    String componentId,
+    String repositoryId,
+    String branch,
+  ) async {
+    await _tick();
+    return Ok(
+      ComponentRepositoryLink(
+        componentId: componentId,
+        repositoryId: repositoryId,
+        repositoryName: 'demo',
+        sshUrl: 'git@demo:repo.git',
+        branch: branch,
+        createdAt: DateTime.now().toUtc(),
+      ),
+    );
+  }
+
+  @override
+  Future<Result<ComponentRepositoryLink, AppFailure>>
+  updateComponentRepositoryBranch(
+    String projectId,
+    String componentId,
+    String repositoryId,
+    String branch,
+  ) async {
+    await _tick();
+    return const Err(NotFoundFailure());
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> unlinkComponentRepository(
+    String projectId,
+    String componentId,
+    String repositoryId,
+  ) async {
+    await _tick();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  // ---- customers ----
+
+  @override
+  Future<Result<List<Customer>, AppFailure>> listCustomers(
+    String projectId,
+  ) async {
+    await _tick();
+    return Ok(_s.customersByProject[projectId] ?? const []);
+  }
+
+  @override
+  Future<Result<Customer, AppFailure>> createCustomer(
+    String projectId,
+    CreateCustomerRequest body,
+  ) async {
+    await _tick();
+    final created = Customer(
+      id: _s.nextId('cust'),
+      projectId: projectId,
+      name: body.name,
+      companyName: body.companyName,
+      contactEmail: body.contactEmail,
+      phone: body.phone,
+      notes: body.notes,
+      createdAt: DateTime.now().toUtc(),
+    );
+    (_s.customersByProject[projectId] ??= []).add(created);
+    return Ok(created);
+  }
+
+  @override
+  Future<Result<Customer, AppFailure>> updateCustomer(
+    String projectId,
+    String customerId,
+    UpdateCustomerRequest body,
+  ) async {
+    await _tick();
+    final list = _s.customersByProject[projectId] ?? const [];
+    final i = list.indexWhere((c) => c.id == customerId);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = list[i];
+    final next = Customer(
+      id: cur.id,
+      projectId: cur.projectId,
+      name: body.name ?? cur.name,
+      companyName: body.companyName ?? cur.companyName,
+      contactEmail: body.contactEmail ?? cur.contactEmail,
+      phone: body.phone ?? cur.phone,
+      notes: body.notes ?? cur.notes,
+      createdAt: cur.createdAt,
+    );
+    _s.customersByProject[projectId]![i] = next;
+    return Ok(next);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteCustomer(
+    String projectId,
+    String customerId,
+  ) async {
+    await _tick();
+    _s.customersByProject[projectId]?.removeWhere((c) => c.id == customerId);
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  // ---- releases + versions ----
+
+  @override
+  Future<Result<List<Release>, AppFailure>> listReleases(
+    String projectId,
+  ) async {
+    await _tick();
+    return Ok(_s.releasesByProject[projectId] ?? const []);
+  }
+
+  @override
+  Future<Result<Release, AppFailure>> createRelease(
+    String projectId,
+    CreateReleaseRequest body,
+  ) async {
+    await _tick();
+    final created = Release(
+      id: _s.nextId('rel'),
+      projectId: projectId,
+      name: body.name,
+      description: body.description,
+      createdAt: DateTime.now().toUtc(),
+    );
+    (_s.releasesByProject[projectId] ??= []).add(created);
+    return Ok(created);
+  }
+
+  @override
+  Future<Result<Release, AppFailure>> updateRelease(
+    String projectId,
+    String releaseId,
+    UpdateReleaseRequest body,
+  ) async {
+    await _tick();
+    final list = _s.releasesByProject[projectId] ?? const [];
+    final i = list.indexWhere((r) => r.id == releaseId);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = list[i];
+    final next = Release(
+      id: cur.id,
+      projectId: cur.projectId,
+      name: body.name ?? cur.name,
+      description: body.description ?? cur.description,
+      createdAt: cur.createdAt,
+    );
+    _s.releasesByProject[projectId]![i] = next;
+    return Ok(next);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteRelease(
+    String projectId,
+    String releaseId,
+  ) async {
+    await _tick();
+    _s.releasesByProject[projectId]?.removeWhere((r) => r.id == releaseId);
+    _s.versionsByRelease.remove(releaseId);
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<ReleaseVersion>, AppFailure>> listReleaseVersions(
+    String projectId,
+    String releaseId,
+  ) async {
+    await _tick();
+    return Ok(_s.versionsByRelease[releaseId] ?? const []);
+  }
+
+  @override
+  Future<Result<ReleaseVersion, AppFailure>> createReleaseVersion(
+    String projectId,
+    String releaseId,
+    CreateReleaseVersionRequest body,
+  ) async {
+    await _tick();
+    final created = ReleaseVersion(
+      id: _s.nextId('rv'),
+      releaseId: releaseId,
+      version: body.version,
+      status: body.status,
+      notes: body.notes ?? '',
+      targetDate: body.targetDate,
+      releasedAt: body.releasedAt,
+      repositoryId: body.repositoryId,
+      gitTag: body.gitTag,
+      createdAt: DateTime.now().toUtc(),
+    );
+    (_s.versionsByRelease[releaseId] ??= []).add(created);
+    return Ok(created);
+  }
+
+  @override
+  Future<Result<ReleaseVersion, AppFailure>> updateReleaseVersion(
+    String projectId,
+    String releaseId,
+    String versionId,
+    UpdateReleaseVersionRequest body,
+  ) async {
+    await _tick();
+    final list = _s.versionsByRelease[releaseId] ?? const [];
+    final i = list.indexWhere((v) => v.id == versionId);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = list[i];
+    final patch = body.toJson();
+    final next = ReleaseVersion(
+      id: cur.id,
+      releaseId: cur.releaseId,
+      version: body.version ?? cur.version,
+      status: body.status ?? cur.status,
+      notes: body.notes ?? cur.notes,
+      targetDate: patch.containsKey('target_date')
+          ? patch['target_date'] as String?
+          : cur.targetDate,
+      releasedAt: patch.containsKey('released_at')
+          ? patch['released_at'] as String?
+          : cur.releasedAt,
+      repositoryId: patch.containsKey('repository_id')
+          ? patch['repository_id'] as String?
+          : cur.repositoryId,
+      gitTag: patch.containsKey('git_tag')
+          ? patch['git_tag'] as String?
+          : cur.gitTag,
+      createdAt: cur.createdAt,
+    );
+    _s.versionsByRelease[releaseId]![i] = next;
+    return Ok(next);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteReleaseVersion(
+    String projectId,
+    String releaseId,
+    String versionId,
+  ) async {
+    await _tick();
+    _s.versionsByRelease[releaseId]?.removeWhere((v) => v.id == versionId);
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  // ---- component <-> release links ----
+
+  @override
+  Future<Result<List<ComponentReleaseLink>, AppFailure>> listComponentReleases(
+    String projectId,
+    String componentId,
+  ) async {
+    await _tick();
+    return Ok(_s.componentReleases[componentId] ?? const []);
+  }
+
+  @override
+  Future<Result<ComponentReleaseLink, AppFailure>> linkComponentRelease(
+    String projectId,
+    String componentId,
+    String releaseId,
+  ) async {
+    await _tick();
+    final release = (_s.releasesByProject[projectId] ?? const [])
+        .where((r) => r.id == releaseId)
+        .firstOrNull;
+    final link = ComponentReleaseLink(
+      componentId: componentId,
+      releaseId: releaseId,
+      releaseName: release?.name ?? releaseId,
+      createdAt: DateTime.now().toUtc(),
+    );
+    (_s.componentReleases[componentId] ??= []).add(link);
+    return Ok(link);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> unlinkComponentRelease(
+    String projectId,
+    String componentId,
+    String releaseId,
+  ) async {
+    await _tick();
+    _s.componentReleases[componentId]
+        ?.removeWhere((l) => l.releaseId == releaseId);
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<List<ReleaseVersionRef>, AppFailure>> versionsForComponents(
+    String projectId,
+    List<String> componentIds,
+  ) async {
+    await _tick();
+    final releaseIds = <String>{};
+    for (final cid in componentIds) {
+      for (final l
+          in _s.componentReleases[cid] ?? const <ComponentReleaseLink>[]) {
+        releaseIds.add(l.releaseId);
+      }
+    }
+    final releasesById = {
+      for (final r in _s.releasesByProject[projectId] ?? const <Release>[])
+        r.id: r,
+    };
+    final out = <ReleaseVersionRef>[];
+    for (final rid in releaseIds) {
+      for (final v in _s.versionsByRelease[rid] ?? const <ReleaseVersion>[]) {
+        out.add(
+          ReleaseVersionRef(
+            id: v.id,
+            releaseId: rid,
+            releaseName: releasesById[rid]?.name ?? rid,
+            version: v.version,
+            status: v.status,
+          ),
+        );
+      }
+    }
+    return Ok(out);
+  }
+
+  // ---- issue relationships ----
+
+  @override
+  Future<Result<List<IssueLink>, AppFailure>> listIssueLinks(
+    String projectId,
+    String issueId,
+  ) async {
+    await _tick();
+    return Ok(_s.issueLinks[issueId] ?? const []);
+  }
+
+  @override
+  Future<Result<IssueLink, AppFailure>> createIssueLink(
+    String projectId,
+    String issueId,
+    String targetIssueId,
+    String linkType,
+  ) async {
+    await _tick();
+    final target = _s.issues.where((i) => i.id == targetIssueId).firstOrNull;
+    if (target == null) return const Err(NotFoundFailure());
+    final link = IssueLink(
+      id: _s.nextId('ilink'),
+      otherIssueId: targetIssueId,
+      otherRef: target.reference,
+      otherSubject: target.subject,
+      linkType: linkType,
+      direction: 'outgoing',
+      createdAt: DateTime.now().toUtc(),
+    );
+    (_s.issueLinks[issueId] ??= []).add(link);
+    return Ok(link);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteIssueLink(
+    String projectId,
+    String issueId,
+    String linkId,
+  ) async {
+    await _tick();
+    _s.issueLinks[issueId]?.removeWhere((l) => l.id == linkId);
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  // ---- issue watchers ----
+
+  @override
+  Future<Result<List<String>, AppFailure>> listWatchers(
+    String projectId,
+    String issueId,
+  ) async {
+    await _tick();
+    return Ok(_s.watchersByIssue[issueId] ?? const []);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> addWatcher(
+    String projectId,
+    String issueId, {
+    String? userId,
+  }) async {
+    await _tick();
+    final uid = userId ?? _s.currentUser.id;
+    final list = _s.watchersByIssue[issueId] ??= [];
+    if (!list.contains(uid)) list.add(uid);
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> removeWatcher(
+    String projectId,
+    String issueId,
+    String userId,
+  ) async {
+    await _tick();
+    _s.watchersByIssue[issueId]?.remove(userId);
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 }
@@ -857,15 +1383,23 @@ class DemoBacklogRepository implements BacklogRepository {
       statusId: next.statusId,
       typeId: next.typeId,
       priorityId: next.priorityId,
-      severityId: next.severityId,
-      pointsId: next.pointsId,
+      sizeId: next.sizeId,
       epicId: next.epicId,
       parentId: next.parentId,
       milestoneId: next.milestoneId,
       ownerId: next.ownerId,
       assignedTo: next.assignedTo,
+      category: next.category,
+      customerId: next.customerId,
+      startDate: next.startDate,
+      dueDate: next.dueDate,
+      resolution: next.resolution,
+      resolvedAt: next.resolvedAt,
+      releaseVersionId: next.releaseVersionId,
+      releaseText: next.releaseText,
       labels: next.labels,
       components: next.components,
+      watchers: next.watchers,
       order: next.order,
       version: v,
       createdAt: next.createdAt,
@@ -1036,12 +1570,18 @@ class DemoBacklogRepository implements BacklogRepository {
       statusId: body.statusId,
       typeId: body.typeId,
       priorityId: body.priorityId,
-      severityId: body.severityId,
-      pointsId: body.pointsId,
+      sizeId: body.sizeId,
       epicId: body.epicId,
       parentId: body.parentId,
       milestoneId: body.milestoneId,
       assignedTo: body.assignedTo,
+      category: body.category,
+      customerId: body.customerId,
+      startDate: body.startDate,
+      dueDate: body.dueDate,
+      resolution: body.resolution,
+      releaseVersionId: body.releaseVersionId,
+      releaseText: body.releaseText,
       labels: body.labels,
       components: body.components,
       order: maxOrder + 1,
@@ -1108,12 +1648,9 @@ class DemoBacklogRepository implements BacklogRepository {
       priorityId: patch.containsKey('priority_id')
           ? patch['priority_id'] as String?
           : cur.priorityId,
-      severityId: patch.containsKey('severity_id')
-          ? patch['severity_id'] as String?
-          : cur.severityId,
-      pointsId: patch.containsKey('points_id')
-          ? patch['points_id'] as String?
-          : cur.pointsId,
+      sizeId: patch.containsKey('size_id')
+          ? patch['size_id'] as String?
+          : cur.sizeId,
       epicId: patch.containsKey('epic_id')
           ? patch['epic_id'] as String?
           : cur.epicId,
@@ -1129,6 +1666,29 @@ class DemoBacklogRepository implements BacklogRepository {
       assignedTo: patch.containsKey('assigned_to')
           ? patch['assigned_to'] as String?
           : cur.assignedTo,
+      category: patch.containsKey('category')
+          ? patch['category'] as String?
+          : cur.category,
+      customerId: patch.containsKey('customer_id')
+          ? patch['customer_id'] as String?
+          : cur.customerId,
+      startDate: patch.containsKey('start_date')
+          ? patch['start_date'] as String?
+          : cur.startDate,
+      dueDate: patch.containsKey('due_date')
+          ? patch['due_date'] as String?
+          : cur.dueDate,
+      resolution: patch.containsKey('resolution')
+          ? patch['resolution'] as String?
+          : cur.resolution,
+      resolvedAt: cur.resolvedAt,
+      releaseVersionId: patch.containsKey('release_version_id')
+          ? patch['release_version_id'] as String?
+          : cur.releaseVersionId,
+      releaseText: patch.containsKey('release_text')
+          ? patch['release_text'] as String?
+          : cur.releaseText,
+      watchers: cur.watchers,
       labels: patch.containsKey('labels')
           ? (patch['labels'] as List<dynamic>).cast<String>()
           : cur.labels,
@@ -1347,6 +1907,44 @@ class DemoActivityRepository implements ActivityRepository {
       ),
     );
   }
+
+  @override
+  Future<Result<List<Attachment>, AppFailure>> listCommentAttachments(
+    String projectId,
+    String commentId,
+  ) async {
+    await _tick();
+    return Ok(
+      _s.attachments
+          .where((a) => a.targetType == 'comment' && a.targetId == commentId)
+          .toList(),
+    );
+  }
+
+  @override
+  Future<Result<Attachment, AppFailure>> uploadCommentAttachment(
+    String projectId,
+    String commentId, {
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  }) async {
+    await _tick();
+    final att = Attachment(
+      id: _s.nextId('att'),
+      projectId: projectId,
+      targetType: 'comment',
+      targetId: commentId,
+      uploaderId: _s.currentUser.id,
+      filename: filename,
+      contentType: contentType ?? 'application/octet-stream',
+      sizeBytes: bytes.length,
+      sha256: 'demo-sha-${bytes.length}',
+      createdAt: DateTime.now().toUtc(),
+    );
+    _s.attachments.add(att);
+    return Ok(att);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1489,7 +2087,7 @@ class DemoMilestonesRepository implements MilestonesRepository {
     var donePoints = 0.0;
     var doneCount = 0;
     for (final s in issues) {
-      final pt = s.pointsId == null ? null : statusById[s.pointsId!]?.value;
+      final pt = s.sizeId == null ? null : statusById[s.sizeId!]?.value;
       final closed =
           s.statusId != null && (statusById[s.statusId]?.isClosed ?? false);
       totalPoints += pt ?? 0;

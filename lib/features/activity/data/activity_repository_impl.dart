@@ -212,4 +212,57 @@ class ActivityRepositoryImpl implements ActivityRepository {
       err: Err.new,
     );
   }
+
+  // ---- comment attachments ----
+
+  @override
+  Future<Result<List<Attachment>, AppFailure>> listCommentAttachments(
+    String projectId,
+    String commentId,
+  ) async {
+    final res = await _api.get(
+      '$_base/$projectId/comments/$commentId/attachments',
+    );
+    return res.when(
+      ok: (r) {
+        final body = r.data as Map<String, dynamic>;
+        final raw = body['attachments'] as List<dynamic>? ?? const [];
+        return Ok(
+          raw
+              .map((e) => Attachment.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
+      },
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<Attachment, AppFailure>> uploadCommentAttachment(
+    String projectId,
+    String commentId, {
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  }) async {
+    try {
+      final form = FormData.fromMap({
+        'file': MultipartFile.fromBytes(
+          bytes,
+          filename: filename,
+          contentType: contentType == null
+              ? null
+              : DioMediaType.parse(contentType),
+        ),
+      });
+      final response = await _api.dio.post<dynamic>(
+        '$_base/$projectId/comments/$commentId/attachments',
+        data: form,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+      return Ok(Attachment.fromJson(response.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
 }

@@ -25,14 +25,14 @@ final class IssuesLoaded extends IssuesState {
     required this.statuses,
     required this.types,
     required this.priorities,
-    required this.severities,
+    required this.sizes,
     required this.labels,
     required this.components,
     this.search = '',
     this.statusFilter,
     this.typeFilter,
     this.priorityFilter,
-    this.severityFilter,
+    this.sizeFilter,
     this.busy = false,
     this.lastError,
   });
@@ -41,7 +41,7 @@ final class IssuesLoaded extends IssuesState {
   final List<TaxonomyItem> statuses;
   final List<TaxonomyItem> types;
   final List<TaxonomyItem> priorities;
-  final List<TaxonomyItem> severities;
+  final List<TaxonomyItem> sizes;
   final List<Label> labels;
   final List<Component> components;
 
@@ -49,7 +49,7 @@ final class IssuesLoaded extends IssuesState {
   final String? statusFilter;
   final String? typeFilter;
   final String? priorityFilter;
-  final String? severityFilter;
+  final String? sizeFilter;
   final bool busy;
   final AppFailure? lastError;
 
@@ -59,7 +59,7 @@ final class IssuesLoaded extends IssuesState {
     Object? statusFilter = _absent,
     Object? typeFilter = _absent,
     Object? priorityFilter = _absent,
-    Object? severityFilter = _absent,
+    Object? sizeFilter = _absent,
     bool? busy,
     AppFailure? lastError,
   }) => IssuesLoaded(
@@ -67,7 +67,7 @@ final class IssuesLoaded extends IssuesState {
     statuses: statuses,
     types: types,
     priorities: priorities,
-    severities: severities,
+    sizes: sizes,
     labels: labels,
     components: components,
     search: search ?? this.search,
@@ -77,9 +77,8 @@ final class IssuesLoaded extends IssuesState {
     priorityFilter: priorityFilter == _absent
         ? this.priorityFilter
         : priorityFilter as String?,
-    severityFilter: severityFilter == _absent
-        ? this.severityFilter
-        : severityFilter as String?,
+    sizeFilter:
+        sizeFilter == _absent ? this.sizeFilter : sizeFilter as String?,
     busy: busy ?? this.busy,
     lastError: lastError,
   );
@@ -94,7 +93,7 @@ final class IssuesLoaded extends IssuesState {
       if (priorityFilter != null && i.priorityId != priorityFilter) {
         return false;
       }
-      if (severityFilter != null && i.severityId != severityFilter) {
+      if (sizeFilter != null && i.sizeId != sizeFilter) {
         return false;
       }
       if (q.isEmpty) return true;
@@ -111,7 +110,7 @@ final class IssuesLoaded extends IssuesState {
     statusFilter,
     typeFilter,
     priorityFilter,
-    severityFilter,
+    sizeFilter,
     busy,
     lastError,
   ];
@@ -146,8 +145,8 @@ class IssuesCubit extends Cubit<IssuesState> {
         await _catalog.listTaxonomy(projectId, TaxonomyKind.issueType);
     final priorities =
         await _catalog.listTaxonomy(projectId, TaxonomyKind.priority);
-    final severities =
-        await _catalog.listTaxonomy(projectId, TaxonomyKind.severity);
+    final sizes =
+        await _catalog.listTaxonomy(projectId, TaxonomyKind.size);
     final labels = await _catalog.listLabels(projectId);
     final components = await _catalog.listComponents(projectId);
 
@@ -155,7 +154,7 @@ class IssuesCubit extends Cubit<IssuesState> {
         statuses.failureOrNull ??
         types.failureOrNull ??
         priorities.failureOrNull ??
-        severities.failureOrNull ??
+        sizes.failureOrNull ??
         labels.failureOrNull ??
         components.failureOrNull;
     if (fail != null) {
@@ -168,7 +167,7 @@ class IssuesCubit extends Cubit<IssuesState> {
         statuses: statuses.valueOrNull!,
         types: types.valueOrNull!,
         priorities: priorities.valueOrNull!,
-        severities: severities.valueOrNull!,
+        sizes: sizes.valueOrNull!,
         labels: labels.valueOrNull!,
         components: components.valueOrNull!,
       ),
@@ -195,9 +194,9 @@ class IssuesCubit extends Cubit<IssuesState> {
     if (s is IssuesLoaded) emit(s.copyWith(priorityFilter: id));
   }
 
-  void setSeverityFilter(String? id) {
+  void setSizeFilter(String? id) {
     final s = state;
-    if (s is IssuesLoaded) emit(s.copyWith(severityFilter: id));
+    if (s is IssuesLoaded) emit(s.copyWith(sizeFilter: id));
   }
 
   Future<void> create(CreateIssueRequest body) async {

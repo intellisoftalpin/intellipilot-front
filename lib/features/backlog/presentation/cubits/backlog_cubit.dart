@@ -42,7 +42,7 @@ final class BacklogLoaded extends BacklogState {
   /// `issue_type` taxonomy items (Story / Task / Bug / …).
   final List<TaxonomyItem> types;
 
-  /// `point` taxonomy items.
+  /// `size` taxonomy items (the estimate; rendered as a scaled badge).
   final List<TaxonomyItem> points;
   final String search;
   final String? statusFilter;
@@ -148,7 +148,7 @@ class BacklogCubit extends Cubit<BacklogState> {
     final typesRes =
         await _catalog.listTaxonomy(projectId, TaxonomyKind.issueType);
     final pointsRes =
-        await _catalog.listTaxonomy(projectId, TaxonomyKind.point);
+        await _catalog.listTaxonomy(projectId, TaxonomyKind.size);
 
     final fail = epicsRes.failureOrNull ??
         issuesRes.failureOrNull ??
@@ -258,8 +258,7 @@ class BacklogCubit extends Cubit<BacklogState> {
       statusId: current.statusId,
       typeId: current.typeId,
       priorityId: current.priorityId,
-      severityId: current.severityId,
-      pointsId: current.pointsId,
+      sizeId: current.sizeId,
       epicId: epicId,
       parentId: current.parentId,
       milestoneId: current.milestoneId,

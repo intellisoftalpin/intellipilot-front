@@ -120,17 +120,14 @@ void main() {
       final adapter = _Adapter(
         (_) async => _ok(
           '{"components":[{"id":"c1","project_id":"p1","name":"api",'
-          '"color":"#0079bc","git_repository":"https://example.com/api.git",'
+          '"color":"#0079bc",'
           '"created_at":"2026-05-27T00:00:00Z"}]}',
         ),
       );
       final repo = CatalogRepositoryImpl(_client(adapter));
       final res = await repo.listComponents('p1');
       expect(res.valueOrNull?.single.name, 'api');
-      expect(
-        res.valueOrNull?.single.gitRepository,
-        'https://example.com/api.git',
-      );
+      expect(res.valueOrNull?.single.color, '#0079bc');
     });
 
     test('TaxonomyKind.hasClosed only true for status kinds', () {
@@ -139,12 +136,12 @@ void main() {
       expect(TaxonomyKind.issueStatus.hasClosed, isTrue);
       expect(TaxonomyKind.issueType.hasClosed, isFalse);
       expect(TaxonomyKind.priority.hasClosed, isFalse);
-      expect(TaxonomyKind.point.hasClosed, isFalse);
+      expect(TaxonomyKind.size.hasClosed, isFalse);
     });
 
-    test('TaxonomyKind.hasValue only true for point kind', () {
-      expect(TaxonomyKind.point.hasValue, isTrue);
-      for (final k in TaxonomyKind.values.where((k) => k != TaxonomyKind.point)) {
+    test('TaxonomyKind.hasValue only true for size kind', () {
+      expect(TaxonomyKind.size.hasValue, isTrue);
+      for (final k in TaxonomyKind.values.where((k) => k != TaxonomyKind.size)) {
         expect(k.hasValue, isFalse, reason: '${k.wire} should not carry value');
       }
     });

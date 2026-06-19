@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/core/io/file_picker.dart';
+import 'package:intellipilot/core/io/url_opener.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/core/ui/timestamps.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
+import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/activity/presentation/cubits/activity_stream_cubit.dart';
 import 'package:intellipilot/features/activity/presentation/widgets/comment_composer.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
@@ -193,6 +197,12 @@ class _CommentRow extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             MarkdownText(comment.body),
+            const SizedBox(height: 6),
+            _CommentAttachments(
+              projectId: context.read<ActivityStreamCubit>().projectId,
+              commentId: comment.id,
+              canEdit: canModerate,
+            ),
           ],
         ),
       ),
@@ -352,5 +362,113 @@ class _ComposerGate extends StatelessWidget {
         state is ProjectDetailLoaded && state.has(Permission.commentCreate);
     if (!canComment) return const SizedBox.shrink();
     return CommentComposer(draftKey: draftKey, busy: busy);
+  }
+}
+
+/// Compact comment-level attachment strip. Reuses the attachment endpoints
+/// pointed at the `comments/{id}/attachments` path. Lists existing files,
+/// uploads via the file picker, and opens a signed download URL on tap.
+class _CommentAttachments extends StatefulWidget {
+  const _CommentAttachments({
+    required this.projectId,
+    required this.commentId,
+    required this.canEdit,
+  });
+
+  final String projectId;
+  final String commentId;
+  final bool canEdit;
+
+  @override
+  State<_CommentAttachments> createState() => _CommentAttachmentsState();
+}
+
+class _CommentAttachmentsState extends State<_CommentAttachments> {
+  late Future<List<Attachment>> _future;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<List<Attachment>> _load() async {
+    final res = await getIt<ActivityRepository>()
+        .listCommentAttachments(widget.projectId, widget.commentId);
+    return res.valueOrNull ?? <Attachment>[];
+  }
+
+  void _reload() => setState(() => _future = _load());
+
+  Future<void> _open(Attachment a) async {
+    final res = await getIt<ActivityRepository>()
+        .signAttachmentUrl(widget.projectId, a.id);
+    final signed = res.valueOrNull;
+    if (signed != null) openExternalUrl(signed.url);
+  }
+
+  Future<void> _upload() async {
+    final picked = await getIt<FilePicker>().pickSingleFile();
+    if (picked == null) return;
+    setState(() => _busy = true);
+    await getIt<ActivityRepository>().uploadCommentAttachment(
+      widget.projectId,
+      widget.commentId,
+      filename: picked.name,
+      bytes: picked.bytes,
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    _reload();
+  }
+
+  Future<void> _delete(Attachment a) async {
+    await getIt<ActivityRepository>().deleteAttachment(widget.projectId, a.id);
+    _reload();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FutureBuilder<List<Attachment>>(
+      future: _future,
+      builder: (context, snap) {
+        final items = snap.data ?? const <Attachment>[];
+        if (items.isEmpty && !widget.canEdit) return const SizedBox.shrink();
+        return Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            for (final a in items)
+              InputChip(
+                avatar: const Icon(Icons.attach_file, size: 14),
+                label: Text(a.filename),
+                onPressed: () => _open(a),
+                onDeleted: widget.canEdit ? () => _delete(a) : null,
+                deleteIcon:
+                    widget.canEdit ? const Icon(Icons.close, size: 14) : null,
+                visualDensity: VisualDensity.compact,
+              ),
+            if (widget.canEdit)
+              TextButton.icon(
+                icon: _busy
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.attach_file, size: 16),
+                label: Text(
+                  'Attach',
+                  style: theme.textTheme.bodySmall,
+                ),
+                onPressed: _busy ? null : _upload,
+              ),
+          ],
+        );
+      },
+    );
   }
 }

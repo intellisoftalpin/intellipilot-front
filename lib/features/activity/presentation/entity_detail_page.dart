@@ -199,18 +199,18 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
     if (entity == null) return null;
 
     // Resolve every taxonomy item used by the kind so we can render
-    // status/type/priority/severity/points names.
+    // status/type/priority/size names.
     final lookups = <Future<dynamic>>[];
     lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.issueStatus));
     lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.issueType));
     lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.priority));
-    lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.severity));
-    lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.point));
+    lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.size));
     lookups.add(catalog.listLabels(widget.projectId));
     lookups.add(catalog.listComponents(widget.projectId));
     lookups.add(backlog.listEpics(widget.projectId));
     lookups.add(milestones.list(widget.projectId));
     lookups.add(backlog.listIssues(widget.projectId));
+    lookups.add(catalog.listCustomers(widget.projectId));
     final results = await Future.wait(lookups);
 
     List<T> resolve<T>(int i) =>
@@ -220,18 +220,18 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
       ...resolve<TaxonomyItem>(1),
       ...resolve<TaxonomyItem>(2),
       ...resolve<TaxonomyItem>(3),
-      ...resolve<TaxonomyItem>(4),
     ];
     return _PageData(
       profile: profile,
       project: project,
       entity: entity,
       taxonomyById: {for (final t in taxonomyAll) t.id: t},
-      labelsById: {for (final l in resolve<Label>(5)) l.id: l},
-      componentsById: {for (final c in resolve<Component>(6)) c.id: c},
-      epicsById: {for (final e in resolve<Epic>(7)) e.id: e},
-      milestonesById: {for (final m in resolve<Milestone>(8)) m.id: m},
-      issuesById: {for (final i in resolve<Issue>(9)) i.id: i},
+      labelsById: {for (final l in resolve<Label>(4)) l.id: l},
+      componentsById: {for (final c in resolve<Component>(5)) c.id: c},
+      epicsById: {for (final e in resolve<Epic>(6)) e.id: e},
+      milestonesById: {for (final m in resolve<Milestone>(7)) m.id: m},
+      issuesById: {for (final i in resolve<Issue>(8)) i.id: i},
+      customersById: {for (final c in resolve<Customer>(9)) c.id: c},
     );
   }
 }
@@ -251,6 +251,7 @@ class _PageData {
     required this.epicsById,
     required this.milestonesById,
     required this.issuesById,
+    required this.customersById,
   });
 
   final UserProfile profile;
@@ -262,6 +263,7 @@ class _PageData {
   final Map<String, Epic> epicsById;
   final Map<String, Milestone> milestonesById;
   final Map<String, Issue> issuesById;
+  final Map<String, Customer> customersById;
 }
 
 sealed class _EntityRecord {
@@ -899,6 +901,19 @@ class _LeftColumn extends StatelessWidget {
             ),
           ),
         ),
+        if (kind == EntityKind.issue) ...[
+          gap,
+          _Panel(
+            compact: compact,
+            title: 'Relationships',
+            child: _RelationshipsPanel(
+              projectId: projectId,
+              issueId: entityId,
+              canEdit: canEdit(context),
+              issuesById: data.issuesById,
+            ),
+          ),
+        ],
         gap,
         _Panel(
           compact: compact,
@@ -916,6 +931,11 @@ class _LeftColumn extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  bool canEdit(BuildContext context) {
+    final s = context.read<ProjectDetailCubit>().state;
+    return s is ProjectDetailLoaded && s.has(_modifyPermissionFor(kind));
   }
 }
 
@@ -957,6 +977,18 @@ class _RightColumn extends StatelessWidget {
           title: AppLocalizations.of(context).panelDates,
           child: _DatesTable(data: data),
         ),
+        if (kind == EntityKind.issue) ...[
+          SizedBox(height: compact ? 8 : 12),
+          _Panel(
+            compact: compact,
+            title: 'Watchers',
+            child: _WatchersPanel(
+              projectId: projectId,
+              issueId: entityId,
+              myId: data.profile.id,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1068,14 +1100,34 @@ class _DetailsTable extends StatelessWidget {
           ),
           _taxonomyRow(
             context,
-            label: t.detailFieldSeverity,
-            currentId: issue.severityId,
-            kind: TaxonomyKind.severity,
+            label: 'Size',
+            currentId: issue.sizeId,
+            kind: TaxonomyKind.size,
             canEdit: canEdit,
+            displayBuilder: (item) => item.value == null
+                ? item.name
+                : '${item.name} (${item.value})',
             patch: (id) => _patchEntity(
-              issuePatch: () => UpdateIssueRequest(severityId: id),
+              issuePatch: () => UpdateIssueRequest(sizeId: id),
             ),
           ),
+          _categoryRow(context, current: issue.category, canEdit: canEdit),
+          if (issue.category == IssueCategory.customerRequest.wire)
+            _customerRow(
+              context,
+              currentId: issue.customerId,
+              canEdit: canEdit,
+            ),
+          _kvRow(context, 'Start date', issue.startDate ?? '—'),
+          _kvRow(context, 'Due date', issue.dueDate ?? '—'),
+          _resolutionRow(
+            context,
+            current: issue.resolution,
+            canEdit: canEdit,
+          ),
+          if (issue.resolvedAt != null)
+            _kvRow(context, 'Resolved at', issue.resolvedAt!),
+          _kvRow(context, 'Fix version', _fixVersionLabel(issue)),
           _labelsRow(
             context,
             currentIds: issue.labels,
@@ -1093,19 +1145,6 @@ class _DetailsTable extends StatelessWidget {
             canEdit: canEdit,
           ),
           _parentRow(context, currentId: issue.parentId, canEdit: canEdit),
-          _taxonomyRow(
-            context,
-            label: t.detailFieldPoints,
-            currentId: issue.pointsId,
-            kind: TaxonomyKind.point,
-            canEdit: canEdit,
-            displayBuilder: (item) => item.value == null
-                ? item.name
-                : '${item.name} (${item.value})',
-            patch: (id) => _patchEntity(
-              issuePatch: () => UpdateIssueRequest(pointsId: id),
-            ),
-          ),
         ]);
       case _EpicRec():
         break;
@@ -1270,6 +1309,87 @@ class _DetailsTable extends StatelessWidget {
         issuePatch: () => UpdateIssueRequest(parentId: id),
       ),
     );
+  }
+
+  Widget _categoryRow(
+    BuildContext context, {
+    required String? current,
+    required bool canEdit,
+  }) {
+    final selected = IssueCategory.fromWire(current);
+    return _editableRow(
+      context,
+      label: 'Category',
+      displayText: selected?.label ?? '—',
+      currentId: current,
+      noneLabel: '—',
+      canEdit: canEdit,
+      candidates: [
+        for (final c in IssueCategory.values)
+          _Candidate(id: c.wire, label: c.label),
+      ],
+      onPicked: (id) => _patchEntity(
+        issuePatch: () => id == IssueCategory.customerRequest.wire
+            ? UpdateIssueRequest(category: id)
+            // Leaving customer_request clears any linked customer.
+            : UpdateIssueRequest(category: id, customerId: null),
+      ),
+    );
+  }
+
+  Widget _customerRow(
+    BuildContext context, {
+    required String? currentId,
+    required bool canEdit,
+  }) {
+    final customers = data.customersById.values.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    final current = currentId == null ? null : data.customersById[currentId];
+    return _editableRow(
+      context,
+      label: 'Customer',
+      displayText: current?.name ?? '—',
+      currentId: currentId,
+      noneLabel: '—',
+      canEdit: canEdit,
+      candidates: [
+        for (final c in customers) _Candidate(id: c.id, label: c.name),
+      ],
+      onPicked: (id) => _patchEntity(
+        issuePatch: () => UpdateIssueRequest(customerId: id),
+      ),
+    );
+  }
+
+  Widget _resolutionRow(
+    BuildContext context, {
+    required String? current,
+    required bool canEdit,
+  }) {
+    final selected = IssueResolution.fromWire(current);
+    return _editableRow(
+      context,
+      label: 'Resolution',
+      displayText: selected?.label ?? '—',
+      currentId: current,
+      noneLabel: '—',
+      canEdit: canEdit,
+      candidates: [
+        for (final r in IssueResolution.values)
+          _Candidate(id: r.wire, label: r.label),
+      ],
+      onPicked: (id) => _patchEntity(
+        issuePatch: () => UpdateIssueRequest(resolution: id),
+      ),
+    );
+  }
+
+  String _fixVersionLabel(Issue issue) {
+    if (issue.releaseText != null && issue.releaseText!.isNotEmpty) {
+      return issue.releaseText!;
+    }
+    if (issue.releaseVersionId != null) return issue.releaseVersionId!;
+    return '—';
   }
 
   Widget _labelsRow(
@@ -2816,4 +2936,311 @@ Color _hexToColor(String hex) {
   if (h.length != 8) return const Color(0xFF64748B);
   final v = int.tryParse(h, radix: 16);
   return v == null ? const Color(0xFF64748B) : Color(v);
+}
+
+// ---------------------------------------------------------------------------
+// Issue relationships
+// ---------------------------------------------------------------------------
+
+/// Lists an issue's relationship links (in/out), with add-via-picker and
+/// remove. Talks to [CatalogRepository] directly and refreshes locally.
+class _RelationshipsPanel extends StatefulWidget {
+  const _RelationshipsPanel({
+    required this.projectId,
+    required this.issueId,
+    required this.canEdit,
+    required this.issuesById,
+  });
+
+  final String projectId;
+  final String issueId;
+  final bool canEdit;
+  final Map<String, Issue> issuesById;
+
+  @override
+  State<_RelationshipsPanel> createState() => _RelationshipsPanelState();
+}
+
+class _RelationshipsPanelState extends State<_RelationshipsPanel> {
+  late Future<List<IssueLink>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<List<IssueLink>> _load() async {
+    final res = await getIt<CatalogRepository>()
+        .listIssueLinks(widget.projectId, widget.issueId);
+    return res.valueOrNull ?? <IssueLink>[];
+  }
+
+  void _reload() => setState(() => _future = _load());
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FutureBuilder<List<IssueLink>>(
+      future: _future,
+      builder: (context, snap) {
+        final links = snap.data ?? const <IssueLink>[];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (snap.connectionState != ConnectionState.done)
+              const Padding(
+                padding: EdgeInsets.all(8),
+                child: Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            else if (links.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  'No relationships.',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.outline),
+                ),
+              )
+            else
+              for (final link in links)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.link, size: 18),
+                  title: Text(
+                    '${link.relationLabel} '
+                    'ISSUE-${link.otherRef} · ${link.otherSubject}',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  trailing: widget.canEdit
+                      ? IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          tooltip: 'Remove',
+                          onPressed: () async {
+                            await getIt<CatalogRepository>().deleteIssueLink(
+                              widget.projectId,
+                              widget.issueId,
+                              link.id,
+                            );
+                            _reload();
+                          },
+                        )
+                      : null,
+                ),
+            if (widget.canEdit)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add relationship'),
+                  onPressed: _addLink,
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _addLink() async {
+    final candidates = widget.issuesById.values
+        .where((i) => i.id != widget.issueId)
+        .toList()
+      ..sort((a, b) => a.reference.compareTo(b.reference));
+    if (candidates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No other issues to link.')),
+      );
+      return;
+    }
+    var targetId = candidates.first.id;
+    var type = IssueLinkType.blocks;
+    final result = await showDialog<({String target, String type})>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: const Text('Add relationship'),
+          content: SizedBox(
+            width: 460,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DropdownButtonFormField<IssueLinkType>(
+                  initialValue: type,
+                  decoration: const InputDecoration(labelText: 'Type'),
+                  items: [
+                    for (final t in IssueLinkType.values)
+                      DropdownMenuItem<IssueLinkType>(
+                        value: t,
+                        child: Text(t.label),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => type = v ?? type),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: targetId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Issue'),
+                  items: [
+                    for (final i in candidates)
+                      DropdownMenuItem<String>(
+                        value: i.id,
+                        child: Text(
+                          'ISSUE-${i.reference} · ${i.subject}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => targetId = v ?? targetId),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(ctx).pop((target: targetId, type: type.wire)),
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result == null) return;
+    await getIt<CatalogRepository>().createIssueLink(
+      widget.projectId,
+      widget.issueId,
+      result.target,
+      result.type,
+    );
+    _reload();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Watchers
+// ---------------------------------------------------------------------------
+
+/// Shows the issue's watcher list with a watch/unwatch-self toggle.
+class _WatchersPanel extends StatefulWidget {
+  const _WatchersPanel({
+    required this.projectId,
+    required this.issueId,
+    required this.myId,
+  });
+
+  final String projectId;
+  final String issueId;
+  final String myId;
+
+  @override
+  State<_WatchersPanel> createState() => _WatchersPanelState();
+}
+
+class _WatchersPanelState extends State<_WatchersPanel> {
+  late Future<List<String>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<List<String>> _load() async {
+    final res = await getIt<CatalogRepository>()
+        .listWatchers(widget.projectId, widget.issueId);
+    return res.valueOrNull ?? <String>[];
+  }
+
+  void _reload() => setState(() => _future = _load());
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FutureBuilder<List<String>>(
+      future: _future,
+      builder: (context, snap) {
+        final watchers = snap.data ?? const <String>[];
+        final watching = watchers.contains(widget.myId);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (snap.connectionState != ConnectionState.done)
+              const Padding(
+                padding: EdgeInsets.all(8),
+                child: Center(
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            else ...[
+              FilledButton.tonalIcon(
+                icon: Icon(
+                  watching
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  size: 18,
+                ),
+                label: Text(watching ? 'Unwatch' : 'Watch'),
+                onPressed: () async {
+                  final repo = getIt<CatalogRepository>();
+                  if (watching) {
+                    await repo.removeWatcher(
+                      widget.projectId,
+                      widget.issueId,
+                      widget.myId,
+                    );
+                  } else {
+                    await repo.addWatcher(widget.projectId, widget.issueId);
+                  }
+                  _reload();
+                },
+              ),
+              const SizedBox(height: 8),
+              if (watchers.isEmpty)
+                Text(
+                  'No watchers.',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: theme.colorScheme.outline),
+                )
+              else
+                for (final w in watchers)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_outline, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            w == widget.myId ? '$w (you)' : w,
+                            style: theme.textTheme.bodyMedium,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+            ],
+          ],
+        );
+      },
+    );
+  }
 }

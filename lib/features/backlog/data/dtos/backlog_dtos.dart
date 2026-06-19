@@ -57,7 +57,7 @@ class Epic {
 
 /// The unified work item (Story / Task / Bug / sub-task). `typeId` is an
 /// `issue_type` taxonomy item; `parentId` nests sub-tasks; `epicId` groups
-/// under an epic; `milestoneId` assigns a sprint; `pointsId` is the estimate.
+/// under an epic; `milestoneId` assigns a sprint; `sizeId` is the estimate.
 class Issue {
   const Issue({
     required this.id,
@@ -74,13 +74,21 @@ class Issue {
     this.statusId,
     this.typeId,
     this.priorityId,
-    this.severityId,
-    this.pointsId,
+    this.sizeId,
     this.epicId,
     this.parentId,
     this.milestoneId,
     this.ownerId,
     this.assignedTo,
+    this.category,
+    this.customerId,
+    this.startDate,
+    this.dueDate,
+    this.resolution,
+    this.resolvedAt,
+    this.releaseVersionId,
+    this.releaseText,
+    this.watchers = const [],
     this.etag,
   });
 
@@ -94,17 +102,27 @@ class Issue {
       statusId: json['status_id'] as String?,
       typeId: json['type_id'] as String?,
       priorityId: json['priority_id'] as String?,
-      severityId: json['severity_id'] as String?,
-      pointsId: json['points_id'] as String?,
+      sizeId: json['size_id'] as String?,
       epicId: json['epic_id'] as String?,
       parentId: json['parent_id'] as String?,
       milestoneId: json['milestone_id'] as String?,
       ownerId: json['owner_id'] as String?,
       assignedTo: json['assigned_to'] as String?,
+      category: json['category'] as String?,
+      customerId: json['customer_id'] as String?,
+      startDate: json['start_date'] as String?,
+      dueDate: json['due_date'] as String?,
+      resolution: json['resolution'] as String?,
+      resolvedAt: json['resolved_at'] as String?,
+      releaseVersionId: json['release_version_id'] as String?,
+      releaseText: json['release_text'] as String?,
       labels: (json['labels'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
           .toList(),
       components: (json['components'] as List<dynamic>? ?? const [])
+          .map((e) => e as String)
+          .toList(),
+      watchers: (json['watchers'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
           .toList(),
       order: (json['order'] as num?)?.toDouble() ?? 0.0,
@@ -123,15 +141,35 @@ class Issue {
   final String? statusId;
   final String? typeId;
   final String? priorityId;
-  final String? severityId;
-  final String? pointsId;
+  final String? sizeId;
   final String? epicId;
   final String? parentId;
   final String? milestoneId;
   final String? ownerId;
   final String? assignedTo;
+
+  /// One of the fixed `IssueCategory` wire values (nullable).
+  final String? category;
+  final String? customerId;
+
+  /// `YYYY-MM-DD` dates (nullable).
+  final String? startDate;
+  final String? dueDate;
+
+  /// One of the fixed `IssueResolution` wire values (nullable).
+  final String? resolution;
+
+  /// RFC3339 timestamp — READ-ONLY, system-managed (never sent).
+  final String? resolvedAt;
+
+  /// Structured fix-version (id) or free-text fix-version. At most one set.
+  final String? releaseVersionId;
+  final String? releaseText;
   final List<String> labels;
   final List<String> components;
+
+  /// User ids watching this issue (read path; mutate via sub-resources).
+  final List<String> watchers;
   final double order;
   final int version;
   final DateTime createdAt;
@@ -215,12 +253,18 @@ class CreateIssueRequest {
     this.statusId,
     this.typeId,
     this.priorityId,
-    this.severityId,
-    this.pointsId,
+    this.sizeId,
     this.epicId,
     this.parentId,
     this.milestoneId,
     this.assignedTo,
+    this.category,
+    this.customerId,
+    this.startDate,
+    this.dueDate,
+    this.resolution,
+    this.releaseVersionId,
+    this.releaseText,
     this.labels = const [],
     this.components = const [],
   });
@@ -230,12 +274,18 @@ class CreateIssueRequest {
   final String? statusId;
   final String? typeId;
   final String? priorityId;
-  final String? severityId;
-  final String? pointsId;
+  final String? sizeId;
   final String? epicId;
   final String? parentId;
   final String? milestoneId;
   final String? assignedTo;
+  final String? category;
+  final String? customerId;
+  final String? startDate;
+  final String? dueDate;
+  final String? resolution;
+  final String? releaseVersionId;
+  final String? releaseText;
   final List<String> labels;
   final List<String> components;
 
@@ -245,12 +295,18 @@ class CreateIssueRequest {
     if (statusId != null) 'status_id': statusId,
     if (typeId != null) 'type_id': typeId,
     if (priorityId != null) 'priority_id': priorityId,
-    if (severityId != null) 'severity_id': severityId,
-    if (pointsId != null) 'points_id': pointsId,
+    if (sizeId != null) 'size_id': sizeId,
     if (epicId != null) 'epic_id': epicId,
     if (parentId != null) 'parent_id': parentId,
     if (milestoneId != null) 'milestone_id': milestoneId,
     if (assignedTo != null) 'assigned_to': assignedTo,
+    if (category != null) 'category': category,
+    if (customerId != null) 'customer_id': customerId,
+    if (startDate != null) 'start_date': startDate,
+    if (dueDate != null) 'due_date': dueDate,
+    if (resolution != null) 'resolution': resolution,
+    if (releaseVersionId != null) 'release_version_id': releaseVersionId,
+    if (releaseText != null) 'release_text': releaseText,
     'labels': labels,
     'components': components,
   };
@@ -263,13 +319,19 @@ class UpdateIssueRequest {
     this.statusId = const _Absent(),
     this.typeId = const _Absent(),
     this.priorityId = const _Absent(),
-    this.severityId = const _Absent(),
-    this.pointsId = const _Absent(),
+    this.sizeId = const _Absent(),
     this.epicId = const _Absent(),
     this.parentId = const _Absent(),
     this.milestoneId = const _Absent(),
     this.assignedTo = const _Absent(),
     this.ownerId = const _Absent(),
+    this.category = const _Absent(),
+    this.customerId = const _Absent(),
+    this.startDate = const _Absent(),
+    this.dueDate = const _Absent(),
+    this.resolution = const _Absent(),
+    this.releaseVersionId = const _Absent(),
+    this.releaseText = const _Absent(),
     this.labels,
     this.components,
   });
@@ -279,13 +341,19 @@ class UpdateIssueRequest {
   final Object? statusId;
   final Object? typeId;
   final Object? priorityId;
-  final Object? severityId;
-  final Object? pointsId;
+  final Object? sizeId;
   final Object? epicId;
   final Object? parentId;
   final Object? milestoneId;
   final Object? assignedTo;
   final Object? ownerId;
+  final Object? category;
+  final Object? customerId;
+  final Object? startDate;
+  final Object? dueDate;
+  final Object? resolution;
+  final Object? releaseVersionId;
+  final Object? releaseText;
 
   /// Backend treats absent as "leave alone", present as "replace fully".
   final List<String>? labels;
@@ -297,13 +365,19 @@ class UpdateIssueRequest {
     if (statusId is! _Absent) 'status_id': statusId,
     if (typeId is! _Absent) 'type_id': typeId,
     if (priorityId is! _Absent) 'priority_id': priorityId,
-    if (severityId is! _Absent) 'severity_id': severityId,
-    if (pointsId is! _Absent) 'points_id': pointsId,
+    if (sizeId is! _Absent) 'size_id': sizeId,
     if (epicId is! _Absent) 'epic_id': epicId,
     if (parentId is! _Absent) 'parent_id': parentId,
     if (milestoneId is! _Absent) 'milestone_id': milestoneId,
     if (assignedTo is! _Absent) 'assigned_to': assignedTo,
     if (ownerId is! _Absent) 'owner_id': ownerId,
+    if (category is! _Absent) 'category': category,
+    if (customerId is! _Absent) 'customer_id': customerId,
+    if (startDate is! _Absent) 'start_date': startDate,
+    if (dueDate is! _Absent) 'due_date': dueDate,
+    if (resolution is! _Absent) 'resolution': resolution,
+    if (releaseVersionId is! _Absent) 'release_version_id': releaseVersionId,
+    if (releaseText is! _Absent) 'release_text': releaseText,
     if (labels != null) 'labels': labels,
     if (components != null) 'components': components,
   };

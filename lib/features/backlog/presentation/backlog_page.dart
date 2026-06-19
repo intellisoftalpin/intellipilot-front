@@ -15,6 +15,7 @@ import 'package:intellipilot/features/backlog/presentation/widgets/user_story_ed
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/size_badge.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
@@ -482,7 +483,7 @@ class _UserStoryRow extends StatelessWidget {
     final status =
         statuses.where((s) => s.id == story.statusId).cast<TaxonomyItem?>().firstOrNull;
     final p = points
-        .where((p) => p.id == story.pointsId)
+        .where((p) => p.id == story.sizeId)
         .cast<TaxonomyItem?>()
         .firstOrNull;
     final tile = ListTile(
@@ -499,13 +500,7 @@ class _UserStoryRow extends StatelessWidget {
               colorHex: status.color,
               dense: true,
             ),
-          if (p?.value != null)
-            Text(
-              '${t.taxonomyValueLabel}: ${p!.value}',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
-              ),
-            ),
+          if (p != null) SizeBadge(item: p),
         ],
       ),
       onTap: () => context.go(
@@ -554,7 +549,7 @@ class _UserStoryRow extends StatelessWidget {
                         description: updated.description,
                         statusId: updated.statusId,
                         epicId: updated.epicId,
-                        pointsId: updated.pointsId,
+                        sizeId: updated.sizeId,
                       ),
                     );
                   },

@@ -66,4 +66,17 @@ abstract interface class ActivityRepository {
     String projectId,
     String attachmentId,
   );
+
+  // ---- comment attachments (reuse the attachment machinery) ----
+  Future<Result<List<Attachment>, AppFailure>> listCommentAttachments(
+    String projectId,
+    String commentId,
+  );
+  Future<Result<Attachment, AppFailure>> uploadCommentAttachment(
+    String projectId,
+    String commentId, {
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  });
 }

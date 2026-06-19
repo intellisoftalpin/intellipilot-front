@@ -63,8 +63,7 @@ class _TaxonomyTabState extends State<TaxonomyTab> {
     TaxonomyKind.issueStatus => t.taxKindIssueStatus,
     TaxonomyKind.issueType => t.taxKindIssueType,
     TaxonomyKind.priority => t.taxKindPriority,
-    TaxonomyKind.severity => t.taxKindSeverity,
-    TaxonomyKind.point => t.taxKindPoint,
+    TaxonomyKind.size => 'Size',
   };
 }
 

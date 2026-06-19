@@ -39,6 +39,21 @@ class DemoStore {
   final Map<String, List<TaxonomyItem>> taxonomyByProject = {};
   final Map<String, List<Label>> labelsByProject = {};
   final Map<String, List<Component>> componentsByProject = {};
+  final Map<String, List<Customer>> customersByProject = {};
+  final Map<String, List<Release>> releasesByProject = {};
+
+  /// Release versions keyed by release id.
+  final Map<String, List<ReleaseVersion>> versionsByRelease = {};
+
+  /// Component→release links keyed by component id.
+  final Map<String, List<ComponentReleaseLink>> componentReleases = {};
+
+  /// Issue relationship links keyed by issue id (outgoing entries; the
+  /// inverse is rendered for the other side).
+  final Map<String, List<IssueLink>> issueLinks = {};
+
+  /// Watcher user ids keyed by issue id.
+  final Map<String, List<String>> watchersByIssue = {};
 
   // -- backlog entities ----------------------------------------------------
   final List<Epic> epics = [];
@@ -191,14 +206,18 @@ void seedDemoStore(DemoStore s) {
     t('is-ty-question', TaxonomyKind.issueType, 'Question', 'question', '#3b82f6', 4),
     // Priority
     t('pri-low', TaxonomyKind.priority, 'Low', 'low', '#10b981', 1),
-    t('pri-high', TaxonomyKind.priority, 'High', 'high', '#ef4444', 2),
-    // Severity
-    t('sev-minor', TaxonomyKind.severity, 'Minor', 'minor', '#10b981', 1),
-    t('sev-major', TaxonomyKind.severity, 'Major', 'major', '#ef4444', 2),
-    // Points
-    t('pt-1', TaxonomyKind.point, '1', '1', '#999999', 1, value: 1),
-    t('pt-3', TaxonomyKind.point, '3', '3', '#999999', 2, value: 3),
-    t('pt-5', TaxonomyKind.point, '5', '5', '#999999', 3, value: 5),
+    t('pri-medium', TaxonomyKind.priority, 'Medium', 'medium', '#f59e0b', 2),
+    t('pri-high', TaxonomyKind.priority, 'High', 'high', '#ef4444', 3),
+    t('pri-critical', TaxonomyKind.priority, 'Critical', 'critical', '#b91c1c',
+        4),
+    t('pri-blocker', TaxonomyKind.priority, 'Blocker', 'blocker', '#7f1d1d', 5),
+    // Size (XS..XXL — value is the ordinal driving the scaled badge)
+    t('sz-xs', TaxonomyKind.size, 'XS', 'xs', '#10b981', 1, value: 1),
+    t('sz-s', TaxonomyKind.size, 'S', 's', '#84cc16', 2, value: 2),
+    t('sz-m', TaxonomyKind.size, 'M', 'm', '#f59e0b', 3, value: 3),
+    t('sz-l', TaxonomyKind.size, 'L', 'l', '#f97316', 4, value: 4),
+    t('sz-xl', TaxonomyKind.size, 'XL', 'xl', '#ef4444', 5, value: 5),
+    t('sz-xxl', TaxonomyKind.size, 'XXL', 'xxl', '#b91c1c', 6, value: 6),
   ];
   s.taxonomyByProject[projectId] = taxonomy;
 
@@ -225,7 +244,6 @@ void seedDemoStore(DemoStore s) {
       projectId: projectId,
       name: 'Web client',
       color: '#3b82f6',
-      gitRepository: 'github.com/example/web',
       createdAt: now,
     ),
     Component(
@@ -233,6 +251,62 @@ void seedDemoStore(DemoStore s) {
       projectId: projectId,
       name: 'API',
       color: '#10b981',
+      createdAt: now,
+    ),
+  ];
+
+  // ---- customers ------------------------------------------------------
+  s.customersByProject[projectId] = [
+    Customer(
+      id: 'cust-acme',
+      projectId: projectId,
+      name: 'Acme Corp',
+      companyName: 'Acme Corporation',
+      contactEmail: 'ops@acme.example',
+      createdAt: now,
+    ),
+    Customer(
+      id: 'cust-globex',
+      projectId: projectId,
+      name: 'Globex',
+      companyName: 'Globex Inc',
+      createdAt: now,
+    ),
+  ];
+
+  // ---- releases + versions + component links --------------------------
+  s.releasesByProject[projectId] = [
+    Release(
+      id: 'rel-psbp',
+      projectId: projectId,
+      name: 'PSBP',
+      description: 'Public sector baseline platform',
+      createdAt: now,
+    ),
+  ];
+  s.versionsByRelease['rel-psbp'] = [
+    ReleaseVersion(
+      id: 'rv-psbp-10',
+      releaseId: 'rel-psbp',
+      version: '1.0',
+      status: 'released',
+      notes: '',
+      createdAt: now,
+    ),
+    ReleaseVersion(
+      id: 'rv-psbp-11',
+      releaseId: 'rel-psbp',
+      version: '1.1',
+      status: 'in_progress',
+      notes: '',
+      createdAt: now,
+    ),
+  ];
+  s.componentReleases['cmp-api'] = [
+    ComponentReleaseLink(
+      componentId: 'cmp-api',
+      releaseId: 'rel-psbp',
+      releaseName: 'PSBP',
       createdAt: now,
     ),
   ];
@@ -295,7 +369,7 @@ void seedDemoStore(DemoStore s) {
       typeId: 'is-ty-story',
       epicId: 'ep-auth',
       milestoneId: milestoneId,
-      pointsId: 'pt-3',
+      sizeId: 'sz-m',
       ownerId: userId,
       assignedTo: userId,
       labels: const [],
@@ -316,7 +390,7 @@ void seedDemoStore(DemoStore s) {
       typeId: 'is-ty-story',
       epicId: 'ep-auth',
       milestoneId: milestoneId,
-      pointsId: 'pt-5',
+      sizeId: 'sz-l',
       ownerId: userId,
       assignedTo: userId,
       labels: const [],
@@ -337,7 +411,7 @@ void seedDemoStore(DemoStore s) {
       typeId: 'is-ty-story',
       epicId: 'ep-board',
       milestoneId: milestoneId,
-      pointsId: 'pt-3',
+      sizeId: 'sz-m',
       ownerId: userId,
       assignedTo: 'user-alex',
       labels: const [],
@@ -357,7 +431,7 @@ void seedDemoStore(DemoStore s) {
       statusId: 'us-st-new',
       typeId: 'is-ty-story',
       epicId: 'ep-board',
-      pointsId: 'pt-5',
+      sizeId: 'sz-l',
       ownerId: userId,
       labels: const [],
       components: const [],
@@ -435,7 +509,9 @@ void seedDemoStore(DemoStore s) {
       statusId: 'us-st-progress',
       typeId: 'is-ty-bug',
       priorityId: 'pri-high',
-      severityId: 'sev-major',
+      sizeId: 'sz-l',
+      category: 'customer_request',
+      customerId: 'cust-acme',
       labels: const ['lbl-backend'],
       components: const ['cmp-api'],
       ownerId: userId,
@@ -455,7 +531,8 @@ void seedDemoStore(DemoStore s) {
       statusId: 'us-st-done',
       typeId: 'is-ty-bug',
       priorityId: 'pri-low',
-      severityId: 'sev-minor',
+      sizeId: 'sz-s',
+      category: 'technical_debt',
       labels: const ['lbl-frontend'],
       components: const ['cmp-web'],
       order: 6,

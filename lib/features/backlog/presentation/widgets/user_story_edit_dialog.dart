@@ -22,7 +22,7 @@ Future<CreateIssueRequest?> showBacklogIssueDialog(
   var statusId = existing?.statusId;
   var typeId = existing?.typeId;
   var epicId = existing?.epicId;
-  var pointsId = existing?.pointsId;
+  var pointsId = existing?.sizeId;
 
   return showDialog<CreateIssueRequest>(
     context: context,
@@ -110,11 +110,10 @@ Future<CreateIssueRequest?> showBacklogIssueDialog(
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String?>(
                   initialValue: pointsId,
-                  decoration: InputDecoration(labelText: t.backlogFieldPoints),
+                  decoration: const InputDecoration(labelText: 'Size'),
                   items: [
-                    DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text(t.backlogNoPoints),
+                    const DropdownMenuItem<String?>(
+                      child: Text('No estimate'),
                     ),
                     ...points.map(
                       (p) => DropdownMenuItem<String?>(
@@ -147,7 +146,7 @@ Future<CreateIssueRequest?> showBacklogIssueDialog(
                   statusId: statusId,
                   typeId: typeId,
                   epicId: epicId,
-                  pointsId: pointsId,
+                  sizeId: pointsId,
                 ),
               );
             },

@@ -66,21 +66,13 @@ class ComponentsCubit extends Cubit<ComponentsState> {
     );
   }
 
-  Future<void> create({
-    required String name,
-    required String color,
-    String? gitRepository,
-  }) async {
+  Future<void> create({required String name, required String color}) async {
     final s = state;
     if (s is! ComponentsLoaded) return;
     emit(s.copyWith(busy: true, lastError: null));
     final res = await _repo.createComponent(
       projectId,
-      CreateComponentRequest(
-        name: name,
-        color: color,
-        gitRepository: gitRepository,
-      ),
+      CreateComponentRequest(name: name, color: color),
     );
     if (res.isErr) {
       emit(s.copyWith(busy: false, lastError: res.failureOrNull));

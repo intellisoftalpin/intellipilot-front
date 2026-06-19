@@ -20,7 +20,7 @@ Future<CreateIssueRequest?> showIssueEditDialog(
   var statusId = existing?.statusId;
   var typeId = existing?.typeId;
   var priorityId = existing?.priorityId;
-  var severityId = existing?.severityId;
+  var sizeId = existing?.sizeId;
   final labels = <String>{...?existing?.labels};
   final components = <String>{...?existing?.components};
 
@@ -74,10 +74,10 @@ Future<CreateIssueRequest?> showIssueEditDialog(
                 ),
                 const SizedBox(height: 8),
                 _kindDropdown(
-                  label: t.issueFieldSeverity,
-                  items: state.severities,
-                  current: severityId,
-                  onChanged: (v) => setState(() => severityId = v),
+                  label: 'Size',
+                  items: state.sizes,
+                  current: sizeId,
+                  onChanged: (v) => setState(() => sizeId = v),
                 ),
                 const SizedBox(height: 12),
                 Text(t.issueFieldLabels),
@@ -137,7 +137,7 @@ Future<CreateIssueRequest?> showIssueEditDialog(
                   statusId: statusId,
                   typeId: typeId,
                   priorityId: priorityId,
-                  severityId: severityId,
+                  sizeId: sizeId,
                   labels: labels.toList(),
                   components: components.toList(),
                 ),

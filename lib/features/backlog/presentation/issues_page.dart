@@ -13,6 +13,7 @@ import 'package:intellipilot/features/backlog/presentation/widgets/issue_edit_di
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/size_badge.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
@@ -263,14 +264,14 @@ class _FilterRow extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           _menu(
-            label: state.severityFilter == null
-                ? t.issuesFilterSeverity
-                : state.severities
-                      .firstWhere((s) => s.id == state.severityFilter)
+            label: state.sizeFilter == null
+                ? 'Size'
+                : state.sizes
+                      .firstWhere((s) => s.id == state.sizeFilter)
                       .name,
-            items: state.severities,
-            current: state.severityFilter,
-            onSelected: context.read<IssuesCubit>().setSeverityFilter,
+            items: state.sizes,
+            current: state.sizeFilter,
+            onSelected: context.read<IssuesCubit>().setSizeFilter,
           ),
         ],
       ),
@@ -338,8 +339,8 @@ class _IssueRow extends StatelessWidget {
         .where((s) => s.id == issue.priorityId)
         .cast<TaxonomyItem?>()
         .firstOrNull;
-    final severity = state.severities
-        .where((s) => s.id == issue.severityId)
+    final size = state.sizes
+        .where((s) => s.id == issue.sizeId)
         .cast<TaxonomyItem?>()
         .firstOrNull;
     return Card(
@@ -362,7 +363,7 @@ class _IssueRow extends StatelessWidget {
             if (status != null) _MiniChip(label: status.name, color: status.color),
             if (type != null) _MiniChip(label: type.name, color: type.color),
             if (priority != null) _MiniChip(label: priority.name, color: priority.color),
-            if (severity != null) _MiniChip(label: severity.name, color: severity.color),
+            if (size != null) SizeBadge(item: size),
           ],
         ),
         trailing: canEdit
@@ -387,7 +388,7 @@ class _IssueRow extends StatelessWidget {
                         statusId: body.statusId,
                         typeId: body.typeId,
                         priorityId: body.priorityId,
-                        severityId: body.severityId,
+                        sizeId: body.sizeId,
                         labels: body.labels,
                         components: body.components,
                       ),

@@ -8,7 +8,10 @@ import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/components_tab.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/customers_tab.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/labels_tab.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/releases_tab.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/repositories_tab.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/taxonomy_tab.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
@@ -91,7 +94,7 @@ class _SettingsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return DefaultTabController(
-      length: 7,
+      length: 10,
       child: Scaffold(
         appBar: AppBar(
           title: ProjectSectionBreadcrumb(
@@ -107,6 +110,9 @@ class _SettingsView extends StatelessWidget {
               Tab(text: t.tabTaxonomy),
               Tab(text: t.tabLabels),
               Tab(text: t.tabComponents),
+              const Tab(text: 'Repositories'),
+              const Tab(text: 'Customers'),
+              const Tab(text: 'Releases'),
               Tab(text: t.tabDangerZone),
             ],
           ),
@@ -130,6 +136,9 @@ class _SettingsView extends StatelessWidget {
                   TaxonomyTab(projectId: projectId),
                   LabelsTab(projectId: projectId),
                   ComponentsTab(projectId: projectId),
+                  RepositoriesTab(projectId: projectId),
+                  CustomersTab(projectId: projectId),
+                  ReleasesTab(projectId: projectId),
                   _DangerZoneTab(state: state),
                 ],
               );
