@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/admin_branding_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_ldap_page.dart';
@@ -83,6 +85,13 @@ class _SettingsView extends StatelessWidget {
                     builder: (_) => const AdminNotificationsPage(),
                   ),
                 ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('Activity log'),
+                subtitle: const Text('Recent auth and account events'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => context.go(Routes.adminActivity),
               ),
               const SizedBox(height: 16),
               Text(

@@ -50,6 +50,21 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   @override
+  Future<Result<ActivityList, AppFailure>> listActivity({
+    String? action,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final params = <String, dynamic>{'limit': limit, 'offset': offset};
+    if (action != null && action.isNotEmpty) params['action'] = action;
+    final res = await _api.get('$_base/activity', query: params);
+    return _mapOk(
+      res,
+      (r) => ActivityList.fromJson(r.data as Map<String, dynamic>),
+    );
+  }
+
+  @override
   Future<Result<CreateUserResponse, AppFailure>> createUser(
     CreateUserRequest body,
   ) async {

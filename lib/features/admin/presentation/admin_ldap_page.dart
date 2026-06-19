@@ -6,6 +6,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_ldap_cubit.dart';
+import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class AdminLdapPage extends StatelessWidget {
@@ -15,7 +16,10 @@ class AdminLdapPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider<AdminLdapCubit>(
       create: (_) {
-        final c = AdminLdapCubit(getIt<AdminRepository>());
+        final c = AdminLdapCubit(
+          getIt<AdminRepository>(),
+          getIt<ProfileRepository>(),
+        );
         unawaited(c.load());
         return c;
       },
@@ -35,11 +39,17 @@ class AdminLdapPage extends StatelessWidget {
                 ),
               ),
             ),
-            AdminLdapLoaded(:final settings, :final saving) => _LdapForm(
-              key: ValueKey(settings.updatedAt),
-              settings: settings,
-              saving: saving,
-            ),
+            AdminLdapLoaded(
+              :final settings,
+              :final saving,
+              :final currentUserIsLdap,
+            ) =>
+              _LdapForm(
+                key: ValueKey(settings.updatedAt),
+                settings: settings,
+                saving: saving,
+                readOnly: currentUserIsLdap,
+              ),
           },
         ),
       ),
@@ -48,9 +58,17 @@ class AdminLdapPage extends StatelessWidget {
 }
 
 class _LdapForm extends StatefulWidget {
-  const _LdapForm({required this.settings, required this.saving, super.key});
+  const _LdapForm({
+    required this.settings,
+    required this.saving,
+    this.readOnly = false,
+    super.key,
+  });
   final LdapSettings settings;
   final bool saving;
+
+  /// When true the whole form is view-only (current admin signed in via LDAP).
+  final bool readOnly;
 
   @override
   State<_LdapForm> createState() => _LdapFormState();
@@ -221,27 +239,40 @@ class _LdapFormState extends State<_LdapForm> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
+    final ro = widget.readOnly;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (ro)
+          Card(
+            color: theme.colorScheme.tertiaryContainer,
+            child: const ListTile(
+              leading: Icon(Icons.lock_outline),
+              title: Text('Read-only'),
+              subtitle: Text(
+                'You are signed in via LDAP. LDAP settings can only be changed '
+                'by a superadmin who signs in with a local password.',
+              ),
+            ),
+          ),
         SwitchListTile(
           title: Text(l10n.adminLdapEnable),
           subtitle: Text(l10n.adminLdapEnableHelp),
           value: _enabled,
-          onChanged: (v) => setState(() => _enabled = v),
+          onChanged: ro ? null : (v) => setState(() => _enabled = v),
         ),
         const Divider(),
         _field(_serverUrl, l10n.adminLdapServerUrl, hint: 'ldap://dc.example.com:389'),
         SwitchListTile(
           title: Text(l10n.adminLdapUseStartTls),
           value: _startTls,
-          onChanged: (v) => setState(() => _startTls = v),
+          onChanged: ro ? null : (v) => setState(() => _startTls = v),
         ),
         SwitchListTile(
           title: Text(l10n.adminLdapSkipTlsVerify),
           subtitle: Text(l10n.adminLdapSkipTlsVerifyHelp),
           value: _skipVerify,
-          onChanged: (v) => setState(() => _skipVerify = v),
+          onChanged: ro ? null : (v) => setState(() => _skipVerify = v),
         ),
         _field(_baseDn, l10n.adminLdapBaseDn, hint: 'dc=example,dc=com'),
         _field(_defaultDomain, l10n.adminLdapDefaultDomain, hint: 'example.com'),
@@ -260,7 +291,9 @@ class _LdapFormState extends State<_LdapForm> {
             ),
           ],
           selected: {_bindMode},
-          onSelectionChanged: (sel) => setState(() => _bindMode = sel.first),
+          onSelectionChanged: ro
+              ? null
+              : (sel) => setState(() => _bindMode = sel.first),
         ),
         const SizedBox(height: 4),
         Text(
@@ -335,16 +368,18 @@ class _LdapFormState extends State<_LdapForm> {
               label: Text(l10n.adminLdapTestConnection),
             ),
             const Spacer(),
-            FilledButton(
-              onPressed: widget.saving ? null : _save,
-              child: widget.saving
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(l10n.adminLdapSave),
-            ),
+            // Saving is hidden for LDAP-authenticated admins (read-only).
+            if (!ro)
+              FilledButton(
+                onPressed: widget.saving ? null : _save,
+                child: widget.saving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.adminLdapSave),
+              ),
           ],
         ),
       ],
@@ -361,6 +396,7 @@ class _LdapFormState extends State<_LdapForm> {
     padding: const EdgeInsets.symmetric(vertical: 6),
     child: TextField(
       controller: c,
+      readOnly: widget.readOnly,
       keyboardType: keyboardType,
       obscureText: obscure,
       decoration: InputDecoration(

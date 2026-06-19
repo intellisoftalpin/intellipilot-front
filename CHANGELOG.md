@@ -4,6 +4,20 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.4.3] - 2026-06-19
+
+### Added
+- **Activity log** admin page (superadmin) — lists auth events (logins, failed
+  logins with reason, first logins, password changes) with friendly labels,
+  colour-coded success/failure, actor, IP, time, and an action filter.
+- **Auth-source marker** in the admin users list — a clear **LDAP** / **Local**
+  chip per user.
+
+### Changed
+- The **LDAP settings page is read-only** when the signed-in superadmin
+  authenticated via LDAP (banner + disabled inputs + hidden Save), matching the
+  backend guard.
+
 ## [0.4.2] - 2026-06-19
 
 ### Added

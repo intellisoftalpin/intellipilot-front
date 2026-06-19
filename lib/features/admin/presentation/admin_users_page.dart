@@ -249,6 +249,21 @@ class _UserTile extends StatelessWidget {
       title: Row(
         children: [
           Expanded(child: Text(user.email)),
+          // Auth source — make LDAP vs local accounts obvious at a glance.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Chip(
+              avatar: Icon(
+                user.isLdap ? Icons.dns_outlined : Icons.password_outlined,
+                size: 16,
+              ),
+              label: Text(user.isLdap ? 'LDAP' : 'Local'),
+              visualDensity: VisualDensity.compact,
+              backgroundColor: user.isLdap
+                  ? Theme.of(context).colorScheme.tertiaryContainer
+                  : null,
+            ),
+          ),
           if (user.isSuperadmin)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),

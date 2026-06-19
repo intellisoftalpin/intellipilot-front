@@ -27,6 +27,75 @@ class AdminUserList {
   final int offset;
 }
 
+/// A single auth/activity event from `GET /admin/activity`.
+class ActivityEvent {
+  const ActivityEvent({
+    required this.id,
+    required this.action,
+    required this.metadata,
+    required this.createdAt,
+    this.actorId,
+    this.actorEmail,
+    this.actorUsername,
+    this.ip,
+    this.userAgent,
+  });
+
+  factory ActivityEvent.fromJson(Map<String, dynamic> json) {
+    return ActivityEvent(
+      id: json['id'] as String,
+      action: json['action'] as String? ?? '',
+      actorId: json['actor_id'] as String?,
+      actorEmail: json['actor_email'] as String?,
+      actorUsername: json['actor_username'] as String?,
+      ip: json['ip'] as String?,
+      userAgent: json['user_agent'] as String?,
+      metadata:
+          (json['metadata'] as Map<String, dynamic>?) ?? const {},
+      createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+
+  final String id;
+  final String action;
+  final String? actorId;
+  final String? actorEmail;
+  final String? actorUsername;
+  final String? ip;
+  final String? userAgent;
+
+  /// Free-form, action-specific JSON (commonly `reason`, `identifier`, `via`).
+  final Map<String, dynamic> metadata;
+  final DateTime createdAt;
+}
+
+/// Envelope for `GET /admin/activity`.
+class ActivityList {
+  const ActivityList({
+    required this.items,
+    required this.total,
+    required this.limit,
+    required this.offset,
+  });
+
+  factory ActivityList.fromJson(Map<String, dynamic> json) {
+    final items = (json['items'] as List<dynamic>? ?? const [])
+        .map((e) => ActivityEvent.fromJson(e as Map<String, dynamic>))
+        .toList(growable: false);
+    return ActivityList(
+      items: items,
+      total: (json['total'] as num?)?.toInt() ?? items.length,
+      limit: (json['limit'] as num?)?.toInt() ?? items.length,
+      offset: (json['offset'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  final List<ActivityEvent> items;
+  final int total;
+  final int limit;
+  final int offset;
+}
+
 class CreateUserRequest {
   const CreateUserRequest({
     required this.email,

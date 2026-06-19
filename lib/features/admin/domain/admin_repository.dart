@@ -13,6 +13,13 @@ abstract interface class AdminRepository {
     int offset = 0,
   });
 
+  /// Superadmin-only audit feed. `action` filters by event type when set.
+  Future<Result<ActivityList, AppFailure>> listActivity({
+    String? action,
+    int limit = 50,
+    int offset = 0,
+  });
+
   Future<Result<CreateUserResponse, AppFailure>> createUser(
     CreateUserRequest body,
   );

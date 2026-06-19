@@ -2465,6 +2465,18 @@ class DemoAdminRepository implements AdminRepository {
   }
 
   @override
+  Future<Result<ActivityList, AppFailure>> listActivity({
+    String? action,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    await _tick();
+    return Ok(
+      ActivityList(items: const [], total: 0, limit: limit, offset: offset),
+    );
+  }
+
+  @override
   Future<Result<CreateUserResponse, AppFailure>> createUser(
     CreateUserRequest body,
   ) async {
