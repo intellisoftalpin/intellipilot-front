@@ -8,6 +8,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
+import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/components_tab.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/customers_tab.dart';
@@ -318,7 +319,7 @@ class _MembersTab extends StatelessWidget {
             for (final member in m.members)
               Card(
                 child: ListTile(
-                  leading: const Icon(Icons.person_outline),
+                  leading: UserAvatar(user: member.toRef(), size: 40),
                   title: Text(member.displayName),
                   subtitle: Text(
                     member.email.isNotEmpty

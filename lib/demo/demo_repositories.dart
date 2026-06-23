@@ -159,6 +159,28 @@ class DemoProfileRepository implements ProfileRepository {
   }
 
   @override
+  Future<Result<UserProfile, AppFailure>> uploadAvatar({
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  }) async {
+    await _tick();
+    return Ok(_s.currentUser);
+  }
+
+  @override
+  Future<Result<UserProfile, AppFailure>> setEmojiAvatar(String emoji) async {
+    await _tick();
+    return Ok(_s.currentUser);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteAvatar() async {
+    await _tick();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
   Future<Result<AccountErasureResponse, AppFailure>> deleteAccount() async {
     await _tick();
     return Ok(
@@ -1223,8 +1245,9 @@ class DemoCatalogRepository implements CatalogRepository {
     String releaseId,
   ) async {
     await _tick();
-    _s.componentReleases[componentId]
-        ?.removeWhere((l) => l.releaseId == releaseId);
+    _s.componentReleases[componentId]?.removeWhere(
+      (l) => l.releaseId == releaseId,
+    );
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 

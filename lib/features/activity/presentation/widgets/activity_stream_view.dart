@@ -5,6 +5,7 @@ import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/io/url_opener.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/core/ui/timestamps.dart';
+import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/activity/presentation/cubits/activity_stream_cubit.dart';
@@ -162,15 +163,21 @@ class _CommentRow extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.account_circle_outlined,
-                  size: 18,
-                  color: theme.colorScheme.primary,
-                ),
+                if (comment.author != null)
+                  UserAvatar(user: comment.author!, size: 24)
+                else
+                  Icon(
+                    Icons.account_circle_outlined,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    formatTimestamp(context, comment.createdAt),
+                    comment.author != null
+                        ? '${comment.author!.displayName} · '
+                              '${formatTimestamp(context, comment.createdAt)}'
+                        : formatTimestamp(context, comment.createdAt),
                     style: theme.textTheme.bodySmall,
                   ),
                 ),

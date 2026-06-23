@@ -1,6 +1,7 @@
 // Keep field names readable in the public constructor.
 // ignore_for_file: prefer_initializing_formals
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:equatable/equatable.dart';
@@ -77,13 +78,27 @@ class ProfileCubit extends Cubit<ProfileState> {
     }
   }
 
-  Future<void> save({String? fullName, String? lang, String? timezone}) async {
+  Future<void> save({
+    String? fullName,
+    String? lang,
+    String? timezone,
+    String? motto,
+    String? moodEmoji,
+    String? moodText,
+  }) async {
     final current = state;
     if (current is! ProfileLoaded) return;
     emit(current.copyWith(saving: true, lastError: null));
 
     final res = await _repo.updateProfile(
-      ProfileUpdateRequest(fullName: fullName, lang: lang, timezone: timezone),
+      ProfileUpdateRequest(
+        fullName: fullName,
+        lang: lang,
+        timezone: timezone,
+        motto: motto,
+        moodEmoji: moodEmoji,
+        moodText: moodText,
+      ),
     );
     res.when(
       ok: (updated) {
@@ -96,5 +111,49 @@ class ProfileCubit extends Cubit<ProfileState> {
       },
       err: (f) => emit(current.copyWith(saving: false, lastError: f)),
     );
+  }
+
+  Future<void> uploadAvatar({
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  }) async {
+    final current = state;
+    if (current is! ProfileLoaded) return;
+    emit(current.copyWith(saving: true, lastError: null));
+    final res = await _repo.uploadAvatar(
+      filename: filename,
+      bytes: bytes,
+      contentType: contentType,
+    );
+    res.when(
+      ok: (updated) =>
+          emit(ProfileLoaded(profile: updated, savedAt: DateTime.now())),
+      err: (f) => emit(current.copyWith(saving: false, lastError: f)),
+    );
+  }
+
+  Future<void> setEmojiAvatar(String emoji) async {
+    final current = state;
+    if (current is! ProfileLoaded) return;
+    emit(current.copyWith(saving: true, lastError: null));
+    final res = await _repo.setEmojiAvatar(emoji);
+    res.when(
+      ok: (updated) =>
+          emit(ProfileLoaded(profile: updated, savedAt: DateTime.now())),
+      err: (f) => emit(current.copyWith(saving: false, lastError: f)),
+    );
+  }
+
+  Future<void> resetAvatar() async {
+    final current = state;
+    if (current is! ProfileLoaded) return;
+    emit(current.copyWith(saving: true, lastError: null));
+    final res = await _repo.deleteAvatar();
+    if (res.isErr) {
+      emit(current.copyWith(saving: false, lastError: res.failureOrNull));
+      return;
+    }
+    await load();
   }
 }

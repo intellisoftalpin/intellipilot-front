@@ -1,3 +1,5 @@
+import 'package:intellipilot/core/models/user_ref.dart';
+
 /// The backlog entity kinds that share comments / history / attachments.
 /// The `slug` is the URL path segment (`epics | issues`) the backend exposes;
 /// `wire` is the stored `target_type` value the backend returns inside DTOs
@@ -27,6 +29,7 @@ class Comment {
     required this.bodyHtml,
     required this.createdAt,
     this.authorId,
+    this.author,
     this.editedAt,
   });
 
@@ -35,6 +38,9 @@ class Comment {
     targetType: json['target_type'] as String,
     targetId: json['target_id'] as String,
     authorId: json['author_id'] as String?,
+    author: json['author'] == null
+        ? null
+        : UserRef.fromJson(json['author'] as Map<String, dynamic>),
     body: (json['body'] as String?) ?? '',
     bodyHtml: (json['body_html'] as String?) ?? '',
     editedAt: _parseOptional(json['edited_at']),
@@ -45,6 +51,9 @@ class Comment {
   final String targetType;
   final String targetId;
   final String? authorId;
+
+  /// The author's avatar + identity descriptor (null for a deleted user).
+  final UserRef? author;
   final String body;
   final String bodyHtml;
   final DateTime? editedAt;

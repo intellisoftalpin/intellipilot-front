@@ -1,13 +1,15 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
+import 'package:intellipilot/core/widgets/members_scope.dart';
+import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
@@ -19,6 +21,7 @@ import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_
 import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
+import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
@@ -29,25 +32,36 @@ class BoardPage extends StatelessWidget {
   const BoardPage({required this.projectId, super.key});
   final String projectId;
 
+  Future<(UserProfile?, Map<String, UserRef>)> _loadContext() async {
+    final p = await getIt<ProfileRepository>().getProfile();
+    final m = await getIt<ProjectsRepository>().listMembers(projectId);
+    final map = {
+      for (final mem in (m.valueOrNull ?? const <Membership>[]))
+        mem.userId: mem.toRef(),
+    };
+    return (p.valueOrNull, map);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<UserProfile?>(
-      future:
-          getIt<ProfileRepository>().getProfile().then((r) => r.valueOrNull),
+    return FutureBuilder<(UserProfile?, Map<String, UserRef>)>(
+      future: _loadContext(),
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final profile = snap.data;
+        final (profile, members) = snap.data ?? (null, const <String, UserRef>{});
         if (profile == null) {
           return Scaffold(
             body: Center(child: Text(AppLocalizations.of(context).errUnknown)),
           );
         }
-        return MultiBlocProvider(
-          providers: [
+        return MembersScope(
+          membersById: members,
+          child: MultiBlocProvider(
+            providers: [
             BlocProvider<ProjectDetailCubit>(
               create: (_) {
                 final c = ProjectDetailCubit(
@@ -71,8 +85,9 @@ class BoardPage extends StatelessWidget {
                 return c;
               },
             ),
-          ],
-          child: _BoardView(projectId: projectId),
+            ],
+            child: _BoardView(projectId: projectId),
+          ),
         );
       },
     );
@@ -406,9 +421,16 @@ class _TaskCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IssueKeyChip(text: '#${task.reference}'),
+              Row(
+                children: [
+                  IssueKeyChip(text: '#${task.reference}'),
+                  const Spacer(),
+                  if (MembersScope.user(context, task.assignedTo) != null)
+                    UserAvatar(
+                      user: MembersScope.user(context, task.assignedTo)!,
+                      size: 22,
+                    ),
+                ],
               ),
               const SizedBox(height: 6),
               Text(

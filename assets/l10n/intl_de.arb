@@ -892,5 +892,11 @@
   "ttSetAllowance": "Urlaubsanspruch festlegen",
   "ttYear": "Jahr",
   "ttWorkMinutesPerDay": "Arbeitsminuten pro Tag",
-  "ttAllowancesHistory": "Anspruchsverlauf"
+  "ttAllowancesHistory": "Anspruchsverlauf",
+  "pfMotto": "Persönliches Motto",
+  "pfDailyMood": "Stimmung heute",
+  "pfMoodStatus": "Status (max. 16)",
+  "pfUpload": "Bild hochladen",
+  "pfPickEmoji": "Emoji wählen",
+  "pfReset": "Zurücksetzen"
 }

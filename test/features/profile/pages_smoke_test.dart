@@ -60,7 +60,15 @@ void main() {
   testWidgets('ProfilePage save shows the saved snack', (tester) async {
     await tester.pumpWidget(_wrap(const ProfilePage()));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Save changes'));
+    // The form now carries an avatar editor + motto + mood, so the save
+    // button can sit below the fold — scroll it into view first.
+    final saveButton = find.widgetWithText(FilledButton, 'Save changes');
+    await tester.scrollUntilVisible(
+      saveButton,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(saveButton);
     await tester.pumpAndSettle();
     expect(find.text('Profile updated.'), findsOneWidget);
   });

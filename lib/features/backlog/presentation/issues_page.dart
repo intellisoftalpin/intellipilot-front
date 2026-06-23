@@ -1,12 +1,14 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
+import 'package:intellipilot/core/widgets/members_scope.dart';
+import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
@@ -18,6 +20,7 @@ import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_
 import 'package:intellipilot/features/catalog/presentation/widgets/size_badge.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
+import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
@@ -27,19 +30,27 @@ class IssuesPage extends StatelessWidget {
   const IssuesPage({required this.projectId, super.key});
   final String projectId;
 
+  Future<(UserProfile?, Map<String, UserRef>)> _loadContext() async {
+    final p = await getIt<ProfileRepository>().getProfile();
+    final m = await getIt<ProjectsRepository>().listMembers(projectId);
+    final map = {
+      for (final mem in (m.valueOrNull ?? const <Membership>[]))
+        mem.userId: mem.toRef(),
+    };
+    return (p.valueOrNull, map);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<UserProfile?>(
-      future: getIt<ProfileRepository>().getProfile().then(
-        (r) => r.valueOrNull,
-      ),
+    return FutureBuilder<(UserProfile?, Map<String, UserRef>)>(
+      future: _loadContext(),
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final profile = snap.data;
+        final (profile, members) = snap.data ?? (null, const <String, UserRef>{});
         if (profile == null) {
           return Scaffold(
             body: Center(
@@ -47,8 +58,10 @@ class IssuesPage extends StatelessWidget {
             ),
           );
         }
-        return MultiBlocProvider(
-          providers: [
+        return MembersScope(
+          membersById: members,
+          child: MultiBlocProvider(
+            providers: [
             BlocProvider<ProjectDetailCubit>(
               create: (_) {
                 final c = ProjectDetailCubit(
@@ -71,8 +84,9 @@ class IssuesPage extends StatelessWidget {
                 return c;
               },
             ),
-          ],
-          child: _IssuesView(projectId: projectId),
+            ],
+            child: _IssuesView(projectId: projectId),
+          ),
         );
       },
     );
@@ -357,7 +371,18 @@ class _IssueRow extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
         leading: HexColorDot(hex: status?.color ?? '', size: 14),
-        title: Text(issue.subject),
+        title: Row(
+          children: [
+            Expanded(child: Text(issue.subject)),
+            if (MembersScope.user(context, issue.assignedTo) != null) ...[
+              const SizedBox(width: 8),
+              UserAvatar(
+                user: MembersScope.user(context, issue.assignedTo)!,
+                size: 26,
+              ),
+            ],
+          ],
+        ),
         onTap: () => context.go(
           Routes.entityDetailFor(
             issue.projectId,

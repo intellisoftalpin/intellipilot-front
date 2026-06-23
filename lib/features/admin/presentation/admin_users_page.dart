@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
+import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_users_cubit.dart';
@@ -248,6 +249,7 @@ class _UserTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return ListTile(
+      leading: UserAvatar(user: user.toRef(), size: 40),
       title: Row(
         children: [
           Expanded(child: Text(user.email)),

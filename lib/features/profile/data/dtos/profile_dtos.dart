@@ -1,3 +1,5 @@
+import 'package:intellipilot/core/models/user_ref.dart';
+
 /// Wire shape of `intellipilot_core::user::User`. The backend exposes profile
 /// info as a flat JSON object; everything not in this list is server-internal.
 class UserProfile {
@@ -13,6 +15,7 @@ class UserProfile {
     required this.mustChangePassword,
     required this.createdAt,
     this.authSource = 'local',
+    this.card = const UserCard(),
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -28,8 +31,18 @@ class UserProfile {
       mustChangePassword: json['must_change_password'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
       authSource: (json['auth_source'] as String?) ?? 'local',
+      card: UserCard.fromJson(json),
     );
   }
+
+  /// The shared user descriptor used by the avatar widget + hover card.
+  UserRef toRef() => UserRef(
+    id: id,
+    username: username,
+    fullName: fullName,
+    email: email,
+    card: card,
+  );
 
   /// `'local'` (password) or `'ldap'` (directory). LDAP accounts manage their
   /// password in the directory, not in IntelliPilot.
@@ -52,6 +65,7 @@ class UserProfile {
   final bool mustChangePassword;
   final DateTime createdAt;
   final String authSource;
+  final UserCard card;
 
   UserProfile copyWith({
     String? fullName,
@@ -59,6 +73,7 @@ class UserProfile {
     String? timezone,
     bool? mustChangePassword,
     bool? isSuperadmin,
+    UserCard? card,
   }) => UserProfile(
     id: id,
     email: email,
@@ -71,20 +86,34 @@ class UserProfile {
     mustChangePassword: mustChangePassword ?? this.mustChangePassword,
     createdAt: createdAt,
     authSource: authSource,
+    card: card ?? this.card,
   );
 }
 
 class ProfileUpdateRequest {
-  const ProfileUpdateRequest({this.fullName, this.lang, this.timezone});
+  const ProfileUpdateRequest({
+    this.fullName,
+    this.lang,
+    this.timezone,
+    this.motto,
+    this.moodEmoji,
+    this.moodText,
+  });
 
   final String? fullName;
   final String? lang;
   final String? timezone;
+  final String? motto;
+  final String? moodEmoji;
+  final String? moodText;
 
   Map<String, dynamic> toJson() => {
     if (fullName != null) 'full_name': fullName,
     if (lang != null) 'lang': lang,
     if (timezone != null) 'timezone': timezone,
+    if (motto != null) 'motto': motto,
+    if (moodEmoji != null) 'mood_emoji': moodEmoji,
+    if (moodText != null) 'mood_text': moodText,
   };
 }
 

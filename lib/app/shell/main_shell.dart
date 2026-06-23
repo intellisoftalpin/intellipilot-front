@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -9,7 +11,10 @@ import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
+import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/palette/presentation/cmd_k_dialog.dart';
+import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
+import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
@@ -368,8 +373,30 @@ class _CreateMenu extends StatelessWidget {
   }
 }
 
-class _AvatarMenu extends StatelessWidget {
+class _AvatarMenu extends StatefulWidget {
   const _AvatarMenu();
+
+  @override
+  State<_AvatarMenu> createState() => _AvatarMenuState();
+}
+
+class _AvatarMenuState extends State<_AvatarMenu> {
+  UserProfile? _me;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    try {
+      final res = await getIt<ProfileRepository>().getProfile();
+      if (mounted) setState(() => _me = res.valueOrNull);
+    } on Object {
+      // Top bar falls back to the generic icon.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -423,15 +450,17 @@ class _AvatarMenu extends StatelessWidget {
       builder: (context, controller, _) => IconButton(
         onPressed: () =>
             controller.isOpen ? controller.close() : controller.open(),
-        icon: CircleAvatar(
-          radius: 14,
-          backgroundColor: theme.colorScheme.primaryContainer,
-          child: Icon(
-            Icons.person,
-            size: 16,
-            color: theme.colorScheme.onPrimaryContainer,
-          ),
-        ),
+        icon: _me != null
+            ? UserAvatar(user: _me!.toRef(), size: 28, enableHover: false)
+            : CircleAvatar(
+                radius: 14,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Icon(
+                  Icons.person,
+                  size: 16,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
+              ),
       ),
     );
   }

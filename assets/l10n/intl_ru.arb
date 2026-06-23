@@ -822,5 +822,11 @@
   "ttSetAllowance": "Задать норму отпуска",
   "ttYear": "Год",
   "ttWorkMinutesPerDay": "Рабочих минут в день",
-  "ttAllowancesHistory": "История норм"
+  "ttAllowancesHistory": "История норм",
+  "pfMotto": "Личный девиз",
+  "pfDailyMood": "Настроение дня",
+  "pfMoodStatus": "Статус (до 16)",
+  "pfUpload": "Загрузить картинку",
+  "pfPickEmoji": "Выбрать эмодзи",
+  "pfReset": "Сбросить"
 }

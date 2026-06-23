@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/io/file_downloader.dart';
 import 'package:intellipilot/core/result/result.dart';
@@ -104,6 +106,21 @@ class FakeProfileRepository implements ProfileRepository {
   }) async {
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
+
+  @override
+  Future<Result<UserProfile, AppFailure>> uploadAvatar({
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  }) => getProfile();
+
+  @override
+  Future<Result<UserProfile, AppFailure>> setEmojiAvatar(String emoji) =>
+      getProfile();
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteAvatar() async =>
+      const Ok<Unit, AppFailure>(Unit.instance);
 }
 
 class RecordingDownloader implements FileDownloader {

@@ -891,5 +891,11 @@
   "ttSetAllowance": "Задаць норму адпачынку",
   "ttYear": "Год",
   "ttWorkMinutesPerDay": "Працоўных хвілін у дзень",
-  "ttAllowancesHistory": "Гісторыя нормаў"
+  "ttAllowancesHistory": "Гісторыя нормаў",
+  "pfMotto": "Асабісты дэвіз",
+  "pfDailyMood": "Настрой дня",
+  "pfMoodStatus": "Статус (да 16)",
+  "pfUpload": "Загрузіць выяву",
+  "pfPickEmoji": "Выбраць эмодзі",
+  "pfReset": "Скінуць"
 }

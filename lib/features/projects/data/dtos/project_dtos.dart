@@ -1,3 +1,4 @@
+import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
 
 enum ProjectVisibility {
@@ -109,6 +110,7 @@ class Membership {
     this.username = '',
     this.fullName = '',
     this.email = '',
+    this.card = const UserCard(),
   });
 
   factory Membership.fromJson(Map<String, dynamic> json) {
@@ -122,6 +124,7 @@ class Membership {
       roleId: json['role_id'] as String,
       roleSlug: json['role_slug'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
+      card: UserCard.fromJson(json),
     );
   }
 
@@ -133,6 +136,16 @@ class Membership {
     return userId;
   }
 
+  /// The shared user descriptor (avatar + hover card), keyed by the *member's*
+  /// user id (not the membership id).
+  UserRef toRef() => UserRef(
+    id: userId,
+    username: username,
+    fullName: fullName,
+    email: email,
+    card: card,
+  );
+
   final String id;
   final String projectId;
   final String userId;
@@ -142,6 +155,7 @@ class Membership {
   final String roleId;
   final String roleSlug;
   final DateTime createdAt;
+  final UserCard card;
 }
 
 class Invitation {

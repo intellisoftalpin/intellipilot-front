@@ -1571,5 +1571,11 @@
   "ttSetAllowance": "Set vacation allowance",
   "ttYear": "Year",
   "ttWorkMinutesPerDay": "Work minutes per day",
-  "ttAllowancesHistory": "Allowance history"
+  "ttAllowancesHistory": "Allowance history",
+  "pfMotto": "Personal motto",
+  "pfDailyMood": "Daily mood",
+  "pfMoodStatus": "Status (max 16)",
+  "pfUpload": "Upload image",
+  "pfPickEmoji": "Pick emoji",
+  "pfReset": "Reset"
 }

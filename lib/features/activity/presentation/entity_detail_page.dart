@@ -6,11 +6,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/core/ui/timestamps.dart';
+import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/activity/presentation/cubits/activity_stream_cubit.dart';
@@ -198,19 +200,22 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
     final projects = getIt<ProjectsRepository>();
 
     // Fetch the entity + project + kind-specific lookups in parallel.
-    final project =
-        (await projects.getProject(widget.projectId)).valueOrNull;
+    final project = (await projects.getProject(widget.projectId)).valueOrNull;
     if (project == null) return null;
 
     _EntityRecord? entity;
     switch (widget.kind) {
       case EntityKind.epic:
-        final v = (await backlog.getEpic(widget.projectId, widget.entityId))
-            .valueOrNull;
+        final v = (await backlog.getEpic(
+          widget.projectId,
+          widget.entityId,
+        )).valueOrNull;
         if (v != null) entity = _EntityRecord.epic(v);
       case EntityKind.issue:
-        final v = (await backlog.getIssue(widget.projectId, widget.entityId))
-            .valueOrNull;
+        final v = (await backlog.getIssue(
+          widget.projectId,
+          widget.entityId,
+        )).valueOrNull;
         if (v != null) entity = _EntityRecord.issue(v);
     }
     if (entity == null) return null;
@@ -218,7 +223,9 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
     // Resolve every taxonomy item used by the kind so we can render
     // status/type/priority/size names.
     final lookups = <Future<dynamic>>[];
-    lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.issueStatus));
+    lookups.add(
+      catalog.listTaxonomy(widget.projectId, TaxonomyKind.issueStatus),
+    );
     lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.issueType));
     lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.priority));
     lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.size));
@@ -228,6 +235,7 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
     lookups.add(milestones.list(widget.projectId));
     lookups.add(backlog.listIssues(widget.projectId));
     lookups.add(catalog.listCustomers(widget.projectId));
+    lookups.add(projects.listMembers(widget.projectId));
     final results = await Future.wait(lookups);
 
     List<T> resolve<T>(int i) =>
@@ -249,6 +257,9 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
       milestonesById: {for (final m in resolve<Milestone>(7)) m.id: m},
       issuesById: {for (final i in resolve<Issue>(8)) i.id: i},
       customersById: {for (final c in resolve<Customer>(9)) c.id: c},
+      membersById: {
+        for (final m in resolve<Membership>(10)) m.userId: m.toRef(),
+      },
     );
   }
 }
@@ -269,6 +280,7 @@ class _PageData {
     required this.milestonesById,
     required this.issuesById,
     required this.customersById,
+    required this.membersById,
   });
 
   final UserProfile profile;
@@ -281,6 +293,9 @@ class _PageData {
   final Map<String, Milestone> milestonesById;
   final Map<String, Issue> issuesById;
   final Map<String, Customer> customersById;
+
+  /// Project members keyed by user id — for assignee/reporter avatars + names.
+  final Map<String, UserRef> membersById;
 }
 
 sealed class _EntityRecord {
@@ -394,8 +409,7 @@ class _DetailView extends StatelessWidget {
             ),
             Crumb(
               label: data.project.name,
-              onTap: () =>
-                  context.go(Routes.projectDetailFor(data.project.id)),
+              onTap: () => context.go(Routes.projectDetailFor(data.project.id)),
             ),
             Crumb(label: key, mono: true),
           ],
@@ -438,78 +452,78 @@ class _DetailView extends StatelessWidget {
       body: _KvLabelWidth(
         width: _isCompact ? 96 : 140,
         child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          _isCompact ? 12 : 16,
-          _isCompact ? 8 : 12,
-          _isCompact ? 12 : 16,
-          _isCompact ? 16 : 32,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _ActionBar(
-              data: data,
-              kind: kind,
-              entityId: entityId,
-              projectId: projectId,
-              onChanged: onChanged,
-            ),
-            const SizedBox(height: 12),
-            if (isWide)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 5,
-                    child: _LeftColumn(
-                      data: data,
-                      kind: kind,
-                      entityId: entityId,
-                      projectId: projectId,
-                      onChanged: onChanged,
-                      compact: _isCompact,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 3,
-                    child: _RightColumn(
-                      data: data,
-                      kind: kind,
-                      entityId: entityId,
-                      projectId: projectId,
-                      onChanged: onChanged,
-                      compact: _isCompact,
-                    ),
-                  ),
-                ],
-              )
-            else
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _LeftColumn(
-                    data: data,
-                    kind: kind,
-                    entityId: entityId,
-                    projectId: projectId,
-                    onChanged: onChanged,
-                    compact: _isCompact,
-                  ),
-                  SizedBox(height: _isCompact ? 8 : 12),
-                  _RightColumn(
-                    data: data,
-                    kind: kind,
-                    entityId: entityId,
-                    projectId: projectId,
-                    onChanged: onChanged,
-                    compact: _isCompact,
-                  ),
-                ],
+          padding: EdgeInsets.fromLTRB(
+            _isCompact ? 12 : 16,
+            _isCompact ? 8 : 12,
+            _isCompact ? 12 : 16,
+            _isCompact ? 16 : 32,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _ActionBar(
+                data: data,
+                kind: kind,
+                entityId: entityId,
+                projectId: projectId,
+                onChanged: onChanged,
               ),
-          ],
+              const SizedBox(height: 12),
+              if (isWide)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: _LeftColumn(
+                        data: data,
+                        kind: kind,
+                        entityId: entityId,
+                        projectId: projectId,
+                        onChanged: onChanged,
+                        compact: _isCompact,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 3,
+                      child: _RightColumn(
+                        data: data,
+                        kind: kind,
+                        entityId: entityId,
+                        projectId: projectId,
+                        onChanged: onChanged,
+                        compact: _isCompact,
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _LeftColumn(
+                      data: data,
+                      kind: kind,
+                      entityId: entityId,
+                      projectId: projectId,
+                      onChanged: onChanged,
+                      compact: _isCompact,
+                    ),
+                    SizedBox(height: _isCompact ? 8 : 12),
+                    _RightColumn(
+                      data: data,
+                      kind: kind,
+                      entityId: entityId,
+                      projectId: projectId,
+                      onChanged: onChanged,
+                      compact: _isCompact,
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -704,7 +718,14 @@ class _ActionBar extends StatelessWidget {
           label: Text(t.entityActionComment),
         ),
         if (status != null)
-          _StatusPill(status: status, onChanged: onChanged, kind: kind, entityId: entityId, projectId: projectId, data: data),
+          _StatusPill(
+            status: status,
+            onChanged: onChanged,
+            kind: kind,
+            entityId: entityId,
+            projectId: projectId,
+            data: data,
+          ),
       ],
     );
   }
@@ -735,8 +756,9 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = _hexToColor(status.color);
-    final foreground =
-        c.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
+    final foreground = c.computeLuminance() > 0.5
+        ? Colors.black87
+        : Colors.white;
     final perm = _statusChangePermission(kind);
     final canChange = context.select<ProjectDetailCubit, bool>((cubit) {
       final s = cubit.state;
@@ -768,8 +790,11 @@ class _StatusPill extends StatelessWidget {
           ),
           if (canChange) ...[
             const SizedBox(width: 6),
-            Icon(Icons.arrow_drop_down,
-                size: 16, color: foreground.withValues(alpha: 0.7)),
+            Icon(
+              Icons.arrow_drop_down,
+              size: 16,
+              color: foreground.withValues(alpha: 0.7),
+            ),
           ],
         ],
       ),
@@ -822,9 +847,8 @@ class _StatusPill extends StatelessWidget {
       EntityKind.epic => TaxonomyKind.issueStatus, // unified issue status
       EntityKind.issue => TaxonomyKind.issueStatus,
     };
-    final list =
-        taxonomy.values.where((t) => t.kind == target).toList()
-          ..sort((a, b) => a.order.compareTo(b.order));
+    final list = taxonomy.values.where((t) => t.kind == target).toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
     return list;
   }
 
@@ -1123,9 +1147,8 @@ class _DetailsTable extends StatelessWidget {
             currentId: issue.sizeId,
             kind: TaxonomyKind.size,
             canEdit: canEdit,
-            displayBuilder: (item) => item.value == null
-                ? item.name
-                : '${item.name} (${item.value})',
+            displayBuilder: (item) =>
+                item.value == null ? item.name : '${item.name} (${item.value})',
             patch: (id) => _patchEntity(
               issuePatch: () => UpdateIssueRequest(sizeId: id),
             ),
@@ -1215,9 +1238,7 @@ class _DetailsTable extends StatelessWidget {
     String Function(TaxonomyItem)? displayBuilder,
   }) {
     final t = AppLocalizations.of(context);
-    final all = data.taxonomyById.values
-        .where((tx) => tx.kind == kind)
-        .toList()
+    final all = data.taxonomyById.values.where((tx) => tx.kind == kind).toList()
       ..sort((a, b) => a.order.compareTo(b.order));
     final current = currentId == null ? null : data.taxonomyById[currentId];
     final renderLabel = displayBuilder ?? (TaxonomyItem item) => item.name;
@@ -1252,8 +1273,9 @@ class _DetailsTable extends StatelessWidget {
     return _editableRow(
       context,
       label: t.detailFieldEpic,
-      displayText:
-          current == null ? '—' : 'EPIC-${current.reference} · ${current.subject}',
+      displayText: current == null
+          ? '—'
+          : 'EPIC-${current.reference} · ${current.subject}',
       currentId: currentId,
       noneLabel: t.backlogNoEpic,
       canEdit: canEdit,
@@ -1279,8 +1301,7 @@ class _DetailsTable extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final milestones = data.milestonesById.values.toList()
       ..sort((a, b) => a.name.compareTo(b.name));
-    final current =
-        currentId == null ? null : data.milestonesById[currentId];
+    final current = currentId == null ? null : data.milestonesById[currentId];
     return _editableRow(
       context,
       label: t.detailFieldMilestone,
@@ -1303,10 +1324,11 @@ class _DetailsTable extends StatelessWidget {
     required bool canEdit,
   }) {
     final t = AppLocalizations.of(context);
-    final candidates = data.issuesById.values
-        .where((i) => i.id != entityId && i.parentId == null)
-        .toList()
-      ..sort((a, b) => a.reference.compareTo(b.reference));
+    final candidates =
+        data.issuesById.values
+            .where((i) => i.id != entityId && i.parentId == null)
+            .toList()
+          ..sort((a, b) => a.reference.compareTo(b.reference));
     final current = currentId == null ? null : data.issuesById[currentId];
     return _editableRow(
       context,
@@ -1479,8 +1501,7 @@ class _DetailsTable extends StatelessWidget {
     switch (kind) {
       case EntityKind.epic:
         if (epicPatch == null) return false;
-        final fresh =
-            (await backlog.getEpic(projectId, entityId)).valueOrNull;
+        final fresh = (await backlog.getEpic(projectId, entityId)).valueOrNull;
         if (fresh?.etag == null) return false;
         final res = await backlog.updateEpic(
           projectId,
@@ -1491,8 +1512,7 @@ class _DetailsTable extends StatelessWidget {
         ok = res.isOk;
       case EntityKind.issue:
         if (issuePatch == null) return false;
-        final fresh =
-            (await backlog.getIssue(projectId, entityId)).valueOrNull;
+        final fresh = (await backlog.getIssue(projectId, entityId)).valueOrNull;
         if (fresh?.etag == null) return false;
         final res = await backlog.updateIssue(
           projectId,
@@ -1618,11 +1638,11 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
     final newDisplay = newId == null
         ? '—'
         : widget.candidates
-                .where((c) => c.id == newId)
-                .cast<_Candidate?>()
-                .firstOrNull
-                ?.label ??
-            '—';
+                  .where((c) => c.id == newId)
+                  .cast<_Candidate?>()
+                  .firstOrNull
+                  ?.label ??
+              '—';
     setState(() {
       _optimisticDisplay = newDisplay;
       _saving = true;
@@ -1741,8 +1761,7 @@ Future<String?> _showSearchablePicker(
   const popupHeight = 340.0;
   const gap = 4.0;
 
-  final anchorTopLeft =
-      anchor.localToGlobal(Offset.zero, ancestor: overlay);
+  final anchorTopLeft = anchor.localToGlobal(Offset.zero, ancestor: overlay);
   final anchorSize = anchor.size;
   final overlaySize = overlay.size;
 
@@ -1968,124 +1987,126 @@ class _SearchablePickerBodyState extends State<_SearchablePickerBody> {
           ),
         },
         child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8),
-                child: TextField(
-                  controller: _searchCtrl,
-                  focusNode: _searchFocus,
-                  textInputAction: TextInputAction.done,
-                  decoration: InputDecoration(
-                    hintText: t.pickerSearchHint,
-                    prefixIcon: const Icon(Icons.search, size: 16),
-                    isDense: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: TextField(
+                controller: _searchCtrl,
+                focusNode: _searchFocus,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  hintText: t.pickerSearchHint,
+                  prefixIcon: const Icon(Icons.search, size: 16),
+                  isDense: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  onChanged: (_) => setState(() => _highlight = 0),
-                  onSubmitted: (_) => _commitIndex(_highlight),
                 ),
+                onChanged: (_) => setState(() => _highlight = 0),
+                onSubmitted: (_) => _commitIndex(_highlight),
               ),
-              const Divider(height: 1),
-              Expanded(
-                child: rows.length == 1 && rows.first.isNone
-                    // Only the None row remains — show "No matches"
-                    // alongside it so users know the filter is active.
-                    ? _NoMatchesBody(noneRow: rows.first, onTap: () => _commitIndex(0))
-                    : ListView.builder(
-                        padding: EdgeInsets.zero,
-                        itemCount: rows.length,
-                        itemBuilder: (context, i) {
-                          final row = rows[i];
-                          if (row.isDivider) {
-                            return const Divider(height: 8, thickness: 1);
-                          }
-                          final selected = i == _highlight;
-                          final isCurrent =
-                              row.candidate?.id == widget.currentId;
-                          final candidate = row.candidate;
-                          return Container(
-                            color: selected
-                                ? theme.colorScheme.primaryContainer
-                                    .withValues(alpha: 0.5)
-                                : null,
-                            child: InkWell(
-                              onTap: () => _commitIndex(i),
-                              onHover: (h) {
-                                if (!h || _highlight == i) return;
-                                // Defer to avoid retriggering the
-                                // mouse-tracker mid-update.
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) {
-                                  if (mounted && _highlight != i) {
-                                    setState(() => _highlight = i);
-                                  }
-                                });
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                child: Row(
-                                  children: [
-                                    if (row.isNone)
-                                      Icon(
-                                        Icons.block_outlined,
-                                        size: 14,
-                                        color: theme.colorScheme.outline,
-                                      )
-                                    else if (candidate?.icon != null)
-                                      Icon(
-                                        candidate!.icon,
-                                        size: 14,
-                                        color: theme.colorScheme.primary,
-                                      )
-                                    else if (candidate?.colorHex != null)
-                                      Container(
-                                        width: 10,
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          color: _hexToColor(
-                                            candidate!.colorHex!,
-                                          ),
-                                          shape: BoxShape.circle,
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: rows.length == 1 && rows.first.isNone
+                  // Only the None row remains — show "No matches"
+                  // alongside it so users know the filter is active.
+                  ? _NoMatchesBody(
+                      noneRow: rows.first,
+                      onTap: () => _commitIndex(0),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.zero,
+                      itemCount: rows.length,
+                      itemBuilder: (context, i) {
+                        final row = rows[i];
+                        if (row.isDivider) {
+                          return const Divider(height: 8, thickness: 1);
+                        }
+                        final selected = i == _highlight;
+                        final isCurrent = row.candidate?.id == widget.currentId;
+                        final candidate = row.candidate;
+                        return Container(
+                          color: selected
+                              ? theme.colorScheme.primaryContainer.withValues(
+                                  alpha: 0.5,
+                                )
+                              : null,
+                          child: InkWell(
+                            onTap: () => _commitIndex(i),
+                            onHover: (h) {
+                              if (!h || _highlight == i) return;
+                              // Defer to avoid retriggering the
+                              // mouse-tracker mid-update.
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted && _highlight != i) {
+                                  setState(() => _highlight = i);
+                                }
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              child: Row(
+                                children: [
+                                  if (row.isNone)
+                                    Icon(
+                                      Icons.block_outlined,
+                                      size: 14,
+                                      color: theme.colorScheme.outline,
+                                    )
+                                  else if (candidate?.icon != null)
+                                    Icon(
+                                      candidate!.icon,
+                                      size: 14,
+                                      color: theme.colorScheme.primary,
+                                    )
+                                  else if (candidate?.colorHex != null)
+                                    Container(
+                                      width: 10,
+                                      height: 10,
+                                      decoration: BoxDecoration(
+                                        color: _hexToColor(
+                                          candidate!.colorHex!,
                                         ),
-                                      )
-                                    else
-                                      const SizedBox(width: 10),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        row.isNone
-                                            ? widget.noneLabel
-                                            : candidate!.label,
-                                        style: theme.textTheme.bodyMedium,
-                                        overflow: TextOverflow.ellipsis,
+                                        shape: BoxShape.circle,
                                       ),
+                                    )
+                                  else
+                                    const SizedBox(width: 10),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      row.isNone
+                                          ? widget.noneLabel
+                                          : candidate!.label,
+                                      style: theme.textTheme.bodyMedium,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    if (isCurrent) ...[
-                                      const SizedBox(width: 8),
-                                      Icon(
-                                        Icons.check,
-                                        size: 14,
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                    ],
+                                  ),
+                                  if (isCurrent) ...[
+                                    const SizedBox(width: 8),
+                                    Icon(
+                                      Icons.check,
+                                      size: 14,
+                                      color: theme.colorScheme.primary,
+                                    ),
                                   ],
-                                ),
+                                ],
                               ),
                             ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
-      );
+      ),
+    );
   }
 }
 
@@ -2140,17 +2161,14 @@ class _NoMatchesBody extends StatelessWidget {
 }
 
 class _PickerRow {
-  const _PickerRow.none()
-      : isNone = true,
-        isDivider = false,
-        candidate = null;
+  const _PickerRow.none() : isNone = true, isDivider = false, candidate = null;
   const _PickerRow.candidate(_Candidate this.candidate)
-      : isNone = false,
-        isDivider = false;
+    : isNone = false,
+      isDivider = false;
   const _PickerRow.divider()
-      : isNone = false,
-        isDivider = true,
-        candidate = null;
+    : isNone = false,
+      isDivider = true,
+      candidate = null;
   final bool isNone;
   final bool isDivider;
   final _Candidate? candidate;
@@ -2333,69 +2351,71 @@ class _MultiSelectCellState extends State<_MultiSelectCell> {
     }
 
     return Wrap(
-        spacing: 6,
-        runSpacing: 6,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          for (final c in chips)
-            InputChip(
-              avatar: c.colorHex == null
-                  ? null
-                  : Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: _hexToColor(c.colorHex!),
-                        shape: BoxShape.circle,
-                      ),
+      spacing: 6,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (final c in chips)
+          InputChip(
+            avatar: c.colorHex == null
+                ? null
+                : Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: _hexToColor(c.colorHex!),
+                      shape: BoxShape.circle,
                     ),
-              label: Text(c.label),
-              onDeleted: _saving ? null : () => _removeOne(c.id),
-              deleteIcon: const Icon(Icons.close, size: 14),
-              labelPadding:
-                  const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
+                  ),
+            label: Text(c.label),
+            onDeleted: _saving ? null : () => _removeOne(c.id),
+            deleteIcon: const Icon(Icons.close, size: 14),
+            labelPadding: const EdgeInsets.symmetric(
+              horizontal: 4,
+              vertical: 0,
             ),
-          MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _saving ? null : _openDialog,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: theme.colorScheme.outlineVariant),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_saving)
-                      SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 1.5,
-                          color: theme.colorScheme.primary,
-                        ),
-                      )
-                    else
-                      Icon(
-                        Icons.add,
-                        size: 12,
-                        color: theme.colorScheme.onSurfaceVariant,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+          ),
+        MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _saving ? null : _openDialog,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 4,
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.colorScheme.outlineVariant),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_saving)
+                    SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: theme.colorScheme.primary,
                       ),
-                  ],
-                ),
+                    )
+                  else
+                    Icon(
+                      Icons.add,
+                      size: 12,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                ],
               ),
             ),
           ),
-        ],
+        ),
+      ],
     );
   }
 }
@@ -2512,38 +2532,44 @@ class _PeopleTable extends StatelessWidget {
         _kvRowWith(
           context,
           t.detailFieldAssignee,
-          _ClickToEditCell(
-            displayText: _userLabel(data.entity.assignedTo, me, t),
-            candidates: _assigneeCandidates(t, me),
-            currentId: data.entity.assignedTo,
-            noneLabel: '—',
-            canEdit: canEdit,
-            onPicked: (id) async {
-              final ok = await _patchAssignee(id);
-              if (ok && id != null) {
-                await _RecentAssignees.push(projectId, id);
-              }
-              return ok;
-            },
+          _withAvatar(
+            data.entity.assignedTo,
+            _ClickToEditCell(
+              displayText: _userLabel(data.entity.assignedTo, me, t),
+              candidates: _assigneeCandidates(t, me),
+              currentId: data.entity.assignedTo,
+              noneLabel: '—',
+              canEdit: canEdit,
+              onPicked: (id) async {
+                final ok = await _patchAssignee(id);
+                if (ok && id != null) {
+                  await _RecentAssignees.push(projectId, id);
+                }
+                return ok;
+              },
+            ),
           ),
         ),
         const SizedBox(height: 4),
         _kvRowWith(
           context,
           t.detailFieldReporter,
-          _ClickToEditCell(
-            displayText: _userLabel(data.entity.ownerId, me, t),
-            candidates: _reporterCandidates(t, me),
-            currentId: data.entity.ownerId,
-            noneLabel: '—',
-            canEdit: canEdit,
-            onPicked: (id) async {
-              final ok = await _patchReporter(id);
-              if (ok && id != null) {
-                await _RecentAssignees.push(projectId, id);
-              }
-              return ok;
-            },
+          _withAvatar(
+            data.entity.ownerId,
+            _ClickToEditCell(
+              displayText: _userLabel(data.entity.ownerId, me, t),
+              candidates: _reporterCandidates(t, me),
+              currentId: data.entity.ownerId,
+              noneLabel: '—',
+              canEdit: canEdit,
+              onPicked: (id) async {
+                final ok = await _patchReporter(id);
+                if (ok && id != null) {
+                  await _RecentAssignees.push(projectId, id);
+                }
+                return ok;
+              },
+            ),
           ),
         ),
       ],
@@ -2552,21 +2578,33 @@ class _PeopleTable extends StatelessWidget {
 
   String _userLabel(String? id, String me, AppLocalizations t) {
     if (id == null) return '—';
-    if (id == me) return '${t.detailValueYou} ($id)';
-    return id;
+    final name = data.membersById[id]?.displayName ?? id;
+    if (id == me) return '${t.detailValueYou} · $name';
+    return name;
   }
 
-  /// Build the assignee picker's candidate list:
-  /// - "Assign to me" pinned at the top with a person icon (always
-  ///   the current user — the most-used Jira shortcut).
-  /// - Recent assignees for this project (persisted in the UI Hive
-  ///   box). Shows raw user ids today — once the backend exposes
-  ///   member display names the labels can swap to those.
+  /// Prefix a person field with their avatar (+ hover card) when the id
+  /// resolves to a known project member.
+  Widget _withAvatar(String? id, Widget child) {
+    final ref = id == null ? null : data.membersById[id];
+    if (ref == null) return child;
+    return Row(
+      children: [
+        UserAvatar(user: ref, size: 24),
+        const SizedBox(width: 8),
+        Expanded(child: child),
+      ],
+    );
+  }
+
+  /// Build the assignee picker: "Assign to me" pinned on top, then every
+  /// project member by display name.
   List<_Candidate> _assigneeCandidates(AppLocalizations t, String me) {
-    final recent = _RecentAssignees.read(projectId)
-        .where((id) => id != me)
-        .take(5)
-        .toList();
+    final others = data.membersById.values.where((r) => r.id != me).toList()
+      ..sort(
+        (a, b) =>
+            a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
+      );
     return [
       _Candidate(
         id: me,
@@ -2574,7 +2612,7 @@ class _PeopleTable extends StatelessWidget {
         icon: Icons.person_outline,
         pinned: true,
       ),
-      for (final id in recent) _Candidate(id: id, label: id),
+      for (final r in others) _Candidate(id: r.id, label: r.displayName),
     ];
   }
 
@@ -2583,8 +2621,7 @@ class _PeopleTable extends StatelessWidget {
     var ok = false;
     switch (kind) {
       case EntityKind.epic:
-        final fresh =
-            (await backlog.getEpic(projectId, entityId)).valueOrNull;
+        final fresh = (await backlog.getEpic(projectId, entityId)).valueOrNull;
         if (fresh?.etag == null) return false;
         final res = await backlog.updateEpic(
           projectId,
@@ -2594,8 +2631,7 @@ class _PeopleTable extends StatelessWidget {
         );
         ok = res.isOk;
       case EntityKind.issue:
-        final fresh =
-            (await backlog.getIssue(projectId, entityId)).valueOrNull;
+        final fresh = (await backlog.getIssue(projectId, entityId)).valueOrNull;
         if (fresh?.etag == null) return false;
         final res = await backlog.updateIssue(
           projectId,
@@ -2612,10 +2648,11 @@ class _PeopleTable extends StatelessWidget {
   /// Same shape as the assignee picker, with "Set me as reporter" as the
   /// pinned shortcut and the same per-project recent-user history.
   List<_Candidate> _reporterCandidates(AppLocalizations t, String me) {
-    final recent = _RecentAssignees.read(projectId)
-        .where((id) => id != me)
-        .take(5)
-        .toList();
+    final others = data.membersById.values.where((r) => r.id != me).toList()
+      ..sort(
+        (a, b) =>
+            a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
+      );
     return [
       _Candidate(
         id: me,
@@ -2623,7 +2660,7 @@ class _PeopleTable extends StatelessWidget {
         icon: Icons.person_outline,
         pinned: true,
       ),
-      for (final id in recent) _Candidate(id: id, label: id),
+      for (final r in others) _Candidate(id: r.id, label: r.displayName),
     ];
   }
 
@@ -2632,8 +2669,7 @@ class _PeopleTable extends StatelessWidget {
     var ok = false;
     switch (kind) {
       case EntityKind.epic:
-        final fresh =
-            (await backlog.getEpic(projectId, entityId)).valueOrNull;
+        final fresh = (await backlog.getEpic(projectId, entityId)).valueOrNull;
         if (fresh?.etag == null) return false;
         final res = await backlog.updateEpic(
           projectId,
@@ -2643,8 +2679,7 @@ class _PeopleTable extends StatelessWidget {
         );
         ok = res.isOk;
       case EntityKind.issue:
-        final fresh =
-            (await backlog.getIssue(projectId, entityId)).valueOrNull;
+        final fresh = (await backlog.getIssue(projectId, entityId)).valueOrNull;
         if (fresh?.etag == null) return false;
         final res = await backlog.updateIssue(
           projectId,
@@ -2729,20 +2764,18 @@ class _KvLabelWidth extends InheritedWidget {
   final double width;
 
   static double of(BuildContext context) {
-    final w =
-        context.dependOnInheritedWidgetOfExactType<_KvLabelWidth>();
+    final w = context.dependOnInheritedWidgetOfExactType<_KvLabelWidth>();
     return w?.width ?? 140;
   }
 
   @override
-  bool updateShouldNotify(_KvLabelWidth oldWidget) =>
-      oldWidget.width != width;
+  bool updateShouldNotify(_KvLabelWidth oldWidget) => oldWidget.width != width;
 }
 
 Permission _modifyPermissionFor(EntityKind kind) => switch (kind) {
-      EntityKind.epic => Permission.epicModify,
-      EntityKind.issue => Permission.issueModify,
-    };
+  EntityKind.epic => Permission.epicModify,
+  EntityKind.issue => Permission.issueModify,
+};
 
 /// Shared PATCH dispatcher for any field on the entity detail page.
 /// The caller passes only the builder matching the active kind; the
@@ -2899,14 +2932,15 @@ class _InlineTextEditorState extends State<_InlineTextEditor> {
     final hasValue = widget.value.isNotEmpty;
     final display = hasValue
         ? (widget.displayBuilder?.call(context) ??
-            Text(widget.value, style: widget.displayStyle))
+              Text(widget.value, style: widget.displayStyle))
         : Text(
             widget.placeholder ?? '—',
-            style: (widget.displayStyle ?? theme.textTheme.bodyMedium)?.copyWith(
-              color: theme.colorScheme.outline,
-              fontStyle: FontStyle.italic,
-              fontWeight: FontWeight.normal,
-            ),
+            style: (widget.displayStyle ?? theme.textTheme.bodyMedium)
+                ?.copyWith(
+                  color: theme.colorScheme.outline,
+                  fontStyle: FontStyle.italic,
+                  fontWeight: FontWeight.normal,
+                ),
           );
     if (!widget.canEdit) return display;
     return InkWell(
@@ -2990,8 +3024,10 @@ class _RelationshipsPanelState extends State<_RelationshipsPanel> {
   }
 
   Future<List<IssueLink>> _load() async {
-    final res = await getIt<CatalogRepository>()
-        .listIssueLinks(widget.projectId, widget.issueId);
+    final res = await getIt<CatalogRepository>().listIssueLinks(
+      widget.projectId,
+      widget.issueId,
+    );
     return res.valueOrNull ?? <IssueLink>[];
   }
 
@@ -3023,8 +3059,9 @@ class _RelationshipsPanelState extends State<_RelationshipsPanel> {
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
                   'No relationships.',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.outline),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
                 ),
               )
             else
@@ -3069,10 +3106,9 @@ class _RelationshipsPanelState extends State<_RelationshipsPanel> {
   }
 
   Future<void> _addLink() async {
-    final candidates = widget.issuesById.values
-        .where((i) => i.id != widget.issueId)
-        .toList()
-      ..sort((a, b) => a.reference.compareTo(b.reference));
+    final candidates =
+        widget.issuesById.values.where((i) => i.id != widget.issueId).toList()
+          ..sort((a, b) => a.reference.compareTo(b.reference));
     if (candidates.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No other issues to link.')),
@@ -3179,8 +3215,10 @@ class _WatchersPanelState extends State<_WatchersPanel> {
   }
 
   Future<List<String>> _load() async {
-    final res = await getIt<CatalogRepository>()
-        .listWatchers(widget.projectId, widget.issueId);
+    final res = await getIt<CatalogRepository>().listWatchers(
+      widget.projectId,
+      widget.issueId,
+    );
     return res.valueOrNull ?? <String>[];
   }
 
@@ -3235,8 +3273,9 @@ class _WatchersPanelState extends State<_WatchersPanel> {
               if (watchers.isEmpty)
                 Text(
                   'No watchers.',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: theme.colorScheme.outline),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
                 )
               else
                 for (final w in watchers)
