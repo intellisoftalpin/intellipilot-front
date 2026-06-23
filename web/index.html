@@ -32,6 +32,14 @@
   <title>intellipilot</title>
   <link rel="manifest" href="manifest.json">
   <style>
+    /* Stop the browser's trackpad swipe-back/forward gesture from firing when
+       a horizontal scroller (e.g. the task board) overscrolls past its edge.
+       Without this, scrolling the board left at column 0 triggers history
+       navigation and leaves the screen. Applies app-wide. */
+    html, body {
+      overscroll-behavior-x: none;
+    }
+
     /* Service-worker "new build ready" banner. Styled to match the
        IntelliPilot indigo theme; rendered above the Flutter canvas so it
        remains visible even if the SPA is stuck. */

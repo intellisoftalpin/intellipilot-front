@@ -7,10 +7,12 @@ import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/io/file_downloader.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
+import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/widgets/members_scope.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
+import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/issues_cubit.dart';
@@ -97,17 +99,42 @@ class IssuesPage extends StatelessWidget {
   }
 }
 
-class _IssuesView extends StatelessWidget {
+class _IssuesView extends StatefulWidget {
   const _IssuesView({required this.projectId});
   final String projectId;
 
   @override
+  State<_IssuesView> createState() => _IssuesViewState();
+}
+
+class _IssuesViewState extends State<_IssuesView> {
+  /// Selected issue id — when set on a wide screen the detail panel shows on
+  /// the right. On narrow screens selection navigates to the full route
+  /// instead (so we never cram a two-pane layout onto a phone).
+  String? _selectedId;
+
+  void _onSelect(BuildContext context, String id) {
+    if (Breakpoints.of(context).isExpanded) {
+      setState(() => _selectedId = id);
+    } else {
+      context.go(
+        Routes.entityDetailFor(widget.projectId, EntityKind.issue, id),
+      );
+    }
+  }
+
+  void _openFull(BuildContext context, String id) {
+    context.go(Routes.entityDetailFor(widget.projectId, EntityKind.issue, id));
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final isWide = Breakpoints.of(context).isExpanded;
     return Scaffold(
       appBar: AppBar(
         title: ProjectSectionBreadcrumb(
-          projectId: projectId,
+          projectId: widget.projectId,
           currentLabel: t.issuesTitle,
         ),
         actions: [
@@ -160,29 +187,55 @@ class _IssuesView extends StatelessWidget {
           );
         },
       ),
-      body: BlocBuilder<IssuesCubit, IssuesState>(
-        builder: (context, state) {
-          if (state is IssuesLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is IssuesFailed) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(t.issuesLoadFailed),
-                  const SizedBox(height: 8),
-                  FilledButton(
-                    onPressed: () => context.read<IssuesCubit>().load(),
-                    child: Text(t.actionRetry),
-                  ),
-                ],
+      body: Row(
+        children: [
+          Expanded(
+            child: BlocBuilder<IssuesCubit, IssuesState>(
+              builder: (context, state) {
+                if (state is IssuesLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (state is IssuesFailed) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(t.issuesLoadFailed),
+                        const SizedBox(height: 8),
+                        FilledButton(
+                          onPressed: () => context.read<IssuesCubit>().load(),
+                          child: Text(t.actionRetry),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                if (state is IssuesLoaded) {
+                  return _Loaded(
+                    state: state,
+                    selectedId: isWide ? _selectedId : null,
+                    onSelect: (id) => _onSelect(context, id),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+          ),
+          if (isWide && _selectedId != null) ...[
+            const VerticalDivider(width: 1),
+            SizedBox(
+              width: 420,
+              child: EntityDetailPage(
+                key: ValueKey('issue:$_selectedId'),
+                projectId: widget.projectId,
+                kind: EntityKind.issue,
+                entityId: _selectedId!,
+                onClose: () => setState(() => _selectedId = null),
+                onOpen: () => _openFull(context, _selectedId!),
               ),
-            );
-          }
-          if (state is IssuesLoaded) return _Loaded(state: state);
-          return const SizedBox.shrink();
-        },
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -198,7 +251,8 @@ class _IssuesView extends StatelessWidget {
   Future<void> _export(BuildContext context, ExportFormat format) async {
     final t = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final res = await getIt<IssuesIoRepository>().export(projectId, format);
+    final res =
+        await getIt<IssuesIoRepository>().export(widget.projectId, format);
     final bytes = res.valueOrNull;
     if (bytes == null) {
       messenger.showSnackBar(SnackBar(content: Text(t.exportFailed)));
@@ -220,7 +274,7 @@ class _IssuesView extends StatelessWidget {
     if (s is! IssuesLoaded) return;
     final imported = await showIssueImportDialog(
       context,
-      projectId: projectId,
+      projectId: widget.projectId,
       state: s,
     );
     if (imported) await cubit.load();
@@ -228,8 +282,14 @@ class _IssuesView extends StatelessWidget {
 }
 
 class _Loaded extends StatelessWidget {
-  const _Loaded({required this.state});
+  const _Loaded({
+    required this.state,
+    required this.selectedId,
+    required this.onSelect,
+  });
   final IssuesLoaded state;
+  final String? selectedId;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -268,6 +328,8 @@ class _Loaded extends StatelessWidget {
                           issue: issue,
                           state: state,
                           canEdit: canEdit,
+                          selected: issue.id == selectedId,
+                          onSelect: onSelect,
                         );
                       },
                     ),
@@ -417,10 +479,14 @@ class _IssueRow extends StatelessWidget {
     required this.issue,
     required this.state,
     required this.canEdit,
+    required this.selected,
+    required this.onSelect,
   });
   final Issue issue;
   final IssuesLoaded state;
   final bool canEdit;
+  final bool selected;
+  final ValueChanged<String> onSelect;
 
   @override
   Widget build(BuildContext context) {
@@ -439,7 +505,17 @@ class _IssueRow extends StatelessWidget {
         .firstOrNull;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      shape: selected
+          ? RoundedRectangleBorder(
+              side: BorderSide(
+                color: Theme.of(context).colorScheme.primary,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(12),
+            )
+          : null,
       child: ListTile(
+        selected: selected,
         leading: HexColorDot(hex: status?.color ?? '', size: 14),
         title: Row(
           children: [
@@ -453,13 +529,7 @@ class _IssueRow extends StatelessWidget {
             ],
           ],
         ),
-        onTap: () => context.go(
-          Routes.entityDetailFor(
-            issue.projectId,
-            EntityKind.issue,
-            issue.id,
-          ),
-        ),
+        onTap: () => onSelect(issue.id),
         subtitle: Wrap(
           spacing: 6,
           runSpacing: 4,

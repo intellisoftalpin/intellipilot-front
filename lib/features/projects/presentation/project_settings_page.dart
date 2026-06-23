@@ -316,7 +316,10 @@ class _MembersTab extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            for (final member in m.members)
+            for (final member in (m.members.toList()
+                  ..sort((a, b) => a.displayName.toLowerCase().compareTo(
+                        b.displayName.toLowerCase(),
+                      ))))
               Card(
                 child: ListTile(
                   leading: UserAvatar(user: member.toRef(), size: 40),

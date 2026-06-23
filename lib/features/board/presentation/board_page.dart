@@ -291,11 +291,12 @@ class _TasksLoaded extends StatelessWidget {
               ),
             ),
           ),
+        _BoardFilterBar(state: state),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 for (final status in state.statuses)
                   _TaskColumn(
@@ -318,6 +319,132 @@ class _TasksLoaded extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Horizontal row of filter dropdowns (assignee, epic, label, component,
+/// category) below the app bar. Each dropdown is `null` = no filter.
+class _BoardFilterBar extends StatelessWidget {
+  const _BoardFilterBar({required this.state});
+  final TaskBoardLoaded state;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final cubit = context.read<TaskBoardCubit>();
+    return SizedBox(
+      height: 48,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Row(
+          children: [
+            _FilterDropdown<String>(
+              hint: t.boardFilterAssignee,
+              value: state.assigneeFilter,
+              items: [
+                for (final id in state.assigneeIds)
+                  (id, MembersScope.user(context, id)?.displayName ?? id),
+              ],
+              onChanged: cubit.setAssigneeFilter,
+            ),
+            const SizedBox(width: 8),
+            _FilterDropdown<String>(
+              hint: t.boardFilterEpic,
+              value: state.epicFilter,
+              items: [
+                for (final e in state.epics)
+                  (e.id, 'EPIC-${e.reference} · ${e.subject}'),
+              ],
+              onChanged: cubit.setEpicFilter,
+            ),
+            const SizedBox(width: 8),
+            _FilterDropdown<String>(
+              hint: t.boardFilterLabel,
+              value: state.labelFilter,
+              items: [for (final l in state.labels) (l.id, l.name)],
+              onChanged: cubit.setLabelFilter,
+            ),
+            const SizedBox(width: 8),
+            _FilterDropdown<String>(
+              hint: t.boardFilterComponent,
+              value: state.componentFilter,
+              items: [for (final c in state.components) (c.id, c.name)],
+              onChanged: cubit.setComponentFilter,
+            ),
+            const SizedBox(width: 8),
+            _FilterDropdown<String>(
+              hint: t.boardFilterCategory,
+              value: state.categoryFilter,
+              items: [
+                for (final c in IssueCategory.values) (c.wire, c.label),
+              ],
+              onChanged: cubit.setCategoryFilter,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A compact "All / pick one" dropdown chip used in the board filter bar.
+/// Each item is an `(id, label)` record; a leading "All" entry clears it.
+class _FilterDropdown<T> extends StatelessWidget {
+  const _FilterDropdown({
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+  final String hint;
+  final T? value;
+  final List<(T, String)> items;
+  final ValueChanged<T?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final active = value != null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: active ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        color: active ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3) : null,
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T?>(
+          value: value,
+          hint: Text(hint, style: theme.textTheme.bodyMedium),
+          isDense: true,
+          borderRadius: BorderRadius.circular(8),
+          items: [
+            DropdownMenuItem<T?>(value: null, child: Text(t.boardFilterAll)),
+            for (final (id, label) in items)
+              DropdownMenuItem<T?>(
+                value: id,
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+          selectedItemBuilder: (_) => [
+            Text(hint),
+            for (final (_, label) in items)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 160),
+                child: Text(label, overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: onChanged,
+        ),
+      ),
     );
   }
 }
@@ -372,14 +499,22 @@ class _TaskColumn extends StatelessWidget {
                 count: tasks.length,
               ),
               const Divider(height: 12),
-              for (final task in tasks)
-                _TaskCard(
-                  task: task,
-                  projectId: projectId,
-                  selected: task.id == selectedId,
-                  onTap: () => onSelect(task.id),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    for (final task in tasks)
+                      _TaskCard(
+                        task: task,
+                        projectId: projectId,
+                        selected: task.id == selectedId,
+                        onTap: () => onSelect(task.id),
+                      ),
+                    if (tasks.isEmpty)
+                      _EmptyColumnNote(label: t.boardEmptyColumn),
+                  ],
                 ),
-              if (tasks.isEmpty) _EmptyColumnNote(label: t.boardEmptyColumn),
+              ),
             ],
           ),
         );
@@ -439,6 +574,23 @@ class _TaskCard extends StatelessWidget {
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
+              if (MembersScope.user(context, task.ownerId) != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Spacer(),
+                    Tooltip(
+                      message:
+                          '${AppLocalizations.of(context).detailFieldReporter}: '
+                          '${MembersScope.user(context, task.ownerId)!.displayName}',
+                      child: UserAvatar(
+                        user: MembersScope.user(context, task.ownerId)!,
+                        size: 18,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

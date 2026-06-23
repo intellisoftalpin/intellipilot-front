@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
+import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
@@ -185,14 +186,12 @@ class _LoadedState extends State<_Loaded> {
     final detail = context.watch<ProjectDetailCubit>().state;
     final canEditUs =
         detail is ProjectDetailLoaded && detail.has(Permission.usModify);
-    final canEditEpic =
-        detail is ProjectDetailLoaded && detail.has(Permission.epicModify);
     final canCreateEpic =
         detail is ProjectDetailLoaded && detail.has(Permission.epicCreate);
     final canCreateUs =
         detail is ProjectDetailLoaded && detail.has(Permission.usCreate);
 
-    final groups = widget.state.grouped;
+    final stories = widget.state.visible;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 880),
@@ -230,30 +229,33 @@ class _LoadedState extends State<_Loaded> {
               ),
             ),
             SizedBox(
-              height: 44,
+              height: 56,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   children: [
-                    FilterChip(
-                      label: Text(t.filterAllStatuses),
-                      selected: widget.state.statusFilter == null,
-                      onSelected: (_) =>
-                          context.read<BacklogCubit>().setStatusFilter(null),
+                    _BacklogFilter(
+                      hint: t.backlogFilterStatus,
+                      value: widget.state.statusFilter,
+                      items: [
+                        for (final s in widget.state.statuses) (s.id, s.name),
+                      ],
+                      onChanged: (id) =>
+                          context.read<BacklogCubit>().setStatusFilter(id),
                     ),
                     const SizedBox(width: 8),
-                    for (final s in widget.state.statuses) ...[
-                      FilterChip(
-                        avatar: HexColorDot(hex: s.color, size: 12),
-                        label: Text(s.name),
-                        selected: widget.state.statusFilter == s.id,
-                        onSelected: (_) => context
-                            .read<BacklogCubit>()
-                            .setStatusFilter(s.id),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
+                    _BacklogFilter(
+                      hint: t.backlogFilterEpic,
+                      value: widget.state.epicFilter,
+                      items: [
+                        (BacklogLoaded.noEpic, t.backlogNoEpicGroup),
+                        for (final e in widget.state.epics)
+                          (e.id, 'EPIC-${e.reference} · ${e.subject}'),
+                      ],
+                      onChanged: (id) =>
+                          context.read<BacklogCubit>().setEpicFilter(id),
+                    ),
                     const SizedBox(width: 8),
                     if (canCreateEpic)
                       OutlinedButton.icon(
@@ -274,31 +276,24 @@ class _LoadedState extends State<_Loaded> {
             ),
             const Divider(height: 16),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                children: [
-                  for (final epic in widget.state.epics)
-                    _EpicSection(
-                      epic: epic,
-                      stories: groups[epic.id] ?? const [],
-                      statuses: widget.state.statuses,
-                      points: widget.state.points,
-                      canEditUs: canEditUs,
-                      canEditEpic: canEditEpic,
-                      canCreateUs: canCreateUs,
+              child: stories.isEmpty
+                  ? EmptyState(
+                      icon: Icons.bookmark_border,
+                      title: t.railBacklog,
+                      body: t.backlogEmpty,
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      children: [
+                        for (final us in stories)
+                          _UserStoryRow(
+                            story: us,
+                            statuses: widget.state.statuses,
+                            points: widget.state.points,
+                            canEdit: canEditUs,
+                          ),
+                      ],
                     ),
-                  if ((groups[null] ?? const []).isNotEmpty)
-                    _EpicSection(
-                      epic: null,
-                      stories: groups[null]!,
-                      statuses: widget.state.statuses,
-                      points: widget.state.points,
-                      canEditUs: canEditUs,
-                      canEditEpic: false,
-                      canCreateUs: canCreateUs,
-                    ),
-                ],
-              ),
             ),
           ],
         ),
@@ -328,149 +323,62 @@ class _LoadedState extends State<_Loaded> {
   }
 }
 
-class _EpicSection extends StatelessWidget {
-  const _EpicSection({
-    required this.epic,
-    required this.stories,
-    required this.statuses,
-    required this.points,
-    required this.canEditUs,
-    required this.canEditEpic,
-    required this.canCreateUs,
+/// A compact "All / pick one" dropdown used in the backlog filter row.
+/// Each item is an `(id, label)` record; a leading "All" entry clears it.
+class _BacklogFilter extends StatelessWidget {
+  const _BacklogFilter({
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
   });
-
-  final Epic? epic;
-  final List<Issue> stories;
-  final List<TaxonomyItem> statuses;
-  final List<TaxonomyItem> points;
-  final bool canEditUs;
-  final bool canEditEpic;
-  final bool canCreateUs;
+  final String hint;
+  final String? value;
+  final List<(String, String)> items;
+  final ValueChanged<String?> onChanged;
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    return DragTarget<String>(
-      // Reject drags whose source is already in this epic — `moveToEpic` is
-      // a no-op then, but suppressing the highlight is the honest signal.
-      onWillAcceptWithDetails: (details) {
-        if (!canEditUs) return false;
-        final cubit = context.read<BacklogCubit>();
-        final s = cubit.state;
-        if (s is! BacklogLoaded) return false;
-        final src = s.issues
-            .where((u) => u.id == details.data)
-            .cast<Issue?>()
-            .firstOrNull;
-        return src != null && src.epicId != epic?.id;
-      },
-      onAcceptWithDetails: (details) {
-        unawaited(
-          context.read<BacklogCubit>().moveIssueToEpic(
-            details.data,
-            epic?.id,
-          ),
-        );
-      },
-      builder: (context, candidate, rejected) {
-        final highlighted = candidate.isNotEmpty;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: highlighted
-                  ? theme.colorScheme.primary
-                  : Colors.transparent,
-              width: 2,
-            ),
-            color: highlighted
-                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.35)
-                : null,
-          ),
-          child: _buildCard(context, t),
-        );
-      },
-    );
-  }
-
-  Widget _buildCard(BuildContext context, AppLocalizations t) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: ExpansionTile(
-        initiallyExpanded: true,
-        leading: epic == null
-            ? const Icon(Icons.folder_open_outlined)
-            : HexColorDot(hex: epic!.color, size: 18),
-        title: epic == null
-            ? Text(t.backlogNoEpicGroup)
-            : Row(
-                children: [
-                  IssueKeyChip(text: 'EPIC-${epic!.reference}'),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(epic!.subject, overflow: TextOverflow.ellipsis),
-                  ),
-                ],
-              ),
-        subtitle: Text(
-          '${stories.length} ${t.backlogStoryCountSuffix}',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.outline,
-          ),
+    final active = value != null;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: active
+              ? theme.colorScheme.primary
+              : theme.colorScheme.outlineVariant,
         ),
-        trailing: canEditEpic && epic != null
-            ? PopupMenuButton<String>(
-                itemBuilder: (_) => [
-                  PopupMenuItem(value: 'open', child: Text(t.actionOpenDetail)),
-                  PopupMenuItem(value: 'edit', child: Text(t.actionEdit)),
-                  PopupMenuItem(value: 'delete', child: Text(t.actionDelete)),
-                ],
-                onSelected: (v) async {
-                  if (v == 'open') {
-                    context.go(
-                      Routes.entityDetailFor(
-                        epic!.projectId,
-                        EntityKind.epic,
-                        epic!.id,
-                      ),
-                    );
-                  } else if (v == 'edit') {
-                    final updated =
-                        await showEpicEditDialog(context, existing: epic);
-                    if (updated == null || !context.mounted) return;
-                    await context.read<BacklogCubit>().updateEpic(
-                      epic!.id,
-                      UpdateEpicRequest(
-                        subject: updated.subject,
-                        description: updated.description,
-                        color: updated.color,
-                      ),
-                    );
-                  } else if (v == 'delete') {
-                    final ok = await _confirm(
-                      context,
-                      title: t.backlogDeleteEpicTitle,
-                      body: t.backlogDeleteEpicConfirm(epic!.subject),
-                    );
-                    if ((ok ?? false) && context.mounted) {
-                      await context.read<BacklogCubit>().deleteEpic(epic!.id);
-                    }
-                  }
-                },
-              )
+        borderRadius: BorderRadius.circular(8),
+        color: active
+            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
             : null,
-        children: [
-          for (final us in stories)
-            _UserStoryRow(
-              story: us,
-              statuses: statuses,
-              points: points,
-              canEdit: canEditUs,
-            ),
-        ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String?>(
+          value: value,
+          hint: Text(hint),
+          isDense: true,
+          borderRadius: BorderRadius.circular(8),
+          items: [
+            DropdownMenuItem<String?>(value: null, child: Text(t.filterAll)),
+            for (final (id, label) in items)
+              DropdownMenuItem<String?>(
+                value: id,
+                child: Text(label, overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          selectedItemBuilder: (_) => [
+            Text(hint),
+            for (final (_, label) in items)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 200),
+                child: Text(label, overflow: TextOverflow.ellipsis),
+              ),
+          ],
+          onChanged: onChanged,
+        ),
       ),
     );
   }
@@ -491,7 +399,6 @@ class _UserStoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final theme = Theme.of(context);
     final status =
         statuses.where((s) => s.id == story.statusId).cast<TaxonomyItem?>().firstOrNull;
     final p = points
@@ -586,39 +493,7 @@ class _UserStoryRow extends StatelessWidget {
             )
           : null,
     );
-    if (!canEdit) return tile;
-    final feedback = Material(
-      elevation: 4,
-      borderRadius: BorderRadius.circular(8),
-      color: theme.colorScheme.surface,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 320),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IssueKeyChip(text: 'US-${story.reference}'),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  story.subject,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    return Draggable<String>(
-      data: story.id,
-      dragAnchorStrategy: pointerDragAnchorStrategy,
-      feedback: feedback,
-      childWhenDragging: Opacity(opacity: 0.4, child: tile),
-      child: tile,
-    );
+    return tile;
   }
 }
 

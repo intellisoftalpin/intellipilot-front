@@ -516,6 +516,11 @@ class _ProjectRailState extends State<_ProjectRail> {
         path: Routes.projectBacklogFor(widget.projectId),
       ),
       _RailItem(
+        icon: Icons.bookmarks_outlined,
+        label: t.railEpics,
+        path: Routes.projectEpicsFor(widget.projectId),
+      ),
+      _RailItem(
         icon: Icons.view_kanban_outlined,
         label: t.railBoard,
         path: Routes.projectBoardFor(widget.projectId),

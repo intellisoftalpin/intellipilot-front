@@ -59,7 +59,13 @@ class AdminUsersCubit extends Cubit<AdminUsersState> {
     emit(const AdminUsersLoading());
     final res = await _repo.listUsers(q: _q.isEmpty ? null : _q, limit: 200);
     res.when(
-      ok: (l) => emit(AdminUsersLoaded(items: l.items, total: l.total)),
+      ok: (l) {
+        String key(UserProfile u) =>
+            (u.fullName.isNotEmpty ? u.fullName : u.username).toLowerCase();
+        final sorted = l.items.toList()
+          ..sort((a, b) => key(a).compareTo(key(b)));
+        emit(AdminUsersLoaded(items: sorted, total: l.total));
+      },
       err: (f) => emit(AdminUsersFailed(f)),
     );
   }

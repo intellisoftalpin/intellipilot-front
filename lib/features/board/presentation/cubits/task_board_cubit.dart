@@ -29,7 +29,15 @@ class TaskBoardLoaded extends TaskBoardState {
     required this.statuses,
     required this.issues,
     required this.milestones,
+    this.epics = const [],
+    this.labels = const [],
+    this.components = const [],
     this.sprintFilter,
+    this.assigneeFilter,
+    this.epicFilter,
+    this.labelFilter,
+    this.componentFilter,
+    this.categoryFilter,
     this.search = '',
     this.staleData = false,
   });
@@ -43,9 +51,21 @@ class TaskBoardLoaded extends TaskBoardState {
   /// Project milestones — populate the optional Sprint filter.
   final List<Milestone> milestones;
 
+  /// Project epics / labels / components — populate the filter dropdowns.
+  final List<Epic> epics;
+  final List<Label> labels;
+  final List<Component> components;
+
   /// Optional sprint filter: when set, only issues in this milestone show.
   /// `null` = all sprints (the board needs no milestone to render).
   final String? sprintFilter;
+
+  /// Optional filters. `null` = no filter on that dimension.
+  final String? assigneeFilter;
+  final String? epicFilter;
+  final String? labelFilter;
+  final String? componentFilter;
+  final String? categoryFilter;
 
   /// Free-text filter over subject / `#ref`.
   final String search;
@@ -57,25 +77,67 @@ class TaskBoardLoaded extends TaskBoardState {
     List<TaxonomyItem>? statuses,
     List<Issue>? issues,
     List<Milestone>? milestones,
+    List<Epic>? epics,
+    List<Label>? labels,
+    List<Component>? components,
     Object? sprintFilter = _absent,
+    Object? assigneeFilter = _absent,
+    Object? epicFilter = _absent,
+    Object? labelFilter = _absent,
+    Object? componentFilter = _absent,
+    Object? categoryFilter = _absent,
     String? search,
     bool? staleData,
   }) => TaskBoardLoaded(
     statuses: statuses ?? this.statuses,
     issues: issues ?? this.issues,
     milestones: milestones ?? this.milestones,
+    epics: epics ?? this.epics,
+    labels: labels ?? this.labels,
+    components: components ?? this.components,
     sprintFilter:
         sprintFilter == _absent ? this.sprintFilter : sprintFilter as String?,
+    assigneeFilter: assigneeFilter == _absent
+        ? this.assigneeFilter
+        : assigneeFilter as String?,
+    epicFilter: epicFilter == _absent ? this.epicFilter : epicFilter as String?,
+    labelFilter:
+        labelFilter == _absent ? this.labelFilter : labelFilter as String?,
+    componentFilter: componentFilter == _absent
+        ? this.componentFilter
+        : componentFilter as String?,
+    categoryFilter: categoryFilter == _absent
+        ? this.categoryFilter
+        : categoryFilter as String?,
     search: search ?? this.search,
     staleData: staleData ?? this.staleData,
   );
 
   static const _absent = Object();
 
+  /// Distinct assignee user ids referenced by top-level issues — drives the
+  /// assignee filter dropdown (names resolved via MembersScope in the UI).
+  List<String> get assigneeIds {
+    final ids = <String>{};
+    for (final it in issues) {
+      if (it.parentId == null && it.assignedTo != null) {
+        ids.add(it.assignedTo!);
+      }
+    }
+    return ids.toList();
+  }
+
   bool _matches(Issue it) {
     // Only top-level issues are cards; sub-tasks live under their parent.
     if (it.parentId != null) return false;
     if (sprintFilter != null && it.milestoneId != sprintFilter) return false;
+    if (assigneeFilter != null && it.assignedTo != assigneeFilter) return false;
+    if (epicFilter != null && it.epicId != epicFilter) return false;
+    if (labelFilter != null && !it.labels.contains(labelFilter)) return false;
+    if (componentFilter != null && !it.components.contains(componentFilter)) {
+      return false;
+    }
+    if (categoryFilter != null && it.category != categoryFilter) return false;
     if (search.trim().isEmpty) return true;
     final q = search.toLowerCase();
     return it.subject.toLowerCase().contains(q) ||
@@ -100,8 +162,22 @@ class TaskBoardLoaded extends TaskBoardState {
   }
 
   @override
-  List<Object?> get props =>
-      [statuses, issues, milestones, sprintFilter, search, staleData];
+  List<Object?> get props => [
+    statuses,
+    issues,
+    milestones,
+    epics,
+    labels,
+    components,
+    sprintFilter,
+    assigneeFilter,
+    epicFilter,
+    labelFilter,
+    componentFilter,
+    categoryFilter,
+    search,
+    staleData,
+  ];
 }
 
 class TaskBoardCubit extends Cubit<TaskBoardState> {
@@ -128,6 +204,9 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     );
     final issueRes = await _repo.listIssues(projectId);
     final msRes = await _milestones.list(projectId);
+    final epicRes = await _repo.listEpics(projectId);
+    final labelRes = await _catalog.listLabels(projectId);
+    final compRes = await _catalog.listComponents(projectId);
     final statuses = statusRes.valueOrNull;
     final issues = issueRes.valueOrNull;
     if (statuses == null || issues == null) {
@@ -140,6 +219,9 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
           statuses: statuses,
           issues: issues,
           milestones: msRes.valueOrNull ?? const [],
+          epics: epicRes.valueOrNull ?? const [],
+          labels: labelRes.valueOrNull ?? const [],
+          components: compRes.valueOrNull ?? const [],
         ),
       );
     }
@@ -148,6 +230,31 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
   void setSprintFilter(String? milestoneId) {
     final s = state;
     if (s is TaskBoardLoaded) emit(s.copyWith(sprintFilter: milestoneId));
+  }
+
+  void setAssigneeFilter(String? userId) {
+    final s = state;
+    if (s is TaskBoardLoaded) emit(s.copyWith(assigneeFilter: userId));
+  }
+
+  void setEpicFilter(String? epicId) {
+    final s = state;
+    if (s is TaskBoardLoaded) emit(s.copyWith(epicFilter: epicId));
+  }
+
+  void setLabelFilter(String? labelId) {
+    final s = state;
+    if (s is TaskBoardLoaded) emit(s.copyWith(labelFilter: labelId));
+  }
+
+  void setComponentFilter(String? componentId) {
+    final s = state;
+    if (s is TaskBoardLoaded) emit(s.copyWith(componentFilter: componentId));
+  }
+
+  void setCategoryFilter(String? category) {
+    final s = state;
+    if (s is TaskBoardLoaded) emit(s.copyWith(categoryFilter: category));
   }
 
   void setSearch(String q) {

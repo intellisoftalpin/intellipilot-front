@@ -13,6 +13,7 @@ import 'package:intellipilot/features/auth/presentation/login_page.dart';
 import 'package:intellipilot/features/auth/presentation/register_page.dart';
 import 'package:intellipilot/features/auth/presentation/reset_password_page.dart';
 import 'package:intellipilot/features/backlog/presentation/backlog_page.dart';
+import 'package:intellipilot/features/backlog/presentation/epics_page.dart';
 import 'package:intellipilot/features/backlog/presentation/issues_page.dart';
 import 'package:intellipilot/features/board/presentation/board_page.dart';
 import 'package:intellipilot/features/home/presentation/home_page.dart';
@@ -67,6 +68,7 @@ abstract class Routes {
   static String projectDetailFor(String id) => '/projects/$id';
   static String projectSettingsFor(String id) => '/projects/$id/settings';
   static String projectBacklogFor(String id) => '/projects/$id/backlog';
+  static String projectEpicsFor(String id) => '/projects/$id/epics';
   static String projectIssuesFor(String id) => '/projects/$id/issues';
   static String projectBoardFor(String id) => '/projects/$id/board';
 
@@ -202,6 +204,12 @@ GoRouter buildRouter({required SessionBloc session}) {
         name: 'project_backlog',
         builder: (context, state) =>
             BacklogPage(projectId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/projects/:id/epics',
+        name: 'project_epics',
+        builder: (context, state) =>
+            EpicsPage(projectId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/projects/:id/issues',

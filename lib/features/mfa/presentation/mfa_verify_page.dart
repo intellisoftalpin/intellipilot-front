@@ -58,12 +58,31 @@ class _MfaVerifyViewState extends State<_MfaVerifyView> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final session = context.watch<SessionBloc>().state;
-    if (session is! SessionMfaRequired) {
-      return Scaffold(
-        body: Center(child: Text(t.mfaContextLost)),
-      );
-    }
+    // Subscribe to the session via the getIt singleton — NOT context.watch.
+    // SessionBloc is not provided through the widget tree (the app root only
+    // exposes Theme/Locale/Branding), so `context.watch<SessionBloc>()` throws
+    // ProviderNotFoundException here and the page renders blank, locking out
+    // any user with MFA enabled. Binding the BlocBuilder to the instance also
+    // recovers from the cold-start `SessionUnknown` → `SessionMfaRequired`
+    // transition on a hard reload of this route.
+    return BlocBuilder<SessionBloc, SessionState>(
+      bloc: getIt<SessionBloc>(),
+      builder: (context, session) {
+        if (session is! SessionMfaRequired) {
+          return Scaffold(
+            body: Center(child: Text(t.mfaContextLost)),
+          );
+        }
+        return _buildForm(context, t, session);
+      },
+    );
+  }
+
+  Widget _buildForm(
+    BuildContext context,
+    AppLocalizations t,
+    SessionMfaRequired session,
+  ) {
     return Scaffold(
       appBar: AppBar(title: Text(t.mfaVerifyTitle)),
       body: Center(

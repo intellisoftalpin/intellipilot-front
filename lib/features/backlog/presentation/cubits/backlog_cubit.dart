@@ -28,6 +28,7 @@ final class BacklogLoaded extends BacklogState {
     required this.points,
     this.search = '',
     this.statusFilter,
+    this.epicFilter,
     this.busy = false,
     this.lastError,
     this.staleData = false,
@@ -46,7 +47,14 @@ final class BacklogLoaded extends BacklogState {
   final List<TaxonomyItem> points;
   final String search;
   final String? statusFilter;
+
+  /// Optional epic filter. `null` = all epics, [noEpic] = stories with no
+  /// epic, otherwise an epic id.
+  final String? epicFilter;
   final bool busy;
+
+  /// Sentinel [epicFilter] value selecting stories that belong to no epic.
+  static const noEpic = '__none__';
   final AppFailure? lastError;
 
   /// Set when a 409/412 conflict was returned — the UI shows a "data has
@@ -61,6 +69,7 @@ final class BacklogLoaded extends BacklogState {
     List<TaxonomyItem>? points,
     String? search,
     Object? statusFilter = _absent,
+    Object? epicFilter = _absent,
     bool? busy,
     AppFailure? lastError,
     bool? staleData,
@@ -73,12 +82,36 @@ final class BacklogLoaded extends BacklogState {
     search: search ?? this.search,
     statusFilter:
         statusFilter == _absent ? this.statusFilter : statusFilter as String?,
+    epicFilter:
+        epicFilter == _absent ? this.epicFilter : epicFilter as String?,
     busy: busy ?? this.busy,
     lastError: lastError,
     staleData: staleData ?? false,
   );
 
   static const _absent = Object();
+
+  /// Flat list of top-level stories matching the search + status + epic
+  /// filters, sorted by `order`. Replaces the old epic-grouped view.
+  List<Issue> get visible {
+    final list = issues.where((it) {
+      if (it.parentId != null) return false;
+      if (statusFilter != null && it.statusId != statusFilter) return false;
+      if (epicFilter == noEpic && it.epicId != null) return false;
+      if (epicFilter != null &&
+          epicFilter != noEpic &&
+          it.epicId != epicFilter) {
+        return false;
+      }
+      if (search.trim().isEmpty) return true;
+      final q = search.toLowerCase();
+      return it.subject.toLowerCase().contains(q) ||
+          it.description.toLowerCase().contains(q) ||
+          '#${it.reference}'.contains(q);
+    }).toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    return list;
+  }
 
   /// Top-level issues (sub-tasks are nested elsewhere) matching the current
   /// search/status filters, grouped by `epicId` (null bucket first). Each
@@ -113,6 +146,7 @@ final class BacklogLoaded extends BacklogState {
     points.map((p) => p.id).toList(),
     search,
     statusFilter,
+    epicFilter,
     busy,
     lastError,
     staleData,
@@ -179,6 +213,13 @@ class BacklogCubit extends Cubit<BacklogState> {
     final s = state;
     if (s is BacklogLoaded) {
       emit(s.copyWith(statusFilter: id, lastError: null));
+    }
+  }
+
+  void setEpicFilter(String? id) {
+    final s = state;
+    if (s is BacklogLoaded) {
+      emit(s.copyWith(epicFilter: id, lastError: null));
     }
   }
 
