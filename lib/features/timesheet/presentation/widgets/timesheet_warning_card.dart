@@ -27,12 +27,18 @@ class _TimesheetWarningCardState extends State<TimesheetWarningCard> {
 
   Future<void> _load() async {
     final now = DateTime.now();
-    final res = await getIt<TimesheetRepository>().mySummary(
-      year: now.year,
-      month: now.month,
-    );
-    if (!mounted) return;
-    setState(() => _summary = res.valueOrNull);
+    // Best-effort dashboard card: never let a failed/absent endpoint crash the
+    // page that embeds it.
+    try {
+      final res = await getIt<TimesheetRepository>().mySummary(
+        year: now.year,
+        month: now.month,
+      );
+      if (!mounted) return;
+      setState(() => _summary = res.valueOrNull);
+    } on Object {
+      // Ignore — the card simply renders nothing.
+    }
   }
 
   @override

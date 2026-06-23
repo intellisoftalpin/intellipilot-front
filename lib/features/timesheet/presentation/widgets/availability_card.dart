@@ -26,11 +26,16 @@ class _AvailabilityCardState extends State<AvailabilityCard> {
   }
 
   Future<void> _load() async {
-    final res = await getIt<TimesheetRepository>().availability(
-      widget.projectId,
-    );
-    if (!mounted) return;
-    setState(() => _people = res.valueOrNull ?? const []);
+    // Best-effort dashboard card: ignore failures rather than crash the page.
+    try {
+      final res = await getIt<TimesheetRepository>().availability(
+        widget.projectId,
+      );
+      if (!mounted) return;
+      setState(() => _people = res.valueOrNull ?? const []);
+    } on Object {
+      if (mounted) setState(() => _people = const []);
+    }
   }
 
   @override

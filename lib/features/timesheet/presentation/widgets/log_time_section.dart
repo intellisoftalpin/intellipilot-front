@@ -32,15 +32,19 @@ class _LogTimeSectionState extends State<LogTimeSection> {
   }
 
   Future<void> _load() async {
-    final res = await getIt<TimesheetRepository>().issueTime(
-      widget.projectId,
-      widget.issueId,
-    );
-    if (!mounted) return;
-    setState(() {
-      _data = res.valueOrNull;
-      _loading = false;
-    });
+    try {
+      final res = await getIt<TimesheetRepository>().issueTime(
+        widget.projectId,
+        widget.issueId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _data = res.valueOrNull;
+        _loading = false;
+      });
+    } on Object {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override

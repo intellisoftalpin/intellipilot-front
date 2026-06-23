@@ -128,4 +128,15 @@ class RecordingDownloader implements FileDownloader {
     lastContents = contents;
     return true;
   }
+
+  @override
+  Future<bool> downloadBytes({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+  }) async {
+    calls++;
+    lastFilename = filename;
+    return true;
+  }
 }
