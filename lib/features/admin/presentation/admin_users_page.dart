@@ -54,6 +54,11 @@ class _UsersViewState extends State<_UsersView> {
         title: Text(l10n.adminUsersTitle),
         actions: [
           IconButton(
+            onPressed: _openInviteDialog,
+            icon: const Icon(Icons.mail_outline),
+            tooltip: l10n.adminInviteTitle,
+          ),
+          IconButton(
             onPressed: () => _openCreateDialog(cubit),
             icon: const Icon(Icons.person_add_alt_1),
             tooltip: l10n.adminUsersCreateTooltip,
@@ -114,6 +119,13 @@ class _UsersViewState extends State<_UsersView> {
         ),
       );
     }
+  }
+
+  Future<void> _openInviteDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => const _InviteDialog(),
+    );
   }
 
   Future<void> _confirmDelete(UserProfile u, AdminUsersCubit cubit) async {
@@ -552,6 +564,156 @@ class _OneTimeTokenDialog extends StatelessWidget {
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
           child: Text(l10n.adminUsersDone),
+        ),
+      ],
+    );
+  }
+}
+
+/// Invite a new user by email (moved here from the former standalone admin
+/// invitations page).
+class _InviteDialog extends StatefulWidget {
+  const _InviteDialog();
+
+  @override
+  State<_InviteDialog> createState() => _InviteDialogState();
+}
+
+class _InviteDialogState extends State<_InviteDialog> {
+  final _email = TextEditingController();
+  String _role = 'user';
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final email = _email.text.trim();
+    if (email.isEmpty) return;
+    setState(() => _busy = true);
+    final res = await getIt<AdminRepository>().createInvitation(
+      CreateInvitationRequest(email: email, role: _role),
+    );
+    if (!mounted) return;
+    final created = res.valueOrNull;
+    if (created == null) {
+      setState(() => _busy = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.adminInviteCreateError)),
+      );
+      return;
+    }
+    navigator.pop();
+    if (created.inviteToken != null) {
+      await showDialog<void>(
+        context: navigator.context,
+        builder: (_) => _InviteLinkDialog(
+          email: created.email,
+          token: created.inviteToken!,
+        ),
+      );
+    } else {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.adminInviteEmailedSnack(created.email))),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l10n.adminInviteTitle),
+      content: SizedBox(
+        width: 360,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.email_outlined),
+                labelText: l10n.adminInviteEmailHint,
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: _role,
+              decoration: const InputDecoration(border: OutlineInputBorder()),
+              items: [
+                DropdownMenuItem(
+                  value: 'user',
+                  child: Text(l10n.adminInviteRoleUser),
+                ),
+                DropdownMenuItem(
+                  value: 'superadmin',
+                  child: Text(l10n.adminInviteRoleSuperadmin),
+                ),
+              ],
+              onChanged: (v) => setState(() => _role = v ?? 'user'),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: Text(l10n.actionCancel),
+        ),
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(l10n.adminInviteButton),
+        ),
+      ],
+    );
+  }
+}
+
+class _InviteLinkDialog extends StatelessWidget {
+  const _InviteLinkDialog({required this.email, required this.token});
+  final String email;
+  final String token;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final link = '${Uri.base.origin}/register?token=$token';
+    return AlertDialog(
+      title: Text(l10n.adminInviteCreatedTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.adminInviteLinkInstructions(email)),
+          const SizedBox(height: 12),
+          SelectableText(link),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            unawaited(Clipboard.setData(ClipboardData(text: link)));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.adminInviteLinkCopied)),
+            );
+          },
+          child: Text(l10n.adminInviteCopyLink),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.adminInviteDone),
         ),
       ],
     );

@@ -244,7 +244,12 @@ class _ProfileForm extends StatelessWidget {
                   child: TextField(
                     controller: moodTextController,
                     maxLength: 16,
-                    decoration: InputDecoration(labelText: t.pfMoodStatus),
+                    // Hide the built-in counter so the field height matches the
+                    // 56px emoji button (the label already states the limit).
+                    decoration: InputDecoration(
+                      labelText: t.pfMoodStatus,
+                      counterText: '',
+                    ),
                   ),
                 ),
               ],
@@ -280,7 +285,7 @@ class _ProfileForm extends StatelessWidget {
             if (state.lastError != null) ...[
               const SizedBox(height: 12),
               Text(
-                t.profileSaveFailed,
+                _failureText(t, state.lastError!),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
@@ -289,6 +294,14 @@ class _ProfileForm extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The backend's specific problem detail/title, falling back to the generic
+/// "couldn't save" message — so the user sees *what* went wrong.
+String _failureText(AppLocalizations t, AppFailure f) {
+  final p = f.problem;
+  final msg = p?.detail ?? p?.title;
+  return (msg != null && msg.isNotEmpty) ? msg : t.profileSaveFailed;
 }
 
 /// Current avatar + upload / pick-emoji / reset actions.
@@ -379,9 +392,12 @@ Future<String?> _showEmojiPicker(
   String title,
 ) {
   final t = AppLocalizations.of(context);
+  // Pop with the DIALOG's own context — using the page context resolves to the
+  // wrong (nested) navigator and pops the whole page (blank screen) instead of
+  // the dialog.
   return showDialog<String>(
     context: context,
-    builder: (_) => AlertDialog(
+    builder: (dialogContext) => AlertDialog(
       title: Text(title),
       content: SizedBox(
         width: 320,
@@ -390,7 +406,7 @@ Future<String?> _showEmojiPicker(
           runSpacing: 8,
           children: [
             InkWell(
-              onTap: () => Navigator.pop(context, ''),
+              onTap: () => Navigator.pop(dialogContext, ''),
               borderRadius: BorderRadius.circular(8),
               child: const Padding(
                 padding: EdgeInsets.all(8),
@@ -399,7 +415,7 @@ Future<String?> _showEmojiPicker(
             ),
             for (final e in emojis)
               InkWell(
-                onTap: () => Navigator.pop(context, e),
+                onTap: () => Navigator.pop(dialogContext, e),
                 borderRadius: BorderRadius.circular(8),
                 child: Padding(
                   padding: const EdgeInsets.all(8),
@@ -411,7 +427,7 @@ Future<String?> _showEmojiPicker(
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(dialogContext),
           child: Text(t.actionCancel),
         ),
       ],

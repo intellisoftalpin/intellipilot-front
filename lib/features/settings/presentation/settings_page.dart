@@ -21,14 +21,12 @@ class SettingsPage extends StatelessWidget {
       title: Text(l10n.settingsTitle),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 16),
+        // Profile & Security live in the top-right account menu (their own
+        // entries) — not duplicated here.
         children: const [
-          _ProfileSection(),
-          SizedBox(height: 16),
           _ThemeSection(),
           SizedBox(height: 16),
           _LocaleSection(),
-          SizedBox(height: 16),
-          _SecuritySection(),
           SizedBox(height: 16),
           _AccountSection(),
           SizedBox(height: 16),
@@ -158,24 +156,6 @@ class _SeedSwatch extends StatelessWidget {
   }
 }
 
-class _ProfileSection extends StatelessWidget {
-  const _ProfileSection();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.account_circle_outlined),
-        title: Text(l10n.settingsProfileTitle),
-        subtitle: Text(l10n.settingsProfileSubtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.go(Routes.profile),
-      ),
-    );
-  }
-}
-
 class _AccountSection extends StatelessWidget {
   const _AccountSection();
 
@@ -189,24 +169,6 @@ class _AccountSection extends StatelessWidget {
         subtitle: Text(l10n.settingsAccountSubtitle),
         trailing: const Icon(Icons.chevron_right),
         onTap: () => context.go(Routes.account),
-      ),
-    );
-  }
-}
-
-class _SecuritySection extends StatelessWidget {
-  const _SecuritySection();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.shield_outlined),
-        title: Text(l10n.settingsSecurityTitle),
-        subtitle: Text(l10n.settingsSecuritySubtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => context.go(Routes.security),
       ),
     );
   }

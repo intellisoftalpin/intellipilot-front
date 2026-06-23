@@ -6,7 +6,6 @@ import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
 import 'package:intellipilot/features/activity/presentation/entity_edit_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_activity_page.dart';
-import 'package:intellipilot/features/admin/presentation/admin_invitations_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_settings_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_users_page.dart';
 import 'package:intellipilot/features/auth/presentation/forgot_password_page.dart';
@@ -62,7 +61,6 @@ abstract class Routes {
   // backend gates the API with 403, and the SPA hides the nav entry for
   // non-admins, but no router-level redirect today.
   static const adminUsers = '/admin/users';
-  static const adminInvitations = '/admin/invitations';
   static const adminSettings = '/admin/settings';
   static const adminActivity = '/admin/activity';
 
@@ -299,11 +297,6 @@ GoRouter buildRouter({required SessionBloc session}) {
         path: Routes.adminUsers,
         name: 'admin_users',
         builder: (context, state) => const AdminUsersPage(),
-      ),
-      GoRoute(
-        path: Routes.adminInvitations,
-        name: 'admin_invitations',
-        builder: (context, state) => const AdminInvitationsPage(),
       ),
       GoRoute(
         path: Routes.adminSettings,

@@ -1577,5 +1577,67 @@
   "pfMoodStatus": "Status (max 16)",
   "pfUpload": "Upload image",
   "pfPickEmoji": "Pick emoji",
-  "pfReset": "Reset"
+  "pfReset": "Reset",
+
+  "exportTitle": "Export",
+  "@exportTitle": { "description": "Export menu tooltip on the issues page." },
+  "exportCsv": "Export as CSV",
+  "@exportCsv": { "description": "Export format menu item." },
+  "exportXlsx": "Export as Excel",
+  "@exportXlsx": { "description": "Export format menu item." },
+  "exportFailed": "Export failed",
+  "@exportFailed": { "description": "Snackbar when the export request fails." },
+  "exportUnsupported": "Download isn't supported on this platform",
+  "@exportUnsupported": { "description": "Snackbar when the platform can't save a file." },
+  "importTitle": "Import",
+  "@importTitle": { "description": "Import button tooltip / dialog title." },
+  "importPickHint": "Choose a JIRA or IntelliPilot CSV export to import into this project.",
+  "@importPickHint": { "description": "Help text on the import file-picker step." },
+  "importChooseFile": "Choose file",
+  "@importChooseFile": { "description": "Button that opens the file picker." },
+  "importParseFailed": "Couldn't read that file. Expected a JIRA or IntelliPilot CSV export.",
+  "@importParseFailed": { "description": "Error when the uploaded file can't be parsed." },
+  "importFailed": "Import failed",
+  "@importFailed": { "description": "Error when the import commit fails." },
+  "importIssueCount": "{count} issues will be imported.",
+  "@importIssueCount": {
+    "description": "Header on the import mapping step.",
+    "placeholders": { "count": { "type": "int", "example": "12" } }
+  },
+  "importTypes": "Types",
+  "@importTypes": { "description": "Mapping section header." },
+  "importStatuses": "Statuses",
+  "@importStatuses": { "description": "Mapping section header." },
+  "importPriorities": "Priorities",
+  "@importPriorities": { "description": "Mapping section header." },
+  "importComponents": "Components",
+  "@importComponents": { "description": "Mapping section header." },
+  "importSkip": "Skip",
+  "@importSkip": { "description": "Dropdown option to leave a value unmapped." },
+  "importUnmatchedUsers": "Unmatched users",
+  "@importUnmatchedUsers": { "description": "Header for users with no project match." },
+  "importUnmatchedUsersHint": "Comments from these users keep their name as a prefix.",
+  "@importUnmatchedUsersHint": { "description": "Explains how unmatched comment authors are handled." },
+  "importAction": "Import",
+  "@importAction": { "description": "Commit button on the import dialog." },
+  "importDoneIssues": "{count} issues created",
+  "@importDoneIssues": {
+    "description": "Import summary line.",
+    "placeholders": { "count": { "type": "int", "example": "12" } }
+  },
+  "importDoneEpics": "{count} epics created",
+  "@importDoneEpics": {
+    "description": "Import summary line.",
+    "placeholders": { "count": { "type": "int", "example": "2" } }
+  },
+  "importDoneComments": "{count} comments created",
+  "@importDoneComments": {
+    "description": "Import summary line.",
+    "placeholders": { "count": { "type": "int", "example": "5" } }
+  },
+  "importDoneTaxonomy": "{count} taxonomy items created",
+  "@importDoneTaxonomy": {
+    "description": "Import summary line.",
+    "placeholders": { "count": { "type": "int", "example": "3" } }
+  }
 }

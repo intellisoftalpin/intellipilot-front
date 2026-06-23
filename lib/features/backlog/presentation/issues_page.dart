@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/io/file_downloader.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
@@ -18,6 +19,9 @@ import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/size_badge.dart';
+import 'package:intellipilot/features/issues_io/data/dtos/issues_io_dtos.dart';
+import 'package:intellipilot/features/issues_io/domain/issues_io_repository.dart';
+import 'package:intellipilot/features/issues_io/presentation/import_dialog.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
@@ -106,6 +110,41 @@ class _IssuesView extends StatelessWidget {
           projectId: projectId,
           currentLabel: t.issuesTitle,
         ),
+        actions: [
+          BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
+            builder: (context, detail) {
+              if (detail is! ProjectDetailLoaded) {
+                return const SizedBox.shrink();
+              }
+              return Row(
+                children: [
+                  if (detail.has(Permission.issueView))
+                    PopupMenuButton<ExportFormat>(
+                      icon: const Icon(Icons.download),
+                      tooltip: t.exportTitle,
+                      onSelected: (f) => _export(context, f),
+                      itemBuilder: (_) => [
+                        PopupMenuItem(
+                          value: ExportFormat.csv,
+                          child: Text(t.exportCsv),
+                        ),
+                        PopupMenuItem(
+                          value: ExportFormat.xlsx,
+                          child: Text(t.exportXlsx),
+                        ),
+                      ],
+                    ),
+                  if (detail.has(Permission.issueCreate))
+                    IconButton(
+                      icon: const Icon(Icons.upload),
+                      tooltip: t.importTitle,
+                      onPressed: () => _import(context),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
       floatingActionButton:
           BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
@@ -154,6 +193,37 @@ class _IssuesView extends StatelessWidget {
     if (s is! IssuesLoaded) return;
     final body = await showIssueEditDialog(context, state: s);
     if (body != null) await cubit.create(body);
+  }
+
+  Future<void> _export(BuildContext context, ExportFormat format) async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final res = await getIt<IssuesIoRepository>().export(projectId, format);
+    final bytes = res.valueOrNull;
+    if (bytes == null) {
+      messenger.showSnackBar(SnackBar(content: Text(t.exportFailed)));
+      return;
+    }
+    final ok = await getIt<FileDownloader>().downloadBytes(
+      filename: 'issues.${format.extension}',
+      mimeType: format.mimeType,
+      bytes: bytes,
+    );
+    if (!ok) {
+      messenger.showSnackBar(SnackBar(content: Text(t.exportUnsupported)));
+    }
+  }
+
+  Future<void> _import(BuildContext context) async {
+    final cubit = context.read<IssuesCubit>();
+    final s = cubit.state;
+    if (s is! IssuesLoaded) return;
+    final imported = await showIssueImportDialog(
+      context,
+      projectId: projectId,
+      state: s,
+    );
+    if (imported) await cubit.load();
   }
 }
 

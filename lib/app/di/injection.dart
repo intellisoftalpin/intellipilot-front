@@ -22,6 +22,8 @@ import 'package:intellipilot/features/board/data/board_repository_impl.dart';
 import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/data/catalog_repository_impl.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/issues_io/data/issues_io_repository_impl.dart';
+import 'package:intellipilot/features/issues_io/domain/issues_io_repository.dart';
 import 'package:intellipilot/features/links/data/links_repository_http.dart';
 import 'package:intellipilot/features/links/domain/links_repository.dart';
 import 'package:intellipilot/features/mfa/data/mfa_repository_impl.dart';
@@ -152,6 +154,9 @@ Future<void> configureDependencies({
   );
   getIt.registerLazySingleton<TimesheetRepository>(
     () => TimesheetRepositoryImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<IssuesIoRepository>(
+    () => IssuesIoRepositoryImpl(getIt<ApiClient>()),
   );
   getIt.registerLazySingleton<BrandingCubit>(
     () => BrandingCubit(getIt<AuthRepository>(), getIt<ApiConfig>()),

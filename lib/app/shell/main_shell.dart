@@ -419,26 +419,21 @@ class _AvatarMenuState extends State<_AvatarMenu> {
           onPressed: () => context.go(Routes.settings),
           child: Text(t.topMenuSettings),
         ),
-        // V011: platform admin. Surface to every signed-in user — the backend
-        // returns 403 for non-admins, which the pages render as an honest
-        // error. A future iteration can hide these conditionally once the
-        // current-user profile is hoisted into a global cubit.
-        const Divider(height: 1),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.admin_panel_settings_outlined),
-          onPressed: () => context.go(Routes.adminUsers),
-          child: const Text('Admin · users'),
-        ),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.mail_outline),
-          onPressed: () => context.go(Routes.adminInvitations),
-          child: const Text('Admin · invitations'),
-        ),
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.tune),
-          onPressed: () => context.go(Routes.adminSettings),
-          child: const Text('Admin · settings'),
-        ),
+        // Platform admin — only shown to superadmins (user management now also
+        // hosts invite-by-email, so there's no separate invitations entry).
+        if (_me?.isSuperadmin ?? false) ...[
+          const Divider(height: 1),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.admin_panel_settings_outlined),
+            onPressed: () => context.go(Routes.adminUsers),
+            child: const Text('Admin · users'),
+          ),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.tune),
+            onPressed: () => context.go(Routes.adminSettings),
+            child: const Text('Admin · settings'),
+          ),
+        ],
         const Divider(height: 1),
         MenuItemButton(
           leadingIcon: const Icon(Icons.logout),
