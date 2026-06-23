@@ -16,6 +16,13 @@ class _ClipboardDownloader implements FileDownloader {
     await Clipboard.setData(ClipboardData(text: contents));
     return true;
   }
+
+  @override
+  Future<bool> downloadBytes({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+  }) async => false;
 }
 
 FileDownloader createFileDownloader() => const _ClipboardDownloader();

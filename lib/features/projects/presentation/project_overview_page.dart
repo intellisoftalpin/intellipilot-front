@@ -15,6 +15,8 @@ import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
 import 'package:intellipilot/features/projects/presentation/widgets/permission_debug_overlay.dart';
 import 'package:intellipilot/features/projects/presentation/widgets/permission_gate.dart';
+import 'package:intellipilot/features/timesheet/presentation/widgets/availability_card.dart';
+import 'package:intellipilot/features/timesheet/presentation/widgets/timesheet_warning_card.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class ProjectOverviewPage extends StatelessWidget {
@@ -188,6 +190,10 @@ class _Overview extends StatelessWidget {
                 Chip(label: Text(_visibilityLabel(t, project.visibility))),
               ],
             ),
+            const SizedBox(height: 16),
+            const TimesheetWarningCard(),
+            const SizedBox(height: 8),
+            AvailabilityCard(projectId: project.id),
             const SizedBox(height: 16),
             if (project.description.isNotEmpty) ...[
               Card(

@@ -33,6 +33,8 @@ import 'package:intellipilot/features/profile/data/profile_repository_impl.dart'
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/projects_repository_impl.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
+import 'package:intellipilot/features/timesheet/data/timesheet_repository_impl.dart';
+import 'package:intellipilot/features/timesheet/domain/timesheet_repository.dart';
 import 'package:intellipilot/features/wiki/data/wiki_repository_impl.dart';
 import 'package:intellipilot/features/wiki/domain/wiki_repository.dart';
 import 'package:logger/logger.dart';
@@ -148,6 +150,9 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<AdminRepository>(
     () => AdminRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<TimesheetRepository>(
+    () => TimesheetRepositoryImpl(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<BrandingCubit>(
     () => BrandingCubit(getIt<AuthRepository>(), getIt<ApiConfig>()),
   );
@@ -235,6 +240,7 @@ Future<void> configureForTests({
       fileDownloader ?? const _InMemoryDownloader(),
     )
     ..registerSingleton<FilePicker>(filePicker ?? const _StubFilePicker())
+    ..registerSingleton<TimesheetRepository>(_NoopTimesheetRepository())
     ..registerSingleton<SessionBloc>(SessionBloc(repository: authRepository))
     ..registerSingleton<ThemeCubit>(ThemeCubit(settingsStorage))
     ..registerSingleton<LocaleCubit>(LocaleCubit(settingsStorage))
@@ -339,6 +345,13 @@ class _NoopLinksRepository implements LinksRepository {
       throw UnimplementedError('_NoopLinksRepository.${invocation.memberName}');
 }
 
+class _NoopTimesheetRepository implements TimesheetRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    '_NoopTimesheetRepository.${invocation.memberName}',
+  );
+}
+
 class _InMemoryDownloader implements FileDownloader {
   const _InMemoryDownloader();
 
@@ -350,6 +363,13 @@ class _InMemoryDownloader implements FileDownloader {
     required String filename,
     required String mimeType,
     required String contents,
+  }) async => true;
+
+  @override
+  Future<bool> downloadBytes({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
   }) async => true;
 }
 

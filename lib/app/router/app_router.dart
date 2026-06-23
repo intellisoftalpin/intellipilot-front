@@ -32,6 +32,9 @@ import 'package:intellipilot/features/projects/presentation/project_overview_pag
 import 'package:intellipilot/features/projects/presentation/project_settings_page.dart';
 import 'package:intellipilot/features/projects/presentation/projects_list_page.dart';
 import 'package:intellipilot/features/settings/presentation/settings_page.dart';
+import 'package:intellipilot/features/timesheet/presentation/pages/admin_user_time_page.dart';
+import 'package:intellipilot/features/timesheet/presentation/pages/project_time_page.dart';
+import 'package:intellipilot/features/timesheet/presentation/pages/timesheet_page.dart';
 import 'package:intellipilot/features/wiki/presentation/wiki_list_page.dart';
 import 'package:intellipilot/features/wiki/presentation/wiki_page_view.dart';
 import 'package:intellipilot/features/wiki/presentation/wiki_revisions_page.dart';
@@ -53,6 +56,7 @@ abstract class Routes {
   static const profile = '/me/profile';
   static const account = '/me/account';
   static const projects = '/projects';
+  static const timesheet = '/me/timesheet';
   static const acceptInvitation = '/i';
   // Platform-admin (V011) — only superadmins should reach these; the
   // backend gates the API with 403, and the SPA hides the nav entry for
@@ -74,6 +78,8 @@ abstract class Routes {
   @Deprecated('Use projectBoardFor — Stories/Tasks toggle on the board')
   static String projectTaskBoardFor(String id) => projectBoardFor(id);
   static String projectMilestonesFor(String id) => '/projects/$id/milestones';
+  static String projectTimeFor(String id) => '/projects/$id/time';
+  static String adminUserTimeFor(String id) => '/admin/users/$id/time';
   static String milestoneDetailFor(String projectId, String milestoneId) =>
       '/projects/$projectId/milestones/$milestoneId';
   static String projectWikiFor(String id) => '/projects/$id/wiki';
@@ -163,6 +169,23 @@ GoRouter buildRouter({required SessionBloc session}) {
         path: Routes.projects,
         name: 'projects',
         builder: (context, state) => const ProjectsListPage(),
+      ),
+      GoRoute(
+        path: Routes.timesheet,
+        name: 'timesheet',
+        builder: (context, state) => const TimesheetPage(),
+      ),
+      GoRoute(
+        path: '/projects/:id/time',
+        name: 'project_time',
+        builder: (context, state) =>
+            ProjectTimePage(projectId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/admin/users/:id/time',
+        name: 'admin_user_time',
+        builder: (context, state) =>
+            AdminUserTimePage(userId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/projects/:id',

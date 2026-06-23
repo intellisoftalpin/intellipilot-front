@@ -16,10 +16,20 @@ class _WebDownloader implements FileDownloader {
     required String filename,
     required String mimeType,
     required String contents,
+  }) => downloadBytes(
+    filename: filename,
+    mimeType: mimeType,
+    bytes: utf8.encode(contents),
+  );
+
+  @override
+  Future<bool> downloadBytes({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
   }) async {
-    final bytes = Uint8List.fromList(utf8.encode(contents));
     final blob = web.Blob(
-      [bytes.toJS].toJS,
+      [Uint8List.fromList(bytes).toJS].toJS,
       web.BlobPropertyBag(type: mimeType),
     );
     final url = web.URL.createObjectURL(blob);

@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
@@ -291,6 +293,8 @@ class _UserTile extends StatelessWidget {
               onToggleSuperadmin(!user.isSuperadmin);
             case 'reset':
               onResetPassword();
+            case 'time':
+              unawaited(context.push(Routes.adminUserTimeFor(user.id)));
             case 'delete':
               onDelete();
           }
@@ -316,6 +320,7 @@ class _UserTile extends StatelessWidget {
             value: 'reset',
             child: Text(l10n.adminUsersIssueReset),
           ),
+          PopupMenuItem(value: 'time', child: Text(l10n.ttAdminTimeMenu)),
           PopupMenuItem(value: 'delete', child: Text(l10n.adminUsersDeleteMenu)),
         ],
       ),

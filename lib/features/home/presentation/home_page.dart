@@ -8,6 +8,7 @@ import 'package:intellipilot/core/widgets/app_scaffold.dart';
 import 'package:intellipilot/core/widgets/error_view.dart';
 import 'package:intellipilot/core/widgets/loading_indicator.dart';
 import 'package:intellipilot/core/widgets/primary_button.dart';
+import 'package:intellipilot/features/timesheet/presentation/widgets/timesheet_warning_card.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// Phase-1 placeholder home page. Demonstrates the foundation layers
@@ -46,6 +47,8 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 12),
             Text(l10n.homeWelcomeBody, style: theme.textTheme.bodyLarge),
             const SizedBox(height: 16),
+            const TimesheetWarningCard(),
+            const SizedBox(height: 8),
             FilledButton.icon(
               icon: const Icon(Icons.folder_outlined),
               onPressed: () => context.go(Routes.projects),

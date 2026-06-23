@@ -106,6 +106,9 @@ class Membership {
     required this.roleId,
     required this.roleSlug,
     required this.createdAt,
+    this.username = '',
+    this.fullName = '',
+    this.email = '',
   });
 
   factory Membership.fromJson(Map<String, dynamic> json) {
@@ -113,15 +116,29 @@ class Membership {
       id: json['id'] as String,
       projectId: json['project_id'] as String,
       userId: json['user_id'] as String,
+      username: json['username'] as String? ?? '',
+      fullName: json['full_name'] as String? ?? '',
+      email: json['email'] as String? ?? '',
       roleId: json['role_id'] as String,
       roleSlug: json['role_slug'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
 
+  /// Best human-readable label: full name, else username, else email, else id.
+  String get displayName {
+    if (fullName.isNotEmpty) return fullName;
+    if (username.isNotEmpty) return username;
+    if (email.isNotEmpty) return email;
+    return userId;
+  }
+
   final String id;
   final String projectId;
   final String userId;
+  final String username;
+  final String fullName;
+  final String email;
   final String roleId;
   final String roleSlug;
   final DateTime createdAt;

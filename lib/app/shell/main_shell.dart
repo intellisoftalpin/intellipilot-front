@@ -164,6 +164,11 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                   ),
                   const SizedBox(width: 4),
                   _NavLink(
+                    label: AppLocalizations.of(context).ttNavTimesheet,
+                    onTap: () => context.go(Routes.timesheet),
+                  ),
+                  const SizedBox(width: 4),
+                  _NavLink(
                     label: AppLocalizations.of(context).topNavSettings,
                     onTap: () => context.go(Routes.settings),
                   ),
@@ -500,6 +505,11 @@ class _ProjectRailState extends State<_ProjectRail> {
         icon: Icons.flag_outlined,
         label: t.railMilestones,
         path: Routes.projectMilestonesFor(widget.projectId),
+      ),
+      _RailItem(
+        icon: Icons.schedule_outlined,
+        label: t.ttRailTime,
+        path: Routes.projectTimeFor(widget.projectId),
       ),
       _RailItem(
         icon: Icons.menu_book_outlined,

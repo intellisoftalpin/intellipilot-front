@@ -19,4 +19,12 @@ abstract interface class FileDownloader {
     required String mimeType,
     required String contents,
   });
+
+  /// Save raw bytes (e.g. an .xlsx workbook). Web triggers a Blob download;
+  /// native returns false (binary cannot degrade to a clipboard copy).
+  Future<bool> downloadBytes({
+    required String filename,
+    required String mimeType,
+    required List<int> bytes,
+  });
 }

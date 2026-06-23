@@ -102,6 +102,7 @@ class RoleEditor extends StatelessWidget {
         PermissionDomain.wiki => t.permDomainWiki,
         PermissionDomain.commentsAndAttachments =>
           t.permDomainCommentsAttachments,
+        PermissionDomain.timeTracking => t.ttTimeTracking,
       };
 
   String _permissionLabel(Permission p) {

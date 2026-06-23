@@ -319,8 +319,12 @@ class _MembersTab extends StatelessWidget {
               Card(
                 child: ListTile(
                   leading: const Icon(Icons.person_outline),
-                  title: Text(member.userId),
-                  subtitle: Text(member.roleSlug),
+                  title: Text(member.displayName),
+                  subtitle: Text(
+                    member.email.isNotEmpty
+                        ? '${member.email} · ${member.roleSlug}'
+                        : member.roleSlug,
+                  ),
                   trailing: Wrap(
                     spacing: 4,
                     children: [

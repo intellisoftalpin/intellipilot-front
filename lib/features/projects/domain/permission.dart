@@ -66,7 +66,12 @@ enum Permission {
   attachmentDelete(
     'attachment.delete',
     PermissionDomain.commentsAndAttachments,
-  );
+  ),
+
+  // Time tracking
+  timeLog('time.log', PermissionDomain.timeTracking),
+  timeViewAll('time.view_all', PermissionDomain.timeTracking),
+  timeManage('time.manage', PermissionDomain.timeTracking);
 
   const Permission(this.wire, this.domain);
   final String wire;
@@ -91,6 +96,7 @@ enum PermissionDomain {
   milestones,
   wiki,
   commentsAndAttachments,
+  timeTracking,
 }
 
 /// Built-in preset permission sets matching the backend's default roles. Used
@@ -124,6 +130,7 @@ abstract final class RolePresets {
       Permission.commentCreate,
       Permission.attachmentCreate,
       Permission.attachmentDelete,
+      Permission.timeLog,
     ]);
     return base;
   }
@@ -149,6 +156,7 @@ abstract final class RolePresets {
       Permission.milestoneDelete,
       Permission.wikiDelete,
       Permission.commentModerate,
+      Permission.timeViewAll,
     ]);
     return base;
   }

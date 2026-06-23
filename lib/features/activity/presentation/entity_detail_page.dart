@@ -32,6 +32,7 @@ import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
+import 'package:intellipilot/features/timesheet/presentation/widgets/log_time_section.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// Jira-inspired entity detail page: breadcrumb + title + action bar over a
@@ -929,6 +930,8 @@ class _LeftColumn extends StatelessWidget {
               issuesById: data.issuesById,
             ),
           ),
+          gap,
+          LogTimeSection(projectId: projectId, issueId: entityId),
         ],
         gap,
         _Panel(
