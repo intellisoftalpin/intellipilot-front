@@ -264,7 +264,8 @@ class BreakdownList extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: shown[i].count / max,
                       minHeight: 10,
-                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                      backgroundColor:
+                          theme.colorScheme.surfaceContainerHighest,
                       valueColor: AlwaysStoppedAnimation<Color>(
                         _bucketColor(shown[i].color, i),
                       ),
@@ -389,6 +390,5 @@ class ThroughputChart extends StatelessWidget {
   }
 
   /// `2026-06-22` → `06-22` (compact axis tick).
-  String _weekLabel(String iso) =>
-      iso.length >= 10 ? iso.substring(5) : iso;
+  String _weekLabel(String iso) => iso.length >= 10 ? iso.substring(5) : iso;
 }

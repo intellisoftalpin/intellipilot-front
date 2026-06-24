@@ -20,8 +20,9 @@ void main() {
 
   tearDown(resetDependencies);
 
-  testWidgets('App boots and shows the welcome screen when authenticated',
-      (tester) async {
+  testWidgets('App boots and shows the welcome screen when authenticated', (
+    tester,
+  ) async {
     getIt<SessionBloc>().add(
       const SessionEstablished(
         TokenResponse(
@@ -35,7 +36,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('IntelliPilot'), findsWidgets);
-    expect(find.text('Welcome to IntelliPilot'), findsOneWidget);
+    expect(find.textContaining('Welcome back'), findsOneWidget);
   });
 
   test('AppLocalizations bindings expose at least English', () {

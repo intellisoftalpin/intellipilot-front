@@ -3,11 +3,13 @@ import 'package:intellipilot/app/branding/branding_cubit.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
+import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/io/file_downloader.dart';
 import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/network/api_config.dart';
 import 'package:intellipilot/core/network/cookie_setup.dart';
+import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
 import 'package:intellipilot/features/activity/data/activity_repository_impl.dart';
@@ -23,6 +25,7 @@ import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/data/catalog_repository_impl.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/dashboard/data/dashboard_repository_impl.dart';
+import 'package:intellipilot/features/dashboard/data/dtos/dashboard_dtos.dart';
 import 'package:intellipilot/features/dashboard/domain/dashboard_repository.dart';
 import 'package:intellipilot/features/issues_io/data/issues_io_repository_impl.dart';
 import 'package:intellipilot/features/issues_io/domain/issues_io_repository.dart';
@@ -363,10 +366,42 @@ class _NoopTimesheetRepository implements TimesheetRepository {
   );
 }
 
+// Returns empty (not throwing) data so widget tests that boot onto the home
+// dashboard settle instead of spinning on an infinite loading indicator.
 class _NoopDashboardRepository implements DashboardRepository {
   @override
-  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
-    '_NoopDashboardRepository.${invocation.memberName}',
+  Future<Result<HomeDashboard, AppFailure>> getHome() async =>
+      const Ok<HomeDashboard, AppFailure>(
+        HomeDashboard(
+          assignedTotal: 0,
+          overdue: 0,
+          dueSoon: 0,
+          vacationDaysLeft: 0,
+          byStatus: [],
+          byProject: [],
+          attention: [],
+        ),
+      );
+
+  @override
+  Future<Result<ProjectDashboard, AppFailure>> getProject(
+    String projectId,
+  ) async => const Ok<ProjectDashboard, AppFailure>(
+    ProjectDashboard(
+      total: 0,
+      open: 0,
+      overdue: 0,
+      unassigned: 0,
+      bugsOpen: 0,
+      myAssigned: 0,
+      myOverdue: 0,
+      byStatus: [],
+      myByStatus: [],
+      byType: [],
+      byPriority: [],
+      epics: [],
+      throughput: [],
+    ),
   );
 }
 

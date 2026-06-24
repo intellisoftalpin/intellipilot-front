@@ -198,9 +198,7 @@ class _AttentionList extends StatelessWidget {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(
-              it.overdue
-                  ? Icons.error_outline
-                  : Icons.schedule_outlined,
+              it.overdue ? Icons.error_outline : Icons.schedule_outlined,
               color: it.overdue
                   ? theme.colorScheme.error
                   : theme.colorScheme.primary,

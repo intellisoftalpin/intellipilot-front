@@ -53,8 +53,9 @@ void main() {
     },
   );
 
-  testWidgets('authenticated session lands on home and can reach settings',
-      (tester) async {
+  testWidgets('authenticated session lands on home and can reach settings', (
+    tester,
+  ) async {
     final session = getIt<SessionBloc>()
       ..add(
         const SessionEstablished(
@@ -82,7 +83,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Welcome to IntelliPilot'), findsOneWidget);
+    expect(find.textContaining('Welcome back'), findsOneWidget);
 
     router.go(Routes.settings);
     await tester.pumpAndSettle();

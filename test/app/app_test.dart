@@ -22,8 +22,9 @@ void main() {
 
   tearDown(resetDependencies);
 
-  testWidgets('rebuilds MaterialApp when theme and locale change',
-      (tester) async {
+  testWidgets('rebuilds MaterialApp when theme and locale change', (
+    tester,
+  ) async {
     getIt<SessionBloc>().add(
       const SessionEstablished(
         TokenResponse(
@@ -35,13 +36,13 @@ void main() {
     );
     await tester.pumpWidget(const IntelliPilotApp());
     await tester.pumpAndSettle();
-    expect(find.text('Welcome to IntelliPilot'), findsOneWidget);
+    expect(find.textContaining('Welcome back'), findsOneWidget);
 
     await getIt<ThemeCubit>().setMode(ThemeMode.dark);
     await tester.pumpAndSettle();
     await getIt<LocaleCubit>().setLocale(const Locale('en'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Welcome to IntelliPilot'), findsOneWidget);
+    expect(find.textContaining('Welcome back'), findsOneWidget);
   });
 }

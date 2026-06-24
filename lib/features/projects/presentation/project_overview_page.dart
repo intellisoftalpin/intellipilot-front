@@ -234,10 +234,22 @@ class _Overview extends StatelessWidget {
             Wrap(
               spacing: 8,
               children: [
-                _FeatureChip(label: t.projectFeatureBacklog, on: project.backlogEnabled),
-                _FeatureChip(label: t.projectFeatureKanban, on: project.kanbanEnabled),
-                _FeatureChip(label: t.projectFeatureEpics, on: project.epicsEnabled),
-                _FeatureChip(label: t.projectFeatureWiki, on: project.wikiEnabled),
+                _FeatureChip(
+                  label: t.projectFeatureBacklog,
+                  on: project.backlogEnabled,
+                ),
+                _FeatureChip(
+                  label: t.projectFeatureKanban,
+                  on: project.kanbanEnabled,
+                ),
+                _FeatureChip(
+                  label: t.projectFeatureEpics,
+                  on: project.epicsEnabled,
+                ),
+                _FeatureChip(
+                  label: t.projectFeatureWiki,
+                  on: project.wikiEnabled,
+                ),
               ],
             ),
             const SizedBox(height: 24),
