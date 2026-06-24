@@ -18,6 +18,7 @@ import 'package:intellipilot/demo/demo_store.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
+import 'package:intellipilot/features/admin/data/dtos/app_token_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/auth/data/dtos/auth_dtos.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
@@ -2852,5 +2853,84 @@ class DemoAdminRepository implements AdminRepository {
         message: 'Demo mode: no transport is configured.',
       ),
     );
+  }
+
+  final List<AppTokenDto> _appTokens = [];
+
+  @override
+  Future<Result<List<AppTokenDto>, AppFailure>> listAppTokens() async {
+    await _tick();
+    return Ok(List.unmodifiable(_appTokens));
+  }
+
+  @override
+  Future<Result<CreateAppTokenResult, AppFailure>> createAppToken(
+    CreateAppTokenRequest body,
+  ) async {
+    await _tick();
+    const secret = 'ipat_demoDEMOdemoDEMOdemoDEMOdemo01';
+    final token = AppTokenDto(
+      id: 'demo-${_appTokens.length + 1}',
+      name: body.name,
+      prefix: secret.substring(0, 11),
+      last4: secret.substring(secret.length - 4),
+      permissions: body.permissions,
+      projectIds: body.projectIds,
+      createdBy: null,
+      expiresAt: body.expiresAt,
+      revokedAt: null,
+      lastUsedAt: null,
+      createdAt: DateTime.now(),
+    );
+    _appTokens.insert(0, token);
+    return Ok(CreateAppTokenResult(token: token, secret: secret));
+  }
+
+  @override
+  Future<Result<AppTokenDto, AppFailure>> updateAppToken(
+    String id,
+    UpdateAppTokenRequest body,
+  ) async {
+    await _tick();
+    final i = _appTokens.indexWhere((tok) => tok.id == id);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _appTokens[i];
+    final next = AppTokenDto(
+      id: cur.id,
+      name: body.name ?? cur.name,
+      prefix: cur.prefix,
+      last4: cur.last4,
+      permissions: body.permissions ?? cur.permissions,
+      projectIds: body.projectIds ?? cur.projectIds,
+      createdBy: cur.createdBy,
+      expiresAt: cur.expiresAt,
+      revokedAt: cur.revokedAt,
+      lastUsedAt: cur.lastUsedAt,
+      createdAt: cur.createdAt,
+    );
+    _appTokens[i] = next;
+    return Ok(next);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> revokeAppToken(String id) async {
+    await _tick();
+    final i = _appTokens.indexWhere((tok) => tok.id == id);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _appTokens[i];
+    _appTokens[i] = AppTokenDto(
+      id: cur.id,
+      name: cur.name,
+      prefix: cur.prefix,
+      last4: cur.last4,
+      permissions: cur.permissions,
+      projectIds: cur.projectIds,
+      createdBy: cur.createdBy,
+      expiresAt: cur.expiresAt,
+      revokedAt: DateTime.now(),
+      lastUsedAt: cur.lastUsedAt,
+      createdAt: cur.createdAt,
+    );
+    return const Ok(Unit.instance);
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:intellipilot/core/models/intellibot.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
 
 /// Provides the project's members (keyed by user id) to descendant widgets so
@@ -20,9 +21,16 @@ class MembersScope extends InheritedWidget {
           ?.membersById ??
       const {};
 
-  /// Resolve a single user id (null/unknown → null).
-  static UserRef? user(BuildContext context, String? id) =>
-      id == null ? null : of(context)[id];
+  /// Resolve a single user id (null/unknown → null). The INTELLIBOT system
+  /// actor resolves to a synthetic ref even though it is never a project member,
+  /// so app-token actions render as "INTELLIBOT" wherever an actor is shown.
+  static UserRef? user(BuildContext context, String? id) {
+    if (id == null) return null;
+    final found = of(context)[id];
+    if (found != null) return found;
+    if (id == kIntellibotUserId) return intellibotRef();
+    return null;
+  }
 
   @override
   bool updateShouldNotify(MembersScope oldWidget) =>

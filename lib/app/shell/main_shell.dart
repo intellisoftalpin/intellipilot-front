@@ -433,6 +433,11 @@ class _AvatarMenuState extends State<_AvatarMenu> {
             onPressed: () => context.go(Routes.adminSettings),
             child: const Text('Admin · settings'),
           ),
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.key_outlined),
+            onPressed: () => context.go(Routes.adminAppTokens),
+            child: const Text('Admin · app tokens'),
+          ),
         ],
         const Divider(height: 1),
         MenuItemButton(

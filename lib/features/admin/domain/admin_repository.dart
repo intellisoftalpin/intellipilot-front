@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
+import 'package:intellipilot/features/admin/data/dtos/app_token_dtos.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 
 /// Domain contract for `/api/v1/admin/*` (V011 — platform admin).
@@ -93,4 +94,19 @@ abstract interface class AdminRepository {
     required String channel,
     String? to,
   });
+
+  // ---- App tokens (V004) ----
+  Future<Result<List<AppTokenDto>, AppFailure>> listAppTokens();
+
+  /// Creates a token; the raw secret in the result is delivered only once.
+  Future<Result<CreateAppTokenResult, AppFailure>> createAppToken(
+    CreateAppTokenRequest body,
+  );
+
+  Future<Result<AppTokenDto, AppFailure>> updateAppToken(
+    String id,
+    UpdateAppTokenRequest body,
+  );
+
+  Future<Result<Unit, AppFailure>> revokeAppToken(String id);
 }

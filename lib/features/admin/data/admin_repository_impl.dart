@@ -6,6 +6,7 @@ import 'package:intellipilot/core/error/failure_mapper.dart';
 import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
+import 'package:intellipilot/features/admin/data/dtos/app_token_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 
@@ -332,5 +333,56 @@ class AdminRepositoryImpl implements AdminRepository {
     } on Object catch (e) {
       return Err(UnknownFailure(cause: e));
     }
+  }
+
+  // ---- App tokens (V004) ----
+
+  @override
+  Future<Result<List<AppTokenDto>, AppFailure>> listAppTokens() async {
+    final res = await _api.get('$_base/app-tokens');
+    return _mapOk(
+      res,
+      (r) => ((r.data as List<dynamic>?) ?? const [])
+          .map((e) => AppTokenDto.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  @override
+  Future<Result<CreateAppTokenResult, AppFailure>> createAppToken(
+    CreateAppTokenRequest body,
+  ) async {
+    final res = await _api.post('$_base/app-tokens', body: body.toJson());
+    return _mapOk(
+      res,
+      (r) => CreateAppTokenResult.fromJson(r.data as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  Future<Result<AppTokenDto, AppFailure>> updateAppToken(
+    String id,
+    UpdateAppTokenRequest body,
+  ) async {
+    try {
+      final r = await _api.dio.patch<dynamic>(
+        '$_base/app-tokens/$id',
+        data: body.toJson(),
+      );
+      return Ok(AppTokenDto.fromJson(r.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
+    }
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> revokeAppToken(String id) async {
+    final res = await _api.post('$_base/app-tokens/$id/revoke');
+    return res.when(
+      ok: (_) => const Ok(Unit.instance),
+      err: Err.new,
+    );
   }
 }

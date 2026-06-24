@@ -6,6 +6,7 @@ import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
 import 'package:intellipilot/features/activity/presentation/entity_edit_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_activity_page.dart';
+import 'package:intellipilot/features/admin/presentation/admin_app_tokens_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_settings_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_users_page.dart';
 import 'package:intellipilot/features/auth/presentation/forgot_password_page.dart';
@@ -64,6 +65,7 @@ abstract class Routes {
   static const adminUsers = '/admin/users';
   static const adminSettings = '/admin/settings';
   static const adminActivity = '/admin/activity';
+  static const adminAppTokens = '/admin/app-tokens';
 
   static String projectDetailFor(String id) => '/projects/$id';
   static String projectSettingsFor(String id) => '/projects/$id/settings';
@@ -315,6 +317,11 @@ GoRouter buildRouter({required SessionBloc session}) {
         path: Routes.adminActivity,
         name: 'admin_activity',
         builder: (context, state) => const AdminActivityPage(),
+      ),
+      GoRoute(
+        path: Routes.adminAppTokens,
+        name: 'admin_app_tokens',
+        builder: (context, state) => const AdminAppTokensPage(),
       ),
         ],
       ),

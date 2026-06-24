@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/models/intellibot.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
@@ -259,6 +260,9 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
       customersById: {for (final c in resolve<Customer>(9)) c.id: c},
       membersById: {
         for (final m in resolve<Membership>(10)) m.userId: m.toRef(),
+        // INTELLIBOT is the actor for app-token actions but never a project
+        // member — inject it so owner/author rows resolve to its identity.
+        kIntellibotUserId: intellibotRef(),
       },
     );
   }
