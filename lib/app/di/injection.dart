@@ -22,6 +22,8 @@ import 'package:intellipilot/features/board/data/board_repository_impl.dart';
 import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/data/catalog_repository_impl.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/dashboard/data/dashboard_repository_impl.dart';
+import 'package:intellipilot/features/dashboard/domain/dashboard_repository.dart';
 import 'package:intellipilot/features/issues_io/data/issues_io_repository_impl.dart';
 import 'package:intellipilot/features/issues_io/domain/issues_io_repository.dart';
 import 'package:intellipilot/features/links/data/links_repository_http.dart';
@@ -130,6 +132,9 @@ Future<void> configureDependencies({
   );
   getIt.registerLazySingleton<CatalogRepository>(
     () => CatalogRepositoryImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<DashboardRepository>(
+    () => DashboardRepositoryImpl(getIt<ApiClient>()),
   );
   getIt.registerLazySingleton<BacklogRepository>(
     () => BacklogRepositoryImpl(getIt<ApiClient>()),
@@ -246,6 +251,7 @@ Future<void> configureForTests({
     )
     ..registerSingleton<FilePicker>(filePicker ?? const _StubFilePicker())
     ..registerSingleton<TimesheetRepository>(_NoopTimesheetRepository())
+    ..registerSingleton<DashboardRepository>(_NoopDashboardRepository())
     ..registerSingleton<SessionBloc>(SessionBloc(repository: authRepository))
     ..registerSingleton<ThemeCubit>(ThemeCubit(settingsStorage))
     ..registerSingleton<LocaleCubit>(LocaleCubit(settingsStorage))
@@ -354,6 +360,13 @@ class _NoopTimesheetRepository implements TimesheetRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
     '_NoopTimesheetRepository.${invocation.memberName}',
+  );
+}
+
+class _NoopDashboardRepository implements DashboardRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    '_NoopDashboardRepository.${invocation.memberName}',
   );
 }
 

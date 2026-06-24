@@ -7,6 +7,12 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
+import 'package:intellipilot/core/widgets/error_view.dart';
+import 'package:intellipilot/core/widgets/loading_indicator.dart';
+import 'package:intellipilot/features/dashboard/data/dtos/dashboard_dtos.dart';
+import 'package:intellipilot/features/dashboard/domain/dashboard_repository.dart';
+import 'package:intellipilot/features/dashboard/presentation/cubits/project_dashboard_cubit.dart';
+import 'package:intellipilot/features/dashboard/presentation/widgets/dashboard_widgets.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
@@ -42,16 +48,30 @@ class ProjectOverviewPage extends StatelessWidget {
             ),
           );
         }
-        return BlocProvider<ProjectDetailCubit>(
-          create: (_) {
-            final c = ProjectDetailCubit(
-              repo: getIt<ProjectsRepository>(),
-              projectId: projectId,
-              currentUserId: profile.id,
-            );
-            unawaited(c.load());
-            return c;
-          },
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider<ProjectDetailCubit>(
+              create: (_) {
+                final c = ProjectDetailCubit(
+                  repo: getIt<ProjectsRepository>(),
+                  projectId: projectId,
+                  currentUserId: profile.id,
+                );
+                unawaited(c.load());
+                return c;
+              },
+            ),
+            BlocProvider<ProjectDashboardCubit>(
+              create: (_) {
+                final c = ProjectDashboardCubit(
+                  repo: getIt<DashboardRepository>(),
+                  projectId: projectId,
+                );
+                unawaited(c.load());
+                return c;
+              },
+            ),
+          ],
           child: const _ProjectOverviewView(),
         );
       },
@@ -191,6 +211,8 @@ class _Overview extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
+            const _ProjectDashboardBlock(),
+            const SizedBox(height: 16),
             const TimesheetWarningCard(),
             const SizedBox(height: 8),
             AvailabilityCard(projectId: project.id),
@@ -259,13 +281,6 @@ class _Overview extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            Text(
-              t.projectPhase5Notice,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
           ],
         ),
       ),
@@ -278,6 +293,148 @@ class _Overview extends StatelessWidget {
         ProjectVisibility.internal => t.projectVisibilityInternal,
         ProjectVisibility.publicReadonly => t.projectVisibilityPublicReadonly,
       };
+}
+
+class _ProjectDashboardBlock extends StatelessWidget {
+  const _ProjectDashboardBlock();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ProjectDashboardCubit, ProjectDashboardState>(
+      builder: (context, state) {
+        if (state is ProjectDashboardLoading) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: LoadingIndicator(),
+          );
+        }
+        if (state is ProjectDashboardFailed) {
+          return ErrorView(
+            failure: state.failure,
+            onRetry: () => context.read<ProjectDashboardCubit>().load(),
+          );
+        }
+        if (state is ProjectDashboardLoaded) {
+          return _DashboardContent(data: state.data);
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+}
+
+class _DashboardContent extends StatelessWidget {
+  const _DashboardContent({required this.data});
+
+  final ProjectDashboard data;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            KpiTile(
+              label: t.dashKpiOpen,
+              value: '${data.open}',
+              icon: Icons.radio_button_unchecked,
+            ),
+            KpiTile(
+              label: t.dashKpiOverdue,
+              value: '${data.overdue}',
+              icon: Icons.warning_amber_outlined,
+              tone: data.overdue > 0 ? theme.colorScheme.error : null,
+            ),
+            KpiTile(
+              label: t.dashKpiUnassigned,
+              value: '${data.unassigned}',
+              icon: Icons.person_off_outlined,
+            ),
+            KpiTile(
+              label: t.dashKpiBugs,
+              value: '${data.bugsOpen}',
+              icon: Icons.bug_report_outlined,
+            ),
+            KpiTile(
+              label: t.dashKpiAssigned,
+              value: '${data.myAssigned}',
+              icon: Icons.assignment_ind_outlined,
+            ),
+            KpiTile(
+              label: t.dashKpiMyOverdue,
+              value: '${data.myOverdue}',
+              icon: Icons.event_busy_outlined,
+              tone: data.myOverdue > 0 ? theme.colorScheme.error : null,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        DashboardSection(
+          title: t.dashBoardTitle,
+          icon: Icons.view_kanban_outlined,
+          child: StatusBarChart(
+            buckets: data.byStatus,
+            emptyLabel: t.dashNoWork,
+          ),
+        ),
+        const SizedBox(height: 16),
+        DashboardSection(
+          title: t.dashMyTasksTitle,
+          icon: Icons.assignment_ind_outlined,
+          child: StatusBarChart(
+            buckets: data.myByStatus,
+            emptyLabel: t.dashNoWork,
+          ),
+        ),
+        const SizedBox(height: 16),
+        DashboardSection(
+          title: t.dashEpicsTitle,
+          icon: Icons.flag_outlined,
+          child: data.epics.isEmpty
+              ? Text(
+                  t.dashEpicsEmpty,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                )
+              : Column(
+                  children: [
+                    for (final e in data.epics) EpicProgressTile(epic: e),
+                  ],
+                ),
+        ),
+        const SizedBox(height: 16),
+        DashboardSection(
+          title: t.dashThroughputTitle,
+          icon: Icons.show_chart_outlined,
+          child: ThroughputChart(weeks: data.throughput),
+        ),
+        const SizedBox(height: 16),
+        DashboardSection(
+          title: t.dashByTypeTitle,
+          icon: Icons.category_outlined,
+          child: BreakdownList(
+            items: data.byType,
+            emptyLabel: t.dashBreakdownEmpty,
+          ),
+        ),
+        const SizedBox(height: 16),
+        DashboardSection(
+          title: t.dashByPriorityTitle,
+          icon: Icons.low_priority_outlined,
+          child: BreakdownList(
+            items: data.byPriority,
+            emptyLabel: t.dashBreakdownEmpty,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _FeatureChip extends StatelessWidget {

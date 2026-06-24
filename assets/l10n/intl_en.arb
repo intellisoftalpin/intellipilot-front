@@ -1712,5 +1712,65 @@
   "@importDoneTaxonomy": {
     "description": "Import summary line.",
     "placeholders": { "count": { "type": "int", "example": "3" } }
-  }
+  },
+
+  "dashGreeting": "Welcome back, {name}",
+  "@dashGreeting": {
+    "description": "Greeting headline on the global dashboard.",
+    "placeholders": { "name": { "type": "String", "example": "Boris" } }
+  },
+  "dashKpiAssigned": "Assigned to me",
+  "@dashKpiAssigned": { "description": "KPI tile: issues assigned to the user." },
+  "dashKpiOverdue": "Overdue",
+  "@dashKpiOverdue": { "description": "KPI tile: overdue issues." },
+  "dashKpiDueSoon": "Due this week",
+  "@dashKpiDueSoon": { "description": "KPI tile: issues due within seven days." },
+  "dashKpiVacation": "Vacation days left",
+  "@dashKpiVacation": { "description": "KPI tile: remaining vacation days this year." },
+  "dashAttentionTitle": "Needs your attention",
+  "@dashAttentionTitle": { "description": "Section title for overdue/soon items." },
+  "dashAttentionEmpty": "You’re all caught up.",
+  "@dashAttentionEmpty": { "description": "Empty state for the attention list." },
+  "dashMyWorkTitle": "My work by status",
+  "@dashMyWorkTitle": { "description": "Section title for the user's work chart." },
+  "dashMyProjectsTitle": "My projects",
+  "@dashMyProjectsTitle": { "description": "Section title for the project cards." },
+  "dashMyProjectsEmpty": "You’re not a member of any project yet.",
+  "@dashMyProjectsEmpty": { "description": "Empty state for the project cards." },
+  "dashNoWork": "No issues",
+  "@dashNoWork": { "description": "Empty state for a status breakdown chart." },
+  "dashOpenCount": "{count} open",
+  "@dashOpenCount": {
+    "description": "Open-issue count on a project card.",
+    "placeholders": { "count": { "type": "int", "example": "4" } }
+  },
+  "dashDue": "Due {date}",
+  "@dashDue": {
+    "description": "Due-date label on an attention item.",
+    "placeholders": { "date": { "type": "String", "example": "2026-06-30" } }
+  },
+  "dashKpiOpen": "Open",
+  "@dashKpiOpen": { "description": "KPI tile: open issues in the project." },
+  "dashKpiUnassigned": "Unassigned",
+  "@dashKpiUnassigned": { "description": "KPI tile: unassigned open issues." },
+  "dashKpiBugs": "Open bugs",
+  "@dashKpiBugs": { "description": "KPI tile: open bug issues." },
+  "dashKpiMyOverdue": "My overdue",
+  "@dashKpiMyOverdue": { "description": "KPI tile: the user's overdue issues here." },
+  "dashBoardTitle": "Board snapshot",
+  "@dashBoardTitle": { "description": "Section title for the project status chart." },
+  "dashMyTasksTitle": "My tasks here",
+  "@dashMyTasksTitle": { "description": "Section title for the personal status chart." },
+  "dashEpicsTitle": "Epic readiness",
+  "@dashEpicsTitle": { "description": "Section title for epic completion bars." },
+  "dashEpicsEmpty": "No epics yet",
+  "@dashEpicsEmpty": { "description": "Empty state for the epic readiness list." },
+  "dashThroughputTitle": "Closed per week",
+  "@dashThroughputTitle": { "description": "Section title for the throughput chart." },
+  "dashByTypeTitle": "By type",
+  "@dashByTypeTitle": { "description": "Section title for the issue-type breakdown." },
+  "dashByPriorityTitle": "By priority",
+  "@dashByPriorityTitle": { "description": "Section title for the priority breakdown." },
+  "dashBreakdownEmpty": "No data",
+  "@dashBreakdownEmpty": { "description": "Empty state for a breakdown list." }
 }

@@ -1,152 +1,287 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
-import 'package:intellipilot/core/error/app_failure.dart';
-import 'package:intellipilot/core/network/api_client.dart';
-import 'package:intellipilot/core/widgets/app_scaffold.dart';
 import 'package:intellipilot/core/widgets/error_view.dart';
 import 'package:intellipilot/core/widgets/loading_indicator.dart';
-import 'package:intellipilot/core/widgets/primary_button.dart';
+import 'package:intellipilot/features/dashboard/data/dtos/dashboard_dtos.dart';
+import 'package:intellipilot/features/dashboard/domain/dashboard_repository.dart';
+import 'package:intellipilot/features/dashboard/presentation/cubits/global_dashboard_cubit.dart';
+import 'package:intellipilot/features/dashboard/presentation/widgets/dashboard_widgets.dart';
+import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/timesheet/presentation/widgets/timesheet_warning_card.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
-/// Phase-1 placeholder home page. Demonstrates the foundation layers
-/// end-to-end by running a real `GET /health/live` through the interceptor
-/// pipeline. Replaced in later phases by the project-list home.
-class HomePage extends StatefulWidget {
+/// Global home dashboard — the user's cross-project plate, shown on app entry.
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  Widget build(BuildContext context) {
+    return BlocProvider<GlobalDashboardCubit>(
+      create: (_) {
+        final c = GlobalDashboardCubit(getIt<DashboardRepository>());
+        unawaited(c.load());
+        return c;
+      },
+      child: const _GlobalDashboardView(),
+    );
+  }
 }
 
-class _HomePageState extends State<HomePage> {
-  _HealthStatus _status = const _HealthStatus.idle();
+class _GlobalDashboardView extends StatelessWidget {
+  const _GlobalDashboardView();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-
-    return AppScaffold(
-      title: Text(l10n.appTitle),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings_outlined),
-          tooltip: l10n.settingsTitle,
-          onPressed: () => context.push(Routes.settings),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.appTitle),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: l10n.settingsTitle,
+            onPressed: () => context.push(Routes.settings),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: BlocBuilder<GlobalDashboardCubit, GlobalDashboardState>(
+          builder: (context, state) {
+            if (state is GlobalDashboardLoading) {
+              return const LoadingIndicator();
+            }
+            if (state is GlobalDashboardFailed) {
+              return ErrorView(
+                failure: state.failure,
+                onRetry: () => context.read<GlobalDashboardCubit>().load(),
+              );
+            }
+            if (state is GlobalDashboardLoaded) {
+              return _Loaded(data: state.data);
+            }
+            return const SizedBox.shrink();
+          },
         ),
-      ],
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+    );
+  }
+}
+
+class _Loaded extends StatelessWidget {
+  const _Loaded({required this.data});
+
+  final HomeDashboard data;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1100),
+        child: ListView(
+          padding: const EdgeInsets.all(24),
           children: [
-            Text(l10n.homeWelcomeTitle, style: theme.textTheme.headlineMedium),
-            const SizedBox(height: 12),
-            Text(l10n.homeWelcomeBody, style: theme.textTheme.bodyLarge),
+            const _Greeting(),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                KpiTile(
+                  label: l10n.dashKpiAssigned,
+                  value: '${data.assignedTotal}',
+                  icon: Icons.assignment_ind_outlined,
+                ),
+                KpiTile(
+                  label: l10n.dashKpiOverdue,
+                  value: '${data.overdue}',
+                  icon: Icons.warning_amber_outlined,
+                  tone: data.overdue > 0
+                      ? Theme.of(context).colorScheme.error
+                      : null,
+                ),
+                KpiTile(
+                  label: l10n.dashKpiDueSoon,
+                  value: '${data.dueSoon}',
+                  icon: Icons.event_outlined,
+                ),
+                KpiTile(
+                  label: l10n.dashKpiVacation,
+                  value: _days(data.vacationDaysLeft),
+                  icon: Icons.beach_access_outlined,
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
             const TimesheetWarningCard(),
-            const SizedBox(height: 8),
-            FilledButton.icon(
-              icon: const Icon(Icons.folder_outlined),
-              onPressed: () => context.go(Routes.projects),
-              label: Text(l10n.actionGoToProjects),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              l10n.homeHealthCheckSection,
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 12),
-            PrimaryButton(
-              label: l10n.homePingButton,
-              icon: Icons.cloud_outlined,
-              loading: _status.loading,
-              onPressed: _ping,
+            const SizedBox(height: 16),
+            DashboardSection(
+              title: l10n.dashAttentionTitle,
+              icon: Icons.priority_high_outlined,
+              child: _AttentionList(items: data.attention),
             ),
             const SizedBox(height: 16),
-            Expanded(
-              child: _StatusView(status: _status, onRetry: _ping),
+            DashboardSection(
+              title: l10n.dashMyWorkTitle,
+              icon: Icons.donut_large_outlined,
+              child: StatusBarChart(
+                buckets: data.byStatus,
+                emptyLabel: l10n.dashNoWork,
+              ),
+            ),
+            const SizedBox(height: 16),
+            DashboardSection(
+              title: l10n.dashMyProjectsTitle,
+              icon: Icons.folder_outlined,
+              child: _ProjectGrid(projects: data.byProject),
             ),
           ],
         ),
       ),
     );
   }
-
-  Future<void> _ping() async {
-    setState(() => _status = const _HealthStatus.loading());
-    final client = getIt<ApiClient>();
-    final result = await client.get('/health/live');
-    if (!mounted) return;
-    setState(() {
-      _status = result.when(
-        ok: (response) => _HealthStatus.ok(response.statusCode ?? 0),
-        err: (failure) => _HealthStatus.error(failure),
-      );
-    });
-  }
 }
 
-class _StatusView extends StatelessWidget {
-  const _StatusView({required this.status, required this.onRetry});
-  final _HealthStatus status;
-  final VoidCallback onRetry;
+class _Greeting extends StatelessWidget {
+  const _Greeting();
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    return FutureBuilder<String>(
+      future: _name(),
+      builder: (context, snap) {
+        final name = snap.data ?? '';
+        return Text(
+          l10n.dashGreeting(name),
+          style: theme.textTheme.headlineSmall,
+        );
+      },
+    );
+  }
 
-    if (status.idle) {
+  Future<String> _name() async {
+    final res = await getIt<ProfileRepository>().getProfile();
+    final p = res.valueOrNull;
+    if (p == null) return '';
+    return p.fullName.isNotEmpty ? p.fullName : p.username;
+  }
+}
+
+class _AttentionList extends StatelessWidget {
+  const _AttentionList({required this.items});
+
+  final List<AttentionItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    if (items.isEmpty) {
       return Text(
-        l10n.homePingHint,
+        l10n.dashAttentionEmpty,
         style: theme.textTheme.bodyMedium?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),
       );
     }
-    if (status.loading) return const LoadingIndicator();
-    if (status.failure != null) {
-      return ErrorView(failure: status.failure!, onRetry: onRetry);
-    }
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(Icons.check_circle, color: theme.colorScheme.primary),
-            const SizedBox(width: 12),
-            Expanded(child: Text(l10n.homePingOk(status.statusCode ?? 0))),
-          ],
-        ),
-      ),
+    return Column(
+      children: [
+        for (final it in items)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              it.overdue
+                  ? Icons.error_outline
+                  : Icons.schedule_outlined,
+              color: it.overdue
+                  ? theme.colorScheme.error
+                  : theme.colorScheme.primary,
+            ),
+            title: Text(
+              '${it.projectSlug}-${it.reference}  ${it.subject}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(
+              it.dueDate == null
+                  ? it.statusName
+                  : '${it.statusName} · ${l10n.dashDue(it.dueDate!)}',
+            ),
+            onTap: () => context.go(Routes.projectIssuesFor(it.projectId)),
+          ),
+      ],
     );
   }
 }
 
-class _HealthStatus {
-  const _HealthStatus._({
-    required this.idle,
-    required this.loading,
-    this.statusCode,
-    this.failure,
-  });
+class _ProjectGrid extends StatelessWidget {
+  const _ProjectGrid({required this.projects});
 
-  const _HealthStatus.idle() : this._(idle: true, loading: false);
+  final List<ProjectBucket> projects;
 
-  const _HealthStatus.loading() : this._(idle: false, loading: true);
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    if (projects.isEmpty) {
+      return Text(
+        l10n.dashMyProjectsEmpty,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      );
+    }
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: [
+        for (final p in projects)
+          SizedBox(
+            width: 220,
+            child: Card(
+              margin: EdgeInsets.zero,
+              child: InkWell(
+                onTap: () => context.go(Routes.projectDetailFor(p.projectId)),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.name,
+                        style: theme.textTheme.titleSmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.dashOpenCount(p.openCount),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
 
-  const _HealthStatus.ok(int code)
-    : this._(idle: false, loading: false, statusCode: code);
-
-  const _HealthStatus.error(AppFailure f)
-    : this._(idle: false, loading: false, failure: f);
-
-  final bool idle;
-  final bool loading;
-  final int? statusCode;
-  final AppFailure? failure;
+/// `18.5` → `18.5`, `18.0` → `18`.
+String _days(double v) {
+  final r = v.toStringAsFixed(1);
+  return r.endsWith('.0') ? r.substring(0, r.length - 2) : r;
 }
