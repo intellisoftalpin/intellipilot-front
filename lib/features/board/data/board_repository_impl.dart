@@ -17,8 +17,7 @@ class BoardRepositoryImpl implements BoardRepository {
       '/api/v1/projects/$projectId/milestones/$milestoneId/board',
     );
     return res.when(
-      ok: (r) =>
-          Ok(BoardSnapshot.fromJson(r.data as Map<String, dynamic>)),
+      ok: (r) => Ok(BoardSnapshot.fromJson(r.data as Map<String, dynamic>)),
       err: Err.new,
     );
   }

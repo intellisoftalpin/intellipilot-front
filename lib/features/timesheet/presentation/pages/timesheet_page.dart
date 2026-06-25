@@ -118,9 +118,18 @@ class _TimesheetView extends StatelessWidget {
   }
 }
 
-class _LoadedBody extends StatelessWidget {
+class _LoadedBody extends StatefulWidget {
   const _LoadedBody({required this.state});
   final TimesheetLoaded state;
+
+  @override
+  State<_LoadedBody> createState() => _LoadedBodyState();
+}
+
+class _LoadedBodyState extends State<_LoadedBody> {
+  String? _selected;
+
+  TimesheetLoaded get state => widget.state;
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +139,15 @@ class _LoadedBody extends StatelessWidget {
       Localizations.localeOf(context).toLanguageTag(),
     ).format(DateTime(state.year, state.month));
     final byDate = state.byDate;
-    final dates = byDate.keys.toList()..sort((a, b) => b.compareTo(a));
+
+    // Default the selected day to today (when in this month) so its entries
+    // show immediately; otherwise none is selected.
+    final today = DateTime.now();
+    final selected =
+        _selected ??
+        ((today.year == state.year && today.month == state.month)
+            ? isoFrom(today)
+            : null);
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -159,13 +176,25 @@ class _LoadedBody extends StatelessWidget {
         const SizedBox(height: 8),
         _BalanceCard(balance: state.balance),
         const SizedBox(height: 12),
+        _MonthCalendar(
+          year: state.year,
+          month: state.month,
+          byDate: byDate,
+          targetMinutes: state.summary.workMinutesPerDay,
+          missingDays: state.summary.missingDays.toSet(),
+          selected: selected,
+          onSelect: (d) => setState(() => _selected = d),
+        ),
+        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
               child: FilledButton.icon(
                 icon: const Icon(Icons.add),
                 label: Text(t.ttLogTime),
-                onPressed: state.busy ? null : () => _openLog(context, cubit),
+                onPressed: state.busy
+                    ? null
+                    : () => _openLog(context, cubit, selected),
               ),
             ),
             const SizedBox(width: 8),
@@ -181,22 +210,32 @@ class _LoadedBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        if (dates.isEmpty)
+        if (selected != null && (byDate[selected]?.isNotEmpty ?? false))
+          _DaySection(
+            date: selected,
+            entries: byDate[selected]!,
+            cubit: cubit,
+          )
+        else
           Padding(
             padding: const EdgeInsets.all(24),
             child: Center(child: Text(t.ttNoEntries)),
-          )
-        else
-          for (final d in dates)
-            _DaySection(date: d, entries: byDate[d]!, cubit: cubit),
+          ),
       ],
     );
   }
 
-  Future<void> _openLog(BuildContext context, TimesheetCubit cubit) async {
+  Future<void> _openLog(
+    BuildContext context,
+    TimesheetCubit cubit,
+    String? day,
+  ) async {
     await showDialog<void>(
       context: context,
-      builder: (_) => LogTimeDialog(cubit: cubit),
+      builder: (_) => LogTimeDialog(
+        cubit: cubit,
+        initialDate: day == null ? null : DateTime.tryParse(day),
+      ),
     );
   }
 
@@ -204,6 +243,198 @@ class _LoadedBody extends StatelessWidget {
     await showDialog<void>(
       context: context,
       builder: (_) => BookAbsenceDialog(cubit: cubit),
+    );
+  }
+}
+
+/// A month grid: each in-month day shows logged hours or an absence marker;
+/// complete days are tinted, missing working days are outlined, today is
+/// ringed, and the selected day is highlighted. Tapping a day selects it.
+class _MonthCalendar extends StatelessWidget {
+  const _MonthCalendar({
+    required this.year,
+    required this.month,
+    required this.byDate,
+    required this.targetMinutes,
+    required this.missingDays,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final int year;
+  final int month;
+  final Map<String, List<TimeEntry>> byDate;
+  final int targetMinutes;
+  final Set<String> missingDays;
+  final String? selected;
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    // Weekday headers Mon..Sun (2024-01-01 was a Monday).
+    final dow = DateFormat.E(locale);
+    final headers = [
+      for (var i = 0; i < 7; i++) dow.format(DateTime(2024, 1, 1 + i)),
+    ];
+
+    final first = DateTime(year, month);
+    final lead = first.weekday - 1; // Mon=1 → 0 leading blanks
+    final days = lastDay(year, month);
+    final todayIso = isoFrom(DateTime.now());
+
+    final cells = <Widget>[];
+    for (var i = 0; i < lead; i++) {
+      cells.add(const SizedBox.shrink());
+    }
+    for (var d = 1; d <= days; d++) {
+      final iso = isoDate(year, month, d);
+      final entries = byDate[iso] ?? const <TimeEntry>[];
+      final work = entries
+          .where((e) => e.kind == EntryKind.work)
+          .fold<int>(0, (s, e) => s + e.minutes);
+      final absence = entries
+          .where((e) => e.kind != EntryKind.work)
+          .map((e) => e.kind)
+          .firstOrNull;
+      cells.add(
+        _DayCell(
+          day: d,
+          workMinutes: work,
+          absence: absence,
+          target: targetMinutes,
+          isMissing: missingDays.contains(iso),
+          isToday: iso == todayIso,
+          isSelected: iso == selected,
+          onTap: () => onSelect(iso),
+        ),
+      );
+    }
+    while (cells.length % 7 != 0) {
+      cells.add(const SizedBox.shrink());
+    }
+
+    final rows = <Widget>[];
+    for (var i = 0; i < cells.length; i += 7) {
+      rows.add(
+        Row(
+          children: [
+            for (var j = 0; j < 7; j++)
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: cells[i + j],
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                for (final h in headers)
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        h,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            ...rows,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DayCell extends StatelessWidget {
+  const _DayCell({
+    required this.day,
+    required this.workMinutes,
+    required this.absence,
+    required this.target,
+    required this.isMissing,
+    required this.isToday,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final int day;
+  final int workMinutes;
+  final EntryKind? absence;
+  final int target;
+  final bool isMissing;
+  final bool isToday;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final complete = workMinutes >= target && target > 0;
+    Color? bg;
+    if (isSelected) {
+      bg = theme.colorScheme.primaryContainer;
+    } else if (absence != null) {
+      bg = theme.colorScheme.tertiaryContainer.withValues(alpha: 0.5);
+    } else if (complete) {
+      bg = theme.colorScheme.primary.withValues(alpha: 0.12);
+    }
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 56,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isToday
+                ? theme.colorScheme.primary
+                : (isMissing
+                      ? theme.colorScheme.error.withValues(alpha: 0.6)
+                      : theme.colorScheme.outlineVariant),
+            width: isToday ? 2 : 1,
+          ),
+        ),
+        padding: const EdgeInsets.all(4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('$day', style: theme.textTheme.labelSmall),
+            const Spacer(),
+            if (absence != null)
+              Center(child: Icon(kindIcon(absence!), size: 16))
+            else if (workMinutes > 0)
+              Center(
+                child: Text(
+                  fmtMins(workMinutes),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: complete
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            const Spacer(),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -150,9 +150,7 @@ class ActivityStreamCubit extends Cubit<ActivityStreamState> {
     if (!isClosed) {
       emit(
         s.copyWith(
-          comments: s.comments
-              .map((x) => x.id == commentId ? c : x)
-              .toList(),
+          comments: s.comments.map((x) => x.id == commentId ? c : x).toList(),
         ),
       );
     }

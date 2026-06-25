@@ -9,6 +9,7 @@ import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/core/widgets/error_view.dart';
 import 'package:intellipilot/core/widgets/loading_indicator.dart';
+import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/dashboard/data/dtos/dashboard_dtos.dart';
 import 'package:intellipilot/features/dashboard/domain/dashboard_repository.dart';
 import 'package:intellipilot/features/dashboard/presentation/cubits/project_dashboard_cubit.dart';
@@ -72,7 +73,7 @@ class ProjectOverviewPage extends StatelessWidget {
               },
             ),
           ],
-          child: const _ProjectOverviewView(),
+          child: _ProjectOverviewView(currentUserId: profile.id),
         );
       },
     );
@@ -85,7 +86,8 @@ class ProjectOverviewPage extends StatelessWidget {
 }
 
 class _ProjectOverviewView extends StatelessWidget {
-  const _ProjectOverviewView();
+  const _ProjectOverviewView({required this.currentUserId});
+  final String currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +154,10 @@ class _ProjectOverviewView extends StatelessWidget {
                 );
               }
               if (state is ProjectDetailLoaded) {
-                return _Overview(state: state);
+                return _Overview(
+                  state: state,
+                  currentUserId: currentUserId,
+                );
               }
               return const SizedBox.shrink();
             },
@@ -165,8 +170,9 @@ class _ProjectOverviewView extends StatelessWidget {
 }
 
 class _Overview extends StatelessWidget {
-  const _Overview({required this.state});
+  const _Overview({required this.state, required this.currentUserId});
   final ProjectDetailLoaded state;
+  final String currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -211,7 +217,10 @@ class _Overview extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            const _ProjectDashboardBlock(),
+            _ProjectDashboardBlock(
+              projectId: project.id,
+              currentUserId: currentUserId,
+            ),
             const SizedBox(height: 16),
             const TimesheetWarningCard(),
             const SizedBox(height: 8),
@@ -308,7 +317,12 @@ class _Overview extends StatelessWidget {
 }
 
 class _ProjectDashboardBlock extends StatelessWidget {
-  const _ProjectDashboardBlock();
+  const _ProjectDashboardBlock({
+    required this.projectId,
+    required this.currentUserId,
+  });
+  final String projectId;
+  final String currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -327,7 +341,11 @@ class _ProjectDashboardBlock extends StatelessWidget {
           );
         }
         if (state is ProjectDashboardLoaded) {
-          return _DashboardContent(data: state.data);
+          return _DashboardContent(
+            data: state.data,
+            projectId: projectId,
+            currentUserId: currentUserId,
+          );
         }
         return const SizedBox.shrink();
       },
@@ -336,14 +354,30 @@ class _ProjectDashboardBlock extends StatelessWidget {
 }
 
 class _DashboardContent extends StatelessWidget {
-  const _DashboardContent({required this.data});
+  const _DashboardContent({
+    required this.data,
+    required this.projectId,
+    required this.currentUserId,
+  });
 
   final ProjectDashboard data;
+  final String projectId;
+  final String currentUserId;
+
+  void _go(BuildContext context, String location) => context.go(location);
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final categories = [
+      for (final c in data.byCategory)
+        NamedCount(
+          name: _humanizeCategory(c.name),
+          color: c.color,
+          count: c.count,
+        ),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -355,33 +389,58 @@ class _DashboardContent extends StatelessWidget {
               label: t.dashKpiOpen,
               value: '${data.open}',
               icon: Icons.radio_button_unchecked,
+              onTap: () => _go(context, Routes.projectIssuesFor(projectId)),
             ),
             KpiTile(
               label: t.dashKpiOverdue,
               value: '${data.overdue}',
               icon: Icons.warning_amber_outlined,
               tone: data.overdue > 0 ? theme.colorScheme.error : null,
+              onTap: () => _go(
+                context,
+                Routes.projectIssuesFiltered(projectId, overdue: true),
+              ),
             ),
             KpiTile(
               label: t.dashKpiUnassigned,
               value: '${data.unassigned}',
               icon: Icons.person_off_outlined,
+              onTap: () => _go(
+                context,
+                Routes.projectIssuesFiltered(projectId, assignee: 'none'),
+              ),
             ),
             KpiTile(
               label: t.dashKpiBugs,
               value: '${data.bugsOpen}',
               icon: Icons.bug_report_outlined,
+              onTap: () => _go(context, Routes.projectIssuesFor(projectId)),
             ),
             KpiTile(
               label: t.dashKpiAssigned,
               value: '${data.myAssigned}',
               icon: Icons.assignment_ind_outlined,
+              onTap: () => _go(
+                context,
+                Routes.projectIssuesFiltered(
+                  projectId,
+                  assignee: currentUserId,
+                ),
+              ),
             ),
             KpiTile(
               label: t.dashKpiMyOverdue,
               value: '${data.myOverdue}',
               icon: Icons.event_busy_outlined,
               tone: data.myOverdue > 0 ? theme.colorScheme.error : null,
+              onTap: () => _go(
+                context,
+                Routes.projectIssuesFiltered(
+                  projectId,
+                  assignee: currentUserId,
+                  overdue: true,
+                ),
+              ),
             ),
           ],
         ),
@@ -416,7 +475,18 @@ class _DashboardContent extends StatelessWidget {
                 )
               : Column(
                   children: [
-                    for (final e in data.epics) EpicProgressTile(epic: e),
+                    for (final e in data.epics)
+                      EpicProgressTile(
+                        epic: e,
+                        onTap: () => _go(
+                          context,
+                          Routes.entityDetailFor(
+                            projectId,
+                            EntityKind.epic,
+                            e.epicId,
+                          ),
+                        ),
+                      ),
                   ],
                 ),
         ),
@@ -444,9 +514,25 @@ class _DashboardContent extends StatelessWidget {
             emptyLabel: t.dashBreakdownEmpty,
           ),
         ),
+        const SizedBox(height: 16),
+        DashboardSection(
+          title: t.dashByCategoryTitle,
+          icon: Icons.workspaces_outline,
+          child: BreakdownList(
+            items: categories,
+            emptyLabel: t.dashBreakdownEmpty,
+          ),
+        ),
       ],
     );
   }
+}
+
+/// `customer_request` → `Customer request`.
+String _humanizeCategory(String raw) {
+  if (raw.isEmpty) return raw;
+  final spaced = raw.replaceAll('_', ' ');
+  return spaced[0].toUpperCase() + spaced.substring(1);
 }
 
 class _FeatureChip extends StatelessWidget {

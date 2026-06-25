@@ -43,8 +43,8 @@ class _ComponentsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final detail = context.watch<ProjectDetailCubit>().state;
-    final canEdit = detail is ProjectDetailLoaded &&
-        detail.has(Permission.projectModify);
+    final canEdit =
+        detail is ProjectDetailLoaded && detail.has(Permission.projectModify);
 
     return BlocBuilder<ComponentsCubit, ComponentsState>(
       builder: (context, state) {
@@ -102,8 +102,7 @@ class _ComponentsView extends StatelessWidget {
                           IconButton(
                             icon: const Icon(Icons.delete_outline),
                             tooltip: t.actionDelete,
-                            onPressed: () =>
-                                _confirmDelete(context, component),
+                            onPressed: () => _confirmDelete(context, component),
                           ),
                         ],
                       ],
@@ -132,9 +131,7 @@ class _ComponentsView extends StatelessWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
           title: Text(
-            existing == null
-                ? t.actionNewComponent
-                : t.actionEditComponent,
+            existing == null ? t.actionNewComponent : t.actionEditComponent,
           ),
           content: SizedBox(
             width: 400,
@@ -344,8 +341,9 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.commit_outlined),
                             title: Text(link.repositoryName),
-                            subtitle:
-                                Text('${link.sshUrl}\nBranch: ${link.branch}'),
+                            subtitle: Text(
+                              '${link.sshUrl}\nBranch: ${link.branch}',
+                            ),
                             isThreeLine: true,
                             trailing: widget.canEdit
                                 ? Wrap(
@@ -469,13 +467,13 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
   Future<void> _addRelease(BuildContext context) async {
     final cubit = context.read<ComponentReleasesCubit>();
     final releases =
-        (await getIt<CatalogRepository>().listReleases(widget.projectId))
-                .valueOrNull ??
-            const [];
+        (await getIt<CatalogRepository>().listReleases(
+          widget.projectId,
+        )).valueOrNull ??
+        const [];
     if (!context.mounted) return;
     final linkedIds = (cubit.state is ComponentReleasesLoaded)
-        ? (cubit.state as ComponentReleasesLoaded)
-              .links
+        ? (cubit.state as ComponentReleasesLoaded).links
               .map((l) => l.releaseId)
               .toSet()
         : <String>{};
@@ -561,8 +559,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
               .map((l) => l.repositoryId)
               .toSet()
         : <String>{};
-    final available =
-        repos.where((r) => !linkedIds.contains(r.id)).toList();
+    final available = repos.where((r) => !linkedIds.contains(r.id)).toList();
     if (available.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No more repositories to link.')),
@@ -647,8 +644,9 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Text('Fetch branches'),
                       ),

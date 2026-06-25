@@ -54,8 +54,10 @@ class AttachmentsView extends StatelessWidget {
                 )
               else
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -83,8 +85,7 @@ class AttachmentsView extends StatelessWidget {
                       ),
                       itemCount: state.items.length,
                       separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, i) =>
-                          _Row(att: state.items[i]),
+                      itemBuilder: (context, i) => _Row(att: state.items[i]),
                     ),
             ),
           ],
@@ -127,8 +128,7 @@ class _UploadBar extends StatelessWidget {
             IconButton(
               tooltip: t.attachmentsCancelUpload,
               icon: const Icon(Icons.close),
-              onPressed: () =>
-                  context.read<AttachmentsCubit>().cancelUpload(),
+              onPressed: () => context.read<AttachmentsCubit>().cancelUpload(),
             ),
           ],
         ),
@@ -233,7 +233,6 @@ class _Row extends StatelessWidget {
       await cubit.delete(att.id);
     }
   }
-
 }
 
 String _humanSize(int bytes) {

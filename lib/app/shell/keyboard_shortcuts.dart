@@ -86,7 +86,8 @@ class _GlobalShortcutsShellState extends State<GlobalShortcutsShell> {
     // Skip if a text field is focused — let it consume the keystroke.
     final focus = FocusManager.instance.primaryFocus;
     if (focus?.context?.widget is EditableText) return false;
-    final isEditable = focus != null &&
+    final isEditable =
+        focus != null &&
         focus.context != null &&
         _isTextEditingContext(focus.context!);
     if (isEditable) return false;
@@ -94,7 +95,8 @@ class _GlobalShortcutsShellState extends State<GlobalShortcutsShell> {
     final ctx = _navContext();
     if (ctx == null) return false;
 
-    final isCmdK = (event.logicalKey == LogicalKeyboardKey.keyK) &&
+    final isCmdK =
+        (event.logicalKey == LogicalKeyboardKey.keyK) &&
         (HardwareKeyboard.instance.isMetaPressed ||
             HardwareKeyboard.instance.isControlPressed);
     if (isCmdK) {
@@ -203,8 +205,7 @@ class _GlobalShortcutsShellState extends State<GlobalShortcutsShell> {
                         ),
                         decoration: BoxDecoration(
                           border: Border.all(
-                            color:
-                                Theme.of(ctx).colorScheme.outlineVariant,
+                            color: Theme.of(ctx).colorScheme.outlineVariant,
                           ),
                           borderRadius: BorderRadius.circular(4),
                         ),

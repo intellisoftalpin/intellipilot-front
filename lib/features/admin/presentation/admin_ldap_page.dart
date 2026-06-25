@@ -262,7 +262,11 @@ class _LdapFormState extends State<_LdapForm> {
           onChanged: ro ? null : (v) => setState(() => _enabled = v),
         ),
         const Divider(),
-        _field(_serverUrl, l10n.adminLdapServerUrl, hint: 'ldap://dc.example.com:389'),
+        _field(
+          _serverUrl,
+          l10n.adminLdapServerUrl,
+          hint: 'ldap://dc.example.com:389',
+        ),
         SwitchListTile(
           title: Text(l10n.adminLdapUseStartTls),
           value: _startTls,
@@ -275,7 +279,11 @@ class _LdapFormState extends State<_LdapForm> {
           onChanged: ro ? null : (v) => setState(() => _skipVerify = v),
         ),
         _field(_baseDn, l10n.adminLdapBaseDn, hint: 'dc=example,dc=com'),
-        _field(_defaultDomain, l10n.adminLdapDefaultDomain, hint: 'example.com'),
+        _field(
+          _defaultDomain,
+          l10n.adminLdapDefaultDomain,
+          hint: 'example.com',
+        ),
         const SizedBox(height: 12),
         Text(l10n.adminLdapBindMode, style: theme.textTheme.titleSmall),
         const SizedBox(height: 8),

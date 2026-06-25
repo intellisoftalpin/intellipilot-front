@@ -195,7 +195,9 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
                             icon: const Icon(Icons.upload_file),
                             onPressed: _pickIcon,
                             label: Text(
-                              AppLocalizations.of(context).adminBrandingUploadIcon,
+                              AppLocalizations.of(
+                                context,
+                              ).adminBrandingUploadIcon,
                             ),
                           ),
                           OutlinedButton.icon(
@@ -204,7 +206,9 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
                                 ? _resetIcon
                                 : null,
                             label: Text(
-                              AppLocalizations.of(context).adminBrandingResetIcon,
+                              AppLocalizations.of(
+                                context,
+                              ).adminBrandingResetIcon,
                             ),
                           ),
                         ],
@@ -232,7 +236,9 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
               maxLength: 64,
               decoration: InputDecoration(
                 hintText: 'IntelliPilot',
-                helperText: AppLocalizations.of(context).adminBrandingNameHelper,
+                helperText: AppLocalizations.of(
+                  context,
+                ).adminBrandingNameHelper,
               ),
             ),
             Align(
@@ -259,8 +265,9 @@ class _AdminBrandingPageState extends State<AdminBrandingPage> {
               maxLines: 4,
               decoration: InputDecoration(
                 hintText: AppLocalizations.of(context).adminBrandingMessageHint,
-                helperText:
-                    AppLocalizations.of(context).adminBrandingMessageHelper,
+                helperText: AppLocalizations.of(
+                  context,
+                ).adminBrandingMessageHelper,
                 alignLabelWithHint: true,
               ),
             ),

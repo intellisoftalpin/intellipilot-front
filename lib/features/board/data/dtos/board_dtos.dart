@@ -8,10 +8,9 @@ class BoardColumn {
 
   factory BoardColumn.fromJson(Map<String, dynamic> json) {
     final rawStatus = json['status'];
-    final issues =
-        (json['issues'] as List<dynamic>? ?? const [])
-            .map((e) => BoardCard.fromJson(e as Map<String, dynamic>))
-            .toList();
+    final issues = (json['issues'] as List<dynamic>? ?? const [])
+        .map((e) => BoardCard.fromJson(e as Map<String, dynamic>))
+        .toList();
     return BoardColumn(
       status: rawStatus is Map<String, dynamic>
           ? TaxonomyItem.fromJson(rawStatus)

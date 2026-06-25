@@ -87,7 +87,11 @@ class _UsersViewState extends State<_UsersView> {
                 AdminUsersFailed(:final failure) => Center(
                   child: Text(l10n.adminUsersLoadFailed(failure.debugLabel)),
                 ),
-                AdminUsersLoaded(:final items, :final total, :final lastError) =>
+                AdminUsersLoaded(
+                  :final items,
+                  :final total,
+                  :final lastError,
+                ) =>
                   _UsersList(
                     items: items,
                     total: total,
@@ -335,7 +339,10 @@ class _UserTile extends StatelessWidget {
             child: Text(l10n.adminUsersIssueReset),
           ),
           PopupMenuItem(value: 'time', child: Text(l10n.ttAdminTimeMenu)),
-          PopupMenuItem(value: 'delete', child: Text(l10n.adminUsersDeleteMenu)),
+          PopupMenuItem(
+            value: 'delete',
+            child: Text(l10n.adminUsersDeleteMenu),
+          ),
         ],
       ),
     );
@@ -403,8 +410,7 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
       case ValidationFailure(:final fieldErrors) when fieldErrors.isNotEmpty:
         return fieldErrors
             .map(
-              (e) =>
-                  '${_fieldLabel(l10n, e.field)}: ${e.message ?? 'invalid'}',
+              (e) => '${_fieldLabel(l10n, e.field)}: ${e.message ?? 'invalid'}',
             )
             .join('\n');
       case ConflictFailure():

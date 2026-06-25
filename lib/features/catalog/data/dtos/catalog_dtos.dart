@@ -16,6 +16,11 @@ enum TaxonomyKind {
   /// drives the scaled size badge).
   bool get hasValue => this == TaxonomyKind.size;
 
+  /// Kinds that carry an identifying emoji (issue type and priority), shown as
+  /// a small glyph on their chips.
+  bool get hasEmoji =>
+      this == TaxonomyKind.issueType || this == TaxonomyKind.priority;
+
   static TaxonomyKind fromWire(String wire) {
     for (final k in TaxonomyKind.values) {
       if (k.wire == wire) return k;
@@ -34,6 +39,7 @@ class TaxonomyItem {
     required this.color,
     required this.order,
     required this.createdAt,
+    this.emoji = '',
     this.isClosed,
     this.value,
   });
@@ -46,6 +52,7 @@ class TaxonomyItem {
       name: json['name'] as String,
       slug: json['slug'] as String,
       color: (json['color'] as String?) ?? '',
+      emoji: (json['emoji'] as String?) ?? '',
       order: (json['order'] as num?)?.toDouble() ?? 0.0,
       isClosed: json['is_closed'] as bool?,
       value: (json['value'] as num?)?.toDouble(),
@@ -59,6 +66,7 @@ class TaxonomyItem {
   final String name;
   final String slug;
   final String color;
+  final String emoji;
   final double order;
   final bool? isClosed;
   final double? value;
@@ -70,6 +78,7 @@ class CreateTaxonomyItemRequest {
     required this.name,
     required this.slug,
     this.color = '',
+    this.emoji = '',
     this.isClosed,
     this.value,
   });
@@ -77,6 +86,7 @@ class CreateTaxonomyItemRequest {
   final String name;
   final String slug;
   final String color;
+  final String emoji;
   final bool? isClosed;
   final double? value;
 
@@ -84,6 +94,7 @@ class CreateTaxonomyItemRequest {
     'name': name,
     'slug': slug,
     'color': color,
+    'emoji': emoji,
     if (isClosed != null) 'is_closed': isClosed,
     if (value != null) 'value': value,
   };
@@ -93,18 +104,21 @@ class UpdateTaxonomyItemRequest {
   const UpdateTaxonomyItemRequest({
     this.name,
     this.color,
+    this.emoji,
     this.isClosed,
     this.value,
   });
 
   final String? name;
   final String? color;
+  final String? emoji;
   final bool? isClosed;
   final double? value;
 
   Map<String, dynamic> toJson() => {
     if (name != null) 'name': name,
     if (color != null) 'color': color,
+    if (emoji != null) 'emoji': emoji,
     if (isClosed != null) 'is_closed': isClosed,
     if (value != null) 'value': value,
   };

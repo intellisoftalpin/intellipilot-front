@@ -17,8 +17,9 @@ class SizeBadge extends StatelessWidget {
     final fontSize = 9.0 + ordinal; // 10..15
     final hPad = 4.0 + ordinal; // 5..10
     final color = _hexToColor(item.color);
-    final foreground =
-        color.computeLuminance() > 0.5 ? Colors.black87 : Colors.white;
+    final foreground = color.computeLuminance() > 0.5
+        ? Colors.black87
+        : Colors.white;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 2),
       decoration: BoxDecoration(

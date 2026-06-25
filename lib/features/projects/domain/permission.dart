@@ -26,19 +26,8 @@ enum Permission {
   epicModify('epic.modify', PermissionDomain.epics),
   epicDelete('epic.delete', PermissionDomain.epics),
 
-  // User stories
-  usView('us.view', PermissionDomain.userStories),
-  usCreate('us.create', PermissionDomain.userStories),
-  usModify('us.modify', PermissionDomain.userStories),
-  usDelete('us.delete', PermissionDomain.userStories),
-
-  // Tasks
-  taskView('task.view', PermissionDomain.tasks),
-  taskCreate('task.create', PermissionDomain.tasks),
-  taskModify('task.modify', PermissionDomain.tasks),
-  taskDelete('task.delete', PermissionDomain.tasks),
-
-  // Issues
+  // Issues (user stories and tasks were merged into the unified issue type;
+  // their old us.* / task.* permissions no longer exist).
   issueView('issue.view', PermissionDomain.issues),
   issueCreate('issue.create', PermissionDomain.issues),
   issueModify('issue.modify', PermissionDomain.issues),
@@ -90,8 +79,6 @@ enum PermissionDomain {
   members,
   roles,
   epics,
-  userStories,
-  tasks,
   issues,
   milestones,
   wiki,
@@ -106,9 +93,8 @@ enum PermissionDomain {
 /// the UI only edits the permissions vector.
 abstract final class RolePresets {
   /// All view permissions (the stakeholder baseline).
-  static Set<Permission> reader() => Permission.values
-      .where((p) => p.wire.endsWith('.view'))
-      .toSet();
+  static Set<Permission> reader() =>
+      Permission.values.where((p) => p.wire.endsWith('.view')).toSet();
 
   /// Developer: view everything, create/modify work items + comments/
   /// attachments. No delete, no project/member/role admin.
@@ -117,10 +103,6 @@ abstract final class RolePresets {
     base.addAll(const [
       Permission.epicCreate,
       Permission.epicModify,
-      Permission.usCreate,
-      Permission.usModify,
-      Permission.taskCreate,
-      Permission.taskModify,
       Permission.issueCreate,
       Permission.issueModify,
       Permission.milestoneCreate,
@@ -150,8 +132,6 @@ abstract final class RolePresets {
       Permission.roleModify,
       Permission.roleDelete,
       Permission.epicDelete,
-      Permission.usDelete,
-      Permission.taskDelete,
       Permission.issueDelete,
       Permission.milestoneDelete,
       Permission.wikiDelete,

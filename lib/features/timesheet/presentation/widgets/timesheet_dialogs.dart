@@ -15,8 +15,9 @@ int? _minutesFromHours(String raw) {
 
 /// Log worked time against one of the caller's assigned tasks.
 class LogTimeDialog extends StatefulWidget {
-  const LogTimeDialog({required this.cubit, super.key});
+  const LogTimeDialog({required this.cubit, this.initialDate, super.key});
   final TimesheetCubit cubit;
+  final DateTime? initialDate;
 
   @override
   State<LogTimeDialog> createState() => _LogTimeDialogState();
@@ -25,7 +26,7 @@ class LogTimeDialog extends StatefulWidget {
 class _LogTimeDialogState extends State<LogTimeDialog> {
   final _hours = TextEditingController();
   final _note = TextEditingController();
-  DateTime _date = DateTime.now();
+  late DateTime _date = widget.initialDate ?? DateTime.now();
   AssignedTask? _task;
   String? _error;
   bool _busy = false;

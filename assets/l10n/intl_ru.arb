@@ -911,5 +911,12 @@
   "dashThroughputTitle": "Закрыто за неделю",
   "dashByTypeTitle": "По типу",
   "dashByPriorityTitle": "По приоритету",
-  "dashBreakdownEmpty": "Нет данных"
+  "dashBreakdownEmpty": "Нет данных",
+  "dashByCategoryTitle": "По категории",
+  "navDashboard": "Дашборд",
+  "fieldEmoji": "Эмодзи",
+  "actionClearFilters": "Сбросить фильтры",
+  "issueFieldDueDate": "Срок выполнения",
+  "issueFieldAssignee": "Исполнитель",
+  "issueFieldCategory": "Категория"
 }

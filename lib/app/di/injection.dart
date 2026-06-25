@@ -399,6 +399,7 @@ class _NoopDashboardRepository implements DashboardRepository {
       myByStatus: [],
       byType: [],
       byPriority: [],
+      byCategory: [],
       epics: [],
       throughput: [],
     ),

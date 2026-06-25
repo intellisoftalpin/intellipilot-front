@@ -82,8 +82,7 @@ class CreateAppTokenRequest {
     'name': name,
     'permissions': permissions.map((p) => p.wire).toList(),
     'project_ids': projectIds,
-    if (expiresAt != null)
-      'expires_at': expiresAt!.toUtc().toIso8601String(),
+    if (expiresAt != null) 'expires_at': expiresAt!.toUtc().toIso8601String(),
   };
 }
 

@@ -44,8 +44,8 @@ class HexColorDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _parseHex(hex) ??
-        Theme.of(context).colorScheme.outlineVariant;
+    final color =
+        _parseHex(hex) ?? Theme.of(context).colorScheme.outlineVariant;
     return Container(
       width: size,
       height: size,

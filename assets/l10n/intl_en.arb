@@ -1772,5 +1772,19 @@
   "dashByPriorityTitle": "By priority",
   "@dashByPriorityTitle": { "description": "Section title for the priority breakdown." },
   "dashBreakdownEmpty": "No data",
-  "@dashBreakdownEmpty": { "description": "Empty state for a breakdown list." }
+  "@dashBreakdownEmpty": { "description": "Empty state for a breakdown list." },
+  "dashByCategoryTitle": "By category",
+  "@dashByCategoryTitle": { "description": "Section title for the issue-category breakdown." },
+  "navDashboard": "Dashboard",
+  "@navDashboard": { "description": "Main-menu entry / brand target for the global dashboard." },
+  "fieldEmoji": "Emoji",
+  "@fieldEmoji": { "description": "Label for the emoji picker on a taxonomy item (issue type / priority)." },
+  "actionClearFilters": "Clear filters",
+  "@actionClearFilters": { "description": "Button to clear all active issue list filters." },
+  "issueFieldDueDate": "Due date",
+  "@issueFieldDueDate": { "description": "Label for the issue due-date field." },
+  "issueFieldAssignee": "Assignee",
+  "@issueFieldAssignee": { "description": "Label for the issue assignee field." },
+  "issueFieldCategory": "Category",
+  "@issueFieldCategory": { "description": "Label for the issue category field." }
 }

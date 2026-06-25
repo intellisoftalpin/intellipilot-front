@@ -50,8 +50,7 @@ class ActivityEvent {
       actorUsername: json['actor_username'] as String?,
       ip: json['ip'] as String?,
       userAgent: json['user_agent'] as String?,
-      metadata:
-          (json['metadata'] as Map<String, dynamic>?) ?? const {},
+      metadata: (json['metadata'] as Map<String, dynamic>?) ?? const {},
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }

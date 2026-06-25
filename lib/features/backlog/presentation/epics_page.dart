@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
-import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
@@ -11,6 +9,7 @@ import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/core/widgets/members_scope.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
+import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/epics_cubit.dart';
@@ -252,9 +251,7 @@ class _EpicRow extends StatelessWidget {
             ],
           ),
         ),
-        onTap: () => context.go(
-          Routes.entityDetailFor(epic.projectId, EntityKind.epic, epic.id),
-        ),
+        onTap: () => _openDetail(context),
         trailing: (canEdit || canDelete)
             ? PopupMenuButton<String>(
                 itemBuilder: (_) => [
@@ -271,13 +268,22 @@ class _EpicRow extends StatelessWidget {
     );
   }
 
+  Future<void> _openDetail(BuildContext context) async {
+    final cubit = context.read<EpicsCubit>();
+    await showEntityDetailSheet(
+      context,
+      projectId: epic.projectId,
+      kind: EntityKind.epic,
+      entityId: epic.id,
+    );
+    await cubit.load();
+  }
+
   Future<void> _onMenu(BuildContext context, String v) async {
     final t = AppLocalizations.of(context);
     final cubit = context.read<EpicsCubit>();
     if (v == 'open') {
-      context.go(
-        Routes.entityDetailFor(epic.projectId, EntityKind.epic, epic.id),
-      );
+      await _openDetail(context);
     } else if (v == 'edit') {
       final updated = await showEpicEditDialog(context, existing: epic);
       if (updated == null) return;

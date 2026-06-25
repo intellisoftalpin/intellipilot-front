@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/io/url_opener.dart';
+import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/core/ui/timestamps.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
@@ -24,6 +25,7 @@ class ActivityStreamView extends StatelessWidget {
   const ActivityStreamView({
     required this.draftKey,
     this.shrinkWrap = false,
+    this.membersById = const {},
     super.key,
   });
 
@@ -31,6 +33,10 @@ class ActivityStreamView extends StatelessWidget {
   /// draft autosave.
   final String draftKey;
   final bool shrinkWrap;
+
+  /// Project members keyed by user id — used to resolve a comment author's
+  /// name when the embedded author object is absent.
+  final Map<String, UserRef> membersById;
 
   @override
   Widget build(BuildContext context) {
@@ -57,14 +63,19 @@ class ActivityStreamView extends StatelessWidget {
                 )
               else
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       for (final entry in state.entries)
                         if (entry.isComment)
-                          _CommentRow(comment: entry.comment!)
+                          _CommentRow(
+                            comment: entry.comment!,
+                            membersById: membersById,
+                          )
                         else
                           _HistoryRow(event: entry.history!),
                     ],
@@ -81,7 +92,7 @@ class ActivityStreamView extends StatelessWidget {
             Expanded(
               child: state.entries.isEmpty
                   ? Center(child: Text(t.activityEmpty))
-                  : _Stream(entries: state.entries),
+                  : _Stream(entries: state.entries, membersById: membersById),
             ),
             _ComposerGate(draftKey: draftKey, busy: state.busy),
           ],
@@ -124,8 +135,9 @@ class _FilterBar extends StatelessWidget {
 }
 
 class _Stream extends StatelessWidget {
-  const _Stream({required this.entries});
+  const _Stream({required this.entries, this.membersById = const {}});
   final List<ActivityEntry> entries;
+  final Map<String, UserRef> membersById;
 
   @override
   Widget build(BuildContext context) {
@@ -135,7 +147,7 @@ class _Stream extends StatelessWidget {
       itemBuilder: (context, i) {
         final entry = entries[i];
         if (entry.isComment) {
-          return _CommentRow(comment: entry.comment!);
+          return _CommentRow(comment: entry.comment!, membersById: membersById);
         }
         return _HistoryRow(event: entry.history!);
       },
@@ -144,7 +156,8 @@ class _Stream extends StatelessWidget {
 }
 
 class _CommentRow extends StatelessWidget {
-  const _CommentRow({required this.comment});
+  const _CommentRow({required this.comment, this.membersById = const {}});
+  final Map<String, UserRef> membersById;
   final Comment comment;
 
   @override
@@ -152,8 +165,12 @@ class _CommentRow extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final detailState = context.watch<ProjectDetailCubit>().state;
-    final canModerate = detailState is ProjectDetailLoaded &&
+    final canModerate =
+        detailState is ProjectDetailLoaded &&
         detailState.has(Permission.commentModerate);
+    final author =
+        comment.author ??
+        (comment.authorId != null ? membersById[comment.authorId] : null);
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: Padding(
@@ -163,8 +180,8 @@ class _CommentRow extends StatelessWidget {
           children: [
             Row(
               children: [
-                if (comment.author != null)
-                  UserAvatar(user: comment.author!, size: 24)
+                if (author != null)
+                  UserAvatar(user: author, size: 24)
                 else
                   Icon(
                     Icons.account_circle_outlined,
@@ -174,8 +191,8 @@ class _CommentRow extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    comment.author != null
-                        ? '${comment.author!.displayName} · '
+                    author != null
+                        ? '${author.displayName} · '
                               '${formatTimestamp(context, comment.createdAt)}'
                         : formatTimestamp(context, comment.createdAt),
                     style: theme.textTheme.bodySmall,
@@ -401,16 +418,20 @@ class _CommentAttachmentsState extends State<_CommentAttachments> {
   }
 
   Future<List<Attachment>> _load() async {
-    final res = await getIt<ActivityRepository>()
-        .listCommentAttachments(widget.projectId, widget.commentId);
+    final res = await getIt<ActivityRepository>().listCommentAttachments(
+      widget.projectId,
+      widget.commentId,
+    );
     return res.valueOrNull ?? <Attachment>[];
   }
 
   void _reload() => setState(() => _future = _load());
 
   Future<void> _open(Attachment a) async {
-    final res = await getIt<ActivityRepository>()
-        .signAttachmentUrl(widget.projectId, a.id);
+    final res = await getIt<ActivityRepository>().signAttachmentUrl(
+      widget.projectId,
+      a.id,
+    );
     final signed = res.valueOrNull;
     if (signed != null) openExternalUrl(signed.url);
   }
@@ -454,8 +475,9 @@ class _CommentAttachmentsState extends State<_CommentAttachments> {
                 label: Text(a.filename),
                 onPressed: () => _open(a),
                 onDeleted: widget.canEdit ? () => _delete(a) : null,
-                deleteIcon:
-                    widget.canEdit ? const Icon(Icons.close, size: 14) : null,
+                deleteIcon: widget.canEdit
+                    ? const Icon(Icons.close, size: 14)
+                    : null,
                 visualDensity: VisualDensity.compact,
               ),
             if (widget.canEdit)

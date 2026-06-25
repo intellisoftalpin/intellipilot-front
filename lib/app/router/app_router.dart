@@ -72,6 +72,29 @@ abstract class Routes {
   static String projectBacklogFor(String id) => '/projects/$id/backlog';
   static String projectEpicsFor(String id) => '/projects/$id/epics';
   static String projectIssuesFor(String id) => '/projects/$id/issues';
+
+  /// Issues list deep-linked with filters. `assignee` accepts a user id or the
+  /// sentinel `'none'` for unassigned issues.
+  static String projectIssuesFiltered(
+    String id, {
+    String? status,
+    String? type,
+    String? assignee,
+    bool overdue = false,
+  }) {
+    final params = <String, String>{
+      'status': ?status,
+      'type': ?type,
+      'assignee': ?assignee,
+      if (overdue) 'overdue': 'true',
+    };
+    if (params.isEmpty) return '/projects/$id/issues';
+    final query = params.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+    return '/projects/$id/issues?$query';
+  }
+
   static String projectBoardFor(String id) => '/projects/$id/board';
 
   /// Back-compat alias for callers that still link to the standalone
@@ -93,14 +116,12 @@ abstract class Routes {
     String projectId,
     EntityKind kind,
     String entityId,
-  ) =>
-      '/projects/$projectId/items/${kind.slug}/$entityId';
+  ) => '/projects/$projectId/items/${kind.slug}/$entityId';
   static String entityEditFor(
     String projectId,
     EntityKind kind,
     String entityId,
-  ) =>
-      '/projects/$projectId/items/${kind.slug}/$entityId/edit';
+  ) => '/projects/$projectId/items/${kind.slug}/$entityId/edit';
   static String acceptInvitationFor(String token) => '/i/$token';
 }
 
@@ -127,202 +148,211 @@ GoRouter buildRouter({required SessionBloc session}) {
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
-      GoRoute(
-        path: Routes.home,
-        name: 'home',
-        builder: (context, state) => const HomePage(),
-      ),
-      GoRoute(
-        path: Routes.settings,
-        name: 'settings',
-        builder: (context, state) => const SettingsPage(),
-      ),
-      GoRoute(
-        path: Routes.security,
-        name: 'security',
-        builder: (context, state) => const SecurityPage(),
-      ),
-      GoRoute(
-        path: Routes.totpSetup,
-        name: 'totp_setup',
-        builder: (context, state) => const TotpSetupPage(),
-      ),
-      GoRoute(
-        path: Routes.recoveryCodes,
-        name: 'recovery_codes',
-        builder: (context, state) => const RecoveryCodesPage(),
-      ),
-      GoRoute(
-        path: Routes.passkeys,
-        name: 'passkeys',
-        builder: (context, state) => const PasskeysPage(),
-      ),
-      GoRoute(
-        path: Routes.profile,
-        name: 'profile',
-        builder: (context, state) => const ProfilePage(),
-      ),
-      GoRoute(
-        path: Routes.account,
-        name: 'account',
-        builder: (context, state) => const AccountPage(),
-      ),
-      GoRoute(
-        path: Routes.projects,
-        name: 'projects',
-        builder: (context, state) => const ProjectsListPage(),
-      ),
-      GoRoute(
-        path: Routes.timesheet,
-        name: 'timesheet',
-        builder: (context, state) => const TimesheetPage(),
-      ),
-      GoRoute(
-        path: '/projects/:id/time',
-        name: 'project_time',
-        builder: (context, state) =>
-            ProjectTimePage(projectId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/admin/users/:id/time',
-        name: 'admin_user_time',
-        builder: (context, state) =>
-            AdminUserTimePage(userId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/projects/:id',
-        name: 'project_detail',
-        builder: (context, state) =>
-            ProjectOverviewPage(projectId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/projects/:id/settings',
-        name: 'project_settings',
-        builder: (context, state) =>
-            ProjectSettingsPage(projectId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/projects/:id/backlog',
-        name: 'project_backlog',
-        builder: (context, state) =>
-            BacklogPage(projectId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/projects/:id/epics',
-        name: 'project_epics',
-        builder: (context, state) =>
-            EpicsPage(projectId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/projects/:id/issues',
-        name: 'project_issues',
-        builder: (context, state) =>
-            IssuesPage(projectId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/projects/:id/board',
-        name: 'project_board',
-        builder: (context, state) =>
-            BoardPage(projectId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        // Back-compat: the standalone task board collapsed into the
-        // unified Board page with a Stories ⇄ Tasks toggle. Anyone
-        // visiting an old `/task-board` link lands on the board, where
-        // their last-chosen mode (persisted per project) is honoured.
-        path: '/projects/:id/task-board',
-        name: 'project_task_board_legacy',
-        redirect: (context, state) =>
-            Routes.projectBoardFor(state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/projects/:id/milestones',
-        name: 'project_milestones',
-        builder: (context, state) =>
-            MilestonesListPage(projectId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/projects/:projectId/milestones/:milestoneId',
-        name: 'milestone_detail',
-        builder: (context, state) => MilestoneDetailPage(
-          projectId: state.pathParameters['projectId']!,
-          milestoneId: state.pathParameters['milestoneId']!,
-        ),
-      ),
-      GoRoute(
-        path: '/projects/:id/wiki',
-        name: 'project_wiki',
-        builder: (context, state) =>
-            WikiListPage(projectId: state.pathParameters['id']!),
-      ),
-      GoRoute(
-        path: '/projects/:projectId/wiki/:pageId',
-        name: 'wiki_page',
-        builder: (context, state) => WikiPageView(
-          projectId: state.pathParameters['projectId']!,
-          pageId: state.pathParameters['pageId']!,
-        ),
-      ),
-      GoRoute(
-        path: '/projects/:projectId/wiki/:pageId/revisions',
-        name: 'wiki_revisions',
-        builder: (context, state) => WikiRevisionsPage(
-          projectId: state.pathParameters['projectId']!,
-          pageId: state.pathParameters['pageId']!,
-        ),
-      ),
-      GoRoute(
-        path: '/projects/:projectId/items/:kind/:entityId',
-        name: 'entity_detail',
-        builder: (context, state) {
-          final slug = state.pathParameters['kind']!;
-          final kind = EntityKind.values.firstWhere(
-            (k) => k.slug == slug,
-            orElse: () => EntityKind.issue,
-          );
-          return EntityDetailPage(
-            projectId: state.pathParameters['projectId']!,
-            kind: kind,
-            entityId: state.pathParameters['entityId']!,
-          );
-        },
-      ),
-      GoRoute(
-        path: '/projects/:projectId/items/:kind/:entityId/edit',
-        name: 'entity_edit',
-        builder: (context, state) {
-          final slug = state.pathParameters['kind']!;
-          final kind = EntityKind.values.firstWhere(
-            (k) => k.slug == slug,
-            orElse: () => EntityKind.issue,
-          );
-          return EntityEditPage(
-            projectId: state.pathParameters['projectId']!,
-            kind: kind,
-            entityId: state.pathParameters['entityId']!,
-          );
-        },
-      ),
-      GoRoute(
-        path: Routes.adminUsers,
-        name: 'admin_users',
-        builder: (context, state) => const AdminUsersPage(),
-      ),
-      GoRoute(
-        path: Routes.adminSettings,
-        name: 'admin_settings',
-        builder: (context, state) => const AdminSettingsPage(),
-      ),
-      GoRoute(
-        path: Routes.adminActivity,
-        name: 'admin_activity',
-        builder: (context, state) => const AdminActivityPage(),
-      ),
-      GoRoute(
-        path: Routes.adminAppTokens,
-        name: 'admin_app_tokens',
-        builder: (context, state) => const AdminAppTokensPage(),
-      ),
+          GoRoute(
+            path: Routes.home,
+            name: 'home',
+            builder: (context, state) => const HomePage(),
+          ),
+          GoRoute(
+            path: Routes.settings,
+            name: 'settings',
+            builder: (context, state) => const SettingsPage(),
+          ),
+          GoRoute(
+            path: Routes.security,
+            name: 'security',
+            builder: (context, state) => const SecurityPage(),
+          ),
+          GoRoute(
+            path: Routes.totpSetup,
+            name: 'totp_setup',
+            builder: (context, state) => const TotpSetupPage(),
+          ),
+          GoRoute(
+            path: Routes.recoveryCodes,
+            name: 'recovery_codes',
+            builder: (context, state) => const RecoveryCodesPage(),
+          ),
+          GoRoute(
+            path: Routes.passkeys,
+            name: 'passkeys',
+            builder: (context, state) => const PasskeysPage(),
+          ),
+          GoRoute(
+            path: Routes.profile,
+            name: 'profile',
+            builder: (context, state) => const ProfilePage(),
+          ),
+          GoRoute(
+            path: Routes.account,
+            name: 'account',
+            builder: (context, state) => const AccountPage(),
+          ),
+          GoRoute(
+            path: Routes.projects,
+            name: 'projects',
+            builder: (context, state) => const ProjectsListPage(),
+          ),
+          GoRoute(
+            path: Routes.timesheet,
+            name: 'timesheet',
+            builder: (context, state) => const TimesheetPage(),
+          ),
+          GoRoute(
+            path: '/projects/:id/time',
+            name: 'project_time',
+            builder: (context, state) =>
+                ProjectTimePage(projectId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/admin/users/:id/time',
+            name: 'admin_user_time',
+            builder: (context, state) =>
+                AdminUserTimePage(userId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/projects/:id',
+            name: 'project_detail',
+            builder: (context, state) =>
+                ProjectOverviewPage(projectId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/projects/:id/settings',
+            name: 'project_settings',
+            builder: (context, state) =>
+                ProjectSettingsPage(projectId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/projects/:id/backlog',
+            name: 'project_backlog',
+            builder: (context, state) =>
+                BacklogPage(projectId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/projects/:id/epics',
+            name: 'project_epics',
+            builder: (context, state) =>
+                EpicsPage(projectId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/projects/:id/issues',
+            name: 'project_issues',
+            builder: (context, state) {
+              final q = state.uri.queryParameters;
+              final overdue = q['overdue'] == 'true';
+              return IssuesPage(
+                projectId: state.pathParameters['id']!,
+                initialStatusFilter: q['status'],
+                initialTypeFilter: q['type'],
+                initialAssigneeFilter: q['assignee'],
+                initialOverdueOnly: overdue,
+              );
+            },
+          ),
+          GoRoute(
+            path: '/projects/:id/board',
+            name: 'project_board',
+            builder: (context, state) =>
+                BoardPage(projectId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            // Back-compat: the standalone task board collapsed into the
+            // unified Board page with a Stories ⇄ Tasks toggle. Anyone
+            // visiting an old `/task-board` link lands on the board, where
+            // their last-chosen mode (persisted per project) is honoured.
+            path: '/projects/:id/task-board',
+            name: 'project_task_board_legacy',
+            redirect: (context, state) =>
+                Routes.projectBoardFor(state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/projects/:id/milestones',
+            name: 'project_milestones',
+            builder: (context, state) =>
+                MilestonesListPage(projectId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/projects/:projectId/milestones/:milestoneId',
+            name: 'milestone_detail',
+            builder: (context, state) => MilestoneDetailPage(
+              projectId: state.pathParameters['projectId']!,
+              milestoneId: state.pathParameters['milestoneId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/projects/:id/wiki',
+            name: 'project_wiki',
+            builder: (context, state) =>
+                WikiListPage(projectId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/projects/:projectId/wiki/:pageId',
+            name: 'wiki_page',
+            builder: (context, state) => WikiPageView(
+              projectId: state.pathParameters['projectId']!,
+              pageId: state.pathParameters['pageId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/projects/:projectId/wiki/:pageId/revisions',
+            name: 'wiki_revisions',
+            builder: (context, state) => WikiRevisionsPage(
+              projectId: state.pathParameters['projectId']!,
+              pageId: state.pathParameters['pageId']!,
+            ),
+          ),
+          GoRoute(
+            path: '/projects/:projectId/items/:kind/:entityId',
+            name: 'entity_detail',
+            builder: (context, state) {
+              final slug = state.pathParameters['kind']!;
+              final kind = EntityKind.values.firstWhere(
+                (k) => k.slug == slug,
+                orElse: () => EntityKind.issue,
+              );
+              return EntityDetailPage(
+                projectId: state.pathParameters['projectId']!,
+                kind: kind,
+                entityId: state.pathParameters['entityId']!,
+              );
+            },
+          ),
+          GoRoute(
+            path: '/projects/:projectId/items/:kind/:entityId/edit',
+            name: 'entity_edit',
+            builder: (context, state) {
+              final slug = state.pathParameters['kind']!;
+              final kind = EntityKind.values.firstWhere(
+                (k) => k.slug == slug,
+                orElse: () => EntityKind.issue,
+              );
+              return EntityEditPage(
+                projectId: state.pathParameters['projectId']!,
+                kind: kind,
+                entityId: state.pathParameters['entityId']!,
+              );
+            },
+          ),
+          GoRoute(
+            path: Routes.adminUsers,
+            name: 'admin_users',
+            builder: (context, state) => const AdminUsersPage(),
+          ),
+          GoRoute(
+            path: Routes.adminSettings,
+            name: 'admin_settings',
+            builder: (context, state) => const AdminSettingsPage(),
+          ),
+          GoRoute(
+            path: Routes.adminActivity,
+            name: 'admin_activity',
+            builder: (context, state) => const AdminActivityPage(),
+          ),
+          GoRoute(
+            path: Routes.adminAppTokens,
+            name: 'admin_app_tokens',
+            builder: (context, state) => const AdminAppTokensPage(),
+          ),
         ],
       ),
       GoRoute(

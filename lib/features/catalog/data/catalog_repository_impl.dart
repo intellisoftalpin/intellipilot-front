@@ -722,7 +722,9 @@ class CatalogRepositoryImpl implements CatalogRepository {
         final body = r.data as Map<String, dynamic>;
         final raw = body['links'] as List<dynamic>? ?? const [];
         return Ok(
-          raw.map((e) => IssueLink.fromJson(e as Map<String, dynamic>)).toList(),
+          raw
+              .map((e) => IssueLink.fromJson(e as Map<String, dynamic>))
+              .toList(),
         );
       },
       err: Err.new,

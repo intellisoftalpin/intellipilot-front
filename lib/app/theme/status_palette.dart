@@ -53,14 +53,13 @@ class StatusPalette extends ThemeExtension<StatusPalette> {
     Color? inReview,
     Color? done,
     Color? blocked,
-  }) =>
-      StatusPalette(
-        todo: todo ?? this.todo,
-        inProgress: inProgress ?? this.inProgress,
-        inReview: inReview ?? this.inReview,
-        done: done ?? this.done,
-        blocked: blocked ?? this.blocked,
-      );
+  }) => StatusPalette(
+    todo: todo ?? this.todo,
+    inProgress: inProgress ?? this.inProgress,
+    inReview: inReview ?? this.inReview,
+    done: done ?? this.done,
+    blocked: blocked ?? this.blocked,
+  );
 
   @override
   StatusPalette lerp(ThemeExtension<StatusPalette>? other, double t) {

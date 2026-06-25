@@ -55,15 +55,15 @@ class _EntityEditPageState extends State<EntityEditPage> {
     final projects = getIt<ProjectsRepository>();
     final milestones = getIt<MilestonesRepository>();
     final profileRepo = getIt<ProfileRepository>();
-    final project =
-        (await projects.getProject(widget.projectId)).valueOrNull;
+    final project = (await projects.getProject(widget.projectId)).valueOrNull;
     if (project == null) return null;
     final profile = (await profileRepo.getProfile()).valueOrNull;
     switch (widget.kind) {
       case EntityKind.epic:
-        final entity =
-            (await backlog.getEpic(widget.projectId, widget.entityId))
-                .valueOrNull;
+        final entity = (await backlog.getEpic(
+          widget.projectId,
+          widget.entityId,
+        )).valueOrNull;
         if (entity == null) return null;
         return _EditData(
           project: project,
@@ -71,48 +71,52 @@ class _EntityEditPageState extends State<EntityEditPage> {
           epic: entity,
         );
       case EntityKind.issue:
-        final entity =
-            (await backlog.getIssue(widget.projectId, widget.entityId))
-                .valueOrNull;
+        final entity = (await backlog.getIssue(
+          widget.projectId,
+          widget.entityId,
+        )).valueOrNull;
         if (entity == null) return null;
         final epics =
             (await backlog.listEpics(widget.projectId)).valueOrNull ?? [];
         final ms = (await milestones.list(widget.projectId)).valueOrNull ?? [];
-        final statuses = (await catalog.listTaxonomy(
-                  widget.projectId, TaxonomyKind.issueStatus,
-                ))
-                .valueOrNull ??
+        final statuses =
+            (await catalog.listTaxonomy(
+              widget.projectId,
+              TaxonomyKind.issueStatus,
+            )).valueOrNull ??
             [];
-        final types = (await catalog.listTaxonomy(
-                  widget.projectId, TaxonomyKind.issueType,
-                ))
-                .valueOrNull ??
+        final types =
+            (await catalog.listTaxonomy(
+              widget.projectId,
+              TaxonomyKind.issueType,
+            )).valueOrNull ??
             [];
-        final priorities = (await catalog.listTaxonomy(
-                  widget.projectId, TaxonomyKind.priority,
-                ))
-                .valueOrNull ??
+        final priorities =
+            (await catalog.listTaxonomy(
+              widget.projectId,
+              TaxonomyKind.priority,
+            )).valueOrNull ??
             [];
-        final sizes = (await catalog.listTaxonomy(
-                  widget.projectId, TaxonomyKind.size,
-                ))
-                .valueOrNull ??
+        final sizes =
+            (await catalog.listTaxonomy(
+              widget.projectId,
+              TaxonomyKind.size,
+            )).valueOrNull ??
             [];
         final labels =
             (await catalog.listLabels(widget.projectId)).valueOrNull ?? [];
         final components =
-            (await catalog.listComponents(widget.projectId)).valueOrNull ??
-                [];
+            (await catalog.listComponents(widget.projectId)).valueOrNull ?? [];
         final customers =
             (await catalog.listCustomers(widget.projectId)).valueOrNull ?? [];
         // Fix-version options for the issue's currently-selected components.
         final fixVersions = entity.components.isEmpty
             ? <ReleaseVersionRef>[]
             : (await catalog.versionsForComponents(
-                        widget.projectId, entity.components,
-                      ))
-                    .valueOrNull ??
-                [];
+                    widget.projectId,
+                    entity.components,
+                  )).valueOrNull ??
+                  [];
         return _EditData(
           project: project,
           profile: profile,
@@ -257,12 +261,9 @@ class _EditViewState extends State<_EditView> {
     final d = widget.data;
     _subjectCtrl = TextEditingController(text: _initialSubject(d));
     _descCtrl = TextEditingController(text: _initialDescription(d));
-    _assigneeCtrl =
-        TextEditingController(text: _initialAssignee(d) ?? '');
-    _reporterCtrl =
-        TextEditingController(text: _initialReporter(d) ?? '');
-    _releaseTextCtrl =
-        TextEditingController(text: d.issue?.releaseText ?? '');
+    _assigneeCtrl = TextEditingController(text: _initialAssignee(d) ?? '');
+    _reporterCtrl = TextEditingController(text: _initialReporter(d) ?? '');
+    _releaseTextCtrl = TextEditingController(text: d.issue?.releaseText ?? '');
     _startDateCtrl = TextEditingController(text: d.issue?.startDate ?? '');
     _dueDateCtrl = TextEditingController(text: d.issue?.dueDate ?? '');
     switch (widget.kind) {
@@ -827,7 +828,10 @@ class _EditViewState extends State<_EditView> {
         const SizedBox(height: 8),
         _metaRow(t.detailFieldCreated, formatTimestamp(context, _createdAt(d))),
         const SizedBox(height: 8),
-        _metaRow(t.detailFieldUpdated, formatTimestamp(context, _modifiedAt(d))),
+        _metaRow(
+          t.detailFieldUpdated,
+          formatTimestamp(context, _modifiedAt(d)),
+        ),
       ],
     );
   }

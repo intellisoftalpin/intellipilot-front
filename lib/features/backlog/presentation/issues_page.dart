@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
-import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/io/file_downloader.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
@@ -12,7 +10,7 @@ import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/widgets/members_scope.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
-import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
+import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/issues_cubit.dart';
@@ -33,8 +31,22 @@ import 'package:intellipilot/features/projects/presentation/cubits/project_detai
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class IssuesPage extends StatelessWidget {
-  const IssuesPage({required this.projectId, super.key});
+  const IssuesPage({
+    required this.projectId,
+    super.key,
+    this.initialStatusFilter,
+    this.initialTypeFilter,
+    this.initialAssigneeFilter,
+    this.initialOverdueOnly = false,
+  });
   final String projectId;
+
+  /// Optional deep-link filters (e.g. from the dashboard). `assignee` accepts
+  /// a user id or the sentinel `'none'` for unassigned.
+  final String? initialStatusFilter;
+  final String? initialTypeFilter;
+  final String? initialAssigneeFilter;
+  final bool initialOverdueOnly;
 
   Future<(UserProfile?, Map<String, UserRef>)> _loadContext() async {
     final p = await getIt<ProfileRepository>().getProfile();
@@ -56,7 +68,8 @@ class IssuesPage extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final (profile, members) = snap.data ?? (null, const <String, UserRef>{});
+        final (profile, members) =
+            snap.data ?? (null, const <String, UserRef>{});
         if (profile == null) {
           return Scaffold(
             body: Center(
@@ -68,28 +81,32 @@ class IssuesPage extends StatelessWidget {
           membersById: members,
           child: MultiBlocProvider(
             providers: [
-            BlocProvider<ProjectDetailCubit>(
-              create: (_) {
-                final c = ProjectDetailCubit(
-                  repo: getIt<ProjectsRepository>(),
-                  projectId: projectId,
-                  currentUserId: profile.id,
-                );
-                unawaited(c.load());
-                return c;
-              },
-            ),
-            BlocProvider<IssuesCubit>(
-              create: (_) {
-                final c = IssuesCubit(
-                  repo: getIt<BacklogRepository>(),
-                  catalog: getIt<CatalogRepository>(),
-                  projectId: projectId,
-                );
-                unawaited(c.load());
-                return c;
-              },
-            ),
+              BlocProvider<ProjectDetailCubit>(
+                create: (_) {
+                  final c = ProjectDetailCubit(
+                    repo: getIt<ProjectsRepository>(),
+                    projectId: projectId,
+                    currentUserId: profile.id,
+                  );
+                  unawaited(c.load());
+                  return c;
+                },
+              ),
+              BlocProvider<IssuesCubit>(
+                create: (_) {
+                  final c = IssuesCubit(
+                    repo: getIt<BacklogRepository>(),
+                    catalog: getIt<CatalogRepository>(),
+                    projectId: projectId,
+                    initialStatusFilter: initialStatusFilter,
+                    initialTypeFilter: initialTypeFilter,
+                    initialAssigneeFilter: initialAssigneeFilter,
+                    initialOverdueOnly: initialOverdueOnly,
+                  );
+                  unawaited(c.load());
+                  return c;
+                },
+              ),
             ],
             child: _IssuesView(projectId: projectId),
           ),
@@ -113,18 +130,18 @@ class _IssuesViewState extends State<_IssuesView> {
   /// instead (so we never cram a two-pane layout onto a phone).
   String? _selectedId;
 
-  void _onSelect(BuildContext context, String id) {
-    if (Breakpoints.of(context).isExpanded) {
-      setState(() => _selectedId = id);
-    } else {
-      context.go(
-        Routes.entityDetailFor(widget.projectId, EntityKind.issue, id),
-      );
-    }
-  }
-
-  void _openFull(BuildContext context, String id) {
-    context.go(Routes.entityDetailFor(widget.projectId, EntityKind.issue, id));
+  Future<void> _onSelect(BuildContext context, String id) async {
+    setState(() => _selectedId = id);
+    final cubit = context.read<IssuesCubit>();
+    await showEntityDetailSheet(
+      context,
+      projectId: widget.projectId,
+      kind: EntityKind.issue,
+      entityId: id,
+    );
+    if (!context.mounted) return;
+    setState(() => _selectedId = null);
+    await cubit.load();
   }
 
   @override
@@ -173,8 +190,7 @@ class _IssuesViewState extends State<_IssuesView> {
           ),
         ],
       ),
-      floatingActionButton:
-          BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
+      floatingActionButton: BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
         builder: (context, detail) {
           if (detail is! ProjectDetailLoaded ||
               !detail.has(Permission.issueCreate)) {
@@ -221,20 +237,6 @@ class _IssuesViewState extends State<_IssuesView> {
               },
             ),
           ),
-          if (isWide && _selectedId != null) ...[
-            const VerticalDivider(width: 1),
-            SizedBox(
-              width: 420,
-              child: EntityDetailPage(
-                key: ValueKey('issue:$_selectedId'),
-                projectId: widget.projectId,
-                kind: EntityKind.issue,
-                entityId: _selectedId!,
-                onClose: () => setState(() => _selectedId = null),
-                onOpen: () => _openFull(context, _selectedId!),
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -244,15 +246,21 @@ class _IssuesViewState extends State<_IssuesView> {
     final cubit = context.read<IssuesCubit>();
     final s = cubit.state;
     if (s is! IssuesLoaded) return;
-    final body = await showIssueEditDialog(context, state: s);
+    final body = await showIssueEditDialog(
+      context,
+      state: s,
+      projectId: widget.projectId,
+    );
     if (body != null) await cubit.create(body);
   }
 
   Future<void> _export(BuildContext context, ExportFormat format) async {
     final t = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final res =
-        await getIt<IssuesIoRepository>().export(widget.projectId, format);
+    final res = await getIt<IssuesIoRepository>().export(
+      widget.projectId,
+      format,
+    );
     final bytes = res.valueOrNull;
     if (bytes == null) {
       messenger.showSnackBar(SnackBar(content: Text(t.exportFailed)));
@@ -365,7 +373,11 @@ class _EmptyIssues extends StatelessWidget {
               icon: const Icon(Icons.add),
               onPressed: () async {
                 final cubit = context.read<IssuesCubit>();
-                final body = await showIssueEditDialog(context, state: state);
+                final body = await showIssueEditDialog(
+                  context,
+                  state: state,
+                  projectId: cubit.projectId,
+                );
                 if (body != null) await cubit.create(body);
               },
               label: Text(t.actionNewIssue),
@@ -422,13 +434,47 @@ class _FilterRow extends StatelessWidget {
           _menu(
             label: state.sizeFilter == null
                 ? 'Size'
-                : state.sizes
-                      .firstWhere((s) => s.id == state.sizeFilter)
-                      .name,
+                : state.sizes.firstWhere((s) => s.id == state.sizeFilter).name,
             items: state.sizes,
             current: state.sizeFilter,
             onSelected: context.read<IssuesCubit>().setSizeFilter,
           ),
+          if (state.overdueOnly) ...[
+            const SizedBox(width: 8),
+            Center(
+              child: InputChip(
+                avatar: const Icon(Icons.error_outline, size: 16),
+                label: Text(t.dashKpiOverdue),
+                onDeleted: () =>
+                    context.read<IssuesCubit>().setOverdueOnly(false),
+              ),
+            ),
+          ],
+          if (state.assigneeFilter != null) ...[
+            const SizedBox(width: 8),
+            Center(
+              child: InputChip(
+                avatar: const Icon(Icons.person_outline, size: 16),
+                label: Text(
+                  state.assigneeFilter == 'none'
+                      ? t.dashKpiUnassigned
+                      : t.dashKpiAssigned,
+                ),
+                onDeleted: () =>
+                    context.read<IssuesCubit>().setAssigneeFilter(null),
+              ),
+            ),
+          ],
+          if (state.hasActiveFilter) ...[
+            const SizedBox(width: 8),
+            Center(
+              child: TextButton.icon(
+                icon: const Icon(Icons.clear_all, size: 18),
+                label: Text(t.actionClearFilters),
+                onPressed: context.read<IssuesCubit>().clearFilters,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -491,10 +537,14 @@ class _IssueRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final status =
-        state.statuses.where((s) => s.id == issue.statusId).cast<TaxonomyItem?>().firstOrNull;
-    final type =
-        state.types.where((s) => s.id == issue.typeId).cast<TaxonomyItem?>().firstOrNull;
+    final status = state.statuses
+        .where((s) => s.id == issue.statusId)
+        .cast<TaxonomyItem?>()
+        .firstOrNull;
+    final type = state.types
+        .where((s) => s.id == issue.typeId)
+        .cast<TaxonomyItem?>()
+        .firstOrNull;
     final priority = state.priorities
         .where((s) => s.id == issue.priorityId)
         .cast<TaxonomyItem?>()
@@ -535,9 +585,18 @@ class _IssueRow extends StatelessWidget {
           runSpacing: 4,
           children: [
             Text('ISSUE-${issue.reference}'),
-            if (status != null) _MiniChip(label: status.name, color: status.color),
-            if (type != null) _MiniChip(label: type.name, color: type.color),
-            if (priority != null) _MiniChip(label: priority.name, color: priority.color),
+            if (status != null)
+              _MiniChip(label: status.name, color: status.color),
+            if (type != null)
+              _MiniChip(
+                label: _emojiLabel(type.emoji, type.name),
+                color: type.color,
+              ),
+            if (priority != null)
+              _MiniChip(
+                label: _emojiLabel(priority.emoji, priority.name),
+                color: priority.color,
+              ),
             if (size != null) SizeBadge(item: size),
           ],
         ),
@@ -549,13 +608,15 @@ class _IssueRow extends StatelessWidget {
                 ],
                 onSelected: (v) async {
                   if (v == 'edit') {
+                    final cubit = context.read<IssuesCubit>();
                     final body = await showIssueEditDialog(
                       context,
                       state: state,
+                      projectId: cubit.projectId,
                       existing: issue,
                     );
                     if (body == null || !context.mounted) return;
-                    await context.read<IssuesCubit>().update(
+                    await cubit.update(
                       issue.id,
                       UpdateIssueRequest(
                         subject: body.subject,
@@ -564,6 +625,12 @@ class _IssueRow extends StatelessWidget {
                         typeId: body.typeId,
                         priorityId: body.priorityId,
                         sizeId: body.sizeId,
+                        assignedTo: body.assignedTo,
+                        epicId: body.epicId,
+                        milestoneId: body.milestoneId,
+                        category: body.category,
+                        startDate: body.startDate,
+                        dueDate: body.dueDate,
                         labels: body.labels,
                         components: body.components,
                       ),
@@ -597,6 +664,10 @@ class _IssueRow extends StatelessWidget {
     );
   }
 }
+
+/// Prefix a taxonomy label with its emoji glyph when one is set.
+String _emojiLabel(String emoji, String name) =>
+    emoji.isEmpty ? name : '$emoji $name';
 
 class _MiniChip extends StatelessWidget {
   const _MiniChip({required this.label, required this.color});

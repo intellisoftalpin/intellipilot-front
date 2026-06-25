@@ -367,7 +367,10 @@ class _NotificationsFormState extends State<_NotificationsForm> {
       const SizedBox(height: 8),
       SegmentedButton<String>(
         segments: [
-          ButtonSegment(value: 'smtp', label: Text(l10n.adminNotifProviderSmtp)),
+          ButtonSegment(
+            value: 'smtp',
+            label: Text(l10n.adminNotifProviderSmtp),
+          ),
           ButtonSegment(
             value: 'mailgun',
             label: Text(l10n.adminNotifProviderMailgun),

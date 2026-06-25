@@ -38,8 +38,11 @@ final class LabelsLoaded extends LabelsState {
   );
 
   @override
-  List<Object?> get props =>
-      [labels.map((l) => l.id).toList(), busy, lastError];
+  List<Object?> get props => [
+    labels.map((l) => l.id).toList(),
+    busy,
+    lastError,
+  ];
 }
 
 final class LabelsLoadFailed extends LabelsState {

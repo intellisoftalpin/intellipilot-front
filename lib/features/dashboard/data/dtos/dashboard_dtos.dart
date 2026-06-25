@@ -64,6 +64,7 @@ class ProjectBucket {
 class AttentionItem {
   const AttentionItem({
     required this.projectId,
+    required this.issueId,
     required this.projectSlug,
     required this.reference,
     required this.subject,
@@ -74,6 +75,7 @@ class AttentionItem {
 
   factory AttentionItem.fromJson(Map<String, dynamic> json) => AttentionItem(
     projectId: json['project_id'] as String? ?? '',
+    issueId: json['issue_id'] as String? ?? '',
     projectSlug: json['project_slug'] as String? ?? '',
     reference: (json['reference'] as num?)?.toInt() ?? 0,
     subject: json['subject'] as String? ?? '',
@@ -83,6 +85,7 @@ class AttentionItem {
   );
 
   final String projectId;
+  final String issueId;
   final String projectSlug;
   final int reference;
   final String subject;
@@ -176,6 +179,7 @@ class ProjectDashboard {
     required this.myByStatus,
     required this.byType,
     required this.byPriority,
+    required this.byCategory,
     required this.epics,
     required this.throughput,
   });
@@ -193,6 +197,7 @@ class ProjectDashboard {
         myByStatus: _list(json['my_by_status'], StatusBucket.fromJson),
         byType: _list(json['by_type'], NamedCount.fromJson),
         byPriority: _list(json['by_priority'], NamedCount.fromJson),
+        byCategory: _list(json['by_category'], NamedCount.fromJson),
         epics: _list(json['epics'], EpicReadiness.fromJson),
         throughput: _list(json['throughput'], WeekCount.fromJson),
       );
@@ -208,6 +213,7 @@ class ProjectDashboard {
   final List<StatusBucket> myByStatus;
   final List<NamedCount> byType;
   final List<NamedCount> byPriority;
+  final List<NamedCount> byCategory;
   final List<EpicReadiness> epics;
   final List<WeekCount> throughput;
 }

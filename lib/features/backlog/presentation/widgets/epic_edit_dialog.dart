@@ -12,10 +12,8 @@ Future<CreateEpicRequest?> showEpicEditDialog(
   Epic? existing,
 }) async {
   final t = AppLocalizations.of(context);
-  final subjectCtrl =
-      TextEditingController(text: existing?.subject ?? '');
-  final descCtrl =
-      TextEditingController(text: existing?.description ?? '');
+  final subjectCtrl = TextEditingController(text: existing?.subject ?? '');
+  final descCtrl = TextEditingController(text: existing?.description ?? '');
   var color = (existing?.color.isNotEmpty ?? false)
       ? existing!.color
       : ColorPalette.swatches.first;

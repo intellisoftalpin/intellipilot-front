@@ -15,10 +15,8 @@ Future<CreateIssueRequest?> showBacklogIssueDialog(
   Issue? existing,
 }) async {
   final t = AppLocalizations.of(context);
-  final subjectCtrl =
-      TextEditingController(text: existing?.subject ?? '');
-  final descCtrl =
-      TextEditingController(text: existing?.description ?? '');
+  final subjectCtrl = TextEditingController(text: existing?.subject ?? '');
+  final descCtrl = TextEditingController(text: existing?.description ?? '');
   var statusId = existing?.statusId;
   var typeId = existing?.typeId;
   var epicId = existing?.epicId;
@@ -41,8 +39,7 @@ Future<CreateIssueRequest?> showBacklogIssueDialog(
                 TextField(
                   controller: subjectCtrl,
                   autofocus: true,
-                  decoration:
-                      InputDecoration(labelText: t.backlogFieldSubject),
+                  decoration: InputDecoration(labelText: t.backlogFieldSubject),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -55,8 +52,9 @@ Future<CreateIssueRequest?> showBacklogIssueDialog(
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String?>(
                   initialValue: typeId,
-                  decoration:
-                      InputDecoration(labelText: t.detailFieldIssueType),
+                  decoration: InputDecoration(
+                    labelText: t.detailFieldIssueType,
+                  ),
                   items: [
                     DropdownMenuItem<String?>(
                       value: null,

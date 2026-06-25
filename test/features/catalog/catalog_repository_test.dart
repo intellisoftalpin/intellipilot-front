@@ -80,6 +80,7 @@ void main() {
         'name': 'Done',
         'slug': 'done',
         'color': '#669900',
+        'emoji': '',
         'is_closed': true,
       });
     });

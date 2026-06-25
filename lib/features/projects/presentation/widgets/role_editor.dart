@@ -95,8 +95,6 @@ class RoleEditor extends StatelessWidget {
         PermissionDomain.members => t.permDomainMembers,
         PermissionDomain.roles => t.permDomainRoles,
         PermissionDomain.epics => t.permDomainEpics,
-        PermissionDomain.userStories => t.permDomainUserStories,
-        PermissionDomain.tasks => t.permDomainTasks,
         PermissionDomain.issues => t.permDomainIssues,
         PermissionDomain.milestones => t.permDomainMilestones,
         PermissionDomain.wiki => t.permDomainWiki,

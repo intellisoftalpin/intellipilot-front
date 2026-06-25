@@ -102,7 +102,8 @@ class Attachment {
     targetId: json['target_id'] as String,
     uploaderId: json['uploader_id'] as String?,
     filename: json['filename'] as String,
-    contentType: (json['content_type'] as String?) ?? 'application/octet-stream',
+    contentType:
+        (json['content_type'] as String?) ?? 'application/octet-stream',
     sizeBytes: (json['size_bytes'] as num?)?.toInt() ?? 0,
     sha256: (json['sha256'] as String?) ?? '',
     createdAt: DateTime.parse(json['created_at'] as String),

@@ -30,9 +30,7 @@ class ActivityRepositoryImpl implements ActivityRepository {
         final body = r.data as Map<String, dynamic>;
         final raw = body['comments'] as List<dynamic>? ?? const [];
         return Ok(
-          raw
-              .map((e) => Comment.fromJson(e as Map<String, dynamic>))
-              .toList(),
+          raw.map((e) => Comment.fromJson(e as Map<String, dynamic>)).toList(),
         );
       },
       err: Err.new,

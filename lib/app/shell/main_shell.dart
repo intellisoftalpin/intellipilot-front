@@ -159,10 +159,15 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                 if (showBrandMark)
                   _BrandMark(
                     compact: compact,
-                    onTap: () => context.go(Routes.projects),
+                    onTap: () => context.go(Routes.home),
                   ),
                 if (!compact) ...[
                   if (showBrandMark) const SizedBox(width: 16),
+                  _NavLink(
+                    label: AppLocalizations.of(context).navDashboard,
+                    onTap: () => context.go(Routes.home),
+                  ),
+                  const SizedBox(width: 4),
                   _NavLink(
                     label: AppLocalizations.of(context).topNavProjects,
                     onTap: () => context.go(Routes.projects),
@@ -510,6 +515,11 @@ class _ProjectRailState extends State<_ProjectRail> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final items = [
+      _RailItem(
+        icon: Icons.home_outlined,
+        label: t.navDashboard,
+        path: Routes.home,
+      ),
       _RailItem(
         icon: Icons.dashboard_outlined,
         label: t.railOverview,

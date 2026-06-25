@@ -38,8 +38,11 @@ final class ComponentsLoaded extends ComponentsState {
   );
 
   @override
-  List<Object?> get props =>
-      [components.map((c) => c.id).toList(), busy, lastError];
+  List<Object?> get props => [
+    components.map((c) => c.id).toList(),
+    busy,
+    lastError,
+  ];
 }
 
 final class ComponentsLoadFailed extends ComponentsState {

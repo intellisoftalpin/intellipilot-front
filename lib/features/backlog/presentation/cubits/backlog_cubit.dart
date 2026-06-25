@@ -80,10 +80,10 @@ final class BacklogLoaded extends BacklogState {
     types: types ?? this.types,
     points: points ?? this.points,
     search: search ?? this.search,
-    statusFilter:
-        statusFilter == _absent ? this.statusFilter : statusFilter as String?,
-    epicFilter:
-        epicFilter == _absent ? this.epicFilter : epicFilter as String?,
+    statusFilter: statusFilter == _absent
+        ? this.statusFilter
+        : statusFilter as String?,
+    epicFilter: epicFilter == _absent ? this.epicFilter : epicFilter as String?,
     busy: busy ?? this.busy,
     lastError: lastError,
     staleData: staleData ?? false,
@@ -108,8 +108,7 @@ final class BacklogLoaded extends BacklogState {
       return it.subject.toLowerCase().contains(q) ||
           it.description.toLowerCase().contains(q) ||
           '#${it.reference}'.contains(q);
-    }).toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
+    }).toList()..sort((a, b) => a.order.compareTo(b.order));
     return list;
   }
 
@@ -125,8 +124,7 @@ final class BacklogLoaded extends BacklogState {
       return it.subject.toLowerCase().contains(q) ||
           it.description.toLowerCase().contains(q) ||
           '#${it.reference}'.contains(q);
-    }).toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
+    }).toList()..sort((a, b) => a.order.compareTo(b.order));
     final byEpic = <String?, List<Issue>>{null: []};
     for (final epic in epics) {
       byEpic[epic.id] = [];
@@ -177,14 +175,18 @@ class BacklogCubit extends Cubit<BacklogState> {
     emit(const BacklogLoading());
     final epicsRes = await _repo.listEpics(projectId);
     final issuesRes = await _repo.listIssues(projectId);
-    final statusesRes =
-        await _catalog.listTaxonomy(projectId, TaxonomyKind.issueStatus);
-    final typesRes =
-        await _catalog.listTaxonomy(projectId, TaxonomyKind.issueType);
-    final pointsRes =
-        await _catalog.listTaxonomy(projectId, TaxonomyKind.size);
+    final statusesRes = await _catalog.listTaxonomy(
+      projectId,
+      TaxonomyKind.issueStatus,
+    );
+    final typesRes = await _catalog.listTaxonomy(
+      projectId,
+      TaxonomyKind.issueType,
+    );
+    final pointsRes = await _catalog.listTaxonomy(projectId, TaxonomyKind.size);
 
-    final fail = epicsRes.failureOrNull ??
+    final fail =
+        epicsRes.failureOrNull ??
         issuesRes.failureOrNull ??
         statusesRes.failureOrNull ??
         typesRes.failureOrNull ??
@@ -456,7 +458,9 @@ class BacklogCubit extends Cubit<BacklogState> {
     );
     if (res.isErr) {
       final stale = res.failureOrNull is ConflictFailure;
-      emit(s.copyWith(busy: false, lastError: res.failureOrNull, staleData: stale));
+      emit(
+        s.copyWith(busy: false, lastError: res.failureOrNull, staleData: stale),
+      );
       if (stale) await load();
       return;
     }
@@ -486,7 +490,8 @@ class BacklogCubit extends Cubit<BacklogState> {
     await load();
   }
 
-  Future<void> bulkCreateIssues(List<String> subjects, {
+  Future<void> bulkCreateIssues(
+    List<String> subjects, {
     String? epicId,
   }) async {
     final s = state;

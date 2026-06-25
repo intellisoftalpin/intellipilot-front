@@ -107,12 +107,12 @@ void main() {
         'p1',
         'r1',
         const UpdateRoleRequest(
-          permissions: {Permission.epicView, Permission.usView},
+          permissions: {Permission.epicView, Permission.issueView},
         ),
       );
       final body = adapter.lastRequest?.data as Map<String, dynamic>;
       final perms = body['permissions'] as List<dynamic>;
-      expect(perms.toSet(), {'epic.view', 'us.view'});
+      expect(perms.toSet(), {'epic.view', 'issue.view'});
     });
 
     test('invite passes email + role slug and parses invite_token', () async {

@@ -72,7 +72,9 @@ class _SettingsView extends StatelessWidget {
                 subtitle: Text(l10n.adminSettingsLdapDesc),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const AdminLdapPage()),
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AdminLdapPage(),
+                  ),
                 ),
               ),
               ListTile(

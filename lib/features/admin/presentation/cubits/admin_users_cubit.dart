@@ -77,7 +77,8 @@ class AdminUsersCubit extends Cubit<AdminUsersState> {
       ok: (u) {
         if (current is AdminUsersLoaded) {
           final updated = [
-            for (final x in current.items) if (x.id == u.id) u else x,
+            for (final x in current.items)
+              if (x.id == u.id) u else x,
           ];
           emit(current.copyWith(items: updated, clearError: true));
         }

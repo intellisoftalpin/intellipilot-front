@@ -980,5 +980,12 @@
   "dashThroughputTitle": "Закрыта за тыдзень",
   "dashByTypeTitle": "Па тыпе",
   "dashByPriorityTitle": "Па прыярытэце",
-  "dashBreakdownEmpty": "Няма даных"
+  "dashBreakdownEmpty": "Няма даных",
+  "dashByCategoryTitle": "Па катэгорыі",
+  "navDashboard": "Дашборд",
+  "fieldEmoji": "Эмодзі",
+  "actionClearFilters": "Скінуць фільтры",
+  "issueFieldDueDate": "Тэрмін выканання",
+  "issueFieldAssignee": "Выканаўца",
+  "issueFieldCategory": "Катэгорыя"
 }

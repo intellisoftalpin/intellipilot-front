@@ -95,10 +95,12 @@ class _SshKeysSection extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             if (state is SshKeysLoading)
-              const Center(child: Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(),
-              ))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
+              )
             else if (state is SshKeysLoadFailed)
               Text(failureText(state.failure))
             else if (state is SshKeysLoaded)
@@ -354,10 +356,12 @@ class _RepositoriesSection extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             if (state is RepositoriesLoading)
-              const Center(child: Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(),
-              ))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                ),
+              )
             else if (state is RepositoriesLoadFailed)
               Text(failureText(state.failure))
             else if (state is RepositoriesLoaded)
@@ -650,7 +654,9 @@ Future<void> _showRepoDialog(BuildContext context, Repository? existing) async {
                         UpdateRepositoryRequest(
                           name: name,
                           sshUrl: url,
-                          sshKeyId: creatingNewKey ? existing.sshKeyId : selectedKey,
+                          sshKeyId: creatingNewKey
+                              ? existing.sshKeyId
+                              : selectedKey,
                           defaultBranch: branch.isEmpty ? null : branch,
                         ),
                       );

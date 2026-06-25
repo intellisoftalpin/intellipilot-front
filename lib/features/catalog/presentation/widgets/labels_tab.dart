@@ -39,8 +39,8 @@ class _LabelsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final detail = context.watch<ProjectDetailCubit>().state;
-    final canEdit = detail is ProjectDetailLoaded &&
-        detail.has(Permission.projectModify);
+    final canEdit =
+        detail is ProjectDetailLoaded && detail.has(Permission.projectModify);
 
     return BlocBuilder<LabelsCubit, LabelsState>(
       builder: (context, state) {
@@ -89,8 +89,7 @@ class _LabelsView extends StatelessWidget {
                               IconButton(
                                 icon: const Icon(Icons.delete_outline),
                                 tooltip: t.actionDelete,
-                                onPressed: () =>
-                                    _confirmDelete(context, label),
+                                onPressed: () => _confirmDelete(context, label),
                               ),
                             ],
                           )

@@ -95,14 +95,16 @@ class TaskBoardLoaded extends TaskBoardState {
     epics: epics ?? this.epics,
     labels: labels ?? this.labels,
     components: components ?? this.components,
-    sprintFilter:
-        sprintFilter == _absent ? this.sprintFilter : sprintFilter as String?,
+    sprintFilter: sprintFilter == _absent
+        ? this.sprintFilter
+        : sprintFilter as String?,
     assigneeFilter: assigneeFilter == _absent
         ? this.assigneeFilter
         : assigneeFilter as String?,
     epicFilter: epicFilter == _absent ? this.epicFilter : epicFilter as String?,
-    labelFilter:
-        labelFilter == _absent ? this.labelFilter : labelFilter as String?,
+    labelFilter: labelFilter == _absent
+        ? this.labelFilter
+        : labelFilter as String?,
     componentFilter: componentFilter == _absent
         ? this.componentFilter
         : componentFilter as String?,

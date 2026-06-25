@@ -50,12 +50,18 @@ class EntityDetailPage extends StatefulWidget {
     required this.entityId,
     this.onClose,
     this.onOpen,
+    this.embeddedWide = false,
     super.key,
   });
 
   final String projectId;
   final EntityKind kind;
   final String entityId;
+
+  /// When true the page keeps its full two-column wide layout even though
+  /// [onClose] is set — used by the wide slide-over detail sheet (as opposed
+  /// to the narrow ~420px board panel which stays compact).
+  final bool embeddedWide;
 
   /// When set, the page renders a close (×) button in the app bar
   /// actions slot. Used when the page is embedded as a panel (e.g. the
@@ -187,6 +193,7 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
         onChanged: _reload,
         onClose: widget.onClose,
         onOpen: widget.onOpen,
+        embeddedWide: widget.embeddedWide,
       ),
     );
   }
@@ -382,6 +389,7 @@ class _DetailView extends StatelessWidget {
     required this.onChanged,
     this.onClose,
     this.onOpen,
+    this.embeddedWide = false,
   });
 
   final _PageData data;
@@ -391,8 +399,11 @@ class _DetailView extends StatelessWidget {
   final VoidCallback onChanged;
   final VoidCallback? onClose;
   final VoidCallback? onOpen;
+  final bool embeddedWide;
 
-  bool get _isCompact => onClose != null;
+  /// The narrow ~420px board panel is compact; the wide slide-over sheet
+  /// ([embeddedWide]) and the full-page route keep the roomy layout.
+  bool get _isCompact => onClose != null && !embeddedWide;
 
   @override
   Widget build(BuildContext context) {
@@ -414,6 +425,14 @@ class _DetailView extends StatelessWidget {
             Crumb(
               label: data.project.name,
               onTap: () => context.go(Routes.projectDetailFor(data.project.id)),
+            ),
+            Crumb(
+              label: kind == EntityKind.epic ? t.railEpics : t.issuesTitle,
+              onTap: () => context.go(
+                kind == EntityKind.epic
+                    ? Routes.projectEpicsFor(data.project.id)
+                    : Routes.projectIssuesFor(data.project.id),
+              ),
             ),
             Crumb(label: key, mono: true),
           ],
@@ -974,6 +993,7 @@ class _LeftColumn extends StatelessWidget {
           child: ActivityStreamView(
             draftKey: '${kind.wire}:$entityId',
             shrinkWrap: true,
+            membersById: data.membersById,
           ),
         ),
       ],
@@ -1033,6 +1053,7 @@ class _RightColumn extends StatelessWidget {
               projectId: projectId,
               issueId: entityId,
               myId: data.profile.id,
+              membersById: data.membersById,
             ),
           ),
         ],
@@ -3199,11 +3220,13 @@ class _WatchersPanel extends StatefulWidget {
     required this.projectId,
     required this.issueId,
     required this.myId,
+    required this.membersById,
   });
 
   final String projectId;
   final String issueId;
   final String myId;
+  final Map<String, UserRef> membersById;
 
   @override
   State<_WatchersPanel> createState() => _WatchersPanelState();
@@ -3227,6 +3250,13 @@ class _WatchersPanelState extends State<_WatchersPanel> {
   }
 
   void _reload() => setState(() => _future = _load());
+
+  /// Resolve a watcher's user id to a display name (falling back to the id),
+  /// tagging the current user with "(you)".
+  String _watcherLabel(String id) {
+    final name = widget.membersById[id]?.displayName ?? id;
+    return id == widget.myId ? '$name (you)' : name;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -3291,7 +3321,7 @@ class _WatchersPanelState extends State<_WatchersPanel> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            w == widget.myId ? '$w (you)' : w,
+                            _watcherLabel(w),
                             style: theme.textTheme.bodyMedium,
                             overflow: TextOverflow.ellipsis,
                           ),

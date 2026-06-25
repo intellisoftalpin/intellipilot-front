@@ -85,8 +85,7 @@ class TaxonomyCubit extends Cubit<TaxonomyState> {
     final s = state;
     if (s is! TaxonomyLoaded) return;
     emit(s.copyWith(busy: true, lastError: null));
-    final res =
-        await _repo.updateTaxonomyItem(projectId, kind, itemId, body);
+    final res = await _repo.updateTaxonomyItem(projectId, kind, itemId, body);
     if (res.isErr) {
       emit(s.copyWith(busy: false, lastError: res.failureOrNull));
       return;

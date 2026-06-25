@@ -79,7 +79,8 @@ class _ActivityView extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(12),
             child: BlocBuilder<AdminActivityCubit, AdminActivityState>(
-              buildWhen: (a, b) => a.runtimeType != b.runtimeType || b is AdminActivityLoaded,
+              buildWhen: (a, b) =>
+                  a.runtimeType != b.runtimeType || b is AdminActivityLoaded,
               builder: (context, state) {
                 final current = state is AdminActivityLoaded
                     ? state.actionFilter
@@ -111,13 +112,14 @@ class _ActivityView extends StatelessWidget {
                 AdminActivityFailed(:final failure) => Center(
                   child: Text('Failed to load activity: ${failure.debugLabel}'),
                 ),
-                AdminActivityLoaded(:final items) => items.isEmpty
-                    ? const Center(child: Text('No activity yet.'))
-                    : ListView.separated(
-                        itemBuilder: (_, i) => _EventTile(event: items[i]),
-                        separatorBuilder: (_, _) => const Divider(height: 0),
-                        itemCount: items.length,
-                      ),
+                AdminActivityLoaded(:final items) =>
+                  items.isEmpty
+                      ? const Center(child: Text('No activity yet.'))
+                      : ListView.separated(
+                          itemBuilder: (_, i) => _EventTile(event: items[i]),
+                          separatorBuilder: (_, _) => const Divider(height: 0),
+                          itemCount: items.length,
+                        ),
               },
             ),
           ),

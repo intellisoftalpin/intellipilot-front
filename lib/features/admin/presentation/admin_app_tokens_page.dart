@@ -13,15 +13,8 @@ import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
-/// Permissions a token may carry — the backend's 35 (the frontend `us.*` /
-/// `task.*` are UI-only placeholders the API would reject).
-final List<Permission> _tokenPermissions = Permission.values
-    .where(
-      (p) =>
-          p.domain != PermissionDomain.userStories &&
-          p.domain != PermissionDomain.tasks,
-    )
-    .toList();
+/// Permissions a token may carry — the full backend permission set.
+final List<Permission> _tokenPermissions = Permission.values.toList();
 
 class AdminAppTokensPage extends StatelessWidget {
   const AdminAppTokensPage({super.key});
@@ -50,16 +43,19 @@ class _View extends StatelessWidget {
     final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(t.adminAppTokensTitle)),
-      floatingActionButton: BlocBuilder<AdminAppTokensCubit, AdminAppTokensState>(
-        builder: (context, state) {
-          if (state is! AdminAppTokensLoaded) return const SizedBox.shrink();
-          return FloatingActionButton.extended(
-            icon: const Icon(Icons.add),
-            label: Text(t.appTokenNew),
-            onPressed: () => _openCreate(context, state.projects),
-          );
-        },
-      ),
+      floatingActionButton:
+          BlocBuilder<AdminAppTokensCubit, AdminAppTokensState>(
+            builder: (context, state) {
+              if (state is! AdminAppTokensLoaded) {
+                return const SizedBox.shrink();
+              }
+              return FloatingActionButton.extended(
+                icon: const Icon(Icons.add),
+                label: Text(t.appTokenNew),
+                onPressed: () => _openCreate(context, state.projects),
+              );
+            },
+          ),
       body: BlocBuilder<AdminAppTokensCubit, AdminAppTokensState>(
         builder: (context, state) {
           if (state is AdminAppTokensLoading) {
@@ -132,8 +128,8 @@ class _TokenRow extends StatelessWidget {
       _ when token.isExpired => (t.appTokenExpired, Colors.orange),
       _ => (t.appTokenActive, Colors.green),
     };
-    final projectNames =
-        token.projectIds.map(state.projectName).toList()..sort();
+    final projectNames = token.projectIds.map(state.projectName).toList()
+      ..sort();
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
@@ -344,12 +340,17 @@ class _TokenDialogState extends State<_TokenDialog> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(t.appTokenProjects,
-                  style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                t.appTokenProjects,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               if (widget.projects.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text('—', style: Theme.of(context).textTheme.bodySmall),
+                  child: Text(
+                    '—',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 )
               else
                 Wrap(
@@ -370,8 +371,10 @@ class _TokenDialogState extends State<_TokenDialog> {
                   ],
                 ),
               const SizedBox(height: 16),
-              Text(t.appTokenPermissions,
-                  style: Theme.of(context).textTheme.titleSmall),
+              Text(
+                t.appTokenPermissions,
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 4),
               _PermissionPicker(
                 selected: _permissions,
@@ -428,7 +431,9 @@ class _PermissionPicker extends StatelessWidget {
             children: [
               OutlinedButton(
                 onPressed: () => onChanged(
-                  _tokenPermissions.where((p) => p.wire.endsWith('.view')).toSet(),
+                  _tokenPermissions
+                      .where((p) => p.wire.endsWith('.view'))
+                      .toSet(),
                 ),
                 child: Text(t.rolePresetReader),
               ),
@@ -483,8 +488,6 @@ class _PermissionPicker extends StatelessWidget {
     PermissionDomain.members => t.permDomainMembers,
     PermissionDomain.roles => t.permDomainRoles,
     PermissionDomain.epics => t.permDomainEpics,
-    PermissionDomain.userStories => t.permDomainUserStories,
-    PermissionDomain.tasks => t.permDomainTasks,
     PermissionDomain.issues => t.permDomainIssues,
     PermissionDomain.milestones => t.permDomainMilestones,
     PermissionDomain.wiki => t.permDomainWiki,

@@ -54,7 +54,9 @@ class AdminAppTokensCubit extends Cubit<AdminAppTokensState> {
     final projectsRes = await _projects.listProjects();
     final tokens = tokensRes.valueOrNull;
     if (tokens == null) {
-      emit(AdminAppTokensFailed(tokensRes.failureOrNull ?? const UnknownFailure()));
+      emit(
+        AdminAppTokensFailed(tokensRes.failureOrNull ?? const UnknownFailure()),
+      );
       return;
     }
     final projects = (projectsRes.valueOrNull ?? const <Project>[]).toList()
@@ -73,11 +75,13 @@ class AdminAppTokensCubit extends Cubit<AdminAppTokensState> {
     }
     final s = state;
     if (s is AdminAppTokensLoaded) {
-      emit(AdminAppTokensLoaded(
-        tokens: s.tokens,
-        projects: s.projects,
-        lastError: res.failureOrNull,
-      ));
+      emit(
+        AdminAppTokensLoaded(
+          tokens: s.tokens,
+          projects: s.projects,
+          lastError: res.failureOrNull,
+        ),
+      );
     }
     return null;
   }
@@ -90,11 +94,13 @@ class AdminAppTokensCubit extends Cubit<AdminAppTokensState> {
     }
     final s = state;
     if (s is AdminAppTokensLoaded) {
-      emit(AdminAppTokensLoaded(
-        tokens: s.tokens,
-        projects: s.projects,
-        lastError: res.failureOrNull,
-      ));
+      emit(
+        AdminAppTokensLoaded(
+          tokens: s.tokens,
+          projects: s.projects,
+          lastError: res.failureOrNull,
+        ),
+      );
     }
     return false;
   }

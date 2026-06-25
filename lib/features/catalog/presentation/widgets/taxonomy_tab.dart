@@ -7,6 +7,7 @@ import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/cubits/taxonomy_cubit.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/emoji_picker.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
@@ -122,9 +123,10 @@ class _TaxonomyKindView extends StatelessWidget {
                               // applies the same shift internally so we can
                               // pass the raw index through.
                               unawaited(
-                                context
-                                    .read<TaxonomyCubit>()
-                                    .reorder(moved.id, newIndex),
+                                context.read<TaxonomyCubit>().reorder(
+                                  moved.id,
+                                  newIndex,
+                                ),
                               );
                             }
                           : (_, _) {},
@@ -135,7 +137,12 @@ class _TaxonomyKindView extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 2),
                           child: Card(
                             child: ListTile(
-                              leading: HexColorDot(hex: item.color, size: 20),
+                              leading: item.emoji.isNotEmpty
+                                  ? Text(
+                                      item.emoji,
+                                      style: const TextStyle(fontSize: 20),
+                                    )
+                                  : HexColorDot(hex: item.color, size: 20),
                               title: Text(item.name),
                               subtitle: _ItemSubtitle(item: item),
                               trailing: Wrap(
@@ -191,6 +198,7 @@ class _TaxonomyKindView extends StatelessWidget {
         ? existing!.color
         : ColorPalette.swatches.first;
     var isClosed = existing?.isClosed ?? false;
+    var emoji = existing?.emoji ?? '';
     final cubit = context.read<TaxonomyCubit>();
 
     await showDialog<void>(
@@ -229,6 +237,15 @@ class _TaxonomyKindView extends StatelessWidget {
                   selectedHex: color,
                   onChanged: (h) => setState(() => color = h),
                 ),
+                if (kind.hasEmoji) ...[
+                  const SizedBox(height: 12),
+                  Text(t.fieldEmoji),
+                  const SizedBox(height: 4),
+                  EmojiPicker(
+                    selected: emoji,
+                    onChanged: (e) => setState(() => emoji = e),
+                  ),
+                ],
                 if (kind.hasClosed) ...[
                   const SizedBox(height: 12),
                   SwitchListTile(
@@ -243,8 +260,9 @@ class _TaxonomyKindView extends StatelessWidget {
                   const SizedBox(height: 12),
                   TextField(
                     controller: valueCtrl,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: InputDecoration(
                       labelText: t.taxonomyValueLabel,
                       helperText: t.taxonomyValueHint,
@@ -274,6 +292,7 @@ class _TaxonomyKindView extends StatelessWidget {
                       name: name,
                       slug: slug,
                       color: color,
+                      emoji: kind.hasEmoji ? emoji : '',
                       isClosed: kind.hasClosed ? isClosed : null,
                       value: value,
                     ),
@@ -284,6 +303,7 @@ class _TaxonomyKindView extends StatelessWidget {
                     UpdateTaxonomyItemRequest(
                       name: name,
                       color: color,
+                      emoji: kind.hasEmoji ? emoji : null,
                       isClosed: kind.hasClosed ? isClosed : null,
                       value: value,
                     ),

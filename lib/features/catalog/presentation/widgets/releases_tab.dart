@@ -114,8 +114,8 @@ class _ReleaseCard extends StatelessWidget {
       child: ExpansionTile(
         leading: const Icon(Icons.rocket_launch_outlined),
         title: Text(release.name),
-        subtitle: (release.description != null &&
-                release.description!.isNotEmpty)
+        subtitle:
+            (release.description != null && release.description!.isNotEmpty)
             ? Text(release.description!)
             : null,
         onExpansionChanged: (open) {
@@ -335,8 +335,10 @@ Future<void> _showVersionDialog(
   var repoId = existing?.repositoryId;
 
   // Repositories for the optional per-version link.
-  final repos = (await getIt<CatalogRepository>().listRepositories(projectId))
-          .valueOrNull ??
+  final repos =
+      (await getIt<CatalogRepository>().listRepositories(
+        projectId,
+      )).valueOrNull ??
       const [];
   if (!context.mounted) return;
 

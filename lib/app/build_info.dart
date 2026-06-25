@@ -17,17 +17,23 @@ class BuildInfo {
   const BuildInfo._();
 
   /// Semver string, e.g. `0.1.0`. Keep in lockstep with `pubspec.yaml`.
-  static const String version =
-      String.fromEnvironment('INTELLIPILOT_VERSION', defaultValue: '0.1.0');
+  static const String version = String.fromEnvironment(
+    'INTELLIPILOT_VERSION',
+    defaultValue: '0.1.0',
+  );
 
   /// Build identifier (`+N` suffix in pubspec). Often a CI build number.
-  static const String build =
-      String.fromEnvironment('INTELLIPILOT_BUILD', defaultValue: '1');
+  static const String build = String.fromEnvironment(
+    'INTELLIPILOT_BUILD',
+    defaultValue: '1',
+  );
 
   /// Flavor — drives flavor-specific UI accents and API base resolution.
   /// Values: `dev`, `staging`, `prod`. Defaults to `dev`.
-  static const String flavor =
-      String.fromEnvironment('INTELLIPILOT_FLAVOR', defaultValue: 'dev');
+  static const String flavor = String.fromEnvironment(
+    'INTELLIPILOT_FLAVOR',
+    defaultValue: 'dev',
+  );
 
   /// `version+build`, matching the pubspec.yaml `version:` field shape.
   static String get fullVersion => '$version+$build';

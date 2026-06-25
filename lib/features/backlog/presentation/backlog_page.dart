@@ -2,13 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
-import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
+import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/backlog_cubit.dart';
@@ -96,11 +95,10 @@ class _BacklogView extends StatelessWidget {
           currentLabel: t.backlogTitle,
         ),
       ),
-      floatingActionButton:
-          BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
+      floatingActionButton: BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
         builder: (context, detail) {
           if (detail is! ProjectDetailLoaded ||
-              !detail.has(Permission.usCreate)) {
+              !detail.has(Permission.issueCreate)) {
             return const SizedBox.shrink();
           }
           return FloatingActionButton.extended(
@@ -123,8 +121,7 @@ class _BacklogView extends StatelessWidget {
                   Text(t.backlogLoadFailed),
                   const SizedBox(height: 8),
                   FilledButton(
-                    onPressed: () =>
-                        context.read<BacklogCubit>().load(),
+                    onPressed: () => context.read<BacklogCubit>().load(),
                     child: Text(t.actionRetry),
                   ),
                 ],
@@ -185,11 +182,11 @@ class _LoadedState extends State<_Loaded> {
     final t = AppLocalizations.of(context);
     final detail = context.watch<ProjectDetailCubit>().state;
     final canEditUs =
-        detail is ProjectDetailLoaded && detail.has(Permission.usModify);
+        detail is ProjectDetailLoaded && detail.has(Permission.issueModify);
     final canCreateEpic =
         detail is ProjectDetailLoaded && detail.has(Permission.epicCreate);
     final canCreateUs =
-        detail is ProjectDetailLoaded && detail.has(Permission.usCreate);
+        detail is ProjectDetailLoaded && detail.has(Permission.issueCreate);
 
     final stories = widget.state.visible;
     return Center(
@@ -224,8 +221,7 @@ class _LoadedState extends State<_Loaded> {
                   border: const OutlineInputBorder(),
                   isDense: true,
                 ),
-                onChanged: (v) =>
-                    context.read<BacklogCubit>().setSearch(v),
+                onChanged: (v) => context.read<BacklogCubit>().setSearch(v),
               ),
             ),
             SizedBox(
@@ -399,8 +395,10 @@ class _UserStoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final status =
-        statuses.where((s) => s.id == story.statusId).cast<TaxonomyItem?>().firstOrNull;
+    final status = statuses
+        .where((s) => s.id == story.statusId)
+        .cast<TaxonomyItem?>()
+        .firstOrNull;
     final p = points
         .where((p) => p.id == story.sizeId)
         .cast<TaxonomyItem?>()
@@ -422,13 +420,7 @@ class _UserStoryRow extends StatelessWidget {
           if (p != null) SizeBadge(item: p),
         ],
       ),
-      onTap: () => context.go(
-        Routes.entityDetailFor(
-          story.projectId,
-          EntityKind.issue,
-          story.id,
-        ),
-      ),
+      onTap: () => _openStoryDetail(context, story),
       trailing: canEdit
           ? Wrap(
               spacing: 4,
@@ -436,13 +428,7 @@ class _UserStoryRow extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.open_in_new),
                   tooltip: t.actionOpenDetail,
-                  onPressed: () => context.go(
-                    Routes.entityDetailFor(
-                      story.projectId,
-                      EntityKind.issue,
-                      story.id,
-                    ),
-                  ),
+                  onPressed: () => _openStoryDetail(context, story),
                 ),
                 _StatusMenu(story: story, statuses: statuses),
                 IconButton(
@@ -483,9 +469,7 @@ class _UserStoryRow extends StatelessWidget {
                       body: t.backlogDeleteUsConfirm(story.subject),
                     );
                     if ((ok ?? false) && context.mounted) {
-                      await context
-                          .read<BacklogCubit>()
-                          .deleteIssue(story.id);
+                      await context.read<BacklogCubit>().deleteIssue(story.id);
                     }
                   },
                 ),
@@ -494,6 +478,17 @@ class _UserStoryRow extends StatelessWidget {
           : null,
     );
     return tile;
+  }
+
+  Future<void> _openStoryDetail(BuildContext context, Issue story) async {
+    final cubit = context.read<BacklogCubit>();
+    await showEntityDetailSheet(
+      context,
+      projectId: story.projectId,
+      kind: EntityKind.issue,
+      entityId: story.id,
+    );
+    await cubit.load();
   }
 }
 

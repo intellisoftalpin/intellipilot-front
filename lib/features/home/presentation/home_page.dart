@@ -7,6 +7,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/widgets/error_view.dart';
 import 'package:intellipilot/core/widgets/loading_indicator.dart';
+import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/dashboard/data/dtos/dashboard_dtos.dart';
 import 'package:intellipilot/features/dashboard/domain/dashboard_repository.dart';
 import 'package:intellipilot/features/dashboard/presentation/cubits/global_dashboard_cubit.dart';
@@ -213,7 +214,13 @@ class _AttentionList extends StatelessWidget {
                   ? it.statusName
                   : '${it.statusName} · ${l10n.dashDue(it.dueDate!)}',
             ),
-            onTap: () => context.go(Routes.projectIssuesFor(it.projectId)),
+            onTap: () => context.go(
+              Routes.entityDetailFor(
+                it.projectId,
+                EntityKind.issue,
+                it.issueId,
+              ),
+            ),
           ),
       ],
     );

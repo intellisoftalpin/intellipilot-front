@@ -981,5 +981,12 @@
   "dashThroughputTitle": "Erledigt pro Woche",
   "dashByTypeTitle": "Nach Typ",
   "dashByPriorityTitle": "Nach Priorität",
-  "dashBreakdownEmpty": "Keine Daten"
+  "dashBreakdownEmpty": "Keine Daten",
+  "dashByCategoryTitle": "Nach Kategorie",
+  "navDashboard": "Dashboard",
+  "fieldEmoji": "Emoji",
+  "actionClearFilters": "Filter löschen",
+  "issueFieldDueDate": "Fälligkeitsdatum",
+  "issueFieldAssignee": "Zugewiesen an",
+  "issueFieldCategory": "Kategorie"
 }
