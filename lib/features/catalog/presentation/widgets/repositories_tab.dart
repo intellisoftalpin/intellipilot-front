@@ -54,7 +54,12 @@ class _RepositoriesView extends StatelessWidget {
   Widget build(BuildContext context) {
     final detail = context.watch<ProjectDetailCubit>().state;
     final canEdit =
-        detail is ProjectDetailLoaded && detail.has(Permission.projectModify);
+        detail is ProjectDetailLoaded &&
+        detail.hasAny(const [
+          Permission.repositoryCreate,
+          Permission.repositoryModify,
+          Permission.repositoryDelete,
+        ]);
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [

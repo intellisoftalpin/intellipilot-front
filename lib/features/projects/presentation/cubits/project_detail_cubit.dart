@@ -33,6 +33,11 @@ final class ProjectDetailLoaded extends ProjectDetailState {
 
   bool has(Permission p) => isAdmin || myPermissions.contains(p);
 
+  /// True if the caller holds any of [perms] (or is an admin). Used to decide
+  /// whether to surface a management UI gated by a group of create/modify/
+  /// delete permissions.
+  bool hasAny(Iterable<Permission> perms) => isAdmin || perms.any(has);
+
   @override
   List<Object?> get props => [project.id, myPermissions, isAdmin];
 }

@@ -1,6 +1,6 @@
-/// All 40 atomic permissions defined in the backend's `intellipilot_core::perms`.
-/// Names match the wire strings exactly so we can round-trip without mapping
-/// tables.
+/// All atomic permissions defined in the backend's `intellipilot_core::perms`
+/// (53 entries). Names match the wire strings exactly so we can round-trip
+/// without mapping tables.
 enum Permission {
   // Project
   projectView('project.view', PermissionDomain.project),
@@ -60,7 +60,37 @@ enum Permission {
   // Time tracking
   timeLog('time.log', PermissionDomain.timeTracking),
   timeViewAll('time.view_all', PermissionDomain.timeTracking),
-  timeManage('time.manage', PermissionDomain.timeTracking);
+  timeManage('time.manage', PermissionDomain.timeTracking),
+
+  // Taxonomy (issue types, priorities, sizes, statuses, resolutions)
+  taxonomyCreate('taxonomy.create', PermissionDomain.taxonomy),
+  taxonomyModify('taxonomy.modify', PermissionDomain.taxonomy),
+  taxonomyDelete('taxonomy.delete', PermissionDomain.taxonomy),
+
+  // Labels
+  labelCreate('label.create', PermissionDomain.labels),
+  labelModify('label.modify', PermissionDomain.labels),
+  labelDelete('label.delete', PermissionDomain.labels),
+
+  // Components
+  componentCreate('component.create', PermissionDomain.components),
+  componentModify('component.modify', PermissionDomain.components),
+  componentDelete('component.delete', PermissionDomain.components),
+
+  // Repositories (incl. SSH keys and component links)
+  repositoryCreate('repository.create', PermissionDomain.repositories),
+  repositoryModify('repository.modify', PermissionDomain.repositories),
+  repositoryDelete('repository.delete', PermissionDomain.repositories),
+
+  // Customers
+  customerCreate('customer.create', PermissionDomain.customers),
+  customerModify('customer.modify', PermissionDomain.customers),
+  customerDelete('customer.delete', PermissionDomain.customers),
+
+  // Releases (incl. versions and component links)
+  releaseCreate('release.create', PermissionDomain.releases),
+  releaseModify('release.modify', PermissionDomain.releases),
+  releaseDelete('release.delete', PermissionDomain.releases);
 
   const Permission(this.wire, this.domain);
   final String wire;
@@ -84,6 +114,12 @@ enum PermissionDomain {
   wiki,
   commentsAndAttachments,
   timeTracking,
+  taxonomy,
+  labels,
+  components,
+  repositories,
+  customers,
+  releases,
 }
 
 /// Built-in preset permission sets matching the backend's default roles. Used
@@ -137,6 +173,25 @@ abstract final class RolePresets {
       Permission.wikiDelete,
       Permission.commentModerate,
       Permission.timeViewAll,
+      // Project-configuration entities.
+      Permission.taxonomyCreate,
+      Permission.taxonomyModify,
+      Permission.taxonomyDelete,
+      Permission.labelCreate,
+      Permission.labelModify,
+      Permission.labelDelete,
+      Permission.componentCreate,
+      Permission.componentModify,
+      Permission.componentDelete,
+      Permission.repositoryCreate,
+      Permission.repositoryModify,
+      Permission.repositoryDelete,
+      Permission.customerCreate,
+      Permission.customerModify,
+      Permission.customerDelete,
+      Permission.releaseCreate,
+      Permission.releaseModify,
+      Permission.releaseDelete,
     ]);
     return base;
   }

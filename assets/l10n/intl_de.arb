@@ -263,6 +263,12 @@
   "permDomainMilestones": "Meilensteine",
   "permDomainWiki": "Wiki",
   "permDomainCommentsAttachments": "Kommentare & Anhänge",
+  "permDomainTaxonomy": "Taxonomie",
+  "permDomainLabels": "Labels",
+  "permDomainComponents": "Komponenten",
+  "permDomainRepositories": "Repositories",
+  "permDomainCustomers": "Kunden",
+  "permDomainReleases": "Releases",
 
   "projectDeleteSectionTitle": "Dieses Projekt löschen",
   "projectDeleteBody": "Dadurch werden das Projekt und alle zugehörigen Daten endgültig gelöscht. Es gibt keine Schonfrist.",

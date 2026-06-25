@@ -44,7 +44,12 @@ class _ReleasesView extends StatelessWidget {
   Widget build(BuildContext context) {
     final detail = context.watch<ProjectDetailCubit>().state;
     final canEdit =
-        detail is ProjectDetailLoaded && detail.has(Permission.projectModify);
+        detail is ProjectDetailLoaded &&
+        detail.hasAny(const [
+          Permission.releaseCreate,
+          Permission.releaseModify,
+          Permission.releaseDelete,
+        ]);
     return BlocBuilder<ReleasesCubit, ReleasesState>(
       builder: (context, state) {
         return ListView(

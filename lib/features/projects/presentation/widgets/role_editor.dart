@@ -70,12 +70,10 @@ class RoleEditor extends StatelessWidget {
                             child: CheckboxListTile(
                               dense: true,
                               contentPadding: EdgeInsets.zero,
-                              controlAffinity:
-                                  ListTileControlAffinity.leading,
+                              controlAffinity: ListTileControlAffinity.leading,
                               title: Text(_permissionLabel(p)),
                               value: selected.contains(p),
-                              onChanged:
-                                  readOnly ? null : (v) => _toggle(p, v),
+                              onChanged: readOnly ? null : (v) => _toggle(p, v),
                             ),
                           ),
                       ],
@@ -89,19 +87,23 @@ class RoleEditor extends StatelessWidget {
     );
   }
 
-  String _domainLabel(AppLocalizations t, PermissionDomain d) =>
-      switch (d) {
-        PermissionDomain.project => t.permDomainProject,
-        PermissionDomain.members => t.permDomainMembers,
-        PermissionDomain.roles => t.permDomainRoles,
-        PermissionDomain.epics => t.permDomainEpics,
-        PermissionDomain.issues => t.permDomainIssues,
-        PermissionDomain.milestones => t.permDomainMilestones,
-        PermissionDomain.wiki => t.permDomainWiki,
-        PermissionDomain.commentsAndAttachments =>
-          t.permDomainCommentsAttachments,
-        PermissionDomain.timeTracking => t.ttTimeTracking,
-      };
+  String _domainLabel(AppLocalizations t, PermissionDomain d) => switch (d) {
+    PermissionDomain.project => t.permDomainProject,
+    PermissionDomain.members => t.permDomainMembers,
+    PermissionDomain.roles => t.permDomainRoles,
+    PermissionDomain.epics => t.permDomainEpics,
+    PermissionDomain.issues => t.permDomainIssues,
+    PermissionDomain.milestones => t.permDomainMilestones,
+    PermissionDomain.wiki => t.permDomainWiki,
+    PermissionDomain.commentsAndAttachments => t.permDomainCommentsAttachments,
+    PermissionDomain.timeTracking => t.ttTimeTracking,
+    PermissionDomain.taxonomy => t.permDomainTaxonomy,
+    PermissionDomain.labels => t.permDomainLabels,
+    PermissionDomain.components => t.permDomainComponents,
+    PermissionDomain.repositories => t.permDomainRepositories,
+    PermissionDomain.customers => t.permDomainCustomers,
+    PermissionDomain.releases => t.permDomainReleases,
+  };
 
   String _permissionLabel(Permission p) {
     // The wire format ("epic.create") is human-readable enough for a power-
@@ -130,14 +132,12 @@ class _Presets extends StatelessWidget {
         ),
         OutlinedButton.icon(
           icon: const Icon(Icons.edit_outlined, size: 16),
-          onPressed:
-              readOnly ? null : () => onPick(RolePresets.contributor()),
+          onPressed: readOnly ? null : () => onPick(RolePresets.contributor()),
           label: Text(t.rolePresetContributor),
         ),
         OutlinedButton.icon(
           icon: const Icon(Icons.shield_outlined, size: 16),
-          onPressed:
-              readOnly ? null : () => onPick(RolePresets.maintainer()),
+          onPressed: readOnly ? null : () => onPick(RolePresets.maintainer()),
           label: Text(t.rolePresetMaintainer),
         ),
         OutlinedButton.icon(

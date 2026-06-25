@@ -40,7 +40,12 @@ class _CustomersView extends StatelessWidget {
   Widget build(BuildContext context) {
     final detail = context.watch<ProjectDetailCubit>().state;
     final canEdit =
-        detail is ProjectDetailLoaded && detail.has(Permission.projectModify);
+        detail is ProjectDetailLoaded &&
+        detail.hasAny(const [
+          Permission.customerCreate,
+          Permission.customerModify,
+          Permission.customerDelete,
+        ]);
     return BlocBuilder<CustomersCubit, CustomersState>(
       builder: (context, state) {
         return ListView(

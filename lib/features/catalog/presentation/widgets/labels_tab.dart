@@ -40,7 +40,12 @@ class _LabelsView extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final detail = context.watch<ProjectDetailCubit>().state;
     final canEdit =
-        detail is ProjectDetailLoaded && detail.has(Permission.projectModify);
+        detail is ProjectDetailLoaded &&
+        detail.hasAny(const [
+          Permission.labelCreate,
+          Permission.labelModify,
+          Permission.labelDelete,
+        ]);
 
     return BlocBuilder<LabelsCubit, LabelsState>(
       builder: (context, state) {

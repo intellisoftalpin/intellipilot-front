@@ -263,6 +263,12 @@
   "permDomainMilestones": "Вехі",
   "permDomainWiki": "Вікі",
   "permDomainCommentsAttachments": "Каментарыі і ўкладанні",
+  "permDomainTaxonomy": "Таксаномія",
+  "permDomainLabels": "Меткі",
+  "permDomainComponents": "Кампаненты",
+  "permDomainRepositories": "Рэпазіторыі",
+  "permDomainCustomers": "Кліенты",
+  "permDomainReleases": "Рэлізы",
 
   "projectDeleteSectionTitle": "Выдаліць гэты праект",
   "projectDeleteBody": "Гэта назаўжды выдаліць праект і ўсе яго даныя. Льготнага перыяду няма.",
