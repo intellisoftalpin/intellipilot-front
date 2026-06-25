@@ -996,5 +996,20 @@
   "issueFieldAssignee": "Zugewiesen an",
   "issueFieldCategory": "Kategorie",
   "milestoneManageEpics": "Epics verwalten",
-  "milestoneNoEpics": "Noch keine Epics in diesem Meilenstein."
+  "milestoneNoEpics": "Noch keine Epics in diesem Meilenstein.",
+  "epicsColAll": "Alle",
+  "epicsColInProgress": "In Arbeit",
+  "epicsColDone": "Fertig",
+  "epicsFilterAllMilestones": "Alle Meilensteine",
+  "epicsFilterMilestoneLabel": "Meilenstein",
+  "epicsCountTooltip": "{count} Epics",
+  "panelEpic": "Epic",
+  "panelIncludedIssues": "Enthaltene Vorgänge",
+  "detailFieldCover": "Titelbild",
+  "epicNoIssues": "Noch keine Vorgänge in diesem Epic.",
+  "epicDangerZoneBody": "Das Löschen dieses Epics ist endgültig. Verknüpfte Vorgänge bleiben erhalten, werden aber davon getrennt.",
+  "epicDeleteAction": "Epic löschen",
+  "epicBoardSettingsTooltip": "Board-Einstellungen",
+  "epicBoardSettingsTitle": "Board-Spalten",
+  "epicBoardSettingsHint": "Wähle, welche Status in der Spalte „In Arbeit“ erscheinen. Geschlossene Status landen immer unter „Fertig“; der Rest bleibt unter „Alle“."
 }

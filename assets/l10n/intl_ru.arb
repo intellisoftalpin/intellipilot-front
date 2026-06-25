@@ -926,5 +926,20 @@
   "issueFieldAssignee": "Исполнитель",
   "issueFieldCategory": "Категория",
   "milestoneManageEpics": "Управление эпиками",
-  "milestoneNoEpics": "В этой вехе пока нет эпиков."
+  "milestoneNoEpics": "В этой вехе пока нет эпиков.",
+  "epicsColAll": "Все",
+  "epicsColInProgress": "В работе",
+  "epicsColDone": "Готово",
+  "epicsFilterAllMilestones": "Все вехи",
+  "epicsFilterMilestoneLabel": "Веха",
+  "epicsCountTooltip": "Эпиков: {count}",
+  "panelEpic": "Эпик",
+  "panelIncludedIssues": "Включённые задачи",
+  "detailFieldCover": "Обложка",
+  "epicNoIssues": "В этом эпике пока нет задач.",
+  "epicDangerZoneBody": "Удаление эпика необратимо. Связанные задачи сохранятся, но будут отвязаны.",
+  "epicDeleteAction": "Удалить эпик",
+  "epicBoardSettingsTooltip": "Настройки доски",
+  "epicBoardSettingsTitle": "Колонки доски",
+  "epicBoardSettingsHint": "Выберите, какие статусы попадают в колонку «В работе». Закрытые статусы всегда идут в «Готово»; остальные остаются в «Все»."
 }

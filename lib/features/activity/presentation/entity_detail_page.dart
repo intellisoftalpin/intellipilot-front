@@ -6,11 +6,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/app/session/session_bloc.dart';
+import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/models/intellibot.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
+import 'package:intellipilot/core/network/api_config.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
+import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/core/ui/timestamps.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
@@ -24,6 +28,7 @@ import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
 import 'package:intellipilot/features/links/domain/links_repository.dart';
 import 'package:intellipilot/features/links/presentation/cubits/links_cubit.dart';
 import 'package:intellipilot/features/links/presentation/widgets/links_panel.dart';
@@ -516,6 +521,7 @@ class _DetailView extends StatelessWidget {
                         entityId: entityId,
                         projectId: projectId,
                         onChanged: onChanged,
+                        onClose: onClose,
                         compact: _isCompact,
                       ),
                     ),
@@ -540,6 +546,7 @@ class _DetailView extends StatelessWidget {
                       entityId: entityId,
                       projectId: projectId,
                       onChanged: onChanged,
+                      onClose: onClose,
                       compact: _isCompact,
                     ),
                   ],
@@ -965,6 +972,21 @@ class _LeftColumn extends StatelessWidget {
             ),
           ),
         ),
+        if (kind == EntityKind.epic) ...[
+          gap,
+          _Panel(
+            compact: compact,
+            title: AppLocalizations.of(context).panelIncludedIssues,
+            child: _IncludedIssuesPanel(
+              issues:
+                  data.issuesById.values
+                      .where((i) => i.epicId == entityId)
+                      .toList()
+                    ..sort((a, b) => a.reference.compareTo(b.reference)),
+              taxonomyById: data.taxonomyById,
+            ),
+          ),
+        ],
         if (kind == EntityKind.issue) ...[
           gap,
           _Panel(
@@ -1013,6 +1035,7 @@ class _RightColumn extends StatelessWidget {
     required this.entityId,
     required this.projectId,
     required this.onChanged,
+    this.onClose,
     this.compact = false,
   });
   final _PageData data;
@@ -1020,16 +1043,35 @@ class _RightColumn extends StatelessWidget {
   final String entityId;
   final String projectId;
   final VoidCallback onChanged;
+  final VoidCallback? onClose;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final gap = SizedBox(height: compact ? 8 : 12);
+    final s = context.watch<ProjectDetailCubit>().state;
+    final canDeleteEpic =
+        s is ProjectDetailLoaded && s.has(Permission.epicDelete);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (kind == EntityKind.epic) ...[
+          _Panel(
+            compact: compact,
+            title: t.panelEpic,
+            child: _EpicPropertiesTable(
+              epic: (data.entity as _EpicRec).epic,
+              projectId: projectId,
+              entityId: entityId,
+              onChanged: onChanged,
+            ),
+          ),
+          gap,
+        ],
         _Panel(
           compact: compact,
-          title: AppLocalizations.of(context).panelPeople,
+          title: t.panelPeople,
           child: _PeopleTable(
             data: data,
             kind: kind,
@@ -1038,14 +1080,14 @@ class _RightColumn extends StatelessWidget {
             onChanged: onChanged,
           ),
         ),
-        SizedBox(height: compact ? 8 : 12),
+        gap,
         _Panel(
           compact: compact,
-          title: AppLocalizations.of(context).panelDates,
+          title: t.panelDates,
           child: _DatesTable(data: data),
         ),
         if (kind == EntityKind.issue) ...[
-          SizedBox(height: compact ? 8 : 12),
+          gap,
           _Panel(
             compact: compact,
             title: 'Watchers',
@@ -1054,6 +1096,19 @@ class _RightColumn extends StatelessWidget {
               issueId: entityId,
               myId: data.profile.id,
               membersById: data.membersById,
+            ),
+          ),
+        ],
+        if (kind == EntityKind.epic && canDeleteEpic) ...[
+          gap,
+          _Panel(
+            compact: compact,
+            title: t.tabDangerZone,
+            child: _EpicDangerZone(
+              projectId: projectId,
+              entityId: entityId,
+              subject: data.entity.subject,
+              onClose: onClose,
             ),
           ),
         ],
@@ -2795,6 +2850,422 @@ class _KvLabelWidth extends InheritedWidget {
 
   @override
   bool updateShouldNotify(_KvLabelWidth oldWidget) => oldWidget.width != width;
+}
+
+// ---------------------------------------------------------------------------
+// Epic-only panels (cover image, colour, dates, included issues, danger zone)
+// ---------------------------------------------------------------------------
+
+/// Epic properties: cover image, colour swatch, and start / end dates. Every
+/// field PATCHes the epic via the shared dispatcher then triggers a reload.
+class _EpicPropertiesTable extends StatelessWidget {
+  const _EpicPropertiesTable({
+    required this.epic,
+    required this.projectId,
+    required this.entityId,
+    required this.onChanged,
+  });
+  final Epic epic;
+  final String projectId;
+  final String entityId;
+  final VoidCallback onChanged;
+
+  Future<void> _patch(UpdateEpicRequest body) async {
+    final ok = await _patchEntityKind(
+      kind: EntityKind.epic,
+      projectId: projectId,
+      entityId: entityId,
+      epicPatch: () => body,
+    );
+    if (ok) onChanged();
+  }
+
+  Future<void> _pickDate(BuildContext context, {required bool isStart}) async {
+    final raw = isStart ? epic.startDate : epic.endDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.tryParse(raw ?? '') ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    final s =
+        '${picked.year.toString().padLeft(4, '0')}-'
+        '${picked.month.toString().padLeft(2, '0')}-'
+        '${picked.day.toString().padLeft(2, '0')}';
+    await _patch(
+      isStart ? UpdateEpicRequest(startDate: s) : UpdateEpicRequest(endDate: s),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final canEdit = context.select<ProjectDetailCubit, bool>((c) {
+      final s = c.state;
+      return s is ProjectDetailLoaded && s.has(Permission.epicModify);
+    });
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _EpicCoverField(
+          epic: epic,
+          projectId: projectId,
+          entityId: entityId,
+          canEdit: canEdit,
+          onChanged: onChanged,
+        ),
+        const SizedBox(height: 10),
+        _kvRowWith(
+          context,
+          t.fieldColor,
+          canEdit
+              ? Align(
+                  alignment: Alignment.centerLeft,
+                  child: ColorSwatchPicker(
+                    selectedHex: epic.color,
+                    onChanged: (hex) =>
+                        unawaited(_patch(UpdateEpicRequest(color: hex))),
+                  ),
+                )
+              : Align(
+                  alignment: Alignment.centerLeft,
+                  child: HexColorDot(hex: epic.color, size: 14),
+                ),
+        ),
+        const SizedBox(height: 8),
+        _kvRowWith(
+          context,
+          t.ttStartDate,
+          _DateValue(
+            value: epic.startDate,
+            canEdit: canEdit,
+            onTap: () => _pickDate(context, isStart: true),
+          ),
+        ),
+        const SizedBox(height: 4),
+        _kvRowWith(
+          context,
+          t.ttEndDate,
+          _DateValue(
+            value: epic.endDate,
+            canEdit: canEdit,
+            onTap: () => _pickDate(context, isStart: false),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A date value cell: shows `YYYY-MM-DD` (or em-dash); tap opens a date picker
+/// when editable.
+class _DateValue extends StatelessWidget {
+  const _DateValue({
+    required this.value,
+    required this.canEdit,
+    required this.onTap,
+  });
+  final String? value;
+  final bool canEdit;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final label = (value == null || value!.isEmpty) ? '—' : value!;
+    final text = Text(label, style: theme.textTheme.bodyMedium);
+    if (!canEdit) return text;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(4),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 2),
+        child: Row(
+          children: [
+            Expanded(child: text),
+            Icon(
+              Icons.edit_calendar_outlined,
+              size: 16,
+              color: theme.colorScheme.outline,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cover image preview + upload / remove, mirroring the avatar upload flow.
+class _EpicCoverField extends StatefulWidget {
+  const _EpicCoverField({
+    required this.epic,
+    required this.projectId,
+    required this.entityId,
+    required this.canEdit,
+    required this.onChanged,
+  });
+  final Epic epic;
+  final String projectId;
+  final String entityId;
+  final bool canEdit;
+  final VoidCallback onChanged;
+
+  @override
+  State<_EpicCoverField> createState() => _EpicCoverFieldState();
+}
+
+class _EpicCoverFieldState extends State<_EpicCoverField> {
+  bool _busy = false;
+
+  Future<void> _upload() async {
+    final picked = await getIt<FilePicker>().pickSingleFile();
+    if (picked == null) return;
+    setState(() => _busy = true);
+    final res = await getIt<BacklogRepository>().uploadEpicCover(
+      widget.projectId,
+      widget.entityId,
+      filename: picked.name,
+      bytes: picked.bytes,
+      contentType: picked.contentType,
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (res.isOk) widget.onChanged();
+  }
+
+  Future<void> _remove() async {
+    setState(() => _busy = true);
+    final res = await getIt<BacklogRepository>().deleteEpicCover(
+      widget.projectId,
+      widget.entityId,
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (res.isOk) widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final canPick = widget.canEdit && getIt<FilePicker>().isSupported;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: widget.epic.hasCover
+              ? _EpicCoverImage(epic: widget.epic)
+              : Container(
+                  height: 120,
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.image_outlined,
+                    size: 36,
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+        ),
+        if (canPick) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: _busy ? null : () => unawaited(_upload()),
+                icon: _busy
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.upload_outlined, size: 18),
+                label: Text(t.pfUpload),
+              ),
+              if (widget.epic.hasCover) ...[
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: _busy ? null : () => unawaited(_remove()),
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  label: Text(t.actionRemove),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Authenticated cover image fetched from the backend (mirrors [UserAvatar]).
+class _EpicCoverImage extends StatelessWidget {
+  const _EpicCoverImage({required this.epic});
+  final Epic epic;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = getIt<ApiConfig>().baseUrl;
+    final token = getIt<SessionBloc>().currentAccessToken;
+    final v = Uri.encodeQueryComponent(epic.coverImageUpdatedAt ?? '');
+    final url =
+        '$base/api/v1/projects/${epic.projectId}/epics/${epic.id}/cover-image?v=$v';
+    return Image.network(
+      url,
+      height: 120,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      headers: token == null ? null : {'Authorization': 'Bearer $token'},
+      gaplessPlayback: true,
+      errorBuilder: (_, _, _) => Container(
+        height: 120,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.broken_image_outlined,
+          color: Theme.of(context).colorScheme.outline,
+        ),
+      ),
+    );
+  }
+}
+
+/// The issues grouped under this epic (read-only list).
+class _IncludedIssuesPanel extends StatelessWidget {
+  const _IncludedIssuesPanel({
+    required this.issues,
+    required this.taxonomyById,
+  });
+  final List<Issue> issues;
+  final Map<String, TaxonomyItem> taxonomyById;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    if (issues.isEmpty) {
+      return Text(
+        t.epicNoIssues,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.outline,
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final i in issues)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(
+              children: [
+                IssueKeyChip(text: '#${i.reference}'),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    i.subject,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+                if (i.statusId != null && taxonomyById[i.statusId] != null) ...[
+                  const SizedBox(width: 8),
+                  StatusPill(
+                    label: taxonomyById[i.statusId]!.name,
+                    colorHex: taxonomyById[i.statusId]!.color,
+                    dense: true,
+                  ),
+                ],
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Danger zone: permanently delete the epic (with confirmation). On success it
+/// closes the sheet so the host reloads its list.
+class _EpicDangerZone extends StatelessWidget {
+  const _EpicDangerZone({
+    required this.projectId,
+    required this.entityId,
+    required this.subject,
+    this.onClose,
+  });
+  final String projectId;
+  final String entityId;
+  final String subject;
+  final VoidCallback? onClose;
+
+  Future<void> _delete(BuildContext context) async {
+    final t = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.backlogDeleteEpicTitle),
+        content: Text(t.backlogDeleteEpicConfirm(subject)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(t.actionCancel),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(t.actionDelete),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final backlog = getIt<BacklogRepository>();
+    final fresh = (await backlog.getEpic(projectId, entityId)).valueOrNull;
+    if (fresh?.etag == null) return;
+    final res = await backlog.deleteEpic(
+      projectId,
+      entityId,
+      etag: fresh!.etag!,
+    );
+    if (!res.isOk) return;
+    if (onClose != null) {
+      onClose!();
+    } else {
+      unawaited(navigator.maybePop());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          t.epicDangerZoneBody,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.outline,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.tonalIcon(
+            style: FilledButton.styleFrom(
+              backgroundColor: theme.colorScheme.errorContainer,
+              foregroundColor: theme.colorScheme.onErrorContainer,
+            ),
+            onPressed: () => unawaited(_delete(context)),
+            icon: const Icon(Icons.delete_forever, size: 18),
+            label: Text(t.epicDeleteAction),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 Permission _modifyPermissionFor(EntityKind kind) => switch (kind) {

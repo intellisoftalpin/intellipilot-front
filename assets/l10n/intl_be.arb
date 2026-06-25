@@ -995,5 +995,20 @@
   "issueFieldAssignee": "Выканаўца",
   "issueFieldCategory": "Катэгорыя",
   "milestoneManageEpics": "Кіраванне эпікамі",
-  "milestoneNoEpics": "У гэтай вяхе пакуль няма эпікаў."
+  "milestoneNoEpics": "У гэтай вяхе пакуль няма эпікаў.",
+  "epicsColAll": "Усе",
+  "epicsColInProgress": "У працы",
+  "epicsColDone": "Гатова",
+  "epicsFilterAllMilestones": "Усе вехі",
+  "epicsFilterMilestoneLabel": "Веха",
+  "epicsCountTooltip": "Эпікаў: {count}",
+  "panelEpic": "Эпік",
+  "panelIncludedIssues": "Уключаныя задачы",
+  "detailFieldCover": "Вокладка",
+  "epicNoIssues": "У гэтым эпіку пакуль няма задач.",
+  "epicDangerZoneBody": "Выдаленне эпіка незваротнае. Звязаныя задачы захаваюцца, але будуць адвязаны.",
+  "epicDeleteAction": "Выдаліць эпік",
+  "epicBoardSettingsTooltip": "Налады дошкі",
+  "epicBoardSettingsTitle": "Калонкі дошкі",
+  "epicBoardSettingsHint": "Выберыце, якія статусы трапляюць у калонку «У працы». Закрытыя статусы заўсёды ідуць у «Гатова»; астатнія застаюцца ў «Усе»."
 }

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
@@ -26,6 +28,20 @@ abstract interface class BacklogRepository {
     String id,
     ReorderRequest body,
   );
+
+  /// Upload (replace) an epic's cover image. Returns the refreshed epic so the
+  /// caller picks up the new `coverImageUpdatedAt` for cache-busting.
+  Future<Result<Epic, AppFailure>> uploadEpicCover(
+    String projectId,
+    String id, {
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  });
+
+  /// Remove an epic's cover image (reset to the colour swatch). Returns the
+  /// refreshed epic.
+  Future<Result<Epic, AppFailure>> deleteEpicCover(String projectId, String id);
 
   // ---- issues (unified: Story / Task / Bug / sub-task) ----
   Future<Result<List<Issue>, AppFailure>> listIssues(String projectId);

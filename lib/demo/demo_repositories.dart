@@ -1549,6 +1549,31 @@ class DemoBacklogRepository implements BacklogRepository {
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
+  @override
+  Future<Result<Epic, AppFailure>> uploadEpicCover(
+    String projectId,
+    String id, {
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  }) async {
+    await _tick();
+    final ep = _s.epics.where((e) => e.id == id).firstOrNull;
+    if (ep == null) return const Err(NotFoundFailure());
+    return Ok(ep);
+  }
+
+  @override
+  Future<Result<Epic, AppFailure>> deleteEpicCover(
+    String projectId,
+    String id,
+  ) async {
+    await _tick();
+    final ep = _s.epics.where((e) => e.id == id).firstOrNull;
+    if (ep == null) return const Err(NotFoundFailure());
+    return Ok(ep);
+  }
+
   // ---- issues ----
 
   @override

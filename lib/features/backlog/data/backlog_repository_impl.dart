@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/error/failure_mapper.dart';
@@ -123,6 +125,54 @@ class BacklogRepositoryImpl implements BacklogRepository {
       ok: (_) => const Ok<Unit, AppFailure>(Unit.instance),
       err: Err.new,
     );
+  }
+
+  @override
+  Future<Result<Epic, AppFailure>> uploadEpicCover(
+    String projectId,
+    String id, {
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  }) async {
+    try {
+      final form = FormData.fromMap({
+        'file': MultipartFile.fromBytes(
+          bytes,
+          filename: filename,
+          contentType: contentType == null
+              ? null
+              : DioMediaType.parse(contentType),
+        ),
+      });
+      final res = await _api.dio.put<dynamic>(
+        '$_base/$projectId/epics/$id/cover-image',
+        data: form,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+      return Ok(
+        Epic.fromJson(res.data as Map<String, dynamic>, etag: _etag(res)),
+      );
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<Epic, AppFailure>> deleteEpicCover(
+    String projectId,
+    String id,
+  ) async {
+    try {
+      final res = await _api.dio.delete<dynamic>(
+        '$_base/$projectId/epics/$id/cover-image',
+      );
+      return Ok(
+        Epic.fromJson(res.data as Map<String, dynamic>, etag: _etag(res)),
+      );
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
   }
 
   // ---- issues ----

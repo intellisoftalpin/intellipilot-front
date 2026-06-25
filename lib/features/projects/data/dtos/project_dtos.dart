@@ -17,6 +17,29 @@ enum ProjectVisibility {
   }
 }
 
+/// Per-project epics-board configuration: which `issue_status` items land in
+/// the board's "In Progress" column. "Done" is derived from closed statuses;
+/// "All" is the remainder.
+class EpicBoardSettings {
+  const EpicBoardSettings({this.inProgressStatusIds = const []});
+
+  factory EpicBoardSettings.fromJson(Map<String, dynamic> json) {
+    return EpicBoardSettings(
+      inProgressStatusIds:
+          (json['in_progress_status_ids'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+    );
+  }
+
+  final List<String> inProgressStatusIds;
+
+  Map<String, dynamic> toJson() => {
+    'in_progress_status_ids': inProgressStatusIds,
+  };
+}
+
 class Project {
   const Project({
     required this.id,
@@ -30,6 +53,7 @@ class Project {
     required this.wikiEnabled,
     required this.epicsEnabled,
     required this.createdAt,
+    this.epicBoard = const EpicBoardSettings(),
   });
 
   factory Project.fromJson(Map<String, dynamic> json) {
@@ -46,6 +70,11 @@ class Project {
       backlogEnabled: json['backlog_enabled'] as bool? ?? true,
       wikiEnabled: json['wiki_enabled'] as bool? ?? true,
       epicsEnabled: json['epics_enabled'] as bool? ?? true,
+      epicBoard: json['epic_board'] is Map<String, dynamic>
+          ? EpicBoardSettings.fromJson(
+              json['epic_board'] as Map<String, dynamic>,
+            )
+          : const EpicBoardSettings(),
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -60,6 +89,7 @@ class Project {
   final bool backlogEnabled;
   final bool wikiEnabled;
   final bool epicsEnabled;
+  final EpicBoardSettings epicBoard;
   final DateTime createdAt;
 }
 
@@ -232,6 +262,7 @@ class UpdateProjectRequest {
     this.backlogEnabled,
     this.wikiEnabled,
     this.epicsEnabled,
+    this.epicBoard,
   });
 
   final String? name;
@@ -241,6 +272,7 @@ class UpdateProjectRequest {
   final bool? backlogEnabled;
   final bool? wikiEnabled;
   final bool? epicsEnabled;
+  final EpicBoardSettings? epicBoard;
 
   Map<String, dynamic> toJson() => {
     if (name != null) 'name': name,
@@ -250,6 +282,7 @@ class UpdateProjectRequest {
     if (backlogEnabled != null) 'backlog_enabled': backlogEnabled,
     if (wikiEnabled != null) 'wiki_enabled': wikiEnabled,
     if (epicsEnabled != null) 'epics_enabled': epicsEnabled,
+    if (epicBoard != null) 'epic_board': epicBoard!.toJson(),
   };
 }
 

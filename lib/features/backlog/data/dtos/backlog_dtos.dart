@@ -18,6 +18,12 @@ class Epic {
     this.ownerId,
     this.assignedTo,
     this.milestoneId,
+    this.startDate,
+    this.endDate,
+    this.coverImageKind = 'none',
+    this.coverImageUpdatedAt,
+    this.taskTotal = 0,
+    this.taskClosed = 0,
     this.etag,
   });
 
@@ -35,6 +41,12 @@ class Epic {
       ownerId: json['owner_id'] as String?,
       assignedTo: json['assigned_to'] as String?,
       milestoneId: json['milestone_id'] as String?,
+      startDate: json['start_date'] as String?,
+      endDate: json['end_date'] as String?,
+      coverImageKind: (json['cover_image_kind'] as String?) ?? 'none',
+      coverImageUpdatedAt: json['cover_image_updated_at'] as String?,
+      taskTotal: (json['task_total'] as num?)?.toInt() ?? 0,
+      taskClosed: (json['task_closed'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(json['created_at'] as String),
       modifiedAt: DateTime.parse(json['modified_at'] as String),
       etag: canonicalEtag(json, etag),
@@ -51,11 +63,28 @@ class Epic {
   final String? ownerId;
   final String? assignedTo;
   final String? milestoneId;
+
+  /// `YYYY-MM-DD` dates (nullable).
+  final String? startDate;
+  final String? endDate;
+
+  /// `none` (render the colour swatch) or `image` (served cover at
+  /// `GET /projects/{pid}/epics/{id}/cover-image`).
+  final String coverImageKind;
+
+  /// RFC3339 timestamp used to cache-bust the cover image URL.
+  final String? coverImageUpdatedAt;
+
+  /// Derived task counts for the progress bar / count badge.
+  final int taskTotal;
+  final int taskClosed;
   final double order;
   final int version;
   final DateTime createdAt;
   final DateTime modifiedAt;
   final String? etag;
+
+  bool get hasCover => coverImageKind == 'image';
 }
 
 /// The unified work item (Story / Task / Bug / sub-task). `typeId` is an
@@ -217,6 +246,9 @@ class UpdateEpicRequest {
     this.color,
     this.assignedTo = const _Absent(),
     this.ownerId = const _Absent(),
+    this.milestoneId = const _Absent(),
+    this.startDate,
+    this.endDate,
   });
 
   final String? subject;
@@ -227,6 +259,12 @@ class UpdateEpicRequest {
   final String? color;
   final Object? assignedTo;
   final Object? ownerId;
+  final Object? milestoneId;
+
+  /// `YYYY-MM-DD`; omitted when null (backend leaves it unchanged — clearing a
+  /// date is not supported, matching issues / milestones).
+  final String? startDate;
+  final String? endDate;
 
   Map<String, dynamic> toJson() => {
     if (subject != null) 'subject': subject,
@@ -235,6 +273,9 @@ class UpdateEpicRequest {
     if (color != null) 'color': color,
     if (assignedTo is! _Absent) 'assigned_to': assignedTo,
     if (ownerId is! _Absent) 'owner_id': ownerId,
+    if (milestoneId is! _Absent) 'milestone_id': milestoneId,
+    if (startDate != null) 'start_date': startDate,
+    if (endDate != null) 'end_date': endDate,
   };
 }
 
