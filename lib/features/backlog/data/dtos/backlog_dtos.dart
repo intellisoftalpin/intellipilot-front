@@ -17,6 +17,7 @@ class Epic {
     this.statusId,
     this.ownerId,
     this.assignedTo,
+    this.milestoneId,
     this.etag,
   });
 
@@ -33,6 +34,7 @@ class Epic {
       statusId: json['status_id'] as String?,
       ownerId: json['owner_id'] as String?,
       assignedTo: json['assigned_to'] as String?,
+      milestoneId: json['milestone_id'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       modifiedAt: DateTime.parse(json['modified_at'] as String),
       etag: canonicalEtag(json, etag),
@@ -48,6 +50,7 @@ class Epic {
   final String color;
   final String? ownerId;
   final String? assignedTo;
+  final String? milestoneId;
   final double order;
   final int version;
   final DateTime createdAt;

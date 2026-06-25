@@ -95,7 +95,9 @@ class UpdateMilestoneRequest {
   Map<String, dynamic> toJson() => {
     if (name != null) 'name': name,
     if (startDate is! _Absent)
-      'start_date': startDate is DateTime ? _isoDate(startDate! as DateTime) : null,
+      'start_date': startDate is DateTime
+          ? _isoDate(startDate! as DateTime)
+          : null,
     if (endDate is! _Absent)
       'end_date': endDate is DateTime ? _isoDate(endDate! as DateTime) : null,
   };
@@ -111,8 +113,7 @@ class MilestoneStats {
 
   factory MilestoneStats.fromJson(Map<String, dynamic> json) => MilestoneStats(
     totalPoints: (json['total_points'] as num?)?.toDouble() ?? 0.0,
-    completedPoints:
-        (json['completed_points'] as num?)?.toDouble() ?? 0.0,
+    completedPoints: (json['completed_points'] as num?)?.toDouble() ?? 0.0,
     totalTasks: (json['total_tasks'] as num?)?.toInt() ?? 0,
     completedTasks: (json['completed_tasks'] as num?)?.toInt() ?? 0,
   );

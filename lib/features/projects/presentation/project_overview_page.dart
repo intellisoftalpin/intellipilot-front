@@ -267,15 +267,6 @@ class _Overview extends StatelessWidget {
               runSpacing: 8,
               children: [
                 FilledButton.icon(
-                  icon: const Icon(Icons.list_alt),
-                  onPressed: () =>
-                      context.go(Routes.projectBacklogFor(project.id)),
-                  label: Text(t.actionOpenBacklog),
-                ),
-                // One Board button — Stories/Tasks toggle lives in the
-                // board's app bar so we no longer need a separate
-                // 'Open task board' entry here.
-                FilledButton.tonalIcon(
                   icon: const Icon(Icons.view_kanban_outlined),
                   onPressed: () =>
                       context.go(Routes.projectBoardFor(project.id)),

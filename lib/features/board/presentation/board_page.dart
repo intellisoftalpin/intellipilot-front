@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
+import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/core/widgets/members_scope.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
+import 'package:intellipilot/core/work_items/work_item_filter.dart';
+import 'package:intellipilot/core/work_items/work_item_filter_bar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
@@ -78,6 +81,9 @@ class BoardPage extends StatelessWidget {
                     repo: getIt<BacklogRepository>(),
                     catalog: getIt<CatalogRepository>(),
                     milestones: getIt<MilestonesRepository>(),
+                    filterStore: WorkItemFilterStore(
+                      getIt<KeyValueStorage>(instanceName: HiveBoxes.ui),
+                    ),
                     projectId: projectId,
                   );
                   unawaited(c.load());
@@ -149,7 +155,8 @@ class _BoardViewState extends State<_BoardView> {
   }
 }
 
-/// Search box + optional Sprint filter, shown in the app bar.
+/// Search box shown in the app bar; all other filters live in the shared
+/// [WorkItemFilterBar] below the bar (identical to the Issues list).
 class _BoardToolbar extends StatelessWidget {
   const _BoardToolbar();
 
@@ -160,45 +167,21 @@ class _BoardToolbar extends StatelessWidget {
       builder: (context, state) {
         if (state is! TaskBoardLoaded) return const SizedBox.shrink();
         final cubit = context.read<TaskBoardCubit>();
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 200,
-              child: TextField(
-                decoration: InputDecoration(
-                  isDense: true,
-                  prefixIcon: const Icon(Icons.search, size: 18),
-                  hintText: t.issuesSearchHint,
-                  border: const OutlineInputBorder(),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 8,
-                  ),
-                ),
-                onChanged: cubit.setSearch,
+        return SizedBox(
+          width: 220,
+          child: TextField(
+            decoration: InputDecoration(
+              isDense: true,
+              prefixIcon: const Icon(Icons.search, size: 18),
+              hintText: t.issuesSearchHint,
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 8,
               ),
             ),
-            const SizedBox(width: 8),
-            if (state.milestones.isNotEmpty)
-              DropdownButton<String?>(
-                value: state.sprintFilter,
-                hint: Text(t.boardSprintAll),
-                underline: const SizedBox.shrink(),
-                items: [
-                  DropdownMenuItem<String?>(
-                    value: null,
-                    child: Text(t.boardSprintAll),
-                  ),
-                  for (final m in state.milestones)
-                    DropdownMenuItem<String?>(
-                      value: m.id,
-                      child: Text(m.name),
-                    ),
-                ],
-                onChanged: cubit.setSprintFilter,
-              ),
-          ],
+            onChanged: (v) => cubit.setFilter(state.filter.copyWith(search: v)),
+          ),
         );
       },
     );
@@ -289,7 +272,19 @@ class _TasksLoaded extends StatelessWidget {
               ),
             ),
           ),
-        _BoardFilterBar(state: state),
+        WorkItemFilterBar(
+          filter: state.filter,
+          onChanged: (f) => context.read<TaskBoardCubit>().setFilter(f),
+          statuses: state.statuses,
+          types: state.types,
+          priorities: state.priorities,
+          sizes: state.sizes,
+          epics: state.epics,
+          milestones: state.milestones,
+          labels: state.labels,
+          components: state.components,
+          showStatus: false,
+        ),
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -317,136 +312,6 @@ class _TasksLoaded extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Horizontal row of filter dropdowns (assignee, epic, label, component,
-/// category) below the app bar. Each dropdown is `null` = no filter.
-class _BoardFilterBar extends StatelessWidget {
-  const _BoardFilterBar({required this.state});
-  final TaskBoardLoaded state;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    final cubit = context.read<TaskBoardCubit>();
-    return SizedBox(
-      height: 48,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Row(
-          children: [
-            _FilterDropdown<String>(
-              hint: t.boardFilterAssignee,
-              value: state.assigneeFilter,
-              items: [
-                for (final id in state.assigneeIds)
-                  (id, MembersScope.user(context, id)?.displayName ?? id),
-              ],
-              onChanged: cubit.setAssigneeFilter,
-            ),
-            const SizedBox(width: 8),
-            _FilterDropdown<String>(
-              hint: t.boardFilterEpic,
-              value: state.epicFilter,
-              items: [
-                for (final e in state.epics)
-                  (e.id, 'EPIC-${e.reference} · ${e.subject}'),
-              ],
-              onChanged: cubit.setEpicFilter,
-            ),
-            const SizedBox(width: 8),
-            _FilterDropdown<String>(
-              hint: t.boardFilterLabel,
-              value: state.labelFilter,
-              items: [for (final l in state.labels) (l.id, l.name)],
-              onChanged: cubit.setLabelFilter,
-            ),
-            const SizedBox(width: 8),
-            _FilterDropdown<String>(
-              hint: t.boardFilterComponent,
-              value: state.componentFilter,
-              items: [for (final c in state.components) (c.id, c.name)],
-              onChanged: cubit.setComponentFilter,
-            ),
-            const SizedBox(width: 8),
-            _FilterDropdown<String>(
-              hint: t.boardFilterCategory,
-              value: state.categoryFilter,
-              items: [
-                for (final c in IssueCategory.values) (c.wire, c.label),
-              ],
-              onChanged: cubit.setCategoryFilter,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// A compact "All / pick one" dropdown chip used in the board filter bar.
-/// Each item is an `(id, label)` record; a leading "All" entry clears it.
-class _FilterDropdown<T> extends StatelessWidget {
-  const _FilterDropdown({
-    required this.hint,
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-  final String hint;
-  final T? value;
-  final List<(T, String)> items;
-  final ValueChanged<T?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-    final active = value != null;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        border: Border.all(
-          color: active
-              ? theme.colorScheme.primary
-              : theme.colorScheme.outlineVariant,
-        ),
-        borderRadius: BorderRadius.circular(8),
-        color: active
-            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-            : null,
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<T?>(
-          value: value,
-          hint: Text(hint, style: theme.textTheme.bodyMedium),
-          isDense: true,
-          borderRadius: BorderRadius.circular(8),
-          items: [
-            DropdownMenuItem<T?>(value: null, child: Text(t.boardFilterAll)),
-            for (final (id, label) in items)
-              DropdownMenuItem<T?>(
-                value: id,
-                child: Text(
-                  label,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-          ],
-          selectedItemBuilder: (_) => [
-            Text(hint),
-            for (final (_, label) in items)
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 160),
-                child: Text(label, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: onChanged,
-        ),
-      ),
     );
   }
 }

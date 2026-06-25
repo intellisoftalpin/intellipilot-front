@@ -4,11 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/core/io/file_downloader.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
+import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/widgets/members_scope.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
+import 'package:intellipilot/core/work_items/work_item_filter.dart';
+import 'package:intellipilot/core/work_items/work_item_filter_bar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
@@ -22,6 +25,7 @@ import 'package:intellipilot/features/catalog/presentation/widgets/size_badge.da
 import 'package:intellipilot/features/issues_io/data/dtos/issues_io_dtos.dart';
 import 'package:intellipilot/features/issues_io/domain/issues_io_repository.dart';
 import 'package:intellipilot/features/issues_io/presentation/import_dialog.dart';
+import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
@@ -47,6 +51,23 @@ class IssuesPage extends StatelessWidget {
   final String? initialTypeFilter;
   final String? initialAssigneeFilter;
   final bool initialOverdueOnly;
+
+  /// Build a deep-link filter from the route query params, or null when none
+  /// were supplied (so the persisted filter is restored instead).
+  WorkItemFilter? _deepLinkFilter() {
+    if (initialStatusFilter == null &&
+        initialTypeFilter == null &&
+        initialAssigneeFilter == null &&
+        !initialOverdueOnly) {
+      return null;
+    }
+    return WorkItemFilter(
+      statusId: initialStatusFilter,
+      typeId: initialTypeFilter,
+      assigneeId: initialAssigneeFilter,
+      overdueOnly: initialOverdueOnly,
+    );
+  }
 
   Future<(UserProfile?, Map<String, UserRef>)> _loadContext() async {
     final p = await getIt<ProfileRepository>().getProfile();
@@ -94,14 +115,16 @@ class IssuesPage extends StatelessWidget {
               ),
               BlocProvider<IssuesCubit>(
                 create: (_) {
+                  final deepLink = _deepLinkFilter();
                   final c = IssuesCubit(
                     repo: getIt<BacklogRepository>(),
                     catalog: getIt<CatalogRepository>(),
+                    milestones: getIt<MilestonesRepository>(),
+                    filterStore: WorkItemFilterStore(
+                      getIt<KeyValueStorage>(instanceName: HiveBoxes.ui),
+                    ),
                     projectId: projectId,
-                    initialStatusFilter: initialStatusFilter,
-                    initialTypeFilter: initialTypeFilter,
-                    initialAssigneeFilter: initialAssigneeFilter,
-                    initialOverdueOnly: initialOverdueOnly,
+                    initialFilter: deepLink,
                   );
                   unawaited(c.load());
                   return c;
@@ -320,10 +343,23 @@ class _Loaded extends StatelessWidget {
                   border: const OutlineInputBorder(),
                   isDense: true,
                 ),
-                onChanged: (v) => context.read<IssuesCubit>().setSearch(v),
+                onChanged: (v) => context.read<IssuesCubit>().setFilter(
+                  state.filter.copyWith(search: v),
+                ),
               ),
             ),
-            _FilterRow(state: state),
+            WorkItemFilterBar(
+              filter: state.filter,
+              onChanged: (f) => context.read<IssuesCubit>().setFilter(f),
+              statuses: state.statuses,
+              types: state.types,
+              priorities: state.priorities,
+              sizes: state.sizes,
+              epics: state.epics,
+              milestones: state.milestones,
+              labels: state.labels,
+              components: state.components,
+            ),
             const Divider(height: 16),
             Expanded(
               child: visible.isEmpty
@@ -383,139 +419,6 @@ class _EmptyIssues extends StatelessWidget {
               label: Text(t.actionNewIssue),
             )
           : null,
-    );
-  }
-}
-
-class _FilterRow extends StatelessWidget {
-  const _FilterRow({required this.state});
-  final IssuesLoaded state;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    return SizedBox(
-      height: 44,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [
-          _menu(
-            label: state.statusFilter == null
-                ? t.issuesFilterStatus
-                : state.statuses
-                      .firstWhere((s) => s.id == state.statusFilter)
-                      .name,
-            items: state.statuses,
-            current: state.statusFilter,
-            onSelected: context.read<IssuesCubit>().setStatusFilter,
-          ),
-          const SizedBox(width: 8),
-          _menu(
-            label: state.typeFilter == null
-                ? t.issuesFilterType
-                : state.types.firstWhere((s) => s.id == state.typeFilter).name,
-            items: state.types,
-            current: state.typeFilter,
-            onSelected: context.read<IssuesCubit>().setTypeFilter,
-          ),
-          const SizedBox(width: 8),
-          _menu(
-            label: state.priorityFilter == null
-                ? t.issuesFilterPriority
-                : state.priorities
-                      .firstWhere((s) => s.id == state.priorityFilter)
-                      .name,
-            items: state.priorities,
-            current: state.priorityFilter,
-            onSelected: context.read<IssuesCubit>().setPriorityFilter,
-          ),
-          const SizedBox(width: 8),
-          _menu(
-            label: state.sizeFilter == null
-                ? 'Size'
-                : state.sizes.firstWhere((s) => s.id == state.sizeFilter).name,
-            items: state.sizes,
-            current: state.sizeFilter,
-            onSelected: context.read<IssuesCubit>().setSizeFilter,
-          ),
-          if (state.overdueOnly) ...[
-            const SizedBox(width: 8),
-            Center(
-              child: InputChip(
-                avatar: const Icon(Icons.error_outline, size: 16),
-                label: Text(t.dashKpiOverdue),
-                onDeleted: () =>
-                    context.read<IssuesCubit>().setOverdueOnly(false),
-              ),
-            ),
-          ],
-          if (state.assigneeFilter != null) ...[
-            const SizedBox(width: 8),
-            Center(
-              child: InputChip(
-                avatar: const Icon(Icons.person_outline, size: 16),
-                label: Text(
-                  state.assigneeFilter == 'none'
-                      ? t.dashKpiUnassigned
-                      : t.dashKpiAssigned,
-                ),
-                onDeleted: () =>
-                    context.read<IssuesCubit>().setAssigneeFilter(null),
-              ),
-            ),
-          ],
-          if (state.hasActiveFilter) ...[
-            const SizedBox(width: 8),
-            Center(
-              child: TextButton.icon(
-                icon: const Icon(Icons.clear_all, size: 18),
-                label: Text(t.actionClearFilters),
-                onPressed: context.read<IssuesCubit>().clearFilters,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _menu({
-    required String label,
-    required List<TaxonomyItem> items,
-    required String? current,
-    required ValueChanged<String?> onSelected,
-  }) {
-    return Builder(
-      builder: (context) {
-        final t = AppLocalizations.of(context);
-        return PopupMenuButton<String?>(
-          tooltip: label,
-          itemBuilder: (_) => [
-            PopupMenuItem<String?>(
-              value: null,
-              child: Text(t.issuesFilterClear),
-            ),
-            ...items.map(
-              (it) => PopupMenuItem<String?>(
-                value: it.id,
-                child: Row(
-                  children: [
-                    HexColorDot(hex: it.color, size: 10),
-                    const SizedBox(width: 8),
-                    Text(it.name),
-                  ],
-                ),
-              ),
-            ),
-          ],
-          onSelected: onSelected,
-          child: Chip(
-            avatar: const Icon(Icons.filter_list, size: 16),
-            label: Text(label),
-          ),
-        );
-      },
     );
   }
 }

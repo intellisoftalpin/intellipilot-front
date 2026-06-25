@@ -526,16 +526,6 @@ class _ProjectRailState extends State<_ProjectRail> {
         path: Routes.projectDetailFor(widget.projectId),
       ),
       _RailItem(
-        icon: Icons.bookmark_outlined,
-        label: t.railBacklog,
-        path: Routes.projectBacklogFor(widget.projectId),
-      ),
-      _RailItem(
-        icon: Icons.bookmarks_outlined,
-        label: t.railEpics,
-        path: Routes.projectEpicsFor(widget.projectId),
-      ),
-      _RailItem(
         icon: Icons.view_kanban_outlined,
         label: t.railBoard,
         path: Routes.projectBoardFor(widget.projectId),
@@ -551,8 +541,13 @@ class _ProjectRailState extends State<_ProjectRail> {
         path: Routes.projectMilestonesFor(widget.projectId),
       ),
       _RailItem(
+        icon: Icons.bookmarks_outlined,
+        label: t.railEpics,
+        path: Routes.projectEpicsFor(widget.projectId),
+      ),
+      _RailItem(
         icon: Icons.schedule_outlined,
-        label: t.ttRailTime,
+        label: t.ttTimeTracking,
         path: Routes.projectTimeFor(widget.projectId),
       ),
       _RailItem(

@@ -18,9 +18,7 @@ Future<CreateMilestoneRequest?> showMilestoneEditDialog(
         final t = AppLocalizations.of(ctx);
         return AlertDialog(
           title: Text(
-            existing == null
-                ? t.milestoneCreateTitle
-                : t.milestoneEditTitle,
+            existing == null ? t.milestoneCreateTitle : t.milestoneEditTitle,
           ),
           content: SizedBox(
             width: 360,
@@ -31,8 +29,7 @@ Future<CreateMilestoneRequest?> showMilestoneEditDialog(
                 TextField(
                   controller: nameCtrl,
                   autofocus: true,
-                  decoration:
-                      InputDecoration(labelText: t.milestoneFieldName),
+                  decoration: InputDecoration(labelText: t.milestoneFieldName),
                 ),
                 const SizedBox(height: 16),
                 _DateField(
@@ -101,8 +98,8 @@ class _DateField extends StatelessWidget {
               value == null
                   ? t.milestoneDateNotSet
                   : '${value!.year.toString().padLeft(4, '0')}'
-                      '-${value!.month.toString().padLeft(2, '0')}'
-                      '-${value!.day.toString().padLeft(2, '0')}',
+                        '-${value!.month.toString().padLeft(2, '0')}'
+                        '-${value!.day.toString().padLeft(2, '0')}',
             ),
           ),
         ),

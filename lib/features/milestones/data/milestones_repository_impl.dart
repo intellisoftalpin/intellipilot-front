@@ -91,8 +91,7 @@ class MilestonesRepositoryImpl implements MilestonesRepository {
 
   @override
   Future<Result<Unit, AppFailure>> close(String projectId, String id) async {
-    final res =
-        await _api.post('$_base/$projectId/milestones/$id/close');
+    final res = await _api.post('$_base/$projectId/milestones/$id/close');
     return res.when(
       ok: (_) => const Ok<Unit, AppFailure>(Unit.instance),
       err: Err.new,
@@ -106,9 +105,28 @@ class MilestonesRepositoryImpl implements MilestonesRepository {
   ) async {
     final res = await _api.get('$_base/$projectId/milestones/$id/stats');
     return res.when(
-      ok: (r) =>
-          Ok(MilestoneStats.fromJson(r.data as Map<String, dynamic>)),
+      ok: (r) => Ok(MilestoneStats.fromJson(r.data as Map<String, dynamic>)),
       err: Err.new,
     );
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> setEpics(
+    String projectId,
+    String milestoneId,
+    List<String> epicIds,
+  ) async {
+    try {
+      await _api.dio.put<dynamic>(
+        '$_base/$projectId/milestones/$milestoneId/epics',
+        data: {'epic_ids': epicIds},
+      );
+      return const Ok<Unit, AppFailure>(Unit.instance);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 204) {
+        return const Ok<Unit, AppFailure>(Unit.instance);
+      }
+      return Err(mapDioExceptionToFailure(e));
+    }
   }
 }

@@ -32,8 +32,9 @@ class MilestoneDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<UserProfile?>(
-      future:
-          getIt<ProfileRepository>().getProfile().then((r) => r.valueOrNull),
+      future: getIt<ProfileRepository>().getProfile().then(
+        (r) => r.valueOrNull,
+      ),
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const Scaffold(
@@ -111,7 +112,8 @@ class _DetailView extends StatelessWidget {
                 }
                 if (state.milestone.closed) return const SizedBox.shrink();
                 final detail = context.watch<ProjectDetailCubit>().state;
-                final canModify = detail is ProjectDetailLoaded &&
+                final canModify =
+                    detail is ProjectDetailLoaded &&
                     detail.has(Permission.milestoneModify);
                 if (!canModify) return const SizedBox.shrink();
                 return TextButton.icon(
@@ -215,6 +217,9 @@ class _StatsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final s = state.stats;
+    final detail = context.watch<ProjectDetailCubit>().state;
+    final canManage =
+        detail is ProjectDetailLoaded && detail.has(Permission.milestoneModify);
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
@@ -231,8 +236,116 @@ class _StatsTab extends StatelessWidget {
           total: '${s.totalTasks}',
           fraction: s.tasksFraction,
         ),
+        const SizedBox(height: 12),
+        _EpicsCard(state: state, canManage: canManage),
       ],
     );
+  }
+}
+
+/// The epics composing this milestone, with a manager to add/remove epics.
+class _EpicsCard extends StatelessWidget {
+  const _EpicsCard({required this.state, required this.canManage});
+  final MilestoneDetailLoaded state;
+  final bool canManage;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final inMilestone = state.epicsInMilestone;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.bookmarks_outlined, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(t.railEpics, style: theme.textTheme.titleMedium),
+                ),
+                if (canManage)
+                  TextButton.icon(
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    label: Text(t.milestoneManageEpics),
+                    onPressed: state.busy ? null : () => _manage(context),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (inMilestone.isEmpty)
+              Text(
+                t.milestoneNoEpics,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            else
+              for (final e in inMilestone)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.bookmark_outline, size: 18),
+                  title: Text('EPIC-${e.reference}  ${e.subject}'),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _manage(BuildContext context) async {
+    final t = AppLocalizations.of(context);
+    final cubit = context.read<MilestoneDetailCubit>();
+    final selected = {for (final e in state.epicsInMilestone) e.id};
+    final result = await showDialog<Set<String>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: Text(t.milestoneManageEpics),
+          content: SizedBox(
+            width: 420,
+            child: state.epics.isEmpty
+                ? Text(t.epicsEmpty)
+                : SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final e in state.epics)
+                          CheckboxListTile(
+                            value: selected.contains(e.id),
+                            controlAffinity: ListTileControlAffinity.leading,
+                            title: Text('EPIC-${e.reference}  ${e.subject}'),
+                            onChanged: (on) => setState(() {
+                              if (on ?? false) {
+                                selected.add(e.id);
+                              } else {
+                                selected.remove(e.id);
+                              }
+                            }),
+                          ),
+                      ],
+                    ),
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(t.actionCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(selected),
+              child: Text(t.actionSave),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result == null) return;
+    await cubit.setEpics(result.toList());
   }
 }
 
@@ -412,9 +525,7 @@ class _BoardTab extends StatelessWidget {
                   margin: const EdgeInsets.all(8),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerLow,
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(

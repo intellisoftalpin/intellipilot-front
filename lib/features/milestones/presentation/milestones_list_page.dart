@@ -25,8 +25,9 @@ class MilestonesListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<UserProfile?>(
-      future:
-          getIt<ProfileRepository>().getProfile().then((r) => r.valueOrNull),
+      future: getIt<ProfileRepository>().getProfile().then(
+        (r) => r.valueOrNull,
+      ),
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const Scaffold(
@@ -86,8 +87,7 @@ class _ListView extends StatelessWidget {
       ),
       floatingActionButton: BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
         builder: (context, s) {
-          if (s is! ProjectDetailLoaded ||
-              !s.has(Permission.milestoneCreate)) {
+          if (s is! ProjectDetailLoaded || !s.has(Permission.milestoneCreate)) {
             return const SizedBox.shrink();
           }
           return FloatingActionButton.extended(
@@ -114,8 +114,7 @@ class _ListView extends StatelessWidget {
                   Text(t.milestonesLoadFailed),
                   const SizedBox(height: 8),
                   FilledButton(
-                    onPressed: () =>
-                        context.read<MilestonesListCubit>().load(),
+                    onPressed: () => context.read<MilestonesListCubit>().load(),
                     child: Text(t.actionRetry),
                   ),
                 ],
@@ -125,7 +124,8 @@ class _ListView extends StatelessWidget {
           if (state is! MilestonesListLoaded) return const SizedBox.shrink();
           if (state.milestones.isEmpty) {
             final detail = context.watch<ProjectDetailCubit>().state;
-            final canCreate = detail is ProjectDetailLoaded &&
+            final canCreate =
+                detail is ProjectDetailLoaded &&
                 detail.has(Permission.milestoneCreate);
             return EmptyState(
               icon: Icons.flag_outlined,
@@ -136,8 +136,7 @@ class _ListView extends StatelessWidget {
                       icon: const Icon(Icons.add),
                       onPressed: () async {
                         final cubit = context.read<MilestonesListCubit>();
-                        final body =
-                            await showMilestoneEditDialog(context);
+                        final body = await showMilestoneEditDialog(context);
                         if (body == null) return;
                         await cubit.create(body);
                       },
@@ -149,10 +148,10 @@ class _ListView extends StatelessWidget {
           final detail = context.watch<ProjectDetailCubit>().state;
           final canEdit =
               detail is ProjectDetailLoaded &&
-                  detail.has(Permission.milestoneModify);
+              detail.has(Permission.milestoneModify);
           final canDelete =
               detail is ProjectDetailLoaded &&
-                  detail.has(Permission.milestoneDelete);
+              detail.has(Permission.milestoneDelete);
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
@@ -200,21 +199,21 @@ class _Row extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         leading: Icon(
-          milestone.closed
-              ? Icons.check_circle
-              : Icons.outlined_flag,
+          milestone.closed ? Icons.check_circle : Icons.outlined_flag,
           color: milestone.closed
               ? theme.colorScheme.outline
               : theme.colorScheme.primary,
         ),
         title: Text(milestone.name),
-        subtitle: Text([
-          if (dates.isNotEmpty) dates,
-          if (milestone.closed)
-            t.milestoneStatusClosed
-          else
-            t.milestoneStatusOpen,
-        ].join(' · ')),
+        subtitle: Text(
+          [
+            if (dates.isNotEmpty) dates,
+            if (milestone.closed)
+              t.milestoneStatusClosed
+            else
+              t.milestoneStatusOpen,
+          ].join(' · '),
+        ),
         onTap: () =>
             context.go(Routes.milestoneDetailFor(projectId, milestone.id)),
         trailing: Wrap(

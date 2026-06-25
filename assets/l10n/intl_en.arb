@@ -1786,5 +1786,9 @@
   "issueFieldAssignee": "Assignee",
   "@issueFieldAssignee": { "description": "Label for the issue assignee field." },
   "issueFieldCategory": "Category",
-  "@issueFieldCategory": { "description": "Label for the issue category field." }
+  "@issueFieldCategory": { "description": "Label for the issue category field." },
+  "milestoneManageEpics": "Manage epics",
+  "@milestoneManageEpics": { "description": "Button to choose which epics compose a milestone." },
+  "milestoneNoEpics": "No epics in this milestone yet.",
+  "@milestoneNoEpics": { "description": "Empty state for a milestone's epic list." }
 }

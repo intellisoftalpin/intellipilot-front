@@ -2129,6 +2129,16 @@ class DemoMilestonesRepository implements MilestonesRepository {
       ),
     );
   }
+
+  @override
+  Future<Result<Unit, AppFailure>> setEpics(
+    String projectId,
+    String milestoneId,
+    List<String> epicIds,
+  ) async {
+    await _tick();
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
 }
 
 class DemoBoardRepository implements BoardRepository {

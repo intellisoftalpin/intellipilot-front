@@ -918,5 +918,7 @@
   "actionClearFilters": "Сбросить фильтры",
   "issueFieldDueDate": "Срок выполнения",
   "issueFieldAssignee": "Исполнитель",
-  "issueFieldCategory": "Категория"
+  "issueFieldCategory": "Категория",
+  "milestoneManageEpics": "Управление эпиками",
+  "milestoneNoEpics": "В этой вехе пока нет эпиков."
 }

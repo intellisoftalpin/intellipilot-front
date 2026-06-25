@@ -93,8 +93,7 @@ class MilestonesListCubit extends Cubit<MilestonesListState> {
     if (!isClosed) {
       emit(
         s.copyWith(
-          milestones:
-              s.milestones.map((x) => x.id == id ? m : x).toList(),
+          milestones: s.milestones.map((x) => x.id == id ? m : x).toList(),
         ),
       );
     }

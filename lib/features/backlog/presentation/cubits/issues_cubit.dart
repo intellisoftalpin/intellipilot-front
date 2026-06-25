@@ -1,13 +1,18 @@
 // Underscore-prefixed fields are clearer than `{required this._repo}` in
 // the public constructor — silence the lint at file scope.
 // ignore_for_file: prefer_initializing_formals
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
+import 'package:intellipilot/core/work_items/work_item_filter.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
+import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
 
 sealed class IssuesState extends Equatable {
   const IssuesState();
@@ -28,13 +33,9 @@ final class IssuesLoaded extends IssuesState {
     required this.sizes,
     required this.labels,
     required this.components,
-    this.search = '',
-    this.statusFilter,
-    this.typeFilter,
-    this.priorityFilter,
-    this.sizeFilter,
-    this.assigneeFilter,
-    this.overdueOnly = false,
+    required this.epics,
+    required this.milestones,
+    this.filter = const WorkItemFilter(),
     this.busy = false,
     this.lastError,
   });
@@ -46,28 +47,16 @@ final class IssuesLoaded extends IssuesState {
   final List<TaxonomyItem> sizes;
   final List<Label> labels;
   final List<Component> components;
+  final List<Epic> epics;
+  final List<Milestone> milestones;
 
-  final String search;
-  final String? statusFilter;
-  final String? typeFilter;
-  final String? priorityFilter;
-  final String? sizeFilter;
-
-  /// A user id, or the sentinel `'none'` for unassigned issues.
-  final String? assigneeFilter;
-  final bool overdueOnly;
+  final WorkItemFilter filter;
   final bool busy;
   final AppFailure? lastError;
 
   IssuesLoaded copyWith({
     List<Issue>? issues,
-    String? search,
-    Object? statusFilter = _absent,
-    Object? typeFilter = _absent,
-    Object? priorityFilter = _absent,
-    Object? sizeFilter = _absent,
-    Object? assigneeFilter = _absent,
-    bool? overdueOnly,
+    WorkItemFilter? filter,
     bool? busy,
     AppFailure? lastError,
   }) => IssuesLoaded(
@@ -78,81 +67,27 @@ final class IssuesLoaded extends IssuesState {
     sizes: sizes,
     labels: labels,
     components: components,
-    search: search ?? this.search,
-    statusFilter: statusFilter == _absent
-        ? this.statusFilter
-        : statusFilter as String?,
-    typeFilter: typeFilter == _absent ? this.typeFilter : typeFilter as String?,
-    priorityFilter: priorityFilter == _absent
-        ? this.priorityFilter
-        : priorityFilter as String?,
-    sizeFilter: sizeFilter == _absent ? this.sizeFilter : sizeFilter as String?,
-    assigneeFilter: assigneeFilter == _absent
-        ? this.assigneeFilter
-        : assigneeFilter as String?,
-    overdueOnly: overdueOnly ?? this.overdueOnly,
+    epics: epics,
+    milestones: milestones,
+    filter: filter ?? this.filter,
     busy: busy ?? this.busy,
     lastError: lastError,
   );
 
-  static const _absent = Object();
-
-  bool get hasActiveFilter =>
-      statusFilter != null ||
-      typeFilter != null ||
-      priorityFilter != null ||
-      sizeFilter != null ||
-      assigneeFilter != null ||
-      overdueOnly;
-
   List<Issue> get visible {
-    final q = search.trim().toLowerCase();
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final closedStatusIds = {
+    final closed = {
       for (final s in statuses)
         if (s.isClosed ?? false) s.id,
     };
-    return issues.where((i) {
-      if (statusFilter != null && i.statusId != statusFilter) return false;
-      if (typeFilter != null && i.typeId != typeFilter) return false;
-      if (priorityFilter != null && i.priorityId != priorityFilter) {
-        return false;
-      }
-      if (sizeFilter != null && i.sizeId != sizeFilter) {
-        return false;
-      }
-      if (assigneeFilter != null) {
-        if (assigneeFilter == 'none') {
-          if (i.assignedTo != null) return false;
-        } else if (i.assignedTo != assigneeFilter) {
-          return false;
-        }
-      }
-      if (overdueOnly) {
-        final due = i.dueDate;
-        if (due == null) return false;
-        final d = DateTime.tryParse(due);
-        if (d == null || !d.isBefore(today)) return false;
-        if (closedStatusIds.contains(i.statusId)) return false;
-      }
-      if (q.isEmpty) return true;
-      return i.subject.toLowerCase().contains(q) ||
-          i.description.toLowerCase().contains(q) ||
-          'issue-${i.reference}'.contains(q);
-    }).toList();
+    return issues
+        .where((i) => filter.matches(i, closedStatusIds: closed))
+        .toList();
   }
 
   @override
   List<Object?> get props => [
     issues.map((i) => i.id).toList(),
-    search,
-    statusFilter,
-    typeFilter,
-    priorityFilter,
-    sizeFilter,
-    assigneeFilter,
-    overdueOnly,
+    filter,
     busy,
     lastError,
   ];
@@ -169,27 +104,29 @@ class IssuesCubit extends Cubit<IssuesState> {
   IssuesCubit({
     required BacklogRepository repo,
     required CatalogRepository catalog,
+    required MilestonesRepository milestones,
+    required WorkItemFilterStore filterStore,
     required this.projectId,
-    this.initialStatusFilter,
-    this.initialTypeFilter,
-    this.initialAssigneeFilter,
-    this.initialOverdueOnly = false,
+    WorkItemFilter? initialFilter,
   }) : _repo = repo,
        _catalog = catalog,
+       _milestones = milestones,
+       _filterStore = filterStore,
+       _filter = initialFilter ?? filterStore.load(_view, projectId),
        super(const IssuesLoading());
+
+  static const _view = 'issues';
 
   final BacklogRepository _repo;
   final CatalogRepository _catalog;
+  final MilestonesRepository _milestones;
+  final WorkItemFilterStore _filterStore;
   final String projectId;
-  final String? initialStatusFilter;
-  final String? initialTypeFilter;
-  final String? initialAssigneeFilter;
-  final bool initialOverdueOnly;
+  WorkItemFilter _filter;
+
+  WorkItemFilter get filter => _filter;
 
   Future<void> load() async {
-    // Preserve any active filters/search across reloads (create/update/delete);
-    // fall back to the deep-link initial filters on the very first load.
-    final prev = state is IssuesLoaded ? state as IssuesLoaded : null;
     emit(const IssuesLoading());
     final issues = await _repo.listIssues(projectId);
     final statuses = await _catalog.listTaxonomy(
@@ -207,6 +144,8 @@ class IssuesCubit extends Cubit<IssuesState> {
     final sizes = await _catalog.listTaxonomy(projectId, TaxonomyKind.size);
     final labels = await _catalog.listLabels(projectId);
     final components = await _catalog.listComponents(projectId);
+    final epics = await _repo.listEpics(projectId);
+    final milestones = await _milestones.list(projectId);
 
     final fail =
         issues.failureOrNull ??
@@ -215,7 +154,8 @@ class IssuesCubit extends Cubit<IssuesState> {
         priorities.failureOrNull ??
         sizes.failureOrNull ??
         labels.failureOrNull ??
-        components.failureOrNull;
+        components.failureOrNull ??
+        epics.failureOrNull;
     if (fail != null) {
       emit(IssuesFailed(fail));
       return;
@@ -229,66 +169,18 @@ class IssuesCubit extends Cubit<IssuesState> {
         sizes: sizes.valueOrNull!,
         labels: labels.valueOrNull!,
         components: components.valueOrNull!,
-        search: prev?.search ?? '',
-        statusFilter: prev?.statusFilter ?? initialStatusFilter,
-        typeFilter: prev?.typeFilter ?? initialTypeFilter,
-        priorityFilter: prev?.priorityFilter,
-        sizeFilter: prev?.sizeFilter,
-        assigneeFilter: prev?.assigneeFilter ?? initialAssigneeFilter,
-        overdueOnly: prev?.overdueOnly ?? initialOverdueOnly,
+        epics: epics.valueOrNull!,
+        milestones: milestones.valueOrNull ?? const [],
+        filter: _filter,
       ),
     );
   }
 
-  void setOverdueOnly(bool v) {
+  void setFilter(WorkItemFilter f) {
+    _filter = f;
+    unawaited(_filterStore.save(_view, projectId, f));
     final s = state;
-    if (s is IssuesLoaded) emit(s.copyWith(overdueOnly: v));
-  }
-
-  void setAssigneeFilter(String? id) {
-    final s = state;
-    if (s is IssuesLoaded) emit(s.copyWith(assigneeFilter: id));
-  }
-
-  void clearFilters() {
-    final s = state;
-    if (s is IssuesLoaded) {
-      emit(
-        s.copyWith(
-          statusFilter: null,
-          typeFilter: null,
-          priorityFilter: null,
-          sizeFilter: null,
-          assigneeFilter: null,
-          overdueOnly: false,
-        ),
-      );
-    }
-  }
-
-  void setSearch(String q) {
-    final s = state;
-    if (s is IssuesLoaded) emit(s.copyWith(search: q));
-  }
-
-  void setStatusFilter(String? id) {
-    final s = state;
-    if (s is IssuesLoaded) emit(s.copyWith(statusFilter: id));
-  }
-
-  void setTypeFilter(String? id) {
-    final s = state;
-    if (s is IssuesLoaded) emit(s.copyWith(typeFilter: id));
-  }
-
-  void setPriorityFilter(String? id) {
-    final s = state;
-    if (s is IssuesLoaded) emit(s.copyWith(priorityFilter: id));
-  }
-
-  void setSizeFilter(String? id) {
-    final s = state;
-    if (s is IssuesLoaded) emit(s.copyWith(sizeFilter: id));
+    if (s is IssuesLoaded) emit(s.copyWith(filter: f));
   }
 
   Future<void> create(CreateIssueRequest body) async {

@@ -1,8 +1,11 @@
 // `_repo` / `_catalog` are intentionally private fields for clarity.
 // ignore_for_file: prefer_initializing_formals
 
+import 'dart:async';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:intellipilot/core/work_items/work_item_filter.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
@@ -29,16 +32,13 @@ class TaskBoardLoaded extends TaskBoardState {
     required this.statuses,
     required this.issues,
     required this.milestones,
+    this.types = const [],
+    this.priorities = const [],
+    this.sizes = const [],
     this.epics = const [],
     this.labels = const [],
     this.components = const [],
-    this.sprintFilter,
-    this.assigneeFilter,
-    this.epicFilter,
-    this.labelFilter,
-    this.componentFilter,
-    this.categoryFilter,
-    this.search = '',
+    this.filter = const WorkItemFilter(),
     this.staleData = false,
   });
 
@@ -48,27 +48,18 @@ class TaskBoardLoaded extends TaskBoardState {
   /// All issues for the project.
   final List<Issue> issues;
 
-  /// Project milestones — populate the optional Sprint filter.
+  /// Project milestones / types / priorities / sizes / epics / labels /
+  /// components — populate the shared filter bar.
   final List<Milestone> milestones;
-
-  /// Project epics / labels / components — populate the filter dropdowns.
+  final List<TaxonomyItem> types;
+  final List<TaxonomyItem> priorities;
+  final List<TaxonomyItem> sizes;
   final List<Epic> epics;
   final List<Label> labels;
   final List<Component> components;
 
-  /// Optional sprint filter: when set, only issues in this milestone show.
-  /// `null` = all sprints (the board needs no milestone to render).
-  final String? sprintFilter;
-
-  /// Optional filters. `null` = no filter on that dimension.
-  final String? assigneeFilter;
-  final String? epicFilter;
-  final String? labelFilter;
-  final String? componentFilter;
-  final String? categoryFilter;
-
-  /// Free-text filter over subject / `#ref`.
-  final String search;
+  /// Shared work-item filter (identical model to the Issues list).
+  final WorkItemFilter filter;
 
   /// Set to true on a 409 from a move — UI surfaces a banner.
   final bool staleData;
@@ -77,84 +68,43 @@ class TaskBoardLoaded extends TaskBoardState {
     List<TaxonomyItem>? statuses,
     List<Issue>? issues,
     List<Milestone>? milestones,
+    List<TaxonomyItem>? types,
+    List<TaxonomyItem>? priorities,
+    List<TaxonomyItem>? sizes,
     List<Epic>? epics,
     List<Label>? labels,
     List<Component>? components,
-    Object? sprintFilter = _absent,
-    Object? assigneeFilter = _absent,
-    Object? epicFilter = _absent,
-    Object? labelFilter = _absent,
-    Object? componentFilter = _absent,
-    Object? categoryFilter = _absent,
-    String? search,
+    WorkItemFilter? filter,
     bool? staleData,
   }) => TaskBoardLoaded(
     statuses: statuses ?? this.statuses,
     issues: issues ?? this.issues,
     milestones: milestones ?? this.milestones,
+    types: types ?? this.types,
+    priorities: priorities ?? this.priorities,
+    sizes: sizes ?? this.sizes,
     epics: epics ?? this.epics,
     labels: labels ?? this.labels,
     components: components ?? this.components,
-    sprintFilter: sprintFilter == _absent
-        ? this.sprintFilter
-        : sprintFilter as String?,
-    assigneeFilter: assigneeFilter == _absent
-        ? this.assigneeFilter
-        : assigneeFilter as String?,
-    epicFilter: epicFilter == _absent ? this.epicFilter : epicFilter as String?,
-    labelFilter: labelFilter == _absent
-        ? this.labelFilter
-        : labelFilter as String?,
-    componentFilter: componentFilter == _absent
-        ? this.componentFilter
-        : componentFilter as String?,
-    categoryFilter: categoryFilter == _absent
-        ? this.categoryFilter
-        : categoryFilter as String?,
-    search: search ?? this.search,
+    filter: filter ?? this.filter,
     staleData: staleData ?? this.staleData,
   );
 
-  static const _absent = Object();
-
-  /// Distinct assignee user ids referenced by top-level issues — drives the
-  /// assignee filter dropdown (names resolved via MembersScope in the UI).
-  List<String> get assigneeIds {
-    final ids = <String>{};
-    for (final it in issues) {
-      if (it.parentId == null && it.assignedTo != null) {
-        ids.add(it.assignedTo!);
-      }
-    }
-    return ids.toList();
-  }
-
-  bool _matches(Issue it) {
-    // Only top-level issues are cards; sub-tasks live under their parent.
-    if (it.parentId != null) return false;
-    if (sprintFilter != null && it.milestoneId != sprintFilter) return false;
-    if (assigneeFilter != null && it.assignedTo != assigneeFilter) return false;
-    if (epicFilter != null && it.epicId != epicFilter) return false;
-    if (labelFilter != null && !it.labels.contains(labelFilter)) return false;
-    if (componentFilter != null && !it.components.contains(componentFilter)) {
-      return false;
-    }
-    if (categoryFilter != null && it.category != categoryFilter) return false;
-    if (search.trim().isEmpty) return true;
-    final q = search.toLowerCase();
-    return it.subject.toLowerCase().contains(q) ||
-        '#${it.reference}'.contains(q);
-  }
-
-  /// Issues bucketed by `statusId`, after filters. Columns always come from the
-  /// status taxonomy (so the board renders even with zero issues). Issues with
-  /// no status fall into the trailing `null` bucket.
+  /// Issues bucketed by `statusId`, after filters. Only top-level issues are
+  /// cards (sub-tasks live under their parent). Columns always come from the
+  /// status taxonomy so the board renders even with zero issues.
   Map<String?, List<Issue>> get bucketed {
+    final closed = {
+      for (final s in statuses)
+        if (s.isClosed ?? false) s.id,
+    };
     final out = <String?, List<Issue>>{null: []};
     for (final s in statuses) {
       out[s.id] = [];
     }
-    for (final t in issues.where(_matches)) {
+    for (final t in issues.where(
+      (i) => i.parentId == null && filter.matches(i, closedStatusIds: closed),
+    )) {
       out.putIfAbsent(t.statusId, () => []).add(t);
     }
     for (final list in out.values) {
@@ -168,16 +118,13 @@ class TaskBoardLoaded extends TaskBoardState {
     statuses,
     issues,
     milestones,
+    types,
+    priorities,
+    sizes,
     epics,
     labels,
     components,
-    sprintFilter,
-    assigneeFilter,
-    epicFilter,
-    labelFilter,
-    componentFilter,
-    categoryFilter,
-    search,
+    filter,
     staleData,
   ];
 }
@@ -187,16 +134,25 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     required BacklogRepository repo,
     required CatalogRepository catalog,
     required MilestonesRepository milestones,
+    required WorkItemFilterStore filterStore,
     required this.projectId,
   }) : _repo = repo,
        _catalog = catalog,
        _milestones = milestones,
+       _filterStore = filterStore,
+       _filter = filterStore.load(_view, projectId),
        super(const TaskBoardLoading());
+
+  static const _view = 'board';
 
   final BacklogRepository _repo;
   final CatalogRepository _catalog;
   final MilestonesRepository _milestones;
+  final WorkItemFilterStore _filterStore;
   final String projectId;
+  WorkItemFilter _filter;
+
+  WorkItemFilter get filter => _filter;
 
   Future<void> load() async {
     if (!isClosed) emit(const TaskBoardLoading());
@@ -209,6 +165,15 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     final epicRes = await _repo.listEpics(projectId);
     final labelRes = await _catalog.listLabels(projectId);
     final compRes = await _catalog.listComponents(projectId);
+    final typeRes = await _catalog.listTaxonomy(
+      projectId,
+      TaxonomyKind.issueType,
+    );
+    final prioRes = await _catalog.listTaxonomy(
+      projectId,
+      TaxonomyKind.priority,
+    );
+    final sizeRes = await _catalog.listTaxonomy(projectId, TaxonomyKind.size);
     final statuses = statusRes.valueOrNull;
     final issues = issueRes.valueOrNull;
     if (statuses == null || issues == null) {
@@ -221,47 +186,23 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
           statuses: statuses,
           issues: issues,
           milestones: msRes.valueOrNull ?? const [],
+          types: typeRes.valueOrNull ?? const [],
+          priorities: prioRes.valueOrNull ?? const [],
+          sizes: sizeRes.valueOrNull ?? const [],
           epics: epicRes.valueOrNull ?? const [],
           labels: labelRes.valueOrNull ?? const [],
           components: compRes.valueOrNull ?? const [],
+          filter: _filter,
         ),
       );
     }
   }
 
-  void setSprintFilter(String? milestoneId) {
+  void setFilter(WorkItemFilter f) {
+    _filter = f;
+    unawaited(_filterStore.save(_view, projectId, f));
     final s = state;
-    if (s is TaskBoardLoaded) emit(s.copyWith(sprintFilter: milestoneId));
-  }
-
-  void setAssigneeFilter(String? userId) {
-    final s = state;
-    if (s is TaskBoardLoaded) emit(s.copyWith(assigneeFilter: userId));
-  }
-
-  void setEpicFilter(String? epicId) {
-    final s = state;
-    if (s is TaskBoardLoaded) emit(s.copyWith(epicFilter: epicId));
-  }
-
-  void setLabelFilter(String? labelId) {
-    final s = state;
-    if (s is TaskBoardLoaded) emit(s.copyWith(labelFilter: labelId));
-  }
-
-  void setComponentFilter(String? componentId) {
-    final s = state;
-    if (s is TaskBoardLoaded) emit(s.copyWith(componentFilter: componentId));
-  }
-
-  void setCategoryFilter(String? category) {
-    final s = state;
-    if (s is TaskBoardLoaded) emit(s.copyWith(categoryFilter: category));
-  }
-
-  void setSearch(String q) {
-    final s = state;
-    if (s is TaskBoardLoaded) emit(s.copyWith(search: q));
+    if (s is TaskBoardLoaded) emit(s.copyWith(filter: f));
   }
 
   /// Optimistic move of an issue to a different `statusId`. On 409 we set

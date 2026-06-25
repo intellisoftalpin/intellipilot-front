@@ -28,6 +28,7 @@ class MilestoneDetailLoaded extends MilestoneDetailState {
     required this.stats,
     required this.scope,
     required this.backlog,
+    required this.epics,
     this.busy = false,
   });
 
@@ -41,19 +42,28 @@ class MilestoneDetailLoaded extends MilestoneDetailState {
   /// (candidates for adding to this sprint's scope).
   final List<Issue> backlog;
 
+  /// All project epics. The milestone is composed of the subset whose
+  /// `milestoneId` matches this milestone.
+  final List<Epic> epics;
+
   final bool busy;
+
+  List<Epic> get epicsInMilestone =>
+      epics.where((e) => e.milestoneId == milestone.id).toList();
 
   MilestoneDetailLoaded copyWith({
     Milestone? milestone,
     MilestoneStats? stats,
     List<Issue>? scope,
     List<Issue>? backlog,
+    List<Epic>? epics,
     bool? busy,
   }) => MilestoneDetailLoaded(
     milestone: milestone ?? this.milestone,
     stats: stats ?? this.stats,
     scope: scope ?? this.scope,
     backlog: backlog ?? this.backlog,
+    epics: epics ?? this.epics,
     busy: busy ?? this.busy,
   );
 
@@ -63,7 +73,7 @@ class MilestoneDetailLoaded extends MilestoneDetailState {
       .toList();
 
   @override
-  List<Object?> get props => [milestone, stats, scope, backlog, busy];
+  List<Object?> get props => [milestone, stats, scope, backlog, epics, busy];
 }
 
 class MilestoneDetailCubit extends Cubit<MilestoneDetailState> {
@@ -86,10 +96,12 @@ class MilestoneDetailCubit extends Cubit<MilestoneDetailState> {
     final ms = await _milestones.get(projectId, milestoneId);
     final st = await _milestones.stats(projectId, milestoneId);
     final us = await _backlog.listIssues(projectId);
+    final ep = await _backlog.listEpics(projectId);
     final m = ms.valueOrNull;
     final s = st.valueOrNull;
     final stories = us.valueOrNull;
-    if (m == null || s == null || stories == null) {
+    final epics = ep.valueOrNull;
+    if (m == null || s == null || stories == null || epics == null) {
       if (!isClosed) emit(const MilestoneDetailFailed());
       return;
     }
@@ -102,9 +114,24 @@ class MilestoneDetailCubit extends Cubit<MilestoneDetailState> {
           stats: s,
           scope: scope,
           backlog: backlog,
+          epics: epics,
         ),
       );
     }
+  }
+
+  /// Replace the set of epics composing this milestone, then reload.
+  Future<bool> setEpics(List<String> epicIds) async {
+    final s = state;
+    if (s is! MilestoneDetailLoaded) return false;
+    if (!isClosed) emit(s.copyWith(busy: true));
+    final res = await _milestones.setEpics(projectId, milestoneId, epicIds);
+    if (res.isErr) {
+      if (!isClosed) emit(s.copyWith(busy: false));
+      return false;
+    }
+    await load();
+    return true;
   }
 
   Future<bool> rename(String name) async {
@@ -170,8 +197,7 @@ class MilestoneDetailCubit extends Cubit<MilestoneDetailState> {
     emit(s.copyWith(busy: true));
     if (moveUnfinishedToBacklog) {
       for (final story in s.openInScope) {
-        final fresh =
-            await _backlog.getIssue(projectId, story.id);
+        final fresh = await _backlog.getIssue(projectId, story.id);
         final us = fresh.valueOrNull;
         if (us?.etag == null) continue;
         await _backlog.updateIssue(

@@ -20,4 +20,11 @@ abstract interface class MilestonesRepository {
     String projectId,
     String id,
   );
+
+  /// Replace the full set of epics belonging to a milestone.
+  Future<Result<Unit, AppFailure>> setEpics(
+    String projectId,
+    String milestoneId,
+    List<String> epicIds,
+  );
 }
