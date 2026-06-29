@@ -53,6 +53,10 @@ class Project {
     required this.wikiEnabled,
     required this.epicsEnabled,
     required this.createdAt,
+    this.issuePrefix = '',
+    this.color = '',
+    this.iconImageKind = 'none',
+    this.iconImageUpdatedAt,
     this.epicBoard = const EpicBoardSettings(),
   });
 
@@ -66,6 +70,12 @@ class Project {
       visibility: ProjectVisibility.fromWire(
         (json['visibility'] as String?) ?? 'private',
       ),
+      issuePrefix: (json['issue_prefix'] as String?) ?? '',
+      color: (json['color'] as String?) ?? '',
+      iconImageKind: (json['icon_image_kind'] as String?) ?? 'none',
+      iconImageUpdatedAt: json['icon_image_updated_at'] != null
+          ? DateTime.tryParse(json['icon_image_updated_at'] as String)
+          : null,
       kanbanEnabled: json['kanban_enabled'] as bool? ?? true,
       backlogEnabled: json['backlog_enabled'] as bool? ?? true,
       wikiEnabled: json['wiki_enabled'] as bool? ?? true,
@@ -85,12 +95,28 @@ class Project {
   final String description;
   final String ownerId;
   final ProjectVisibility visibility;
+
+  /// Issue-key prefix (2–3 uppercase letters). Issue keys are `<prefix>-<ref>`,
+  /// epic keys `<prefix>-E-<ref>`.
+  final String issuePrefix;
+
+  /// Card color (hex), or '' when none.
+  final String color;
+
+  /// `none` (render prefix-initials fallback) or `image` (uploaded icon).
+  final String iconImageKind;
+
+  /// Cache-buster for the uploaded icon image.
+  final DateTime? iconImageUpdatedAt;
   final bool kanbanEnabled;
   final bool backlogEnabled;
   final bool wikiEnabled;
   final bool epicsEnabled;
   final EpicBoardSettings epicBoard;
   final DateTime createdAt;
+
+  /// Whether a custom icon image is set (vs. the initials fallback).
+  bool get hasIcon => iconImageKind == 'image';
 }
 
 class Role {
@@ -238,18 +264,24 @@ class CreateProjectRequest {
     this.slug,
     this.description = '',
     this.visibility,
+    this.issuePrefix,
+    this.color,
   });
 
   final String name;
   final String? slug;
   final String description;
   final ProjectVisibility? visibility;
+  final String? issuePrefix;
+  final String? color;
 
   Map<String, dynamic> toJson() => {
     'name': name,
     if (slug != null) 'slug': slug,
     'description': description,
     if (visibility != null) 'visibility': visibility!.wire,
+    if (issuePrefix != null) 'issue_prefix': issuePrefix,
+    if (color != null) 'color': color,
   };
 }
 
@@ -258,6 +290,8 @@ class UpdateProjectRequest {
     this.name,
     this.description,
     this.visibility,
+    this.issuePrefix,
+    this.color,
     this.kanbanEnabled,
     this.backlogEnabled,
     this.wikiEnabled,
@@ -268,6 +302,8 @@ class UpdateProjectRequest {
   final String? name;
   final String? description;
   final ProjectVisibility? visibility;
+  final String? issuePrefix;
+  final String? color;
   final bool? kanbanEnabled;
   final bool? backlogEnabled;
   final bool? wikiEnabled;
@@ -278,6 +314,8 @@ class UpdateProjectRequest {
     if (name != null) 'name': name,
     if (description != null) 'description': description,
     if (visibility != null) 'visibility': visibility!.wire,
+    if (issuePrefix != null) 'issue_prefix': issuePrefix,
+    if (color != null) 'color': color,
     if (kanbanEnabled != null) 'kanban_enabled': kanbanEnabled,
     if (backlogEnabled != null) 'backlog_enabled': backlogEnabled,
     if (wikiEnabled != null) 'wiki_enabled': wikiEnabled,

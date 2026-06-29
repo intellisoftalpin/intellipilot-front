@@ -33,11 +33,23 @@ class MarkdownText extends StatelessWidget {
     final theme = Theme.of(context);
     switch (b.kind) {
       case _Kind.h1:
-        return _richLine(context, b.lines.join('\n'), theme.textTheme.headlineSmall);
+        return _richLine(
+          context,
+          b.lines.join('\n'),
+          theme.textTheme.headlineSmall,
+        );
       case _Kind.h2:
-        return _richLine(context, b.lines.join('\n'), theme.textTheme.titleLarge);
+        return _richLine(
+          context,
+          b.lines.join('\n'),
+          theme.textTheme.titleLarge,
+        );
       case _Kind.h3:
-        return _richLine(context, b.lines.join('\n'), theme.textTheme.titleMedium);
+        return _richLine(
+          context,
+          b.lines.join('\n'),
+          theme.textTheme.titleMedium,
+        );
       case _Kind.code:
         return Container(
           padding: const EdgeInsets.all(12),
@@ -130,7 +142,7 @@ class _Matcher {
   const _Matcher(this.re, this.build);
   final RegExp re;
   final InlineSpan Function(RegExpMatch m, ThemeData theme, TextStyle? base)
-      build;
+  build;
 }
 
 final _matchers = <_Matcher>[

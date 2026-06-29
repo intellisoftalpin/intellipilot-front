@@ -101,19 +101,19 @@ web.PublicKeyCredentialCreationOptions _creationOptionsToJs(
           alg: (m['alg'] as num).toInt(),
         );
       }).toList();
-  final exclude =
-      (opts['excludeCredentials'] as List<dynamic>? ?? const []).map((c) {
+  final exclude = (opts['excludeCredentials'] as List<dynamic>? ?? const [])
+      .map((c) {
         final m = c as Map<String, dynamic>;
-        final tx =
-            (m['transports'] as List<dynamic>? ?? const [])
-                .map((t) => (t as String).toJS)
-                .toList();
+        final tx = (m['transports'] as List<dynamic>? ?? const [])
+            .map((t) => (t as String).toJS)
+            .toList();
         return web.PublicKeyCredentialDescriptor(
           type: m['type'] as String,
           id: _toJsBuffer(m['id'] as String),
           transports: tx.toJS,
         );
-      }).toList();
+      })
+      .toList();
 
   return web.PublicKeyCredentialCreationOptions(
     rp: web.PublicKeyCredentialRpEntity(
@@ -136,27 +136,26 @@ web.PublicKeyCredentialCreationOptions _creationOptionsToJs(
 web.PublicKeyCredentialRequestOptions _requestOptionsToJs(
   Map<String, dynamic> opts,
 ) {
-  final allow =
-      (opts['allowCredentials'] as List<dynamic>? ?? const []).map((c) {
-        final m = c as Map<String, dynamic>;
-        final tx =
-            (m['transports'] as List<dynamic>? ?? const [])
-                .map((t) => (t as String).toJS)
-                .toList();
-        return web.PublicKeyCredentialDescriptor(
-          type: m['type'] as String,
-          id: _toJsBuffer(m['id'] as String),
-          transports: tx.toJS,
-        );
-      }).toList();
+  final allow = (opts['allowCredentials'] as List<dynamic>? ?? const []).map((
+    c,
+  ) {
+    final m = c as Map<String, dynamic>;
+    final tx = (m['transports'] as List<dynamic>? ?? const [])
+        .map((t) => (t as String).toJS)
+        .toList();
+    return web.PublicKeyCredentialDescriptor(
+      type: m['type'] as String,
+      id: _toJsBuffer(m['id'] as String),
+      transports: tx.toJS,
+    );
+  }).toList();
 
   return web.PublicKeyCredentialRequestOptions(
     challenge: _toJsBuffer(opts['challenge'] as String),
     timeout: (opts['timeout'] as num?)?.toInt() ?? 60000,
     rpId: (opts['rpId'] as String?) ?? '',
     allowCredentials: allow.toJS,
-    userVerification:
-        (opts['userVerification'] as String?) ?? 'preferred',
+    userVerification: (opts['userVerification'] as String?) ?? 'preferred',
   );
 }
 
@@ -166,8 +165,11 @@ web.PublicKeyCredentialRequestOptions _requestOptionsToJs(
 
 Map<String, dynamic> _serializeAttestation(web.PublicKeyCredential cred) {
   final response = cred.response as web.AuthenticatorAttestationResponse;
-  final transports =
-      response.getTransports().toDart.map((s) => s.toDart).toList();
+  final transports = response
+      .getTransports()
+      .toDart
+      .map((s) => s.toDart)
+      .toList();
   return {
     'id': cred.id,
     'rawId': _jsBufferToB64u(cred.rawId),

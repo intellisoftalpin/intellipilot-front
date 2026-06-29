@@ -235,9 +235,11 @@ class _LocaleSection extends StatelessWidget {
                     ),
                   ],
                   onChanged: (code) {
-                    unawaited(context.read<LocaleCubit>().setLocale(
-                      code == null ? null : Locale(code),
-                    ));
+                    unawaited(
+                      context.read<LocaleCubit>().setLocale(
+                        code == null ? null : Locale(code),
+                      ),
+                    );
                   },
                 ),
               ],

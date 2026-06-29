@@ -90,8 +90,7 @@ class _PasskeySignInViewState extends State<_PasskeySignInView> {
                           prefixIcon: const Icon(Icons.alternate_email),
                         ),
                         validationMessages: {
-                          ValidationMessage.required: (_) =>
-                              t.errFieldRequired,
+                          ValidationMessage.required: (_) => t.errFieldRequired,
                           ValidationMessage.email: (_) => t.errEmailInvalid,
                         },
                       ),
@@ -112,7 +111,8 @@ class _PasskeySignInViewState extends State<_PasskeySignInView> {
                         const SizedBox(height: 16),
                         Text(
                           switch (state.failure) {
-                            UnauthorizedFailure() => t.passkeySignInUnauthorized,
+                            UnauthorizedFailure() =>
+                              t.passkeySignInUnauthorized,
                             NetworkFailure() => t.errNetwork,
                             ServerFailure() => t.errServer,
                             _ => t.passkeyCeremonyFailed,

@@ -152,27 +152,27 @@ class _CmdKState extends State<_CmdK> {
                           child: Center(child: CircularProgressIndicator()),
                         )
                       : results.isEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Text(t.paletteEmpty),
-                            )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              padding: EdgeInsets.zero,
-                              itemCount: results.length,
-                              itemBuilder: (context, i) {
-                                final r = results[i];
-                                final selected = i == _selected;
-                                return ListTile(
-                                  selected: selected,
-                                  dense: true,
-                                  leading: _iconFor(r),
-                                  title: Text(r.label),
-                                  subtitle: Text(r.subtitle),
-                                  onTap: () => _activate(context, r),
-                                );
-                              },
-                            ),
+                      ? Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(t.paletteEmpty),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          padding: EdgeInsets.zero,
+                          itemCount: results.length,
+                          itemBuilder: (context, i) {
+                            final r = results[i];
+                            final selected = i == _selected;
+                            return ListTile(
+                              selected: selected,
+                              dense: true,
+                              leading: _iconFor(r),
+                              title: Text(r.label),
+                              subtitle: Text(r.subtitle),
+                              onTap: () => _activate(context, r),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),

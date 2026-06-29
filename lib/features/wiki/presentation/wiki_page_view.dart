@@ -28,8 +28,9 @@ class WikiPageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<UserProfile?>(
-      future:
-          getIt<ProfileRepository>().getProfile().then((r) => r.valueOrNull),
+      future: getIt<ProfileRepository>().getProfile().then(
+        (r) => r.valueOrNull,
+      ),
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const Scaffold(
@@ -177,7 +178,9 @@ class _Reader extends StatelessWidget {
           child: state.page.body.isEmpty
               ? Text(
                   '— ${t.wikiEmptyBody} —',
-                  style: TextStyle(color: Theme.of(context).colorScheme.outline),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
                 )
               : MarkdownText(state.page.body),
         ),
@@ -205,8 +208,8 @@ class _Editor extends StatelessWidget {
                   text: state.draftTitle ?? state.page.title,
                 ),
                 decoration: InputDecoration(labelText: t.wikiFieldTitle),
-                onChanged:
-                    (v) => context.read<WikiPageCubit>().setDraftTitle(v),
+                onChanged: (v) =>
+                    context.read<WikiPageCubit>().setDraftTitle(v),
               ),
             ),
             Expanded(
@@ -243,8 +246,7 @@ class _Editor extends StatelessWidget {
                             ? Text(
                                 '— ${t.wikiEmptyBody} —',
                                 style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.outline,
+                                  color: Theme.of(context).colorScheme.outline,
                                 ),
                               )
                             : MarkdownText(state.draftBody ?? state.page.body),
@@ -297,8 +299,9 @@ class _EditOrSaveActions extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.check),
-          onPressed:
-              state.busy ? null : () => context.read<WikiPageCubit>().save(),
+          onPressed: state.busy
+              ? null
+              : () => context.read<WikiPageCubit>().save(),
           label: Text(t.actionSave),
         ),
         const SizedBox(width: 8),
@@ -345,8 +348,11 @@ class _DeleteAction extends StatelessWidget {
         );
         if (!(ok ?? false) || !context.mounted) return;
         final repo = getIt<WikiRepository>();
-        final res =
-            await repo.delete(page.projectId, page.id, etag: page.etag!);
+        final res = await repo.delete(
+          page.projectId,
+          page.id,
+          etag: page.etag!,
+        );
         if (res.valueOrNull != null && context.mounted) {
           context.go(Routes.projectWikiFor(page.projectId));
         } else {

@@ -183,7 +183,10 @@ class _ImportDialogState extends State<_ImportDialog> {
         ),
         if (_error != null) ...[
           const SizedBox(height: 12),
-          Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          Text(
+            _error!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
         ],
       ],
     );
@@ -213,13 +216,21 @@ class _ImportDialogState extends State<_ImportDialog> {
             widget.state.priorities,
             true,
           ),
-        if (p.components.isNotEmpty)
-          _componentSection(t, p.components),
+        if (p.components.isNotEmpty) _componentSection(t, p.components),
         if (p.unmatchedUsers.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Text(t.importUnmatchedUsers, style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text(p.unmatchedUsers.join(', '), style: Theme.of(context).textTheme.bodySmall),
-          Text(t.importUnmatchedUsersHint, style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            t.importUnmatchedUsers,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          Text(
+            p.unmatchedUsers.join(', '),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          Text(
+            t.importUnmatchedUsersHint,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
         for (final w in p.warnings) ...[
           const SizedBox(height: 8),
@@ -228,13 +239,18 @@ class _ImportDialogState extends State<_ImportDialog> {
             children: [
               const Icon(Icons.warning_amber, size: 16, color: Colors.orange),
               const SizedBox(width: 6),
-              Expanded(child: Text(w, style: Theme.of(context).textTheme.bodySmall)),
+              Expanded(
+                child: Text(w, style: Theme.of(context).textTheme.bodySmall),
+              ),
             ],
           ),
         ],
         if (_error != null) ...[
           const SizedBox(height: 12),
-          Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          Text(
+            _error!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
         ],
       ],
     );
@@ -279,7 +295,10 @@ class _ImportDialogState extends State<_ImportDialog> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(t.importComponents, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            t.importComponents,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
           for (final v in values)
             _row(
               v.value,
@@ -334,8 +353,10 @@ class _ImportDialogState extends State<_ImportDialog> {
         const SizedBox(height: 12),
         Text(t.importDoneIssues(r.createdIssues)),
         if (r.createdEpics > 0) Text(t.importDoneEpics(r.createdEpics)),
-        if (r.createdComments > 0) Text(t.importDoneComments(r.createdComments)),
-        if (r.createdTaxonomy > 0) Text(t.importDoneTaxonomy(r.createdTaxonomy)),
+        if (r.createdComments > 0)
+          Text(t.importDoneComments(r.createdComments)),
+        if (r.createdTaxonomy > 0)
+          Text(t.importDoneTaxonomy(r.createdTaxonomy)),
         for (final s in r.skipped) ...[
           const SizedBox(height: 6),
           Text('• $s', style: Theme.of(context).textTheme.bodySmall),

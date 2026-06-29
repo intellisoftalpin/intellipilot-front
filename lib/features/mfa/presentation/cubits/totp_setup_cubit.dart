@@ -63,9 +63,7 @@ class TotpSetupCubit extends Cubit<TotpSetupState> {
   Future<void> confirm(String code) async {
     final s = state;
     if (s is! TotpAwaitingCode && s is! TotpFailed) return;
-    final start = s is TotpAwaitingCode
-        ? s.start
-        : (s as TotpFailed).start;
+    final start = s is TotpAwaitingCode ? s.start : (s as TotpFailed).start;
     if (start == null) return;
     emit(TotpConfirming(start));
     final res = await _repo.confirmTotp(code);

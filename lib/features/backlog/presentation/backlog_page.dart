@@ -187,6 +187,9 @@ class _LoadedState extends State<_Loaded> {
         detail is ProjectDetailLoaded && detail.has(Permission.epicCreate);
     final canCreateUs =
         detail is ProjectDetailLoaded && detail.has(Permission.issueCreate);
+    final keyPrefix = detail is ProjectDetailLoaded
+        ? detail.project.issuePrefix
+        : '';
 
     final stories = widget.state.visible;
     return Center(
@@ -286,6 +289,7 @@ class _LoadedState extends State<_Loaded> {
                             story: us,
                             statuses: widget.state.statuses,
                             points: widget.state.points,
+                            keyPrefix: keyPrefix,
                             canEdit: canEditUs,
                           ),
                       ],
@@ -385,11 +389,13 @@ class _UserStoryRow extends StatelessWidget {
     required this.story,
     required this.statuses,
     required this.points,
+    required this.keyPrefix,
     required this.canEdit,
   });
   final Issue story;
   final List<TaxonomyItem> statuses;
   final List<TaxonomyItem> points;
+  final String keyPrefix;
   final bool canEdit;
 
   @override
@@ -404,7 +410,7 @@ class _UserStoryRow extends StatelessWidget {
         .cast<TaxonomyItem?>()
         .firstOrNull;
     final tile = ListTile(
-      leading: IssueKeyChip(text: 'US-${story.reference}'),
+      leading: IssueKeyChip(text: issueKeyLabel(keyPrefix, story.reference)),
       title: Text(story.subject),
       subtitle: Wrap(
         spacing: 8,

@@ -92,10 +92,10 @@ class CreateLinkRequest {
   final LinkType type;
 
   Map<String, dynamic> toJson() => {
-        'source_kind': sourceKind.wire,
-        'source_id': sourceId,
-        'target_kind': targetKind.wire,
-        'target_id': targetId,
-        'type': type.wire,
-      };
+    'source_kind': sourceKind.wire,
+    'source_id': sourceId,
+    'target_kind': targetKind.wire,
+    'target_id': targetId,
+    'type': type.wire,
+  };
 }

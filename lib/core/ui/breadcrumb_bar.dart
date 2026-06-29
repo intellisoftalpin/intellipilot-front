@@ -152,9 +152,7 @@ class ProjectSectionBreadcrumb extends StatelessWidget {
         ),
         Crumb(
           label: currentLabel,
-          onTap: sectionRoute == null
-              ? null
-              : () => context.go(sectionRoute!),
+          onTap: sectionRoute == null ? null : () => context.go(sectionRoute!),
         ),
         ...extraCrumbs,
       ],

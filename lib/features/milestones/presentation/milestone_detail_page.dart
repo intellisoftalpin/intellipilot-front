@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
+import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
@@ -447,6 +448,10 @@ class _ScopeColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final detail = context.watch<ProjectDetailCubit>().state;
+    final keyPrefix = detail is ProjectDetailLoaded
+        ? detail.project.issuePrefix
+        : '';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -468,7 +473,7 @@ class _ScopeColumn extends StatelessWidget {
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       child: ListTile(
                         title: Text(s.subject),
-                        subtitle: Text('US-${s.reference}'),
+                        subtitle: Text(issueKeyLabel(keyPrefix, s.reference)),
                         onTap: () => context.go(
                           Routes.entityDetailFor(
                             projectId,
@@ -502,6 +507,10 @@ class _BoardTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final detail = context.watch<ProjectDetailCubit>().state;
+    final keyPrefix = detail is ProjectDetailLoaded
+        ? detail.project.issuePrefix
+        : '';
     return FutureBuilder<BoardSnapshot?>(
       future: getIt<BoardRepository>()
           .load(projectId, milestoneId)
@@ -542,7 +551,9 @@ class _BoardTab extends StatelessWidget {
                           child: ListTile(
                             dense: true,
                             title: Text(card.issue.subject),
-                            subtitle: Text('#${card.issue.reference}'),
+                            subtitle: Text(
+                              issueKeyLabel(keyPrefix, card.issue.reference),
+                            ),
                             onTap: () => context.go(
                               Routes.entityDetailFor(
                                 projectId,

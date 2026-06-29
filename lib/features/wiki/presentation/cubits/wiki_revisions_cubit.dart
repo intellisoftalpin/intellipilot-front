@@ -93,12 +93,14 @@ class WikiRevisionsCubit extends Cubit<WikiRevisionsState> {
     final body = detail.valueOrNull?.body;
     final diff = diffRes.valueOrNull;
     if (!isClosed) {
-      emit(s.copyWith(
-        selectedRev: rev,
-        selectedBody: body,
-        diff: diff,
-        busy: false,
-      ));
+      emit(
+        s.copyWith(
+          selectedRev: rev,
+          selectedBody: body,
+          diff: diff,
+          busy: false,
+        ),
+      );
     }
   }
 }

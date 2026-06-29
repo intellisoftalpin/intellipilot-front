@@ -322,7 +322,6 @@ sealed class _EntityRecord {
   String get subject;
   String get description;
   int get reference;
-  String get prefix;
   String? get statusId;
   String? get assignedTo;
   String? get ownerId;
@@ -340,8 +339,6 @@ class _EpicRec extends _EntityRecord {
   String get description => epic.description;
   @override
   int get reference => epic.reference;
-  @override
-  String get prefix => 'EPIC';
   @override
   String? get statusId => epic.statusId;
   @override
@@ -365,8 +362,6 @@ class _IssueRec extends _EntityRecord {
   String get description => issue.description;
   @override
   int get reference => issue.reference;
-  @override
-  String get prefix => 'ISSUE';
   @override
   String? get statusId => issue.statusId;
   @override
@@ -418,7 +413,9 @@ class _DetailView extends StatelessWidget {
     // even on expanded screens — Breakpoints.of(context) reads the full
     // screen width, not the panel's. Force a single column there.
     final isWide = Breakpoints.of(context).isExpanded && !_isCompact;
-    final key = '${entity.prefix}-${entity.reference}';
+    final key = kind == EntityKind.epic
+        ? epicKeyLabel(data.project.issuePrefix, entity.reference)
+        : issueKeyLabel(data.project.issuePrefix, entity.reference);
     return Scaffold(
       appBar: AppBar(
         title: BreadcrumbBar(
@@ -969,6 +966,7 @@ class _LeftColumn extends StatelessWidget {
             lookup: LinksLookup(
               epics: data.epicsById,
               issues: data.issuesById,
+              prefix: data.project.issuePrefix,
             ),
           ),
         ),
@@ -984,6 +982,7 @@ class _LeftColumn extends StatelessWidget {
                       .toList()
                     ..sort((a, b) => a.reference.compareTo(b.reference)),
               taxonomyById: data.taxonomyById,
+              keyPrefix: data.project.issuePrefix,
             ),
           ),
         ],
@@ -997,6 +996,7 @@ class _LeftColumn extends StatelessWidget {
               issueId: entityId,
               canEdit: canEdit(context),
               issuesById: data.issuesById,
+              keyPrefix: data.project.issuePrefix,
             ),
           ),
           gap,
@@ -1347,6 +1347,7 @@ class _DetailsTable extends StatelessWidget {
     required bool canEdit,
   }) {
     final t = AppLocalizations.of(context);
+    final pfx = data.project.issuePrefix;
     final epics = data.epicsById.values.toList()
       ..sort((a, b) => a.reference.compareTo(b.reference));
     final current = currentId == null ? null : data.epicsById[currentId];
@@ -1355,7 +1356,7 @@ class _DetailsTable extends StatelessWidget {
       label: t.detailFieldEpic,
       displayText: current == null
           ? '—'
-          : 'EPIC-${current.reference} · ${current.subject}',
+          : '${epicKeyLabel(pfx, current.reference)} · ${current.subject}',
       currentId: currentId,
       noneLabel: t.backlogNoEpic,
       canEdit: canEdit,
@@ -1363,7 +1364,7 @@ class _DetailsTable extends StatelessWidget {
         for (final e in epics)
           _Candidate(
             id: e.id,
-            label: 'EPIC-${e.reference} · ${e.subject}',
+            label: '${epicKeyLabel(pfx, e.reference)} · ${e.subject}',
             colorHex: e.color,
           ),
       ],
@@ -1404,6 +1405,7 @@ class _DetailsTable extends StatelessWidget {
     required bool canEdit,
   }) {
     final t = AppLocalizations.of(context);
+    final pfx = data.project.issuePrefix;
     final candidates =
         data.issuesById.values
             .where((i) => i.id != entityId && i.parentId == null)
@@ -1415,7 +1417,7 @@ class _DetailsTable extends StatelessWidget {
       label: t.detailFieldParent,
       displayText: current == null
           ? '—'
-          : '#${current.reference} · ${current.subject}',
+          : '${issueKeyLabel(pfx, current.reference)} · ${current.subject}',
       currentId: currentId,
       noneLabel: t.taskNoParent,
       canEdit: canEdit,
@@ -1423,7 +1425,7 @@ class _DetailsTable extends StatelessWidget {
         for (final u in candidates)
           _Candidate(
             id: u.id,
-            label: '#${u.reference} · ${u.subject}',
+            label: '${issueKeyLabel(pfx, u.reference)} · ${u.subject}',
           ),
       ],
       onPicked: (id) => _patchEntity(
@@ -3136,9 +3138,11 @@ class _IncludedIssuesPanel extends StatelessWidget {
   const _IncludedIssuesPanel({
     required this.issues,
     required this.taxonomyById,
+    required this.keyPrefix,
   });
   final List<Issue> issues;
   final Map<String, TaxonomyItem> taxonomyById;
+  final String keyPrefix;
 
   @override
   Widget build(BuildContext context) {
@@ -3160,7 +3164,7 @@ class _IncludedIssuesPanel extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(
               children: [
-                IssueKeyChip(text: '#${i.reference}'),
+                IssueKeyChip(text: issueKeyLabel(keyPrefix, i.reference)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -3499,12 +3503,14 @@ class _RelationshipsPanel extends StatefulWidget {
     required this.issueId,
     required this.canEdit,
     required this.issuesById,
+    required this.keyPrefix,
   });
 
   final String projectId;
   final String issueId;
   final bool canEdit;
   final Map<String, Issue> issuesById;
+  final String keyPrefix;
 
   @override
   State<_RelationshipsPanel> createState() => _RelationshipsPanelState();
@@ -3568,7 +3574,7 @@ class _RelationshipsPanelState extends State<_RelationshipsPanel> {
                   leading: const Icon(Icons.link, size: 18),
                   title: Text(
                     '${link.relationLabel} '
-                    'ISSUE-${link.otherRef} · ${link.otherSubject}',
+                    '${issueKeyLabel(widget.keyPrefix, link.otherRef)} · ${link.otherSubject}',
                     style: theme.textTheme.bodyMedium,
                   ),
                   trailing: widget.canEdit
@@ -3646,7 +3652,7 @@ class _RelationshipsPanelState extends State<_RelationshipsPanel> {
                       DropdownMenuItem<String>(
                         value: i.id,
                         child: Text(
-                          'ISSUE-${i.reference} · ${i.subject}',
+                          '${issueKeyLabel(widget.keyPrefix, i.reference)} · ${i.subject}',
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

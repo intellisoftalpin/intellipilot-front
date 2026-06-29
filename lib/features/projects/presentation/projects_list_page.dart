@@ -1,15 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/projects_list_cubit.dart';
+import 'package:intellipilot/features/projects/presentation/widgets/project_avatar.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class ProjectsListPage extends StatelessWidget {
@@ -159,46 +162,56 @@ class _LoadedState extends State<_Loaded> {
                       itemCount: visible.length,
                       itemBuilder: (context, i) {
                         final p = visible[i];
+                        final accent = projectColorOrPrimary(context, p.color);
                         return Card(
                           margin: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 4,
                           ),
-                          child: ListTile(
-                            leading: Icon(
-                              Icons.folder_outlined,
-                              color: Theme.of(context).colorScheme.primary,
+                          clipBehavior: Clip.antiAlias,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              border: Border(
+                                left: BorderSide(color: accent, width: 4),
+                              ),
                             ),
-                            title: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    p.name,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IssueKeyChip(text: p.slug),
-                              ],
-                            ),
-                            subtitle: p.description.isEmpty
-                                ? null
-                                : Padding(
-                                    padding: const EdgeInsets.only(top: 2),
+                            child: ListTile(
+                              leading: ProjectAvatar(project: p),
+                              title: Row(
+                                children: [
+                                  Expanded(
                                     child: Text(
-                                      p.description,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
+                                      p.name,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                     ),
                                   ),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () => context.go(
-                              Routes.projectDetailFor(p.id),
+                                  const SizedBox(width: 8),
+                                  IssueKeyChip(
+                                    text: p.issuePrefix.isEmpty
+                                        ? p.slug
+                                        : p.issuePrefix,
+                                  ),
+                                ],
+                              ),
+                              subtitle: p.description.isEmpty
+                                  ? null
+                                  : Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        p.description,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => context.go(
+                                Routes.projectDetailFor(p.id),
+                              ),
                             ),
                           ),
                         );
@@ -216,7 +229,9 @@ Future<void> _showCreateDialog(BuildContext context) async {
   final t = AppLocalizations.of(context);
   final nameController = TextEditingController();
   final descController = TextEditingController();
+  final prefixController = TextEditingController();
   var visibility = ProjectVisibility.private;
+  String? color;
   final cubit = context.read<ProjectsListCubit>();
 
   final created = await showDialog<Project?>(
@@ -267,6 +282,35 @@ Future<void> _showCreateDialog(BuildContext context) async {
                   onChanged: (v) =>
                       setState(() => visibility = v ?? visibility),
                 ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: prefixController,
+                  textCapitalization: TextCapitalization.characters,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp('[A-Za-z]')),
+                    LengthLimitingTextInputFormatter(3),
+                    TextInputFormatter.withFunction(
+                      (_, n) => n.copyWith(text: n.text.toUpperCase()),
+                    ),
+                  ],
+                  decoration: InputDecoration(
+                    labelText: t.projectFieldPrefix,
+                    helperText: t.projectFieldPrefixOptional,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    t.projectFieldColor,
+                    style: Theme.of(ctx).textTheme.labelLarge,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ColorSwatchPicker(
+                  selectedHex: color ?? '',
+                  onChanged: (hex) => setState(() => color = hex),
+                ),
               ],
             ),
           ),
@@ -279,11 +323,16 @@ Future<void> _showCreateDialog(BuildContext context) async {
               onPressed: () async {
                 final name = nameController.text.trim();
                 if (name.isEmpty) return;
+                final prefix = prefixController.text.trim().toUpperCase();
+                // A typed prefix must be 2–3 letters; blank = auto-derive.
+                if (prefix.isNotEmpty && prefix.length < 2) return;
                 final created = await cubit.create(
                   CreateProjectRequest(
                     name: name,
                     description: descController.text.trim(),
                     visibility: visibility,
+                    issuePrefix: prefix.isEmpty ? null : prefix,
+                    color: color,
                   ),
                 );
                 if (ctx.mounted) Navigator.of(ctx).pop(created);

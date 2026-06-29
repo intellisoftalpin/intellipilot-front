@@ -337,10 +337,15 @@ class DemoProjectsRepository implements ProjectsRepository {
       visibility: patch.containsKey('visibility')
           ? ProjectVisibility.fromWire(patch['visibility'] as String)
           : cur.visibility,
+      issuePrefix: (patch['issue_prefix'] as String?) ?? cur.issuePrefix,
+      color: (patch['color'] as String?) ?? cur.color,
+      iconImageKind: cur.iconImageKind,
+      iconImageUpdatedAt: cur.iconImageUpdatedAt,
       kanbanEnabled: (patch['kanban_enabled'] as bool?) ?? cur.kanbanEnabled,
       backlogEnabled: (patch['backlog_enabled'] as bool?) ?? cur.backlogEnabled,
       wikiEnabled: (patch['wiki_enabled'] as bool?) ?? cur.wikiEnabled,
       epicsEnabled: (patch['epics_enabled'] as bool?) ?? cur.epicsEnabled,
+      epicBoard: cur.epicBoard,
       createdAt: cur.createdAt,
     );
     _s.projects[i] = updated;
@@ -368,6 +373,49 @@ class DemoProjectsRepository implements ProjectsRepository {
     final n = _s.epics.where((e) => e.projectId == projectId).length;
     _s.epics.removeWhere((e) => e.projectId == projectId);
     return Ok(n);
+  }
+
+  @override
+  Future<Result<Project, AppFailure>> uploadProjectIcon(
+    String projectId, {
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  }) async => _setIconKind(projectId, 'image');
+
+  @override
+  Future<Result<Project, AppFailure>> deleteProjectIcon(
+    String projectId,
+  ) async => _setIconKind(projectId, 'none');
+
+  Future<Result<Project, AppFailure>> _setIconKind(
+    String projectId,
+    String kind,
+  ) async {
+    await _tick();
+    final i = _s.projects.indexWhere((p) => p.id == projectId);
+    if (i < 0) return const Err(NotFoundFailure());
+    final cur = _s.projects[i];
+    final updated = Project(
+      id: cur.id,
+      slug: cur.slug,
+      name: cur.name,
+      description: cur.description,
+      ownerId: cur.ownerId,
+      visibility: cur.visibility,
+      issuePrefix: cur.issuePrefix,
+      color: cur.color,
+      iconImageKind: kind,
+      iconImageUpdatedAt: DateTime(2024),
+      kanbanEnabled: cur.kanbanEnabled,
+      backlogEnabled: cur.backlogEnabled,
+      wikiEnabled: cur.wikiEnabled,
+      epicsEnabled: cur.epicsEnabled,
+      epicBoard: cur.epicBoard,
+      createdAt: cur.createdAt,
+    );
+    _s.projects[i] = updated;
+    return Ok(updated);
   }
 
   @override

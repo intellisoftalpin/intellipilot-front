@@ -109,7 +109,8 @@ class _Loaded extends StatelessWidget {
               )
             else
               ...state.items.map(
-                (p) => _PasskeyTile(item: p, onDelete: () => cubit.remove(p.id)),
+                (p) =>
+                    _PasskeyTile(item: p, onDelete: () => cubit.remove(p.id)),
               ),
             const SizedBox(height: 16),
             FilledButton.icon(
@@ -172,7 +173,9 @@ class _PasskeyTile extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.fingerprint),
-        title: Text(item.nickname.isEmpty ? t.passkeyNoNickname : item.nickname),
+        title: Text(
+          item.nickname.isEmpty ? t.passkeyNoNickname : item.nickname,
+        ),
         subtitle: Text(
           item.lastUsedAt == null
               ? t.passkeyNeverUsed

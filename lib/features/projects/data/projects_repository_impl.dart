@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/error/failure_mapper.dart';
@@ -73,6 +75,46 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
       if (e.response?.statusCode == 204) {
         return const Ok<Unit, AppFailure>(Unit.instance);
       }
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<Project, AppFailure>> uploadProjectIcon(
+    String projectId, {
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  }) async {
+    try {
+      final form = FormData.fromMap({
+        'file': MultipartFile.fromBytes(
+          bytes,
+          filename: filename,
+          contentType: contentType == null
+              ? null
+              : DioMediaType.parse(contentType),
+        ),
+      });
+      final res = await _api.dio.put<dynamic>(
+        '$_basePath/$projectId/icon',
+        data: form,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+      return Ok(Project.fromJson(res.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<Project, AppFailure>> deleteProjectIcon(
+    String projectId,
+  ) async {
+    try {
+      final res = await _api.dio.delete<dynamic>('$_basePath/$projectId/icon');
+      return Ok(Project.fromJson(res.data as Map<String, dynamic>));
+    } on DioException catch (e) {
       return Err(mapDioExceptionToFailure(e));
     }
   }

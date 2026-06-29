@@ -96,36 +96,41 @@ void seedDemoStore(DemoStore s) {
   );
   s.users
     ..add(s.currentUser)
-    ..add(UserProfile(
-      id: 'user-alex',
-      email: 'alex@intellipilot.local',
-      username: 'alex',
-      fullName: 'Alex Stakeholder',
-      lang: 'en',
-      timezone: 'UTC',
-      isActive: true,
-      isSuperadmin: false,
-      mustChangePassword: false,
-      createdAt: now.subtract(const Duration(days: 20)),
-    ));
+    ..add(
+      UserProfile(
+        id: 'user-alex',
+        email: 'alex@intellipilot.local',
+        username: 'alex',
+        fullName: 'Alex Stakeholder',
+        lang: 'en',
+        timezone: 'UTC',
+        isActive: true,
+        isSuperadmin: false,
+        mustChangePassword: false,
+        createdAt: now.subtract(const Duration(days: 20)),
+      ),
+    );
 
   // ---- project --------------------------------------------------------
   const projectId = 'prj-demo';
-  s.projects.add(Project(
-    id: projectId,
-    slug: 'demo',
-    name: 'Demo Project',
-    description: 'A scripted project that exercises every feature in '
-        'IntelliPilot — backlog, board, milestones, wiki, attachments, '
-        'comments and the command palette.',
-    ownerId: userId,
-    visibility: ProjectVisibility.private,
-    kanbanEnabled: true,
-    backlogEnabled: true,
-    wikiEnabled: true,
-    epicsEnabled: true,
-    createdAt: now.subtract(const Duration(days: 14)),
-  ));
+  s.projects.add(
+    Project(
+      id: projectId,
+      slug: 'demo',
+      name: 'Demo Project',
+      description:
+          'A scripted project that exercises every feature in '
+          'IntelliPilot — backlog, board, milestones, wiki, attachments, '
+          'comments and the command palette.',
+      ownerId: userId,
+      visibility: ProjectVisibility.private,
+      kanbanEnabled: true,
+      backlogEnabled: true,
+      wikiEnabled: true,
+      epicsEnabled: true,
+      createdAt: now.subtract(const Duration(days: 14)),
+    ),
+  );
   // Grant the demo user every permission so the UI is fully unlocked.
   s.permissionsByProject[projectId] = Permission.values.toSet();
 
@@ -179,37 +184,81 @@ void seedDemoStore(DemoStore s) {
     double order, {
     bool? isClosed,
     double? value,
-  }) =>
-      TaxonomyItem(
-        id: id,
-        projectId: projectId,
-        kind: kind,
-        name: name,
-        slug: slug,
-        color: color,
-        order: order,
-        isClosed: isClosed,
-        value: value,
-        createdAt: now,
-      );
+  }) => TaxonomyItem(
+    id: id,
+    projectId: projectId,
+    kind: kind,
+    name: name,
+    slug: slug,
+    color: color,
+    order: order,
+    isClosed: isClosed,
+    value: value,
+    createdAt: now,
+  );
 
   final taxonomy = <TaxonomyItem>[
     // Issue statuses (unified)
-    t('us-st-new', TaxonomyKind.issueStatus, 'New', 'new', '#999999', 1, isClosed: false),
-    t('us-st-ready', TaxonomyKind.issueStatus, 'Ready', 'ready', '#3b82f6', 2, isClosed: false),
-    t('us-st-progress', TaxonomyKind.issueStatus, 'In progress', 'in-progress', '#f59e0b', 3, isClosed: false),
-    t('us-st-done', TaxonomyKind.issueStatus, 'Done', 'done', '#10b981', 4, isClosed: true),
+    t(
+      'us-st-new',
+      TaxonomyKind.issueStatus,
+      'New',
+      'new',
+      '#999999',
+      1,
+      isClosed: false,
+    ),
+    t(
+      'us-st-ready',
+      TaxonomyKind.issueStatus,
+      'Ready',
+      'ready',
+      '#3b82f6',
+      2,
+      isClosed: false,
+    ),
+    t(
+      'us-st-progress',
+      TaxonomyKind.issueStatus,
+      'In progress',
+      'in-progress',
+      '#f59e0b',
+      3,
+      isClosed: false,
+    ),
+    t(
+      'us-st-done',
+      TaxonomyKind.issueStatus,
+      'Done',
+      'done',
+      '#10b981',
+      4,
+      isClosed: true,
+    ),
     // Issue types
     t('is-ty-story', TaxonomyKind.issueType, 'Story', 'story', '#3b7dd8', 1),
     t('is-ty-task', TaxonomyKind.issueType, 'Task', 'task', '#669900', 2),
     t('is-ty-bug', TaxonomyKind.issueType, 'Bug', 'bug', '#ef4444', 3),
-    t('is-ty-question', TaxonomyKind.issueType, 'Question', 'question', '#3b82f6', 4),
+    t(
+      'is-ty-question',
+      TaxonomyKind.issueType,
+      'Question',
+      'question',
+      '#3b82f6',
+      4,
+    ),
     // Priority
     t('pri-low', TaxonomyKind.priority, 'Low', 'low', '#10b981', 1),
     t('pri-medium', TaxonomyKind.priority, 'Medium', 'medium', '#f59e0b', 2),
     t('pri-high', TaxonomyKind.priority, 'High', 'high', '#ef4444', 3),
-    t('pri-critical', TaxonomyKind.priority, 'Critical', 'critical', '#b91c1c',
-        4),
+    t(
+      'pri-critical',
+      TaxonomyKind.priority,
+      'Critical',
+      'critical',
+      '#b91c1c',
+      4,
+    ),
     t('pri-blocker', TaxonomyKind.priority, 'Blocker', 'blocker', '#7f1d1d', 5),
     // Size (XS..XXL — value is the ordinal driving the scaled badge)
     t('sz-xs', TaxonomyKind.size, 'XS', 'xs', '#10b981', 1, value: 1),
@@ -313,19 +362,21 @@ void seedDemoStore(DemoStore s) {
 
   // ---- milestone ------------------------------------------------------
   const milestoneId = 'ms-sprint-1';
-  s.milestones.add(Milestone(
-    id: milestoneId,
-    projectId: projectId,
-    name: 'Sprint 1',
-    slug: 'sprint-1',
-    startDate: now.subtract(const Duration(days: 7)),
-    endDate: now.add(const Duration(days: 7)),
-    closed: false,
-    order: 1,
-    version: 1,
-    createdAt: now.subtract(const Duration(days: 14)),
-    modifiedAt: now.subtract(const Duration(days: 14)),
-  ));
+  s.milestones.add(
+    Milestone(
+      id: milestoneId,
+      projectId: projectId,
+      name: 'Sprint 1',
+      slug: 'sprint-1',
+      startDate: now.subtract(const Duration(days: 7)),
+      endDate: now.add(const Duration(days: 7)),
+      closed: false,
+      order: 1,
+      version: 1,
+      createdAt: now.subtract(const Duration(days: 14)),
+      modifiedAt: now.subtract(const Duration(days: 14)),
+    ),
+  );
 
   // ---- epics ----------------------------------------------------------
   s.epics.addAll([
@@ -505,7 +556,8 @@ void seedDemoStore(DemoStore s) {
       projectId: projectId,
       reference: 200,
       subject: 'Reset password link expires too soon',
-      description: 'Customer feedback from beta — 15-minute window is too short.',
+      description:
+          'Customer feedback from beta — 15-minute window is too short.',
       statusId: 'us-st-progress',
       typeId: 'is-ty-bug',
       priorityId: 'pri-high',
@@ -630,21 +682,25 @@ Have fun.
   ];
 
   // ---- one comment + one history entry on us-login --------------------
-  s.comments.add(Comment(
-    id: 'cm-1',
-    targetType: 'user_story',
-    targetId: 'us-login',
-    authorId: 'user-alex',
-    body: 'Looks good — shipped to staging.',
-    bodyHtml: '<p>Looks good — shipped to staging.</p>',
-    editedAt: null,
-    createdAt: now.subtract(const Duration(hours: 6)),
-  ));
-  s.historyEvents.add(HistoryEvent(
-    diff: const {
-      'status_id': ['us-st-progress', 'us-st-done'],
-    },
-    actorId: userId,
-    createdAt: now.subtract(const Duration(hours: 8)),
-  ));
+  s.comments.add(
+    Comment(
+      id: 'cm-1',
+      targetType: 'user_story',
+      targetId: 'us-login',
+      authorId: 'user-alex',
+      body: 'Looks good — shipped to staging.',
+      bodyHtml: '<p>Looks good — shipped to staging.</p>',
+      editedAt: null,
+      createdAt: now.subtract(const Duration(hours: 6)),
+    ),
+  );
+  s.historyEvents.add(
+    HistoryEvent(
+      diff: const {
+        'status_id': ['us-st-progress', 'us-st-done'],
+      },
+      actorId: userId,
+      createdAt: now.subtract(const Duration(hours: 8)),
+    ),
+  );
 }

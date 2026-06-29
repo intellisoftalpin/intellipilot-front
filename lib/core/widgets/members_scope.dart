@@ -16,9 +16,7 @@ class MembersScope extends InheritedWidget {
 
   /// The members map from the nearest scope, or empty when none is present.
   static Map<String, UserRef> of(BuildContext context) =>
-      context
-          .dependOnInheritedWidgetOfExactType<MembersScope>()
-          ?.membersById ??
+      context.dependOnInheritedWidgetOfExactType<MembersScope>()?.membersById ??
       const {};
 
   /// Resolve a single user id (null/unknown → null). The INTELLIBOT system

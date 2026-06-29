@@ -24,8 +24,9 @@ class WikiListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<UserProfile?>(
-      future:
-          getIt<ProfileRepository>().getProfile().then((r) => r.valueOrNull),
+      future: getIt<ProfileRepository>().getProfile().then(
+        (r) => r.valueOrNull,
+      ),
       builder: (context, snap) {
         if (snap.connectionState != ConnectionState.done) {
           return const Scaffold(
@@ -83,8 +84,7 @@ class _View extends StatelessWidget {
           currentLabel: t.wikiTitle,
         ),
       ),
-      floatingActionButton:
-          BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
+      floatingActionButton: BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
         builder: (context, s) {
           if (s is! ProjectDetailLoaded || !s.has(Permission.wikiCreate)) {
             return const SizedBox.shrink();
@@ -119,7 +119,8 @@ class _View extends StatelessWidget {
           if (state is! WikiListLoaded) return const SizedBox.shrink();
           if (state.pages.isEmpty) {
             final detail = context.watch<ProjectDetailCubit>().state;
-            final canCreate = detail is ProjectDetailLoaded &&
+            final canCreate =
+                detail is ProjectDetailLoaded &&
                 detail.has(Permission.wikiCreate);
             return EmptyState(
               icon: Icons.article_outlined,

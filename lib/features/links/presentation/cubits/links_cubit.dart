@@ -35,19 +35,18 @@ final class LinksLoaded extends LinksState {
     List<EntityLink>? links,
     bool? busy,
     AppFailure? lastError,
-  }) =>
-      LinksLoaded(
-        links: links ?? this.links,
-        busy: busy ?? this.busy,
-        lastError: lastError,
-      );
+  }) => LinksLoaded(
+    links: links ?? this.links,
+    busy: busy ?? this.busy,
+    lastError: lastError,
+  );
 
   @override
   List<Object?> get props => [
-        links.map((l) => l.id).toList(),
-        busy,
-        lastError,
-      ];
+    links.map((l) => l.id).toList(),
+    busy,
+    lastError,
+  ];
 }
 
 final class LinksFailed extends LinksState {
@@ -63,8 +62,8 @@ class LinksCubit extends Cubit<LinksState> {
     required this.projectId,
     required this.kind,
     required this.entityId,
-  })  : _repo = repo,
-        super(const LinksLoading());
+  }) : _repo = repo,
+       super(const LinksLoading());
 
   final LinksRepository _repo;
   final String projectId;

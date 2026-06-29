@@ -8,6 +8,7 @@ import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
+import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/core/widgets/members_scope.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/core/work_items/work_item_filter.dart';
@@ -440,6 +441,10 @@ class _IssueRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final detail = context.watch<ProjectDetailCubit>().state;
+    final keyPrefix = detail is ProjectDetailLoaded
+        ? detail.project.issuePrefix
+        : '';
     final status = state.statuses
         .where((s) => s.id == issue.statusId)
         .cast<TaxonomyItem?>()
@@ -487,7 +492,7 @@ class _IssueRow extends StatelessWidget {
           spacing: 6,
           runSpacing: 4,
           children: [
-            Text('ISSUE-${issue.reference}'),
+            Text(issueKeyLabel(keyPrefix, issue.reference)),
             if (status != null)
               _MiniChip(label: status.name, color: status.color),
             if (type != null)

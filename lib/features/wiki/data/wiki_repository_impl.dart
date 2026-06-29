@@ -24,9 +24,7 @@ class WikiRepositoryImpl implements WikiRepository {
         final body = r.data as Map<String, dynamic>;
         final raw = body['pages'] as List<dynamic>? ?? const [];
         return Ok(
-          raw
-              .map((e) => WikiPage.fromJson(e as Map<String, dynamic>))
-              .toList(),
+          raw.map((e) => WikiPage.fromJson(e as Map<String, dynamic>)).toList(),
         );
       },
       err: Err.new,
@@ -114,8 +112,7 @@ class WikiRepositoryImpl implements WikiRepository {
     String projectId,
     String pageId,
   ) async {
-    final res =
-        await _api.get('$_base/$projectId/wiki/$pageId/revisions');
+    final res = await _api.get('$_base/$projectId/wiki/$pageId/revisions');
     return res.when(
       ok: (r) {
         final body = r.data as Map<String, dynamic>;
@@ -140,8 +137,7 @@ class WikiRepositoryImpl implements WikiRepository {
       '$_base/$projectId/wiki/$pageId/revisions/$rev',
     );
     return res.when(
-      ok: (r) =>
-          Ok(WikiRevision.fromJson(r.data as Map<String, dynamic>)),
+      ok: (r) => Ok(WikiRevision.fromJson(r.data as Map<String, dynamic>)),
       err: Err.new,
     );
   }

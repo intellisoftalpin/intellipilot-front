@@ -76,15 +76,16 @@ class _TotpSetupViewState extends State<_TotpSetupView> {
                   busy: true,
                   failure: null,
                 ),
-                TotpFailed(:final failure, :final start) => start == null
-                    ? _SetupError(failure: failure)
-                    : _SetupForm(
-                        qrPngBase64: start.qrPngBase64,
-                        secret: start.secretBase32,
-                        codeController: _codeController,
-                        busy: false,
-                        failure: failure,
-                      ),
+                TotpFailed(:final failure, :final start) =>
+                  start == null
+                      ? _SetupError(failure: failure)
+                      : _SetupForm(
+                          qrPngBase64: start.qrPngBase64,
+                          secret: start.secretBase32,
+                          codeController: _codeController,
+                          busy: false,
+                          failure: failure,
+                        ),
                 TotpEnabled(:final recoveryCodes) => _SetupDone(
                   codes: recoveryCodes,
                 ),
@@ -150,8 +151,8 @@ class _SetupForm extends StatelessWidget {
           onPressed: busy
               ? null
               : () => context.read<TotpSetupCubit>().confirm(
-                    codeController.text,
-                  ),
+                  codeController.text,
+                ),
           child: busy
               ? const SizedBox.square(
                   dimension: 18,

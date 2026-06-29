@@ -270,6 +270,7 @@ class _Loaded extends StatelessWidget {
     final detail = context.watch<ProjectDetailCubit>().state;
     final loaded = detail is ProjectDetailLoaded ? detail : null;
     final canDrag = loaded?.has(Permission.epicModify) ?? false;
+    final keyPrefix = loaded?.project.issuePrefix ?? '';
     final inProgressIds =
         loaded?.project.epicBoard.inProgressStatusIds.toSet() ??
         const <String>{};
@@ -329,6 +330,7 @@ class _Loaded extends StatelessWidget {
                       title: col.title,
                       epics: col.epics,
                       statuses: state.statuses,
+                      keyPrefix: keyPrefix,
                       targetStatusId: col.target,
                       canDrag: canDrag,
                     ),
@@ -454,12 +456,14 @@ class _EpicColumn extends StatelessWidget {
     required this.title,
     required this.epics,
     required this.statuses,
+    required this.keyPrefix,
     required this.targetStatusId,
     required this.canDrag,
   });
   final String title;
   final List<Epic> epics;
   final List<TaxonomyItem> statuses;
+  final String keyPrefix;
 
   /// Status a card adopts when dropped here (null = clear, for "All").
   final Object? targetStatusId;
@@ -522,7 +526,7 @@ class _EpicColumn extends StatelessWidget {
   }
 
   Widget _card(BuildContext context, Epic e) {
-    final card = _EpicCard(epic: e, statuses: statuses);
+    final card = _EpicCard(epic: e, statuses: statuses, keyPrefix: keyPrefix);
     if (!canDrag) return card;
     final theme = Theme.of(context);
     // Per-card target: dropping onto a card inserts the dragged epic before it.
@@ -563,9 +567,14 @@ class _EpicColumn extends StatelessWidget {
 }
 
 class _EpicCard extends StatelessWidget {
-  const _EpicCard({required this.epic, required this.statuses});
+  const _EpicCard({
+    required this.epic,
+    required this.statuses,
+    required this.keyPrefix,
+  });
   final Epic epic;
   final List<TaxonomyItem> statuses;
+  final String keyPrefix;
 
   @override
   Widget build(BuildContext context) {
@@ -598,7 +607,9 @@ class _EpicCard extends StatelessWidget {
                         HexColorDot(hex: epic.color, size: 12),
                         const SizedBox(width: 6),
                       ],
-                      IssueKeyChip(text: 'EPIC-${epic.reference}'),
+                      IssueKeyChip(
+                        text: epicKeyLabel(keyPrefix, epic.reference),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),

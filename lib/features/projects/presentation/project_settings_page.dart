@@ -7,9 +7,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
+import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
+import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/components_tab.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/customers_tab.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/labels_tab.dart';
@@ -27,6 +30,7 @@ import 'package:intellipilot/features/projects/presentation/cubits/project_detai
 import 'package:intellipilot/features/projects/presentation/cubits/project_settings_cubit.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/roles_cubit.dart';
 import 'package:intellipilot/features/projects/presentation/widgets/permission_gate.dart';
+import 'package:intellipilot/features/projects/presentation/widgets/project_avatar.dart';
 import 'package:intellipilot/features/projects/presentation/widgets/role_editor.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -182,38 +186,61 @@ class _GeneralTab extends StatefulWidget {
 class _GeneralTabState extends State<_GeneralTab> {
   late final TextEditingController _name;
   late final TextEditingController _desc;
+  late final TextEditingController _prefix;
   late ProjectVisibility _visibility;
+  late String _color;
 
   @override
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.state.project.name);
     _desc = TextEditingController(text: widget.state.project.description);
+    _prefix = TextEditingController(text: widget.state.project.issuePrefix);
     _visibility = widget.state.project.visibility;
+    _color = widget.state.project.color;
   }
 
   @override
   void dispose() {
     _name.dispose();
     _desc.dispose();
+    _prefix.dispose();
     super.dispose();
   }
 
   bool get _canEdit => widget.state.has(Permission.projectModify);
 
   Future<void> _save() async {
+    final t = AppLocalizations.of(context);
+    final prefix = _prefix.text.trim().toUpperCase();
+    if (prefix.length < 2 || prefix.length > 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(t.projectPrefixInvalid)),
+      );
+      return;
+    }
     final patch = UpdateProjectRequest(
       name: _name.text.trim(),
       description: _desc.text.trim(),
       visibility: _visibility,
+      issuePrefix: prefix,
+      color: _color.isEmpty ? null : _color,
     );
-    final updated = await context.read<ProjectSettingsCubit>().save(patch);
+    final cubit = context.read<ProjectSettingsCubit>();
+    final updated = await cubit.save(patch);
     if (!mounted) return;
     if (updated != null) {
       context.read<ProjectDetailCubit>().replace(updated);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).projectSavedSnack)),
+        SnackBar(content: Text(t.projectSavedSnack)),
       );
+    } else {
+      final failed = cubit.state;
+      final msg =
+          failed is ProjectSettingsFailed && failed.failure is ConflictFailure
+          ? t.projectPrefixTaken
+          : t.projectSaveFailed;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     }
   }
 
@@ -257,6 +284,38 @@ class _GeneralTabState extends State<_GeneralTab> {
               ? (v) => setState(() => _visibility = v ?? _visibility)
               : null,
         ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _prefix,
+          enabled: _canEdit,
+          textCapitalization: TextCapitalization.characters,
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp('[A-Za-z]')),
+            LengthLimitingTextInputFormatter(3),
+            TextInputFormatter.withFunction(
+              (_, n) => n.copyWith(text: n.text.toUpperCase()),
+            ),
+          ],
+          decoration: InputDecoration(
+            labelText: t.projectFieldPrefix,
+            helperText: t.projectFieldPrefixHelp,
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          t.projectFieldColor,
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        const SizedBox(height: 8),
+        ColorSwatchPicker(
+          selectedHex: _color.isEmpty ? ColorPalette.swatches.first : _color,
+          enabled: _canEdit,
+          onChanged: (hex) => setState(() => _color = hex),
+        ),
+        const SizedBox(height: 20),
+        Text(t.projectFieldIcon, style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 8),
+        _ProjectIconField(project: widget.state.project, canEdit: _canEdit),
         const SizedBox(height: 24),
         BlocBuilder<ProjectSettingsCubit, ProjectSettingsState>(
           builder: (context, s) {
@@ -272,6 +331,81 @@ class _GeneralTabState extends State<_GeneralTab> {
             );
           },
         ),
+      ],
+    );
+  }
+}
+
+/// Project icon: preview ([ProjectAvatar]) + upload / remove. Uploading and
+/// removing hit the dedicated icon endpoint and refresh the project so the
+/// avatar (and its app-wide uses) pick up the change.
+class _ProjectIconField extends StatefulWidget {
+  const _ProjectIconField({required this.project, required this.canEdit});
+  final Project project;
+  final bool canEdit;
+
+  @override
+  State<_ProjectIconField> createState() => _ProjectIconFieldState();
+}
+
+class _ProjectIconFieldState extends State<_ProjectIconField> {
+  bool _busy = false;
+
+  Future<void> _upload() async {
+    final picked = await getIt<FilePicker>().pickSingleFile();
+    if (picked == null || !mounted) return;
+    setState(() => _busy = true);
+    final res = await getIt<ProjectsRepository>().uploadProjectIcon(
+      widget.project.id,
+      filename: picked.name,
+      bytes: picked.bytes,
+      contentType: picked.contentType,
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    final updated = res.valueOrNull;
+    if (updated != null) context.read<ProjectDetailCubit>().replace(updated);
+  }
+
+  Future<void> _remove() async {
+    setState(() => _busy = true);
+    final res = await getIt<ProjectsRepository>().deleteProjectIcon(
+      widget.project.id,
+    );
+    if (!mounted) return;
+    setState(() => _busy = false);
+    final updated = res.valueOrNull;
+    if (updated != null) context.read<ProjectDetailCubit>().replace(updated);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final canPick = widget.canEdit && getIt<FilePicker>().isSupported;
+    return Row(
+      children: [
+        ProjectAvatar(project: widget.project, size: 64),
+        const SizedBox(width: 16),
+        if (canPick) ...[
+          FilledButton.tonalIcon(
+            onPressed: _busy ? null : () => unawaited(_upload()),
+            icon: _busy
+                ? const SizedBox.square(
+                    dimension: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.upload_outlined, size: 18),
+            label: Text(t.pfUpload),
+          ),
+          if (widget.project.hasIcon) ...[
+            const SizedBox(width: 8),
+            TextButton.icon(
+              onPressed: _busy ? null : () => unawaited(_remove()),
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: Text(t.actionRemove),
+            ),
+          ],
+        ],
       ],
     );
   }

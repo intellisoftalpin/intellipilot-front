@@ -20,19 +20,27 @@ class LinksLookup {
   const LinksLookup({
     required this.epics,
     required this.issues,
+    this.prefix = '',
   });
 
   final Map<String, Epic> epics;
   final Map<String, Issue> issues;
 
+  /// Project issue-key prefix used to format resolved keys.
+  final String prefix;
+
   ({String key, String subject})? resolve(EntityKind kind, String id) {
     switch (kind) {
       case EntityKind.epic:
         final e = epics[id];
-        return e == null ? null : (key: 'EPIC-${e.reference}', subject: e.subject);
+        return e == null
+            ? null
+            : (key: epicKeyLabel(prefix, e.reference), subject: e.subject);
       case EntityKind.issue:
         final i = issues[id];
-        return i == null ? null : (key: '#${i.reference}', subject: i.subject);
+        return i == null
+            ? null
+            : (key: issueKeyLabel(prefix, i.reference), subject: i.subject);
     }
   }
 }
@@ -132,6 +140,7 @@ class LinksPanelContent extends StatelessWidget {
       projectId: projectId,
       sourceKind: sourceKind,
       sourceId: sourceId,
+      keyPrefix: lookup.prefix,
     );
     if (result == null) return;
     await cubit.add(
@@ -154,12 +163,16 @@ class LinksPanelContent extends StatelessWidget {
       final otherKind = outgoing ? l.targetKind : l.sourceKind;
       final otherId = outgoing ? l.targetId : l.sourceId;
       final label = _labelFor(t, l.type, outgoing);
-      out.putIfAbsent(label, () => []).add(_LinkRowData(
-            link: l,
-            label: label,
-            otherKind: otherKind,
-            otherId: otherId,
-          ));
+      out
+          .putIfAbsent(label, () => [])
+          .add(
+            _LinkRowData(
+              link: l,
+              label: label,
+              otherKind: otherKind,
+              otherId: otherId,
+            ),
+          );
     }
     return out;
   }
@@ -233,8 +246,8 @@ class _LinkRow extends StatelessWidget {
     // widget via context.findAncestorWidgetOfExactType — but to avoid
     // that, the parent passes a builder. To keep code straightforward we
     // re-look-up via the parent context's ancestor query.
-    final lookupHost =
-        context.findAncestorWidgetOfExactType<LinksPanelContent>();
+    final lookupHost = context
+        .findAncestorWidgetOfExactType<LinksPanelContent>();
     final resolved = lookupHost?.lookup.resolve(row.otherKind, row.otherId);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),

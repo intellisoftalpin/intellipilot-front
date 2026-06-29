@@ -256,6 +256,10 @@ class _TasksLoaded extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final buckets = state.bucketed;
+    final detail = context.watch<ProjectDetailCubit>().state;
+    final keyPrefix = detail is ProjectDetailLoaded
+        ? detail.project.issuePrefix
+        : '';
     return Column(
       children: [
         if (state.staleData)
@@ -296,6 +300,7 @@ class _TasksLoaded extends StatelessWidget {
                     status: status,
                     tasks: buckets[status.id] ?? const [],
                     projectId: projectId,
+                    keyPrefix: keyPrefix,
                     selectedId: selectedId,
                     onSelect: onSelect,
                   ),
@@ -303,6 +308,7 @@ class _TasksLoaded extends StatelessWidget {
                   status: null,
                   tasks: buckets[null] ?? const [],
                   projectId: projectId,
+                  keyPrefix: keyPrefix,
                   selectedId: selectedId,
                   onSelect: onSelect,
                 ),
@@ -321,6 +327,7 @@ class _TaskColumn extends StatelessWidget {
     required this.status,
     required this.tasks,
     required this.projectId,
+    required this.keyPrefix,
     required this.selectedId,
     required this.onSelect,
   });
@@ -329,6 +336,7 @@ class _TaskColumn extends StatelessWidget {
   final TaxonomyItem? status;
   final List<Issue> tasks;
   final String projectId;
+  final String keyPrefix;
   final String? selectedId;
   final ValueChanged<String> onSelect;
 
@@ -374,6 +382,7 @@ class _TaskColumn extends StatelessWidget {
                       _TaskCard(
                         task: task,
                         projectId: projectId,
+                        keyPrefix: keyPrefix,
                         selected: task.id == selectedId,
                         onTap: () => onSelect(task.id),
                       ),
@@ -394,11 +403,13 @@ class _TaskCard extends StatelessWidget {
   const _TaskCard({
     required this.task,
     required this.projectId,
+    required this.keyPrefix,
     required this.selected,
     required this.onTap,
   });
   final Issue task;
   final String projectId;
+  final String keyPrefix;
   final bool selected;
   final VoidCallback onTap;
 
@@ -425,7 +436,7 @@ class _TaskCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  IssueKeyChip(text: '#${task.reference}'),
+                  IssueKeyChip(text: issueKeyLabel(keyPrefix, task.reference)),
                   const Spacer(),
                   if (MembersScope.user(context, task.assignedTo) != null)
                     UserAvatar(

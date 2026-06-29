@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
+import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
@@ -25,9 +26,10 @@ Future<AddLinkResult?> showAddLinkDialog(
   required String projectId,
   required EntityKind sourceKind,
   required String sourceId,
+  String keyPrefix = '',
 }) async {
   final t = AppLocalizations.of(context);
-  final candidates = await _loadCandidates(projectId);
+  final candidates = await _loadCandidates(projectId, keyPrefix);
   if (!context.mounted) return null;
   return showDialog<AddLinkResult>(
     context: context,
@@ -41,9 +43,9 @@ Future<AddLinkResult?> showAddLinkDialog(
 }
 
 String _kindLabel(AppLocalizations t, EntityKind k) => switch (k) {
-      EntityKind.epic => t.kindLabelEpic,
-      EntityKind.issue => t.kindLabelIssue,
-    };
+  EntityKind.epic => t.kindLabelEpic,
+  EntityKind.issue => t.kindLabelIssue,
+};
 
 class _Candidate {
   const _Candidate({
@@ -58,27 +60,34 @@ class _Candidate {
   final String subject;
 }
 
-Future<List<_Candidate>?> _loadCandidates(String projectId) async {
+Future<List<_Candidate>?> _loadCandidates(
+  String projectId,
+  String keyPrefix,
+) async {
   final backlog = getIt<BacklogRepository>();
   final epics = await backlog.listEpics(projectId);
   final issues = await backlog.listIssues(projectId);
   if (epics.isErr || issues.isErr) return null;
   final out = <_Candidate>[];
   for (final e in epics.valueOrNull ?? const <Epic>[]) {
-    out.add(_Candidate(
-      kind: EntityKind.epic,
-      id: e.id,
-      key: 'EPIC-${e.reference}',
-      subject: e.subject,
-    ));
+    out.add(
+      _Candidate(
+        kind: EntityKind.epic,
+        id: e.id,
+        key: epicKeyLabel(keyPrefix, e.reference),
+        subject: e.subject,
+      ),
+    );
   }
   for (final i in issues.valueOrNull ?? const <Issue>[]) {
-    out.add(_Candidate(
-      kind: EntityKind.issue,
-      id: i.id,
-      key: '#${i.reference}',
-      subject: i.subject,
-    ));
+    out.add(
+      _Candidate(
+        kind: EntityKind.issue,
+        id: i.id,
+        key: issueKeyLabel(keyPrefix, i.reference),
+        subject: i.subject,
+      ),
+    );
   }
   return out;
 }
@@ -120,13 +129,14 @@ class _DialogState extends State<_Dialog> {
                 children: [
                   DropdownButtonFormField<LinkType>(
                     initialValue: _type,
-                    decoration:
-                        InputDecoration(labelText: t.linkFieldType),
+                    decoration: InputDecoration(labelText: t.linkFieldType),
                     items: LinkType.values
-                        .map((tp) => DropdownMenuItem(
-                              value: tp,
-                              child: Text(_typeLabel(t, tp)),
-                            ))
+                        .map(
+                          (tp) => DropdownMenuItem(
+                            value: tp,
+                            child: Text(_typeLabel(t, tp)),
+                          ),
+                        )
                         .toList(),
                     onChanged: (v) =>
                         setState(() => _type = v ?? LinkType.blocks),
@@ -161,12 +171,12 @@ class _DialogState extends State<_Dialog> {
           onPressed: _selected == null
               ? null
               : () => Navigator.of(context).pop(
-                    AddLinkResult(
-                      type: _type,
-                      targetKind: _selected!.kind,
-                      targetId: _selected!.id,
-                    ),
+                  AddLinkResult(
+                    type: _type,
+                    targetKind: _selected!.kind,
+                    targetId: _selected!.id,
                   ),
+                ),
           child: Text(t.actionSave),
         ),
       ],
@@ -223,8 +233,7 @@ class _CandidatesList extends StatelessWidget {
           dense: true,
           selected: isSelected,
           leading: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(6),
@@ -247,9 +256,9 @@ class _CandidatesList extends StatelessWidget {
 }
 
 String _typeLabel(AppLocalizations t, LinkType type) => switch (type) {
-      LinkType.blocks => t.linkTypeBlocks,
-      LinkType.relates => t.linkTypeRelates,
-      LinkType.duplicates => t.linkTypeDuplicates,
-      LinkType.clones => t.linkTypeClones,
-      LinkType.causes => t.linkTypeCauses,
-    };
+  LinkType.blocks => t.linkTypeBlocks,
+  LinkType.relates => t.linkTypeRelates,
+  LinkType.duplicates => t.linkTypeDuplicates,
+  LinkType.clones => t.linkTypeClones,
+  LinkType.causes => t.linkTypeCauses,
+};

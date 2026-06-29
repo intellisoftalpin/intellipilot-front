@@ -1,7 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 
-/// Jira-style monospaced key chip: `EPIC-12`, `US-34`, `T-7`, `ISSUE-2`.
+/// Human-readable issue key `<PREFIX>-<ref>` (e.g. `PS-12`). Falls back to
+/// `#<ref>` before the project prefix is known.
+String issueKeyLabel(String prefix, int reference) =>
+    prefix.isEmpty ? '#$reference' : '$prefix-$reference';
+
+/// Human-readable epic key `<PREFIX>-E-<ref>` (e.g. `PS-E-3`). Falls back to
+/// `EPIC-<ref>` before the project prefix is known.
+String epicKeyLabel(String prefix, int reference) =>
+    prefix.isEmpty ? 'EPIC-$reference' : '$prefix-E-$reference';
+
+/// Jira-style monospaced key chip: `PS-12`, `PS-E-3`, `ISSUE-2`.
 /// Renders as outlined pill with the project's neutral surface tone — meant
 /// to be paired with the entity subject as a quiet identifier prefix.
 class IssueKeyChip extends StatelessWidget {

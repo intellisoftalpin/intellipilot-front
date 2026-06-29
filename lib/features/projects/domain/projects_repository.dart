@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
@@ -23,6 +25,18 @@ abstract interface class ProjectsRepository {
   /// Hard-purge every epic in the project (issues kept, detached). Returns the
   /// count.
   Future<Result<int, AppFailure>> purgeEpics(String projectId);
+
+  /// Upload a project icon image (multipart). Returns the refreshed project.
+  Future<Result<Project, AppFailure>> uploadProjectIcon(
+    String projectId, {
+    required String filename,
+    required Uint8List bytes,
+    String? contentType,
+  });
+
+  /// Remove the project icon (revert to the initials fallback). Returns the
+  /// refreshed project.
+  Future<Result<Project, AppFailure>> deleteProjectIcon(String projectId);
 
   // ---- roles ----
   Future<Result<List<Role>, AppFailure>> listRoles(String projectId);
