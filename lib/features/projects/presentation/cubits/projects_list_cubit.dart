@@ -52,8 +52,12 @@ final class ProjectsListLoaded extends ProjectsListState {
   );
 
   @override
-  List<Object?> get props =>
-      [projects.map((p) => p.id).toList(), search, creating, lastError];
+  List<Object?> get props => [
+    projects.map((p) => p.id).toList(),
+    search,
+    creating,
+    lastError,
+  ];
 }
 
 final class ProjectsListLoadFailed extends ProjectsListState {

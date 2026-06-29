@@ -92,5 +92,17 @@ class ProjectSettingsCubit extends Cubit<ProjectSettingsState> {
     );
   }
 
+  /// Hard-purge every issue in the project. Returns the count, or null on error.
+  Future<int?> purgeIssues() async {
+    final res = await _repo.purgeIssues(projectId);
+    return res.valueOrNull;
+  }
+
+  /// Hard-purge every epic in the project. Returns the count, or null on error.
+  Future<int?> purgeEpics() async {
+    final res = await _repo.purgeEpics(projectId);
+    return res.valueOrNull;
+  }
+
   void reset() => emit(const ProjectSettingsIdle());
 }

@@ -42,8 +42,7 @@ class RequestAccessCard extends StatelessWidget {
                   color: theme.colorScheme.outline,
                 ),
                 const SizedBox(height: 12),
-                Text(t.requestAccessTitle,
-                    style: theme.textTheme.titleMedium),
+                Text(t.requestAccessTitle, style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 Text(
                   t.requestAccessBody(missing.wire),

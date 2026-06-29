@@ -1011,5 +1011,11 @@
   "epicDeleteAction": "Epic löschen",
   "epicBoardSettingsTooltip": "Board-Einstellungen",
   "epicBoardSettingsTitle": "Board-Spalten",
-  "epicBoardSettingsHint": "Wähle, welche Status in der Spalte „In Arbeit“ erscheinen. Geschlossene Status landen immer unter „Fertig“; der Rest bleibt unter „Alle“."
+  "epicBoardSettingsHint": "Wähle, welche Status in der Spalte „In Arbeit“ erscheinen. Geschlossene Status landen immer unter „Fertig“; der Rest bleibt unter „Alle“.",
+  "dangerCleanIssuesTitle": "Alle Vorgänge löschen",
+  "dangerCleanIssuesBody": "Jeden Vorgang in diesem Projekt dauerhaft löschen. Dies kann nicht rückgängig gemacht werden.",
+  "dangerCleanEpicsTitle": "Alle Epics löschen",
+  "dangerCleanEpicsBody": "Jedes Epic in diesem Projekt dauerhaft löschen. Die zugehörigen Vorgänge bleiben erhalten, werden aber getrennt. Dies kann nicht rückgängig gemacht werden.",
+  "dangerCleanedIssuesSnack": "{count} Vorgänge gelöscht.",
+  "dangerCleanedEpicsSnack": "{count} Epics gelöscht."
 }

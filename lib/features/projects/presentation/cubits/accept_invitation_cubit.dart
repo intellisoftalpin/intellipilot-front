@@ -28,8 +28,7 @@ final class AcceptInvitationFailed extends AcceptInvitationState {
 }
 
 class AcceptInvitationCubit extends Cubit<AcceptInvitationState> {
-  AcceptInvitationCubit(this._repo)
-    : super(const AcceptInvitationRunning());
+  AcceptInvitationCubit(this._repo) : super(const AcceptInvitationRunning());
 
   final ProjectsRepository _repo;
 

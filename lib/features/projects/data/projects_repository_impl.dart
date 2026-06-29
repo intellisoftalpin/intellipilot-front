@@ -78,6 +78,25 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   }
 
   @override
+  Future<Result<int, AppFailure>> purgeIssues(String projectId) =>
+      _purge('$_basePath/$projectId/issues');
+
+  @override
+  Future<Result<int, AppFailure>> purgeEpics(String projectId) =>
+      _purge('$_basePath/$projectId/epics');
+
+  Future<Result<int, AppFailure>> _purge(String path) async {
+    try {
+      final res = await _api.dio.delete<dynamic>(path);
+      final data = res.data;
+      final n = data is Map ? (data['deleted'] as num?)?.toInt() ?? 0 : 0;
+      return Ok(n);
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
   Future<Result<List<Role>, AppFailure>> listRoles(String projectId) async {
     final res = await _api.get('$_basePath/$projectId/roles');
     return res.when(

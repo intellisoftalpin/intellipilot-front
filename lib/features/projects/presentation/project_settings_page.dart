@@ -207,8 +207,7 @@ class _GeneralTabState extends State<_GeneralTab> {
       description: _desc.text.trim(),
       visibility: _visibility,
     );
-    final updated =
-        await context.read<ProjectSettingsCubit>().save(patch);
+    final updated = await context.read<ProjectSettingsCubit>().save(patch);
     if (!mounted) return;
     if (updated != null) {
       context.read<ProjectDetailCubit>().replace(updated);
@@ -316,10 +315,12 @@ class _MembersTab extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 8),
-            for (final member in (m.members.toList()
-                  ..sort((a, b) => a.displayName.toLowerCase().compareTo(
-                        b.displayName.toLowerCase(),
-                      ))))
+            for (final member
+                in (m.members.toList()..sort(
+                  (a, b) => a.displayName.toLowerCase().compareTo(
+                    b.displayName.toLowerCase(),
+                  ),
+                )))
               Card(
                 child: ListTile(
                   leading: UserAvatar(user: member.toRef(), size: 40),
@@ -350,7 +351,8 @@ class _MembersTab extends StatelessWidget {
                         child: IconButton(
                           icon: const Icon(Icons.person_remove_outlined),
                           tooltip: t.memberRemoveTooltip,
-                          onPressed: () => _confirmRemove(context, member.userId),
+                          onPressed: () =>
+                              _confirmRemove(context, member.userId),
                         ),
                       ),
                     ],
@@ -443,8 +445,7 @@ class _InviteCard extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: BlocBuilder<RolesCubit, RolesState>(
           builder: (context, rs) {
-            final roles =
-                rs is RolesLoaded ? rs.roles : const <Role>[];
+            final roles = rs is RolesLoaded ? rs.roles : const <Role>[];
             return Row(
               children: [
                 Icon(
@@ -537,28 +538,30 @@ class _PendingInvitations extends StatelessWidget {
           next is InvitationsLoaded && next.lastInviteToken != null,
       listener: (context, state) {
         if (state is InvitationsLoaded && state.lastInviteToken != null) {
-          unawaited(showDialog<void>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(t.invitationTokenDialogTitle),
-              content: SelectableText(state.lastInviteToken!),
-              actions: [
-                TextButton(
-                  onPressed: () async {
-                    await Clipboard.setData(
-                      ClipboardData(text: state.lastInviteToken!),
-                    );
-                    if (ctx.mounted) Navigator.of(ctx).pop();
-                  },
-                  child: Text(t.actionCopy),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text(t.actionDone),
-                ),
-              ],
+          unawaited(
+            showDialog<void>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(t.invitationTokenDialogTitle),
+                content: SelectableText(state.lastInviteToken!),
+                actions: [
+                  TextButton(
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: state.lastInviteToken!),
+                      );
+                      if (ctx.mounted) Navigator.of(ctx).pop();
+                    },
+                    child: Text(t.actionCopy),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(t.actionDone),
+                  ),
+                ],
+              ),
             ),
-          ));
+          );
         }
       },
       builder: (context, state) {
@@ -765,9 +768,10 @@ class _RoleEditorBlockState extends State<_RoleEditorBlock> {
             const SizedBox(width: 8),
             if (widget.canModify)
               FilledButton(
-                onPressed: () => context
-                    .read<RolesCubit>()
-                    .updatePermissions(widget.role.id, _perms),
+                onPressed: () => context.read<RolesCubit>().updatePermissions(
+                  widget.role.id,
+                  _perms,
+                ),
                 child: Text(t.actionSave),
               ),
           ],
@@ -815,18 +819,26 @@ class _DangerZoneTab extends StatefulWidget {
 
 class _DangerZoneTabState extends State<_DangerZoneTab> {
   final _confirmCtrl = TextEditingController();
+  final _cleanIssuesCtrl = TextEditingController();
+  final _cleanEpicsCtrl = TextEditingController();
+  bool _cleaningIssues = false;
+  bool _cleaningEpics = false;
 
   @override
   void dispose() {
     _confirmCtrl.dispose();
+    _cleanIssuesCtrl.dispose();
+    _cleanEpicsCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _delete(BuildContext context) async {
-    final ok = await context.read<ProjectSettingsCubit>().deleteWithConfirmation(
-      typedConfirmation: _confirmCtrl.text,
-      expectedName: widget.state.project.name,
-    );
+    final ok = await context
+        .read<ProjectSettingsCubit>()
+        .deleteWithConfirmation(
+          typedConfirmation: _confirmCtrl.text,
+          expectedName: widget.state.project.name,
+        );
     if (!context.mounted) return;
     final t = AppLocalizations.of(context);
     if (ok) {
@@ -844,11 +856,88 @@ class _DangerZoneTabState extends State<_DangerZoneTab> {
     }
   }
 
+  Future<void> _clean(
+    BuildContext context, {
+    required TextEditingController controller,
+    required Future<int?> Function() run,
+    required void Function(bool) setBusy,
+    required String Function(int) snack,
+  }) async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    if (controller.text.trim() != widget.state.project.name) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(t.projectDeleteNameMismatch)),
+      );
+      return;
+    }
+    setBusy(true);
+    final count = await run();
+    if (!context.mounted) return;
+    setBusy(false);
+    if (count == null) {
+      messenger.showSnackBar(SnackBar(content: Text(t.errUnknown)));
+      return;
+    }
+    controller.clear();
+    messenger.showSnackBar(SnackBar(content: Text(snack(count))));
+  }
+
+  Widget _cleanCard(
+    BuildContext context, {
+    required String title,
+    required String body,
+    required String projectName,
+    required TextEditingController controller,
+    required bool enabled,
+    required bool busy,
+    required VoidCallback onClean,
+  }) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(body),
+            const SizedBox(height: 12),
+            Text(t.projectDeleteTypeName(projectName)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: controller,
+              enabled: enabled && !busy,
+              decoration: InputDecoration(hintText: projectName),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              icon: busy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.delete_sweep),
+              onPressed: !enabled || busy ? null : onClean,
+              label: Text(title),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final canDelete = widget.state.has(Permission.projectDelete);
+    final canClean = widget.state.has(Permission.projectModify);
     final project = widget.state.project;
+    final cubit = context.read<ProjectSettingsCubit>();
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
@@ -895,6 +984,40 @@ class _DangerZoneTabState extends State<_DangerZoneTab> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            _cleanCard(
+              context,
+              title: t.dangerCleanIssuesTitle,
+              body: t.dangerCleanIssuesBody,
+              projectName: project.name,
+              controller: _cleanIssuesCtrl,
+              enabled: canClean,
+              busy: _cleaningIssues,
+              onClean: () => _clean(
+                context,
+                controller: _cleanIssuesCtrl,
+                run: cubit.purgeIssues,
+                setBusy: (b) => setState(() => _cleaningIssues = b),
+                snack: t.dangerCleanedIssuesSnack,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _cleanCard(
+              context,
+              title: t.dangerCleanEpicsTitle,
+              body: t.dangerCleanEpicsBody,
+              projectName: project.name,
+              controller: _cleanEpicsCtrl,
+              enabled: canClean,
+              busy: _cleaningEpics,
+              onClean: () => _clean(
+                context,
+                controller: _cleanEpicsCtrl,
+                run: cubit.purgeEpics,
+                setBusy: (b) => setState(() => _cleaningEpics = b),
+                snack: t.dangerCleanedEpicsSnack,
+              ),
+            ),
           ],
         ),
       ),
@@ -928,12 +1051,12 @@ class _AddExistingMemberCard extends StatelessWidget {
               onPressed: roles.isEmpty
                   ? null
                   : () => showDialog<void>(
-                        context: context,
-                        builder: (_) => BlocProvider.value(
-                          value: context.read<MembersCubit>(),
-                          child: _AddMemberDialog(roles: roles),
-                        ),
+                      context: context,
+                      builder: (_) => BlocProvider.value(
+                        value: context.read<MembersCubit>(),
+                        child: _AddMemberDialog(roles: roles),
                       ),
+                    ),
               label: const Text('Add user'),
             ),
           ],
@@ -1023,8 +1146,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
       setState(() {
         _busy = false;
         _error = switch (failure) {
-          NotFoundFailure() =>
-            'No user found with that email or username.',
+          NotFoundFailure() => 'No user found with that email or username.',
           ConflictFailure() => 'That user is already a member.',
           _ => 'Could not add the user. Please try again.',
         };
@@ -1125,8 +1247,8 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
         FilledButton(
           onPressed:
               _busy || (_picked == null && _searchCtrl.text.trim().isEmpty)
-                  ? null
-                  : _add,
+              ? null
+              : _add,
           child: _busy
               ? const SizedBox(
                   width: 16,

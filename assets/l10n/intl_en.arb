@@ -1832,5 +1832,17 @@
   "epicBoardSettingsTitle": "Board columns",
   "@epicBoardSettingsTitle": { "description": "Title of the epics board settings dialog." },
   "epicBoardSettingsHint": "Pick which statuses appear in the In Progress column. Closed statuses always go to Done; the rest stay in All.",
-  "@epicBoardSettingsHint": { "description": "Explanatory copy in the epics board settings dialog." }
+  "@epicBoardSettingsHint": { "description": "Explanatory copy in the epics board settings dialog." },
+  "dangerCleanIssuesTitle": "Clean all issues",
+  "@dangerCleanIssuesTitle": { "description": "Danger-zone section title / button to purge all issues." },
+  "dangerCleanIssuesBody": "Permanently delete every issue in this project. This cannot be undone.",
+  "@dangerCleanIssuesBody": { "description": "Danger-zone explanatory copy for purging issues." },
+  "dangerCleanEpicsTitle": "Clean all epics",
+  "@dangerCleanEpicsTitle": { "description": "Danger-zone section title / button to purge all epics." },
+  "dangerCleanEpicsBody": "Permanently delete every epic in this project. Their issues are kept but detached. This cannot be undone.",
+  "@dangerCleanEpicsBody": { "description": "Danger-zone explanatory copy for purging epics." },
+  "dangerCleanedIssuesSnack": "{count} issues deleted.",
+  "@dangerCleanedIssuesSnack": { "description": "Snackbar after purging issues.", "placeholders": { "count": { "type": "int", "example": "42" } } },
+  "dangerCleanedEpicsSnack": "{count} epics deleted.",
+  "@dangerCleanedEpicsSnack": { "description": "Snackbar after purging epics.", "placeholders": { "count": { "type": "int", "example": "7" } } }
 }

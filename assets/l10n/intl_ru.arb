@@ -941,5 +941,11 @@
   "epicDeleteAction": "Удалить эпик",
   "epicBoardSettingsTooltip": "Настройки доски",
   "epicBoardSettingsTitle": "Колонки доски",
-  "epicBoardSettingsHint": "Выберите, какие статусы попадают в колонку «В работе». Закрытые статусы всегда идут в «Готово»; остальные остаются в «Все»."
+  "epicBoardSettingsHint": "Выберите, какие статусы попадают в колонку «В работе». Закрытые статусы всегда идут в «Готово»; остальные остаются в «Все».",
+  "dangerCleanIssuesTitle": "Удалить все задачи",
+  "dangerCleanIssuesBody": "Безвозвратно удалить все задачи в этом проекте. Действие необратимо.",
+  "dangerCleanEpicsTitle": "Удалить все эпики",
+  "dangerCleanEpicsBody": "Безвозвратно удалить все эпики в этом проекте. Их задачи сохранятся, но будут отвязаны. Действие необратимо.",
+  "dangerCleanedIssuesSnack": "Удалено задач: {count}.",
+  "dangerCleanedEpicsSnack": "Удалено эпиков: {count}."
 }

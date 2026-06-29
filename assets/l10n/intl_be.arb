@@ -1010,5 +1010,11 @@
   "epicDeleteAction": "Выдаліць эпік",
   "epicBoardSettingsTooltip": "Налады дошкі",
   "epicBoardSettingsTitle": "Калонкі дошкі",
-  "epicBoardSettingsHint": "Выберыце, якія статусы трапляюць у калонку «У працы». Закрытыя статусы заўсёды ідуць у «Гатова»; астатнія застаюцца ў «Усе»."
+  "epicBoardSettingsHint": "Выберыце, якія статусы трапляюць у калонку «У працы». Закрытыя статусы заўсёды ідуць у «Гатова»; астатнія застаюцца ў «Усе».",
+  "dangerCleanIssuesTitle": "Выдаліць усе задачы",
+  "dangerCleanIssuesBody": "Беззваротна выдаліць усе задачы ў гэтым праекце. Дзеянне незваротнае.",
+  "dangerCleanEpicsTitle": "Выдаліць усе эпікі",
+  "dangerCleanEpicsBody": "Беззваротна выдаліць усе эпікі ў гэтым праекце. Іх задачы захаваюцца, але будуць адвязаны. Дзеянне незваротнае.",
+  "dangerCleanedIssuesSnack": "Выдалена задач: {count}.",
+  "dangerCleanedEpicsSnack": "Выдалена эпікаў: {count}."
 }

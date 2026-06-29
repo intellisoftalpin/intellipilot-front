@@ -17,6 +17,13 @@ abstract interface class ProjectsRepository {
   );
   Future<Result<Unit, AppFailure>> deleteProject(String id);
 
+  /// Hard-purge every issue in the project (irreversible). Returns the count.
+  Future<Result<int, AppFailure>> purgeIssues(String projectId);
+
+  /// Hard-purge every epic in the project (issues kept, detached). Returns the
+  /// count.
+  Future<Result<int, AppFailure>> purgeEpics(String projectId);
+
   // ---- roles ----
   Future<Result<List<Role>, AppFailure>> listRoles(String projectId);
   Future<Result<Role, AppFailure>> createRole(

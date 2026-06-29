@@ -355,6 +355,22 @@ class DemoProjectsRepository implements ProjectsRepository {
   }
 
   @override
+  Future<Result<int, AppFailure>> purgeIssues(String projectId) async {
+    await _tick();
+    final n = _s.issues.where((i) => i.projectId == projectId).length;
+    _s.issues.removeWhere((i) => i.projectId == projectId);
+    return Ok(n);
+  }
+
+  @override
+  Future<Result<int, AppFailure>> purgeEpics(String projectId) async {
+    await _tick();
+    final n = _s.epics.where((e) => e.projectId == projectId).length;
+    _s.epics.removeWhere((e) => e.projectId == projectId);
+    return Ok(n);
+  }
+
+  @override
   Future<Result<List<Role>, AppFailure>> listRoles(String projectId) async {
     await _tick();
     return Ok(List.unmodifiable(_s.rolesByProject[projectId] ?? const []));

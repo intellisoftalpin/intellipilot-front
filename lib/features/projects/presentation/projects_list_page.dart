@@ -79,8 +79,7 @@ class _ProjectsListView extends StatelessWidget {
                   Text(t.projectsLoadFailed),
                   const SizedBox(height: 8),
                   FilledButton(
-                    onPressed: () =>
-                        context.read<ProjectsListCubit>().load(),
+                    onPressed: () => context.read<ProjectsListCubit>().load(),
                     child: Text(t.actionRetry),
                   ),
                 ],
@@ -190,8 +189,7 @@ class _LoadedState extends State<_Loaded> {
                             subtitle: p.description.isEmpty
                                 ? null
                                 : Padding(
-                                    padding:
-                                        const EdgeInsets.only(top: 2),
+                                    padding: const EdgeInsets.only(top: 2),
                                     child: Text(
                                       p.description,
                                       maxLines: 2,

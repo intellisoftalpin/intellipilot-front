@@ -61,8 +61,9 @@ class _AcceptView extends StatelessWidget {
                   ],
                 ),
                 AcceptInvitationAccepted() => const SizedBox.shrink(),
-                AcceptInvitationFailed(:final failure) =>
-                  _FailureView(failure: failure),
+                AcceptInvitationFailed(:final failure) => _FailureView(
+                  failure: failure,
+                ),
               },
             ),
           ),

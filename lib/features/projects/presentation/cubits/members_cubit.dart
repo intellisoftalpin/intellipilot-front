@@ -42,8 +42,12 @@ final class MembersLoaded extends MembersState {
   );
 
   @override
-  List<Object?> get props =>
-      [members.map((m) => m.id).toList(), roles.map((r) => r.id).toList(), busy, lastError];
+  List<Object?> get props => [
+    members.map((m) => m.id).toList(),
+    roles.map((r) => r.id).toList(),
+    busy,
+    lastError,
+  ];
 }
 
 final class MembersFailed extends MembersState {
@@ -86,8 +90,7 @@ class MembersCubit extends Cubit<MembersState> {
     final s = state;
     if (s is! MembersLoaded) return;
     emit(s.copyWith(busy: true, lastError: null));
-    final res =
-        await _repo.changeMemberRole(projectId, userId, newRoleSlug);
+    final res = await _repo.changeMemberRole(projectId, userId, newRoleSlug);
     if (res.isErr) {
       emit(s.copyWith(busy: false, lastError: res.failureOrNull));
       return;

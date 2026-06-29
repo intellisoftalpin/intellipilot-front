@@ -24,7 +24,8 @@ class _PermissionDebugOverlayState extends State<PermissionDebugOverlay> {
       bottom: 12,
       child: Material(
         color: Colors.transparent,
-        child: _open ? _Panel(onClose: () => setState(() => _open = false))
+        child: _open
+            ? _Panel(onClose: () => setState(() => _open = false))
             : _Toggle(onOpen: () => setState(() => _open = true)),
       ),
     );
@@ -85,8 +86,10 @@ class _Panel extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Text('Permissions · ${state.project.name}',
-                          style: theme.textTheme.titleSmall),
+                      Text(
+                        'Permissions · ${state.project.name}',
+                        style: theme.textTheme.titleSmall,
+                      ),
                       const Spacer(),
                       IconButton(
                         icon: const Icon(Icons.close),
