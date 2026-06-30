@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/widgets/members_scope.dart';
 import 'package:intellipilot/core/work_items/work_item_filter.dart';
@@ -7,6 +9,7 @@ import 'package:intellipilot/core/work_items/work_item_filter_bar.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/domain/board_config.dart';
+import 'package:intellipilot/features/board/presentation/boards_nav_refresh.dart';
 import 'package:intellipilot/features/board/presentation/widgets/board_columns_dialog.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
@@ -30,15 +33,22 @@ const List<String> _cardFieldKeys = [
 
 /// Opens the board create/edit dialog. [board] null → create. Performs the
 /// create/update itself and returns the resulting [Board] (null if cancelled).
+/// When [canDelete] is true and editing an existing board, a "Danger zone"
+/// delete action is shown; deleting closes the dialog and navigates away.
 Future<Board?> showBoardSettingsDialog(
   BuildContext context, {
   required String projectId,
   Board? board,
+  bool canDelete = false,
 }) {
   return showDialog<Board>(
     context: context,
     barrierDismissible: false,
-    builder: (_) => _BoardSettingsDialog(projectId: projectId, board: board),
+    builder: (_) => _BoardSettingsDialog(
+      projectId: projectId,
+      board: board,
+      canDelete: canDelete,
+    ),
   );
 }
 
@@ -69,9 +79,14 @@ class _DialogData {
 }
 
 class _BoardSettingsDialog extends StatefulWidget {
-  const _BoardSettingsDialog({required this.projectId, this.board});
+  const _BoardSettingsDialog({
+    required this.projectId,
+    this.board,
+    this.canDelete = false,
+  });
   final String projectId;
   final Board? board;
+  final bool canDelete;
 
   @override
   State<_BoardSettingsDialog> createState() => _BoardSettingsDialogState();
@@ -181,6 +196,7 @@ class _BoardSettingsDialogState extends State<_BoardSettingsDialog> {
           projectId: widget.projectId,
           board: widget.board,
           data: data,
+          canDelete: widget.canDelete,
         );
       },
     );
@@ -192,10 +208,12 @@ class _BoardSettingsForm extends StatefulWidget {
     required this.projectId,
     required this.board,
     required this.data,
+    this.canDelete = false,
   });
   final String projectId;
   final Board? board;
   final _DialogData data;
+  final bool canDelete;
 
   @override
   State<_BoardSettingsForm> createState() => _BoardSettingsFormState();
@@ -297,6 +315,49 @@ class _BoardSettingsFormState extends State<_BoardSettingsForm> {
       return;
     }
     Navigator.of(context).pop(saved);
+  }
+
+  Future<void> _delete() async {
+    final t = AppLocalizations.of(context);
+    final board = widget.board;
+    if (board == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.boardDeleteTitle),
+        content: Text(t.boardDeleteConfirm(board.name)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(t.actionCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(t.actionDelete),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _saving = true);
+    final res = await getIt<CatalogRepository>().deleteBoard(
+      widget.projectId,
+      board.id,
+    );
+    if (!mounted) return;
+    if (res.isErr) {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.errUnknown)));
+      return;
+    }
+    bumpBoardsNav();
+    // Capture the router before popping; navigate the underlying page to the
+    // board resolver, which redirects to another board (or the empty state).
+    final router = GoRouter.of(context);
+    Navigator.of(context).pop();
+    router.go(Routes.projectBoardFor(widget.projectId));
   }
 
   Future<void> _editColumns() async {
@@ -458,6 +519,34 @@ class _BoardSettingsFormState extends State<_BoardSettingsForm> {
                   border: const OutlineInputBorder(),
                 ),
               ),
+              if (!_isCreate && widget.canDelete) ...[
+                const Divider(height: 24),
+                Text(
+                  t.boardDangerZone,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+                Text(
+                  t.boardDangerZoneHint,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: _saving ? null : _delete,
+                    icon: const Icon(Icons.delete_outline),
+                    label: Text(t.boardDeleteTitle),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: theme.colorScheme.error,
+                      side: BorderSide(color: theme.colorScheme.error),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

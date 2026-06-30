@@ -18,6 +18,7 @@ import 'package:intellipilot/features/backlog/presentation/epics_page.dart';
 import 'package:intellipilot/features/backlog/presentation/issues_page.dart';
 import 'package:intellipilot/features/board/presentation/board_page.dart';
 import 'package:intellipilot/features/board/presentation/board_resolver.dart';
+import 'package:intellipilot/features/board/presentation/boards_gallery_page.dart';
 import 'package:intellipilot/features/home/presentation/home_page.dart';
 import 'package:intellipilot/features/mfa/presentation/mfa_verify_page.dart';
 import 'package:intellipilot/features/mfa/presentation/passkey_signin_page.dart';
@@ -101,6 +102,10 @@ abstract class Routes {
   /// specific board.
   static String projectBoardFor(String id, [String? boardId]) =>
       boardId == null ? '/projects/$id/board' : '/projects/$id/boards/$boardId';
+
+  /// The boards gallery (index) route — lists the project's boards as cards.
+  /// Redirects straight to the board when the project has exactly one.
+  static String projectBoardsFor(String id) => '/projects/$id/boards';
 
   /// Back-compat alias for callers that still link to the standalone
   /// task board. Both views now live on the unified Board page with a
@@ -259,6 +264,12 @@ GoRouter buildRouter({required SessionBloc session}) {
             name: 'project_board',
             builder: (context, state) =>
                 BoardResolverPage(projectId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/projects/:id/boards',
+            name: 'project_boards_gallery',
+            builder: (context, state) =>
+                BoardsGalleryPage(projectId: state.pathParameters['id']!),
           ),
           GoRoute(
             path: '/projects/:id/boards/:boardId',

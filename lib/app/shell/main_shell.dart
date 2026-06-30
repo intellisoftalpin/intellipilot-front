@@ -846,7 +846,7 @@ class _BoardsRailSectionState extends State<_BoardsRailSection> {
         label: null,
         tooltip: t.railBoards,
         selected: widget.active,
-        onTap: () => context.go(Routes.projectBoardFor(widget.projectId)),
+        onTap: () => context.go(Routes.projectBoardsFor(widget.projectId)),
       );
     }
 
@@ -857,9 +857,9 @@ class _BoardsRailSectionState extends State<_BoardsRailSection> {
       children: [
         _BoardsParentRow(
           expanded: _expanded,
-          // Highlight the parent only when on the resolver (no specific board).
+          // Highlight the parent only when on the gallery/resolver (no board).
           selected: widget.active && activeBoardId == null,
-          onTap: () => context.go(Routes.projectBoardFor(widget.projectId)),
+          onTap: () => context.go(Routes.projectBoardsFor(widget.projectId)),
           onToggle: _toggle,
         ),
         if (_expanded) ...[

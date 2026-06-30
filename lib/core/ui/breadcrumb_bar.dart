@@ -42,13 +42,19 @@ class Crumb {
 /// - Long trails ellipsise the middle by switching to horizontal scroll on
 ///   narrow viewports rather than truncating any single segment.
 class BreadcrumbBar extends StatelessWidget {
-  const BreadcrumbBar({required this.crumbs, super.key});
+  const BreadcrumbBar({required this.crumbs, this.activeWidget, super.key});
 
   final List<Crumb> crumbs;
+
+  /// When set, this widget is rendered as the trailing (active) segment in
+  /// place of an active text crumb — e.g. an interactive dropdown. All
+  /// [crumbs] are then rendered as non-active (linkable) segments.
+  final Widget? activeWidget;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasActiveWidget = activeWidget != null;
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -56,7 +62,14 @@ class BreadcrumbBar extends StatelessWidget {
         children: [
           for (var i = 0; i < crumbs.length; i++) ...[
             if (i > 0) _Separator(color: theme.colorScheme.outline),
-            _Segment(crumb: crumbs[i], active: i == crumbs.length - 1),
+            _Segment(
+              crumb: crumbs[i],
+              active: !hasActiveWidget && i == crumbs.length - 1,
+            ),
+          ],
+          if (hasActiveWidget) ...[
+            _Separator(color: theme.colorScheme.outline),
+            activeWidget!,
           ],
         ],
       ),
@@ -118,6 +131,7 @@ class ProjectSectionBreadcrumb extends StatelessWidget {
     required this.currentLabel,
     this.sectionRoute,
     this.extraCrumbs = const [],
+    this.activeWidget,
     super.key,
   });
 
@@ -126,6 +140,11 @@ class ProjectSectionBreadcrumb extends StatelessWidget {
   /// Section label (e.g. **Backlog**, **Board**) — becomes the active
   /// crumb when [extraCrumbs] is empty, or a linkable parent otherwise.
   final String currentLabel;
+
+  /// Optional interactive widget rendered as the active (trailing) segment in
+  /// place of [currentLabel] — e.g. the board switcher dropdown. Ignored when
+  /// [extraCrumbs] is non-empty (the section becomes a linkable parent then).
+  final Widget? activeWidget;
 
   /// Route the section crumb navigates to when tapped. Required by
   /// callers that pass [extraCrumbs] (the section is no longer the
@@ -140,7 +159,11 @@ class ProjectSectionBreadcrumb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    // An interactive active segment (e.g. the board switcher) only applies
+    // when this is the leaf page — i.e. no deeper crumbs follow.
+    final useActiveWidget = activeWidget != null && extraCrumbs.isEmpty;
     return BreadcrumbBar(
+      activeWidget: useActiveWidget ? activeWidget : null,
       crumbs: [
         Crumb(
           label: t.projectsTitle,
@@ -150,10 +173,13 @@ class ProjectSectionBreadcrumb extends StatelessWidget {
           label: _projectName(context),
           onTap: () => context.go(Routes.projectDetailFor(projectId)),
         ),
-        Crumb(
-          label: currentLabel,
-          onTap: sectionRoute == null ? null : () => context.go(sectionRoute!),
-        ),
+        if (!useActiveWidget)
+          Crumb(
+            label: currentLabel,
+            onTap: sectionRoute == null
+                ? null
+                : () => context.go(sectionRoute!),
+          ),
         ...extraCrumbs,
       ],
     );

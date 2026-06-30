@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
+import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
@@ -137,18 +138,24 @@ class _BoardViewState extends State<_BoardView> {
       appBar: AppBar(
         title: BlocBuilder<TaskBoardCubit, TaskBoardState>(
           builder: (context, state) {
-            final label = state is TaskBoardLoaded
-                ? state.board.name
-                : t.boardTitle;
+            final board = state is TaskBoardLoaded ? state.board : null;
+            final label = board?.name ?? t.boardTitle;
             return ProjectSectionBreadcrumb(
               projectId: widget.projectId,
               currentLabel: label,
+              activeWidget: board == null
+                  ? null
+                  : _BoardSwitcher(
+                      projectId: widget.projectId,
+                      currentBoardId: board.id,
+                      currentLabel: label,
+                    ),
             );
           },
         ),
         actions: [
           const _BoardSearchField(),
-          _BoardActionsMenu(
+          _BoardSettingsButton(
             projectId: widget.projectId,
             currentUserId: widget.currentUserId,
           ),
@@ -197,10 +204,114 @@ class _BoardSearchField extends StatelessWidget {
   }
 }
 
-/// Edit / delete affordances, gated on shared-board permissions or personal
-/// board ownership.
-class _BoardActionsMenu extends StatelessWidget {
-  const _BoardActionsMenu({
+/// The breadcrumb's active segment on the board screen: a dropdown listing the
+/// project's boards. With a single board it renders as plain (active) text.
+class _BoardSwitcher extends StatefulWidget {
+  const _BoardSwitcher({
+    required this.projectId,
+    required this.currentBoardId,
+    required this.currentLabel,
+  });
+  final String projectId;
+  final String currentBoardId;
+  final String currentLabel;
+
+  @override
+  State<_BoardSwitcher> createState() => _BoardSwitcherState();
+}
+
+class _BoardSwitcherState extends State<_BoardSwitcher> {
+  List<Board> _boards = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    boardsNavRevision.addListener(_fetch);
+    unawaited(_fetch());
+  }
+
+  @override
+  void dispose() {
+    boardsNavRevision.removeListener(_fetch);
+    super.dispose();
+  }
+
+  Future<void> _fetch() async {
+    final res = await getIt<CatalogRepository>().listBoards(widget.projectId);
+    if (!mounted) return;
+    setState(() => _boards = res.valueOrNull ?? const []);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final style = theme.textTheme.titleSmall?.copyWith(
+      fontWeight: FontWeight.w700,
+      color: theme.colorScheme.onSurface,
+    );
+
+    // A single board: plain active text, matching a normal breadcrumb leaf.
+    if (_boards.length <= 1) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Text(widget.currentLabel, style: style),
+      );
+    }
+
+    return PopupMenuButton<String>(
+      offset: const Offset(0, 36),
+      tooltip: '',
+      onSelected: (id) {
+        if (id != widget.currentBoardId) {
+          context.go(Routes.projectBoardFor(widget.projectId, id));
+        }
+      },
+      itemBuilder: (_) => [
+        for (final b in _boards)
+          PopupMenuItem<String>(
+            value: b.id,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(b.name, overflow: TextOverflow.ellipsis),
+                ),
+                if (b.isShared) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.group_outlined,
+                    size: 16,
+                    color: theme.colorScheme.outline,
+                  ),
+                ],
+              ],
+            ),
+          ),
+      ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                widget.currentLabel,
+                style: style,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const Icon(Icons.arrow_drop_down, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Single settings entry-point, gated on shared-board permissions or personal
+/// board ownership. Greyed out (disabled) when the user may not modify the
+/// board. Delete lives inside the dialog's danger zone.
+class _BoardSettingsButton extends StatelessWidget {
+  const _BoardSettingsButton({
     required this.projectId,
     required this.currentUserId,
   });
@@ -224,86 +335,27 @@ class _BoardActionsMenu extends StatelessWidget {
         final canDelete = board.isShared
             ? can(Permission.boardSharedDelete)
             : isOwner;
-        if (!canEdit && !canDelete) return const SizedBox.shrink();
-        return PopupMenuButton<String>(
-          tooltip: t.boardActionsTooltip,
-          icon: const Icon(Icons.more_vert),
-          onSelected: (value) async {
-            final cubit = context.read<TaskBoardCubit>();
-            if (value == 'edit') {
-              final updated = await showBoardSettingsDialog(
-                context,
-                projectId: projectId,
-                board: board,
-              );
-              if (updated != null) {
-                bumpBoardsNav();
-                await cubit.load();
-              }
-            } else if (value == 'delete') {
-              await _confirmDelete(context, board);
-            }
-          },
-          itemBuilder: (ctx) => [
-            if (canEdit)
-              PopupMenuItem<String>(
-                value: 'edit',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.edit_outlined),
-                  title: Text(t.boardEditTitle),
-                ),
-              ),
-            if (canDelete)
-              PopupMenuItem<String>(
-                value: 'delete',
-                child: ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.delete_outline),
-                  title: Text(t.actionDelete),
-                ),
-              ),
-          ],
+        return IconButton(
+          tooltip: t.boardSettingsTooltip,
+          icon: const Icon(Icons.settings),
+          onPressed: canEdit
+              ? () async {
+                  final cubit = context.read<TaskBoardCubit>();
+                  final updated = await showBoardSettingsDialog(
+                    context,
+                    projectId: projectId,
+                    board: board,
+                    canDelete: canDelete,
+                  );
+                  if (updated != null) {
+                    bumpBoardsNav();
+                    await cubit.load();
+                  }
+                }
+              : null,
         );
       },
     );
-  }
-
-  Future<void> _confirmDelete(BuildContext context, Board board) async {
-    final t = AppLocalizations.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(t.boardDeleteTitle),
-        content: Text(t.boardDeleteConfirm(board.name)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(t.actionCancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(t.actionDelete),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !context.mounted) return;
-    final res = await getIt<CatalogRepository>().deleteBoard(
-      projectId,
-      board.id,
-    );
-    if (!context.mounted) return;
-    if (res.isErr) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(t.errUnknown)));
-      return;
-    }
-    bumpBoardsNav();
-    context.go(Routes.projectBoardFor(projectId));
   }
 }
 
@@ -408,7 +460,9 @@ class _TasksLoaded extends StatelessWidget {
           components: state.components,
           showStatus: false,
           lockedDimensions: state.config.lockedDimensions,
-          hiddenDimensions: {?state.group?.filterKey},
+          // The board hides the issue-type filter (board-only decision) and the
+          // active swimlane dimension.
+          hiddenDimensions: {'type', ?state.group?.filterKey},
         ),
         Expanded(
           child: state.group == null
@@ -432,8 +486,11 @@ class _TasksLoaded extends StatelessWidget {
   }
 }
 
-/// The flat single-board layout (no grouping).
-class _FlatBoard extends StatelessWidget {
+/// The flat single-board layout (no grouping): a horizontal strip of columns
+/// that each scroll vertically on their own (Trello-style), with a single
+/// always-visible horizontal scrollbar. The board pane owns the scroll — there
+/// is no outer page scroll.
+class _FlatBoard extends StatefulWidget {
   const _FlatBoard({
     required this.state,
     required this.projectId,
@@ -448,33 +505,57 @@ class _FlatBoard extends StatelessWidget {
   final ValueChanged<String> onSelect;
 
   @override
+  State<_FlatBoard> createState() => _FlatBoardState();
+}
+
+class _FlatBoardState extends State<_FlatBoard> {
+  final ScrollController _horizontal = ScrollController();
+
+  @override
+  void dispose() {
+    _horizontal.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
     final byId = {for (final s in state.statuses) s.id: s};
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final col in state.flatColumns)
-            _TaskColumn(
-              state: state,
-              column: col,
-              status: col.statusId == null ? null : byId[col.statusId],
-              laneKey: null,
-              projectId: projectId,
-              keyPrefix: keyPrefix,
-              selectedId: selectedId,
-              onSelect: onSelect,
-            ),
-          const SizedBox(width: 16),
-        ],
+    return Scrollbar(
+      controller: _horizontal,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        controller: _horizontal,
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final col in state.flatColumns)
+              _TaskColumn(
+                state: state,
+                column: col,
+                status: col.statusId == null ? null : byId[col.statusId],
+                laneKey: null,
+                projectId: widget.projectId,
+                keyPrefix: widget.keyPrefix,
+                selectedId: widget.selectedId,
+                onSelect: widget.onSelect,
+                scrollable: true,
+              ),
+            const SizedBox(width: 16),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// The grouped (swimlane) layout: one horizontal board per lane.
-class _Swimlanes extends StatelessWidget {
+/// The grouped (swimlane) layout: a single outer vertical scroll (owned by the
+/// board pane) through the stacked lanes, with sticky lane sub-headers. Each
+/// lane's columns grow to content height (cards are capped + "Load more"), so
+/// no inner vertical scroll is ever nested. Lanes are collapsible; the
+/// collapsed set is persisted per board in local Hive.
+class _Swimlanes extends StatefulWidget {
   const _Swimlanes({
     required this.state,
     required this.projectId,
@@ -488,7 +569,45 @@ class _Swimlanes extends StatelessWidget {
   final String? selectedId;
   final ValueChanged<String> onSelect;
 
+  @override
+  State<_Swimlanes> createState() => _SwimlanesState();
+}
+
+class _SwimlanesState extends State<_Swimlanes> {
+  final ScrollController _vertical = ScrollController();
+  late final KeyValueStorage _storage = getIt<KeyValueStorage>(
+    instanceName: HiveBoxes.ui,
+  );
+  late Set<String> _collapsed;
+
+  String get _prefsKey => 'board_collapsed:${widget.state.board.id}';
+
+  @override
+  void initState() {
+    super.initState();
+    final saved = _storage.get<List<dynamic>>(_prefsKey) ?? const [];
+    _collapsed = {for (final e in saved) e.toString()};
+  }
+
+  @override
+  void dispose() {
+    _vertical.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggle(String key) async {
+    setState(() {
+      if (_collapsed.contains(key)) {
+        _collapsed.remove(key);
+      } else {
+        _collapsed.add(key);
+      }
+    });
+    await _storage.set<List<String>>(_prefsKey, _collapsed.toList());
+  }
+
   String _resolveLane(BuildContext context, String key) {
+    final state = widget.state;
     final group = state.group!;
     if (key == 'none') {
       final t = AppLocalizations.of(context);
@@ -509,7 +628,7 @@ class _Swimlanes extends StatelessWidget {
         final e = state.epics.where((x) => x.id == key).firstOrNull;
         return e == null
             ? key
-            : '${epicKeyLabel(keyPrefix, e.reference)} ${e.subject}';
+            : '${epicKeyLabel(widget.keyPrefix, e.reference)} ${e.subject}';
       case BoardGroupBy.priority:
         return state.priorities.where((x) => x.id == key).firstOrNull?.name ??
             key;
@@ -519,6 +638,7 @@ class _Swimlanes extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final state = widget.state;
     final byId = {for (final s in state.statuses) s.id: s};
     if (state.lanes.isEmpty) {
       return Center(
@@ -530,56 +650,185 @@ class _Swimlanes extends StatelessWidget {
         ),
       );
     }
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 16),
-      children: [
-        for (final lane in state.lanes) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Row(
-              children: [
-                Text(
-                  _resolveLane(context, lane.key).toUpperCase(),
+    return Scrollbar(
+      controller: _vertical,
+      thumbVisibility: true,
+      child: CustomScrollView(
+        controller: _vertical,
+        slivers: [
+          for (final lane in state.lanes) ...[
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _LaneHeaderDelegate(
+                title: _resolveLane(context, lane.key),
+                total: lane.total,
+                collapsed: _collapsed.contains(lane.key),
+                background: theme.colorScheme.surface,
+                onToggle: () => _toggle(lane.key),
+              ),
+            ),
+            if (!_collapsed.contains(lane.key))
+              SliverToBoxAdapter(
+                child: _SwimlaneStrip(
+                  lane: lane,
+                  byId: byId,
+                  state: state,
+                  projectId: widget.projectId,
+                  keyPrefix: widget.keyPrefix,
+                  selectedId: widget.selectedId,
+                  onSelect: widget.onSelect,
+                ),
+              ),
+          ],
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Sticky lane sub-header: an expand/collapse toggle, the lane label and the
+/// lane's total. Opaque background so it covers content when pinned.
+class _LaneHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _LaneHeaderDelegate({
+    required this.title,
+    required this.total,
+    required this.collapsed,
+    required this.background,
+    required this.onToggle,
+  });
+
+  final String title;
+  final int total;
+  final bool collapsed;
+  final Color background;
+  final VoidCallback onToggle;
+
+  static const double _height = 44;
+
+  @override
+  double get minExtent => _height;
+
+  @override
+  double get maxExtent => _height;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final theme = Theme.of(context);
+    return Material(
+      color: background,
+      child: InkWell(
+        onTap: onToggle,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 4, 16, 4),
+          child: Row(
+            children: [
+              Icon(
+                collapsed ? Icons.chevron_right : Icons.expand_more,
+                size: 20,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  title.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.4,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '${lane.total}',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: 460,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final col in lane.columns)
-                    _TaskColumn(
-                      state: state,
-                      column: col,
-                      status: col.statusId == null ? null : byId[col.statusId],
-                      laneKey: lane.key,
-                      projectId: projectId,
-                      keyPrefix: keyPrefix,
-                      selectedId: selectedId,
-                      onSelect: onSelect,
-                    ),
-                  const SizedBox(width: 16),
-                ],
               ),
-            ),
+              const SizedBox(width: 8),
+              Text(
+                '$total',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
+            ],
           ),
-        ],
-      ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _LaneHeaderDelegate oldDelegate) =>
+      oldDelegate.title != title ||
+      oldDelegate.total != total ||
+      oldDelegate.collapsed != collapsed ||
+      oldDelegate.background != background;
+}
+
+/// A single lane's horizontal strip of columns. The columns grow to their
+/// content height (no inner vertical scroll); the strip scrolls horizontally
+/// with an always-visible scrollbar.
+class _SwimlaneStrip extends StatefulWidget {
+  const _SwimlaneStrip({
+    required this.lane,
+    required this.byId,
+    required this.state,
+    required this.projectId,
+    required this.keyPrefix,
+    required this.selectedId,
+    required this.onSelect,
+  });
+
+  final BoardLaneData lane;
+  final Map<String, TaxonomyItem> byId;
+  final TaskBoardLoaded state;
+  final String projectId;
+  final String keyPrefix;
+  final String? selectedId;
+  final ValueChanged<String> onSelect;
+
+  @override
+  State<_SwimlaneStrip> createState() => _SwimlaneStripState();
+}
+
+class _SwimlaneStripState extends State<_SwimlaneStrip> {
+  final ScrollController _horizontal = ScrollController();
+
+  @override
+  void dispose() {
+    _horizontal.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lane = widget.lane;
+    return Scrollbar(
+      controller: _horizontal,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        controller: _horizontal,
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final col in lane.columns)
+              _TaskColumn(
+                state: widget.state,
+                column: col,
+                status: col.statusId == null ? null : widget.byId[col.statusId],
+                laneKey: lane.key,
+                projectId: widget.projectId,
+                keyPrefix: widget.keyPrefix,
+                selectedId: widget.selectedId,
+                onSelect: widget.onSelect,
+                scrollable: false,
+              ),
+            const SizedBox(width: 16),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -594,6 +843,7 @@ class _TaskColumn extends StatelessWidget {
     required this.keyPrefix,
     required this.selectedId,
     required this.onSelect,
+    required this.scrollable,
   });
 
   final TaskBoardLoaded state;
@@ -606,6 +856,11 @@ class _TaskColumn extends StatelessWidget {
   final String keyPrefix;
   final String? selectedId;
   final ValueChanged<String> onSelect;
+
+  /// When true (flat board) the card list scrolls vertically inside a bounded
+  /// column (Expanded + ListView). When false (swimlanes) the column grows to
+  /// its content height — the cap + "Load more" keeps it bounded.
+  final bool scrollable;
 
   @override
   Widget build(BuildContext context) {
@@ -622,6 +877,33 @@ class _TaskColumn extends StatelessWidget {
       },
       builder: (context, candidate, rejected) {
         final highlighted = candidate.isNotEmpty;
+        final cards = <Widget>[
+          for (final card in column.cards)
+            _TaskCard(
+              state: state,
+              task: card,
+              projectId: projectId,
+              keyPrefix: keyPrefix,
+              selected: card.id == selectedId,
+              onTap: () => onSelect(card.id),
+            ),
+          if (column.cards.isEmpty) _EmptyColumnNote(label: t.boardEmptyColumn),
+          if (column.hasMore)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: TextButton.icon(
+                icon: const Icon(Icons.expand_more, size: 18),
+                label: Text(
+                  t.boardLoadMore(column.total - column.cards.length),
+                ),
+                onPressed: () => context.read<TaskBoardCubit>().loadMoreColumn(
+                  laneKey: laneKey,
+                  statusId: column.statusId,
+                  offset: column.cards.length,
+                ),
+              ),
+            ),
+        ];
         return Container(
           width: 280,
           margin: const EdgeInsets.all(8),
@@ -634,6 +916,7 @@ class _TaskColumn extends StatelessWidget {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: scrollable ? MainAxisSize.max : MainAxisSize.min,
             children: [
               _ColumnHeader(
                 statusColor: status?.color ?? '',
@@ -641,40 +924,12 @@ class _TaskColumn extends StatelessWidget {
                 count: column.total,
               ),
               const Divider(height: 12),
-              Expanded(
-                child: ListView(
-                  padding: EdgeInsets.zero,
-                  children: [
-                    for (final card in column.cards)
-                      _TaskCard(
-                        state: state,
-                        task: card,
-                        projectId: projectId,
-                        keyPrefix: keyPrefix,
-                        selected: card.id == selectedId,
-                        onTap: () => onSelect(card.id),
-                      ),
-                    if (column.cards.isEmpty)
-                      _EmptyColumnNote(label: t.boardEmptyColumn),
-                    if (column.hasMore)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.expand_more, size: 18),
-                          label: Text(
-                            t.boardLoadMore(column.total - column.cards.length),
-                          ),
-                          onPressed: () =>
-                              context.read<TaskBoardCubit>().loadMoreColumn(
-                                laneKey: laneKey,
-                                statusId: column.statusId,
-                                offset: column.cards.length,
-                              ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
+              if (scrollable)
+                Expanded(
+                  child: ListView(padding: EdgeInsets.zero, children: cards),
+                )
+              else
+                ...cards,
             ],
           ),
         );
