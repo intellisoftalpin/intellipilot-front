@@ -14,6 +14,7 @@ import 'package:dio/dio.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/error/problem.dart';
 import 'package:intellipilot/core/result/result.dart';
+import 'package:intellipilot/core/work_items/work_item_filter.dart';
 import 'package:intellipilot/demo/demo_store.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
@@ -1754,6 +1755,37 @@ class DemoBacklogRepository implements BacklogRepository {
         .firstOrNull;
     if (iss == null) return const Err(NotFoundFailure());
     return Ok(iss);
+  }
+
+  @override
+  Future<Result<IssuePage, AppFailure>> listIssuesPaged(
+    String projectId, {
+    Map<String, dynamic> filter = const {},
+    int? limit,
+    int offset = 0,
+  }) async {
+    await _tick();
+    final f = WorkItemFilter.fromJson(Map<String, dynamic>.from(filter));
+    final items =
+        _s.issues
+            .where(
+              (i) =>
+                  i.projectId == projectId &&
+                  f.matches(i, closedStatusIds: const {}),
+            )
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
+    final total = items.length;
+    final start = offset.clamp(0, total);
+    final end = limit == null ? total : (start + limit).clamp(0, total);
+    return Ok(
+      IssuePage(
+        items: items.sublist(start, end),
+        total: total,
+        limit: limit,
+        offset: offset,
+      ),
+    );
   }
 
   @override

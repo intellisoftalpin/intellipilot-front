@@ -186,4 +186,14 @@ class WorkItemFilterStore {
 
   Future<void> save(String view, String projectId, WorkItemFilter f) =>
       _storage.set<String>(_key(view, projectId), f.encode());
+
+  static String _sizeKey(String view, String projectId) =>
+      'wipagesize:$view:$projectId';
+
+  /// The user's last-used page size for a list, or [fallback] (default 50).
+  int loadPageSize(String view, String projectId, {int fallback = 50}) =>
+      _storage.get<int>(_sizeKey(view, projectId)) ?? fallback;
+
+  Future<void> savePageSize(String view, String projectId, int size) =>
+      _storage.set<int>(_sizeKey(view, projectId), size);
 }

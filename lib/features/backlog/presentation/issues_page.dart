@@ -11,6 +11,7 @@ import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/core/widgets/members_scope.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
+import 'package:intellipilot/core/work_items/list_paginator.dart';
 import 'package:intellipilot/core/work_items/work_item_filter.dart';
 import 'package:intellipilot/core/work_items/work_item_filter_bar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
@@ -362,9 +363,7 @@ class _Loaded extends StatelessWidget {
                   border: const OutlineInputBorder(),
                   isDense: true,
                 ),
-                onChanged: (v) => context.read<IssuesCubit>().setFilter(
-                  state.filter.copyWith(search: v),
-                ),
+                onChanged: (v) => context.read<IssuesCubit>().setSearch(v),
               ),
             ),
             WorkItemFilterBar(
@@ -379,7 +378,13 @@ class _Loaded extends StatelessWidget {
               labels: state.labels,
               components: state.components,
             ),
-            const Divider(height: 16),
+            SizedBox(
+              height: 2,
+              child: state.busy
+                  ? const LinearProgressIndicator(minHeight: 2)
+                  : null,
+            ),
+            const Divider(height: 14),
             Expanded(
               child: visible.isEmpty
                   ? _EmptyIssues(state: state)
@@ -397,6 +402,18 @@ class _Loaded extends StatelessWidget {
                       },
                     ),
             ),
+            if (state.total > 0) ...[
+              const Divider(height: 1),
+              ListPaginator(
+                total: state.total,
+                pageIndex: state.pageIndex,
+                pageCount: state.pageCount,
+                pageSize: state.pageSize,
+                pageSizeOptions: IssuesCubit.pageSizeOptions,
+                onPage: (i) => context.read<IssuesCubit>().setPage(i),
+                onPageSize: (n) => context.read<IssuesCubit>().setPageSize(n),
+              ),
+            ],
           ],
         ),
       ),

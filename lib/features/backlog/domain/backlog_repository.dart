@@ -50,6 +50,15 @@ abstract interface class BacklogRepository {
   /// Resolve a human-readable issue key's numeric ref (e.g. 398 from `PS-398`)
   /// to the full issue — backs key-based deep links.
   Future<Result<Issue, AppFailure>> getIssueByRef(String projectId, int ref);
+
+  /// Server-side filtered + paginated issue listing. [filter] is the
+  /// `WorkItemFilter.toJson()` map (query keys); [limit] null = unbounded.
+  Future<Result<IssuePage, AppFailure>> listIssuesPaged(
+    String projectId, {
+    Map<String, dynamic> filter,
+    int? limit,
+    int offset,
+  });
   Future<Result<Issue, AppFailure>> createIssue(
     String projectId,
     CreateIssueRequest body,

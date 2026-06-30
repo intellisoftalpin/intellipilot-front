@@ -221,6 +221,25 @@ class BacklogRepositoryImpl implements BacklogRepository {
   }
 
   @override
+  Future<Result<IssuePage, AppFailure>> listIssuesPaged(
+    String projectId, {
+    Map<String, dynamic> filter = const {},
+    int? limit,
+    int offset = 0,
+  }) async {
+    final query = <String, dynamic>{
+      for (final e in filter.entries) e.key: '${e.value}',
+      if (limit != null) 'limit': '$limit',
+      'offset': '$offset',
+    };
+    final res = await _api.get('$_base/$projectId/issues', query: query);
+    return res.when(
+      ok: (r) => Ok(IssuePage.fromJson(r.data as Map<String, dynamic>)),
+      err: Err.new,
+    );
+  }
+
+  @override
   Future<Result<Issue, AppFailure>> createIssue(
     String projectId,
     CreateIssueRequest body,

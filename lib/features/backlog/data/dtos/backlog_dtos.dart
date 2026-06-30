@@ -462,3 +462,27 @@ class ResolvedRef {
 class _Absent {
   const _Absent();
 }
+
+/// One page of issues plus the total matching count (server-side filtered).
+class IssuePage {
+  const IssuePage({
+    required this.items,
+    required this.total,
+    required this.offset,
+    this.limit,
+  });
+
+  factory IssuePage.fromJson(Map<String, dynamic> json) => IssuePage(
+    items: (json['issues'] as List<dynamic>? ?? const [])
+        .map((e) => Issue.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    total: (json['total'] as num?)?.toInt() ?? 0,
+    limit: (json['limit'] as num?)?.toInt(),
+    offset: (json['offset'] as num?)?.toInt() ?? 0,
+  );
+
+  final List<Issue> items;
+  final int total;
+  final int? limit;
+  final int offset;
+}
