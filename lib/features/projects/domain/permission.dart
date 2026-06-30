@@ -90,7 +90,12 @@ enum Permission {
   // Releases (incl. versions and component links)
   releaseCreate('release.create', PermissionDomain.releases),
   releaseModify('release.modify', PermissionDomain.releases),
-  releaseDelete('release.delete', PermissionDomain.releases);
+  releaseDelete('release.delete', PermissionDomain.releases),
+
+  // Shared boards (personal boards need only project.view)
+  boardSharedCreate('board.shared.create', PermissionDomain.boards),
+  boardSharedModify('board.shared.modify', PermissionDomain.boards),
+  boardSharedDelete('board.shared.delete', PermissionDomain.boards);
 
   const Permission(this.wire, this.domain);
   final String wire;
@@ -120,6 +125,7 @@ enum PermissionDomain {
   repositories,
   customers,
   releases,
+  boards,
 }
 
 /// Built-in preset permission sets matching the backend's default roles. Used
@@ -192,6 +198,9 @@ abstract final class RolePresets {
       Permission.releaseCreate,
       Permission.releaseModify,
       Permission.releaseDelete,
+      Permission.boardSharedCreate,
+      Permission.boardSharedModify,
+      Permission.boardSharedDelete,
     ]);
     return base;
   }

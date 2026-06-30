@@ -17,6 +17,7 @@ import 'package:intellipilot/features/backlog/presentation/backlog_page.dart';
 import 'package:intellipilot/features/backlog/presentation/epics_page.dart';
 import 'package:intellipilot/features/backlog/presentation/issues_page.dart';
 import 'package:intellipilot/features/board/presentation/board_page.dart';
+import 'package:intellipilot/features/board/presentation/board_resolver.dart';
 import 'package:intellipilot/features/home/presentation/home_page.dart';
 import 'package:intellipilot/features/mfa/presentation/mfa_verify_page.dart';
 import 'package:intellipilot/features/mfa/presentation/passkey_signin_page.dart';
@@ -95,7 +96,11 @@ abstract class Routes {
     return '/projects/$id/issues?$query';
   }
 
-  static String projectBoardFor(String id) => '/projects/$id/board';
+  /// The board route. With no [boardId] this is the resolver entry that
+  /// redirects to the last-opened (or first) board; with one it targets that
+  /// specific board.
+  static String projectBoardFor(String id, [String? boardId]) =>
+      boardId == null ? '/projects/$id/board' : '/projects/$id/boards/$boardId';
 
   /// Back-compat alias for callers that still link to the standalone
   /// task board. Both views now live on the unified Board page with a
@@ -253,7 +258,15 @@ GoRouter buildRouter({required SessionBloc session}) {
             path: '/projects/:id/board',
             name: 'project_board',
             builder: (context, state) =>
-                BoardPage(projectId: state.pathParameters['id']!),
+                BoardResolverPage(projectId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/projects/:id/boards/:boardId',
+            name: 'project_board_detail',
+            builder: (context, state) => BoardPage(
+              projectId: state.pathParameters['id']!,
+              boardId: state.pathParameters['boardId']!,
+            ),
           ),
           GoRoute(
             // Back-compat: the standalone task board collapsed into the

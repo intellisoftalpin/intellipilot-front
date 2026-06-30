@@ -1,23 +1,24 @@
 import 'dart:async';
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
-import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/core/widgets/members_scope.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
-import 'package:intellipilot/core/work_items/work_item_filter.dart';
 import 'package:intellipilot/core/work_items/work_item_filter_bar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
+import 'package:intellipilot/features/board/domain/board_config.dart';
+import 'package:intellipilot/features/board/presentation/boards_nav_refresh.dart';
 import 'package:intellipilot/features/board/presentation/cubits/task_board_cubit.dart';
-import 'package:intellipilot/features/board/presentation/widgets/board_columns_dialog.dart';
+import 'package:intellipilot/features/board/presentation/widgets/board_settings_dialog.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
@@ -25,15 +26,18 @@ import 'package:intellipilot/features/milestones/domain/milestones_repository.da
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
+import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
-/// Project-wide Kanban: every issue grouped into columns by `issue_status`.
-/// The board needs no milestone to render — sprints are an optional filter.
+/// A first-class kanban board, driven by its `config` (visible columns/order,
+/// swimlane group, locked filters, column limit). Per-column counts + capped
+/// cards come from `fetchBoardData`; "Load more" pages a single column.
 class BoardPage extends StatelessWidget {
-  const BoardPage({required this.projectId, super.key});
+  const BoardPage({required this.projectId, required this.boardId, super.key});
   final String projectId;
+  final String boardId;
 
   Future<(UserProfile?, Map<String, UserRef>)> _loadContext() async {
     final p = await getIt<ProfileRepository>().getProfile();
@@ -65,6 +69,7 @@ class BoardPage extends StatelessWidget {
         return MembersScope(
           membersById: members,
           child: MultiBlocProvider(
+            key: ValueKey(boardId),
             providers: [
               BlocProvider<ProjectDetailCubit>(
                 create: (_) {
@@ -83,17 +88,15 @@ class BoardPage extends StatelessWidget {
                     repo: getIt<BacklogRepository>(),
                     catalog: getIt<CatalogRepository>(),
                     milestones: getIt<MilestonesRepository>(),
-                    filterStore: WorkItemFilterStore(
-                      getIt<KeyValueStorage>(instanceName: HiveBoxes.ui),
-                    ),
                     projectId: projectId,
+                    boardId: boardId,
                   );
                   unawaited(c.load());
                   return c;
                 },
               ),
             ],
-            child: _BoardView(projectId: projectId),
+            child: _BoardView(projectId: projectId, currentUserId: profile.id),
           ),
         );
       },
@@ -102,16 +105,15 @@ class BoardPage extends StatelessWidget {
 }
 
 class _BoardView extends StatefulWidget {
-  const _BoardView({required this.projectId});
+  const _BoardView({required this.projectId, required this.currentUserId});
   final String projectId;
+  final String currentUserId;
 
   @override
   State<_BoardView> createState() => _BoardViewState();
 }
 
 class _BoardViewState extends State<_BoardView> {
-  /// The card a user clicked on. When non-null the right-side details panel
-  /// shows the entity; the card itself renders with a primary outline.
   String? _selectedId;
 
   Future<void> _select(String id) async {
@@ -125,7 +127,7 @@ class _BoardViewState extends State<_BoardView> {
     );
     if (!mounted) return;
     setState(() => _selectedId = null);
-    await cubit.load();
+    await cubit.refresh();
   }
 
   @override
@@ -133,35 +135,38 @@ class _BoardViewState extends State<_BoardView> {
     final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: ProjectSectionBreadcrumb(
-          projectId: widget.projectId,
-          currentLabel: t.boardTitle,
+        title: BlocBuilder<TaskBoardCubit, TaskBoardState>(
+          builder: (context, state) {
+            final label = state is TaskBoardLoaded
+                ? state.board.name
+                : t.boardTitle;
+            return ProjectSectionBreadcrumb(
+              projectId: widget.projectId,
+              currentLabel: label,
+            );
+          },
         ),
-        actions: const [
-          _BoardToolbar(),
-          SizedBox(width: 8),
+        actions: [
+          const _BoardSearchField(),
+          _BoardActionsMenu(
+            projectId: widget.projectId,
+            currentUserId: widget.currentUserId,
+          ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: Row(
-        children: [
-          Expanded(
-            child: _TaskBoardBody(
-              projectId: widget.projectId,
-              selectedId: _selectedId,
-              onSelect: _select,
-            ),
-          ),
-        ],
+      body: _TaskBoardBody(
+        projectId: widget.projectId,
+        selectedId: _selectedId,
+        onSelect: _select,
       ),
     );
   }
 }
 
-/// App-bar controls: search box, swimlane grouping, saved-views menu, and the
-/// column-settings button. All other filters live in the shared
-/// [WorkItemFilterBar] below the bar (identical to the Issues list).
-class _BoardToolbar extends StatelessWidget {
-  const _BoardToolbar();
+/// Ad-hoc search box bound to the board's session-only filter.
+class _BoardSearchField extends StatelessWidget {
+  const _BoardSearchField();
 
   @override
   Widget build(BuildContext context) {
@@ -170,178 +175,135 @@ class _BoardToolbar extends StatelessWidget {
       builder: (context, state) {
         if (state is! TaskBoardLoaded) return const SizedBox.shrink();
         final cubit = context.read<TaskBoardCubit>();
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 200,
-              child: TextField(
-                decoration: InputDecoration(
-                  isDense: true,
-                  prefixIcon: const Icon(Icons.search, size: 18),
-                  hintText: t.issuesSearchHint,
-                  border: const OutlineInputBorder(),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 8,
-                  ),
-                ),
-                onChanged: (v) =>
-                    cubit.setFilter(state.filter.copyWith(search: v)),
+        return SizedBox(
+          width: 220,
+          child: TextField(
+            decoration: InputDecoration(
+              isDense: true,
+              prefixIcon: const Icon(Icons.search, size: 18),
+              hintText: t.issuesSearchHint,
+              border: const OutlineInputBorder(),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 8,
               ),
             ),
-            const SizedBox(width: 8),
-            _GroupByMenu(groupBy: state.groupBy, cubit: cubit),
-            const SizedBox(width: 4),
-            _SavedViewsMenu(state: state, cubit: cubit),
-            IconButton(
-              tooltip: 'Board columns',
-              icon: const Icon(Icons.view_column_outlined),
-              onPressed: () async {
-                final res = await showBoardColumnsDialog(
-                  context,
-                  statuses: state.statuses,
-                  order: state.columnOrder,
-                  hidden: state.hiddenColumnIds,
-                );
-                if (res != null) {
-                  cubit.setColumns(order: res.order, hidden: res.hidden);
-                }
-              },
-            ),
-          ],
+            onChanged: (v) =>
+                cubit.setAdhocFilter(state.adhocFilter.copyWith(search: v)),
+          ),
         );
       },
     );
   }
 }
 
-/// Swimlane grouping dropdown.
-class _GroupByMenu extends StatelessWidget {
-  const _GroupByMenu({required this.groupBy, required this.cubit});
-  final BoardGroupBy? groupBy;
-  final TaskBoardCubit cubit;
-
-  String _label(BoardGroupBy? g) => switch (g) {
-    null => 'No grouping',
-    BoardGroupBy.component => 'Component',
-    BoardGroupBy.assignee => 'Assignee',
-    BoardGroupBy.epic => 'Epic',
-    BoardGroupBy.priority => 'Priority',
-  };
+/// Edit / delete affordances, gated on shared-board permissions or personal
+/// board ownership.
+class _BoardActionsMenu extends StatelessWidget {
+  const _BoardActionsMenu({
+    required this.projectId,
+    required this.currentUserId,
+  });
+  final String projectId;
+  final String currentUserId;
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      tooltip: 'Group by',
-      onSelected: (wire) => cubit.setGrouping(
-        wire == 'none' ? null : BoardGroupBy.fromWire(wire),
-      ),
-      itemBuilder: (ctx) => [
-        for (final g in <BoardGroupBy?>[null, ...BoardGroupBy.values])
-          CheckedPopupMenuItem<String>(
-            value: g?.wire ?? 'none',
-            checked: g == groupBy,
-            child: Text(_label(g)),
-          ),
-      ],
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.splitscreen, size: 18),
-            const SizedBox(width: 6),
-            Text(_label(groupBy)),
-            const Icon(Icons.arrow_drop_down, size: 18),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Saved-views menu: apply / delete saved board views and save the current one.
-class _SavedViewsMenu extends StatelessWidget {
-  const _SavedViewsMenu({required this.state, required this.cubit});
-  final TaskBoardLoaded state;
-  final TaskBoardCubit cubit;
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      tooltip: 'Saved boards',
-      icon: const Icon(Icons.bookmark_border),
-      onSelected: (value) async {
-        if (value == '__save__') {
-          final name = await _promptName(context);
-          if (name != null && name.trim().isNotEmpty) {
-            await cubit.saveView(name.trim());
-          }
-          return;
-        }
-        final view = state.savedViews.firstWhere((v) => v.id == value);
-        cubit.applyView(view);
-      },
-      itemBuilder: (ctx) => [
-        for (final v in state.savedViews)
-          PopupMenuItem<String>(
-            value: v.id,
-            child: Row(
-              children: [
-                Expanded(child: Text(v.name)),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 18),
-                  tooltip: 'Delete',
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    unawaited(cubit.deleteView(v.id));
-                  },
+    final t = AppLocalizations.of(context);
+    return BlocBuilder<TaskBoardCubit, TaskBoardState>(
+      builder: (context, state) {
+        if (state is! TaskBoardLoaded) return const SizedBox.shrink();
+        final detail = context.watch<ProjectDetailCubit>().state;
+        final board = state.board;
+        final isOwner = board.ownerId == currentUserId;
+        bool can(Permission p) =>
+            detail is ProjectDetailLoaded && detail.has(p);
+        final canEdit = board.isShared
+            ? can(Permission.boardSharedModify)
+            : isOwner;
+        final canDelete = board.isShared
+            ? can(Permission.boardSharedDelete)
+            : isOwner;
+        if (!canEdit && !canDelete) return const SizedBox.shrink();
+        return PopupMenuButton<String>(
+          tooltip: t.boardActionsTooltip,
+          icon: const Icon(Icons.more_vert),
+          onSelected: (value) async {
+            final cubit = context.read<TaskBoardCubit>();
+            if (value == 'edit') {
+              final updated = await showBoardSettingsDialog(
+                context,
+                projectId: projectId,
+                board: board,
+              );
+              if (updated != null) {
+                bumpBoardsNav();
+                await cubit.load();
+              }
+            } else if (value == 'delete') {
+              await _confirmDelete(context, board);
+            }
+          },
+          itemBuilder: (ctx) => [
+            if (canEdit)
+              PopupMenuItem<String>(
+                value: 'edit',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.edit_outlined),
+                  title: Text(t.boardEditTitle),
                 ),
-              ],
-            ),
-          ),
-        if (state.savedViews.isNotEmpty) const PopupMenuDivider(),
-        const PopupMenuItem<String>(
-          value: '__save__',
-          child: ListTile(
-            dense: true,
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.add),
-            title: Text('Save current board…'),
-          ),
-        ),
-      ],
+              ),
+            if (canDelete)
+              PopupMenuItem<String>(
+                value: 'delete',
+                child: ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.delete_outline),
+                  title: Text(t.actionDelete),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 
-  Future<String?> _promptName(BuildContext context) {
-    final controller = TextEditingController();
-    return showDialog<String>(
+  Future<void> _confirmDelete(BuildContext context, Board board) async {
+    final t = AppLocalizations.of(context);
+    final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Save board'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Name',
-            border: OutlineInputBorder(),
-          ),
-          onSubmitted: (v) => Navigator.of(ctx).pop(v),
-        ),
+        title: Text(t.boardDeleteTitle),
+        content: Text(t.boardDeleteConfirm(board.name)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(t.actionCancel),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text),
-            child: const Text('Save'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(t.actionDelete),
           ),
         ],
       ),
     );
+    if (ok != true || !context.mounted) return;
+    final res = await getIt<CatalogRepository>().deleteBoard(
+      projectId,
+      board.id,
+    );
+    if (!context.mounted) return;
+    if (res.isErr) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.errUnknown)));
+      return;
+    }
+    bumpBoardsNav();
+    context.go(Routes.projectBoardFor(projectId));
   }
 }
 
@@ -416,6 +378,7 @@ class _TasksLoaded extends StatelessWidget {
     final keyPrefix = detail is ProjectDetailLoaded
         ? detail.project.issuePrefix
         : '';
+    final cubit = context.read<TaskBoardCubit>();
     return Column(
       children: [
         if (state.staleData)
@@ -433,8 +396,8 @@ class _TasksLoaded extends StatelessWidget {
             ),
           ),
         WorkItemFilterBar(
-          filter: state.filter,
-          onChanged: (f) => context.read<TaskBoardCubit>().setFilter(f),
+          filter: state.effectiveFilter,
+          onChanged: cubit.setAdhocFilter,
           statuses: state.statuses,
           types: state.types,
           priorities: state.priorities,
@@ -444,9 +407,11 @@ class _TasksLoaded extends StatelessWidget {
           labels: state.labels,
           components: state.components,
           showStatus: false,
+          lockedDimensions: state.config.lockedDimensions,
+          hiddenDimensions: {?state.group?.filterKey},
         ),
         Expanded(
-          child: state.groupBy == null
+          child: state.group == null
               ? _FlatBoard(
                   state: state,
                   projectId: projectId,
@@ -484,29 +449,23 @@ class _FlatBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final buckets = state.bucketed;
+    final byId = {for (final s in state.statuses) s.id: s};
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (final status in state.orderedVisibleStatuses)
+          for (final col in state.flatColumns)
             _TaskColumn(
-              status: status,
-              tasks: buckets[status.id] ?? const [],
+              state: state,
+              column: col,
+              status: col.statusId == null ? null : byId[col.statusId],
+              laneKey: null,
               projectId: projectId,
               keyPrefix: keyPrefix,
               selectedId: selectedId,
               onSelect: onSelect,
             ),
-          _TaskColumn(
-            status: null,
-            tasks: buckets[null] ?? const [],
-            projectId: projectId,
-            keyPrefix: keyPrefix,
-            selectedId: selectedId,
-            onSelect: onSelect,
-          ),
           const SizedBox(width: 16),
         ],
       ),
@@ -514,15 +473,7 @@ class _FlatBoard extends StatelessWidget {
   }
 }
 
-/// A single swimlane group: a display name plus the issues belonging to it.
-class _Group {
-  const _Group({required this.title, required this.issues});
-  final String title;
-  final List<Issue> issues;
-}
-
-/// The grouped (swimlane) layout: one horizontal board per distinct group
-/// value, stacked vertically with a sub-header per row.
+/// The grouped (swimlane) layout: one horizontal board per lane.
 class _Swimlanes extends StatelessWidget {
   const _Swimlanes({
     required this.state,
@@ -537,88 +488,39 @@ class _Swimlanes extends StatelessWidget {
   final String? selectedId;
   final ValueChanged<String> onSelect;
 
-  List<_Group> _buildGroups(BuildContext context) {
-    final issues = state.visibleIssues;
-    final groupBy = state.groupBy!;
-    // Bucket issues by their (possibly multi-valued) group key.
-    final byKey = <String?, List<Issue>>{};
-    void add(String? key, Issue i) => byKey.putIfAbsent(key, () => []).add(i);
-    for (final i in issues) {
-      switch (groupBy) {
-        case BoardGroupBy.component:
-          if (i.components.isEmpty) {
-            add(null, i);
-          } else {
-            for (final c in i.components) {
-              add(c, i);
-            }
-          }
-        case BoardGroupBy.assignee:
-          add(i.assignedTo, i);
-        case BoardGroupBy.epic:
-          add(i.epicId, i);
-        case BoardGroupBy.priority:
-          add(i.priorityId, i);
-      }
+  String _resolveLane(BuildContext context, String key) {
+    final group = state.group!;
+    if (key == 'none') {
+      final t = AppLocalizations.of(context);
+      return switch (group) {
+        BoardGroupBy.component => t.boardLaneNoComponent,
+        BoardGroupBy.assignee => t.dashKpiUnassigned,
+        BoardGroupBy.epic => t.backlogNoEpic,
+        BoardGroupBy.priority => t.boardLaneNoPriority,
+      };
     }
-
-    String resolve(String? key) {
-      if (key == null) {
-        return switch (groupBy) {
-          BoardGroupBy.component => 'No component',
-          BoardGroupBy.assignee => 'Unassigned',
-          BoardGroupBy.epic => 'No epic',
-          BoardGroupBy.priority => 'No priority',
-        };
-      }
-      switch (groupBy) {
-        case BoardGroupBy.component:
-          final c = state.components.where((e) => e.id == key).firstOrNull;
-          return c?.name ?? key;
-        case BoardGroupBy.assignee:
-          return MembersScope.user(context, key)?.displayName ?? key;
-        case BoardGroupBy.epic:
-          final e = state.epics.where((x) => x.id == key).firstOrNull;
-          return e == null
-              ? key
-              : '${epicKeyLabel(keyPrefix, e.reference)} ${e.subject}';
-        case BoardGroupBy.priority:
-          final p = state.priorities.where((x) => x.id == key).firstOrNull;
-          return p?.name ?? key;
-      }
+    switch (group) {
+      case BoardGroupBy.component:
+        return state.components.where((e) => e.id == key).firstOrNull?.name ??
+            key;
+      case BoardGroupBy.assignee:
+        return MembersScope.user(context, key)?.displayName ?? key;
+      case BoardGroupBy.epic:
+        final e = state.epics.where((x) => x.id == key).firstOrNull;
+        return e == null
+            ? key
+            : '${epicKeyLabel(keyPrefix, e.reference)} ${e.subject}';
+      case BoardGroupBy.priority:
+        return state.priorities.where((x) => x.id == key).firstOrNull?.name ??
+            key;
     }
-
-    // Sort keys: priority by taxonomy order, others by display name; the
-    // "none" group always last.
-    final keys = byKey.keys.toList();
-    int orderOf(String? k) {
-      if (k == null) return 1 << 30;
-      if (groupBy == BoardGroupBy.priority) {
-        final p = state.priorities.where((x) => x.id == k).firstOrNull;
-        return p == null ? (1 << 29) : p.order.round();
-      }
-      return 0;
-    }
-
-    keys.sort((a, b) {
-      final ra = orderOf(a);
-      final rb = orderOf(b);
-      if (ra != rb) return ra.compareTo(rb);
-      if (a == null) return 1;
-      if (b == null) return -1;
-      return resolve(a).toLowerCase().compareTo(resolve(b).toLowerCase());
-    });
-
-    return [
-      for (final k in keys) _Group(title: resolve(k), issues: byKey[k]!),
-    ];
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final groups = _buildGroups(context);
-    if (groups.isEmpty) {
+    final byId = {for (final s in state.statuses) s.id: s};
+    if (state.lanes.isEmpty) {
       return Center(
         child: Text(
           AppLocalizations.of(context).boardEmptyColumn,
@@ -631,13 +533,13 @@ class _Swimlanes extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: 16),
       children: [
-        for (final g in groups) ...[
+        for (final lane in state.lanes) ...[
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Row(
               children: [
                 Text(
-                  g.title.toUpperCase(),
+                  _resolveLane(context, lane.key).toUpperCase(),
                   style: theme.textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.4,
@@ -645,7 +547,7 @@ class _Swimlanes extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '${g.issues.length}',
+                  '${lane.total}',
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
@@ -655,13 +557,25 @@ class _Swimlanes extends StatelessWidget {
           ),
           SizedBox(
             height: 460,
-            child: _SwimlaneColumns(
-              state: state,
-              issues: g.issues,
-              projectId: projectId,
-              keyPrefix: keyPrefix,
-              selectedId: selectedId,
-              onSelect: onSelect,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final col in lane.columns)
+                    _TaskColumn(
+                      state: state,
+                      column: col,
+                      status: col.statusId == null ? null : byId[col.statusId],
+                      laneKey: lane.key,
+                      projectId: projectId,
+                      keyPrefix: keyPrefix,
+                      selectedId: selectedId,
+                      onSelect: onSelect,
+                    ),
+                  const SizedBox(width: 16),
+                ],
+              ),
             ),
           ),
         ],
@@ -670,68 +584,24 @@ class _Swimlanes extends StatelessWidget {
   }
 }
 
-/// The horizontal column row for a single swimlane group.
-class _SwimlaneColumns extends StatelessWidget {
-  const _SwimlaneColumns({
-    required this.state,
-    required this.issues,
-    required this.projectId,
-    required this.keyPrefix,
-    required this.selectedId,
-    required this.onSelect,
-  });
-  final TaskBoardLoaded state;
-  final List<Issue> issues;
-  final String projectId;
-  final String keyPrefix;
-  final String? selectedId;
-  final ValueChanged<String> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final buckets = state.bucketFor(issues);
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final status in state.orderedVisibleStatuses)
-            _TaskColumn(
-              status: status,
-              tasks: buckets[status.id] ?? const [],
-              projectId: projectId,
-              keyPrefix: keyPrefix,
-              selectedId: selectedId,
-              onSelect: onSelect,
-            ),
-          _TaskColumn(
-            status: null,
-            tasks: buckets[null] ?? const [],
-            projectId: projectId,
-            keyPrefix: keyPrefix,
-            selectedId: selectedId,
-            onSelect: onSelect,
-          ),
-          const SizedBox(width: 16),
-        ],
-      ),
-    );
-  }
-}
-
 class _TaskColumn extends StatelessWidget {
   const _TaskColumn({
+    required this.state,
+    required this.column,
     required this.status,
-    required this.tasks,
+    required this.laneKey,
     required this.projectId,
     required this.keyPrefix,
     required this.selectedId,
     required this.onSelect,
   });
+
+  final TaskBoardLoaded state;
+  final BoardColumnData column;
 
   /// Null for the trailing "no status" column.
   final TaxonomyItem? status;
-  final List<Issue> tasks;
+  final String? laneKey;
   final String projectId;
   final String keyPrefix;
   final String? selectedId;
@@ -768,23 +638,40 @@ class _TaskColumn extends StatelessWidget {
               _ColumnHeader(
                 statusColor: status?.color ?? '',
                 title: status?.name ?? t.boardColumnNoStatus,
-                count: tasks.length,
+                count: column.total,
               ),
               const Divider(height: 12),
               Expanded(
                 child: ListView(
                   padding: EdgeInsets.zero,
                   children: [
-                    for (final task in tasks)
+                    for (final card in column.cards)
                       _TaskCard(
-                        task: task,
+                        state: state,
+                        task: card,
                         projectId: projectId,
                         keyPrefix: keyPrefix,
-                        selected: task.id == selectedId,
-                        onTap: () => onSelect(task.id),
+                        selected: card.id == selectedId,
+                        onTap: () => onSelect(card.id),
                       ),
-                    if (tasks.isEmpty)
+                    if (column.cards.isEmpty)
                       _EmptyColumnNote(label: t.boardEmptyColumn),
+                    if (column.hasMore)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: TextButton.icon(
+                          icon: const Icon(Icons.expand_more, size: 18),
+                          label: Text(
+                            t.boardLoadMore(column.total - column.cards.length),
+                          ),
+                          onPressed: () =>
+                              context.read<TaskBoardCubit>().loadMoreColumn(
+                                laneKey: laneKey,
+                                statusId: column.statusId,
+                                offset: column.cards.length,
+                              ),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -798,21 +685,26 @@ class _TaskColumn extends StatelessWidget {
 
 class _TaskCard extends StatelessWidget {
   const _TaskCard({
+    required this.state,
     required this.task,
     required this.projectId,
     required this.keyPrefix,
     required this.selected,
     required this.onTap,
   });
+  final TaskBoardLoaded state;
   final Issue task;
   final String projectId;
   final String keyPrefix;
   final bool selected;
   final VoidCallback onTap;
 
+  List<String> get _fields => state.config.cardFields ?? const ['assignee'];
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final showAssignee = _fields.contains('assignee');
     final cardWidget = Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       shape: RoundedRectangleBorder(
@@ -835,7 +727,8 @@ class _TaskCard extends StatelessWidget {
                 children: [
                   IssueKeyChip(text: issueKeyLabel(keyPrefix, task.reference)),
                   const Spacer(),
-                  if (MembersScope.user(context, task.assignedTo) != null)
+                  if (showAssignee &&
+                      MembersScope.user(context, task.assignedTo) != null)
                     UserAvatar(
                       user: MembersScope.user(context, task.assignedTo)!,
                       size: 22,
@@ -849,23 +742,7 @@ class _TaskCard extends StatelessWidget {
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
               ),
-              if (MembersScope.user(context, task.ownerId) != null) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Spacer(),
-                    Tooltip(
-                      message:
-                          '${AppLocalizations.of(context).detailFieldReporter}: '
-                          '${MembersScope.user(context, task.ownerId)!.displayName}',
-                      child: UserAvatar(
-                        user: MembersScope.user(context, task.ownerId)!,
-                        size: 18,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+              ..._buildMeta(context, theme),
             ],
           ),
         ),
@@ -884,6 +761,92 @@ class _TaskCard extends StatelessWidget {
       ),
       childWhenDragging: Opacity(opacity: 0.4, child: cardWidget),
       child: cardWidget,
+    );
+  }
+
+  List<Widget> _buildMeta(BuildContext context, ThemeData theme) {
+    final chips = <Widget>[];
+    if (_fields.contains('priority') && task.priorityId != null) {
+      final p = state.priorities
+          .where((x) => x.id == task.priorityId)
+          .firstOrNull;
+      if (p != null) {
+        chips.add(
+          _MetaChip(
+            color: p.color,
+            label: p.emoji.isEmpty ? p.name : '${p.emoji} ${p.name}',
+          ),
+        );
+      }
+    }
+    if (_fields.contains('size') && task.sizeId != null) {
+      final s = state.sizes.where((x) => x.id == task.sizeId).firstOrNull;
+      if (s != null) chips.add(_MetaChip(color: s.color, label: s.name));
+    }
+    if (_fields.contains('labels')) {
+      for (final id in task.labels) {
+        final l = state.labels.where((x) => x.id == id).firstOrNull;
+        if (l != null) chips.add(_MetaChip(color: l.color, label: l.name));
+      }
+    }
+    if (_fields.contains('due') && task.dueDate != null) {
+      chips.add(
+        _MetaChip(color: '', label: task.dueDate!, icon: Icons.event_outlined),
+      );
+    }
+
+    final reporter = MembersScope.user(context, task.ownerId);
+    return [
+      if (chips.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        Wrap(spacing: 6, runSpacing: 6, children: chips),
+      ],
+      if (reporter != null) ...[
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            const Spacer(),
+            Tooltip(
+              message:
+                  '${AppLocalizations.of(context).detailFieldReporter}: '
+                  '${reporter.displayName}',
+              child: UserAvatar(user: reporter, size: 18),
+            ),
+          ],
+        ),
+      ],
+    ];
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({required this.color, required this.label, this.icon});
+  final String color;
+  final String label;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 4),
+          ] else if (color.isNotEmpty) ...[
+            HexColorDot(hex: color, size: 8),
+            const SizedBox(width: 4),
+          ],
+          Text(label, style: theme.textTheme.labelSmall),
+        ],
+      ),
     );
   }
 }

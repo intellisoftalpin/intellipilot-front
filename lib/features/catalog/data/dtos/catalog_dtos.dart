@@ -1,3 +1,5 @@
+import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
+
 /// Taxonomy kinds the backend exposes. Wire format is snake_case;
 /// this enum keeps the strings identical so we round-trip without mapping.
 enum TaxonomyKind {
@@ -847,26 +849,106 @@ abstract final class ColorPalette {
 
 /// A per-user saved kanban board state. [config] is an opaque blob the board
 /// cubit owns (visible columns, order, filter, grouping).
-class BoardView {
-  const BoardView({
+/// A first-class kanban board (personal or shared). `config` is opaque
+/// SPA-owned state: visible columns + order, swimlane group, locked filters,
+/// and display options.
+class Board {
+  const Board({
     required this.id,
     required this.projectId,
-    required this.userId,
+    required this.visibility,
     required this.name,
+    required this.color,
     required this.config,
+    required this.order,
+    this.ownerId,
   });
 
-  factory BoardView.fromJson(Map<String, dynamic> json) => BoardView(
+  factory Board.fromJson(Map<String, dynamic> json) => Board(
     id: json['id'] as String,
     projectId: json['project_id'] as String,
-    userId: json['user_id'] as String,
+    ownerId: json['owner_id'] as String?,
+    visibility: (json['visibility'] as String?) ?? 'personal',
     name: json['name'] as String,
+    color: (json['color'] as String?) ?? '',
     config: (json['config'] as Map<String, dynamic>?) ?? const {},
+    order: (json['order'] as num?)?.toDouble() ?? 0.0,
   );
 
   final String id;
   final String projectId;
-  final String userId;
+  final String? ownerId;
+  final String visibility;
   final String name;
+  final String color;
   final Map<String, dynamic> config;
+  final double order;
+
+  bool get isShared => visibility == 'shared';
+}
+
+/// One board column (status bucket): total matching count + a capped card slice.
+class BoardColumnData {
+  const BoardColumnData({
+    required this.total,
+    required this.cards,
+    this.statusId,
+  });
+
+  factory BoardColumnData.fromJson(Map<String, dynamic> json) =>
+      BoardColumnData(
+        statusId: json['status_id'] as String?,
+        total: (json['total'] as num?)?.toInt() ?? 0,
+        cards: (json['cards'] as List<dynamic>? ?? const [])
+            .map((e) => Issue.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+
+  final String? statusId;
+  final int total;
+  final List<Issue> cards;
+
+  bool get hasMore => total > cards.length;
+}
+
+/// One swimlane (group value) with its per-column buckets.
+class BoardLaneData {
+  const BoardLaneData({
+    required this.key,
+    required this.total,
+    required this.columns,
+  });
+
+  factory BoardLaneData.fromJson(Map<String, dynamic> json) => BoardLaneData(
+    key: (json['key'] as String?) ?? 'none',
+    total: (json['total'] as num?)?.toInt() ?? 0,
+    columns: (json['columns'] as List<dynamic>? ?? const [])
+        .map((e) => BoardColumnData.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
+
+  final String key;
+  final int total;
+  final List<BoardColumnData> columns;
+}
+
+/// The per-column board payload — flat `columns` or, when grouped, `lanes`.
+class BoardData {
+  const BoardData({this.group, this.columns = const [], this.lanes = const []});
+
+  factory BoardData.fromJson(Map<String, dynamic> json) => BoardData(
+    group: json['group'] as String?,
+    columns: (json['columns'] as List<dynamic>? ?? const [])
+        .map((e) => BoardColumnData.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    lanes: (json['lanes'] as List<dynamic>? ?? const [])
+        .map((e) => BoardLaneData.fromJson(e as Map<String, dynamic>))
+        .toList(),
+  );
+
+  final String? group;
+  final List<BoardColumnData> columns;
+  final List<BoardLaneData> lanes;
+
+  bool get isGrouped => group != null;
 }

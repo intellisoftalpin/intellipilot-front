@@ -499,5 +499,6 @@ class _PermissionPicker extends StatelessWidget {
     PermissionDomain.repositories => t.permDomainRepositories,
     PermissionDomain.customers => t.permDomainCustomers,
     PermissionDomain.releases => t.permDomainReleases,
+    PermissionDomain.boards => t.railBoards,
   };
 }

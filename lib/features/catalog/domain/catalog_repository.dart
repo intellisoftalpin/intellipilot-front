@@ -241,30 +241,42 @@ abstract interface class CatalogRepository {
     String userId,
   );
 
-  // ---- kanban board views (per user) ----
-  Future<Result<List<BoardView>, AppFailure>> listBoardViews(String projectId);
-  Future<Result<BoardView, AppFailure>> createBoardView(
-    String projectId,
-    String name,
+  // ---- kanban boards (personal + shared) ----
+  Future<Result<List<Board>, AppFailure>> listBoards(String projectId);
+  Future<Result<Board, AppFailure>> getBoard(String projectId, String boardId);
+  Future<Result<Board, AppFailure>> createBoard(
+    String projectId, {
+    required String name,
+    String color,
+    bool shared,
     Map<String, dynamic> config,
-  );
-  Future<Result<BoardView, AppFailure>> updateBoardView(
+  });
+  Future<Result<Board, AppFailure>> updateBoard(
     String projectId,
-    String viewId,
-    String name,
+    String boardId, {
+    required String name,
+    String color,
     Map<String, dynamic> config,
-  );
-  Future<Result<Unit, AppFailure>> deleteBoardView(
+  });
+  Future<Result<Unit, AppFailure>> deleteBoard(
     String projectId,
-    String viewId,
+    String boardId,
   );
 
-  /// The user's remembered last-used board config (null if none).
-  Future<Result<Map<String, dynamic>?, AppFailure>> getLastUsedBoard(
+  /// The board id the user last had open in this project (null if none).
+  Future<Result<String?, AppFailure>> getLastOpenedBoard(String projectId);
+  Future<Result<Unit, AppFailure>> setLastOpenedBoard(
     String projectId,
+    String boardId,
   );
-  Future<Result<Unit, AppFailure>> setLastUsedBoard(
-    String projectId,
-    Map<String, dynamic> config,
-  );
+
+  /// The performant per-column board payload: counts + capped cards. [filter]
+  /// is the `WorkItemFilter.toJson()` map. Flat unless [group] is set.
+  Future<Result<BoardData, AppFailure>> fetchBoardData(
+    String projectId, {
+    Map<String, dynamic> filter,
+    String? group,
+    List<String>? columns,
+    int columnLimit,
+  });
 }

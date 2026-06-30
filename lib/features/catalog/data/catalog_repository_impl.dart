@@ -796,21 +796,17 @@ class CatalogRepositoryImpl implements CatalogRepository {
     String userId,
   ) => _delete('$_base/$projectId/issues/$issueId/watchers/$userId');
 
-  // ---- kanban board views (per user) ----
+  // ---- kanban boards (personal + shared) ----
 
   @override
-  Future<Result<List<BoardView>, AppFailure>> listBoardViews(
-    String projectId,
-  ) async {
-    final res = await _api.get('$_base/$projectId/board-views');
+  Future<Result<List<Board>, AppFailure>> listBoards(String projectId) async {
+    final res = await _api.get('$_base/$projectId/boards');
     return res.when(
       ok: (r) {
         final body = r.data as Map<String, dynamic>;
-        final raw = body['views'] as List<dynamic>? ?? const [];
+        final raw = body['boards'] as List<dynamic>? ?? const [];
         return Ok(
-          raw
-              .map((e) => BoardView.fromJson(e as Map<String, dynamic>))
-              .toList(),
+          raw.map((e) => Board.fromJson(e as Map<String, dynamic>)).toList(),
         );
       },
       err: Err.new,
@@ -818,68 +814,87 @@ class CatalogRepositoryImpl implements CatalogRepository {
   }
 
   @override
-  Future<Result<BoardView, AppFailure>> createBoardView(
+  Future<Result<Board, AppFailure>> getBoard(
     String projectId,
-    String name,
-    Map<String, dynamic> config,
+    String boardId,
   ) async {
-    final res = await _api.post(
-      '$_base/$projectId/board-views',
-      body: {'name': name, 'config': config},
-    );
+    final res = await _api.get('$_base/$projectId/boards/$boardId');
     return res.when(
-      ok: (r) => Ok(BoardView.fromJson(r.data as Map<String, dynamic>)),
+      ok: (r) => Ok(Board.fromJson(r.data as Map<String, dynamic>)),
       err: Err.new,
     );
   }
 
   @override
-  Future<Result<BoardView, AppFailure>> updateBoardView(
+  Future<Result<Board, AppFailure>> createBoard(
+    String projectId, {
+    required String name,
+    String color = '',
+    bool shared = false,
+    Map<String, dynamic> config = const {},
+  }) async {
+    final res = await _api.post(
+      '$_base/$projectId/boards',
+      body: {
+        'name': name,
+        'color': color,
+        'shared': shared,
+        'config': config,
+      },
+    );
+    return res.when(
+      ok: (r) => Ok(Board.fromJson(r.data as Map<String, dynamic>)),
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<Board, AppFailure>> updateBoard(
     String projectId,
-    String viewId,
-    String name,
-    Map<String, dynamic> config,
-  ) async {
+    String boardId, {
+    required String name,
+    String color = '',
+    Map<String, dynamic> config = const {},
+  }) async {
     try {
       final response = await _api.dio.put<dynamic>(
-        '$_base/$projectId/board-views/$viewId',
-        data: {'name': name, 'config': config},
+        '$_base/$projectId/boards/$boardId',
+        data: {'name': name, 'color': color, 'config': config},
       );
-      return Ok(BoardView.fromJson(response.data as Map<String, dynamic>));
+      return Ok(Board.fromJson(response.data as Map<String, dynamic>));
     } on DioException catch (e) {
       return Err(mapDioExceptionToFailure(e));
     }
   }
 
   @override
-  Future<Result<Unit, AppFailure>> deleteBoardView(
+  Future<Result<Unit, AppFailure>> deleteBoard(
     String projectId,
-    String viewId,
-  ) => _delete('$_base/$projectId/board-views/$viewId');
+    String boardId,
+  ) => _delete('$_base/$projectId/boards/$boardId');
 
   @override
-  Future<Result<Map<String, dynamic>?, AppFailure>> getLastUsedBoard(
+  Future<Result<String?, AppFailure>> getLastOpenedBoard(
     String projectId,
   ) async {
-    final res = await _api.get('$_base/$projectId/board-views/last-used');
+    final res = await _api.get('$_base/$projectId/boards/last-opened');
     return res.when(
       ok: (r) {
         final body = r.data as Map<String, dynamic>;
-        return Ok(body['config'] as Map<String, dynamic>?);
+        return Ok(body['board_id'] as String?);
       },
       err: Err.new,
     );
   }
 
   @override
-  Future<Result<Unit, AppFailure>> setLastUsedBoard(
+  Future<Result<Unit, AppFailure>> setLastOpenedBoard(
     String projectId,
-    Map<String, dynamic> config,
+    String boardId,
   ) async {
     try {
       await _api.dio.put<dynamic>(
-        '$_base/$projectId/board-views/last-used',
-        data: config,
+        '$_base/$projectId/boards/$boardId/last-opened',
       );
       return const Ok<Unit, AppFailure>(Unit.instance);
     } on DioException catch (e) {
@@ -888,6 +903,27 @@ class CatalogRepositoryImpl implements CatalogRepository {
       }
       return Err(mapDioExceptionToFailure(e));
     }
+  }
+
+  @override
+  Future<Result<BoardData, AppFailure>> fetchBoardData(
+    String projectId, {
+    Map<String, dynamic> filter = const {},
+    String? group,
+    List<String>? columns,
+    int columnLimit = 50,
+  }) async {
+    final query = <String, dynamic>{
+      for (final e in filter.entries) e.key: '${e.value}',
+      'group': ?group,
+      if (columns != null) 'columns': columns.join(','),
+      'column_limit': '$columnLimit',
+    };
+    final res = await _api.get('$_base/$projectId/board', query: query);
+    return res.when(
+      ok: (r) => Ok(BoardData.fromJson(r.data as Map<String, dynamic>)),
+      err: Err.new,
+    );
   }
 
   /// Shared DELETE helper that tolerates the 204 No Content status.

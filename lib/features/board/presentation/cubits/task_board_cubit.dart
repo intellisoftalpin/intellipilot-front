@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:intellipilot/core/work_items/work_item_filter.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
+import 'package:intellipilot/features/board/domain/board_config.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
@@ -27,30 +28,13 @@ class TaskBoardFailed extends TaskBoardState {
   const TaskBoardFailed();
 }
 
-/// Swimlane grouping dimensions for the board. `null` (the default) is the
-/// flat single-board layout.
-enum BoardGroupBy {
-  component('component'),
-  assignee('assignee'),
-  epic('epic'),
-  priority('priority');
-
-  const BoardGroupBy(this.wire);
-  final String wire;
-
-  static BoardGroupBy? fromWire(String? wire) {
-    if (wire == null) return null;
-    for (final g in BoardGroupBy.values) {
-      if (g.wire == wire) return g;
-    }
-    return null;
-  }
-}
-
 class TaskBoardLoaded extends TaskBoardState {
   const TaskBoardLoaded({
+    required this.board,
+    required this.config,
     required this.statuses,
-    required this.issues,
+    required this.flatColumns,
+    required this.lanes,
     required this.milestones,
     this.types = const [],
     this.priorities = const [],
@@ -58,22 +42,26 @@ class TaskBoardLoaded extends TaskBoardState {
     this.epics = const [],
     this.labels = const [],
     this.components = const [],
-    this.filter = const WorkItemFilter(),
+    this.adhocFilter = const WorkItemFilter(),
     this.staleData = false,
-    this.columnOrder = const [],
-    this.hiddenColumnIds = const {},
-    this.groupBy,
-    this.savedViews = const [],
   });
 
-  /// The `issue_status` taxonomy items, ordered — these are the board columns.
+  /// The board being rendered (its `config` drives columns/group/filters).
+  final Board board;
+  final BoardConfig config;
+
+  /// The `issue_status` taxonomy items — column headers + name resolution.
   final List<TaxonomyItem> statuses;
 
-  /// All issues for the project.
-  final List<Issue> issues;
+  /// Ordered per-column data for the flat board (includes the trailing
+  /// no-status column when present). Empty when the board is grouped.
+  final List<BoardColumnData> flatColumns;
 
-  /// Project milestones / types / priorities / sizes / epics / labels /
-  /// components — populate the shared filter bar.
+  /// Ordered swimlanes for a grouped board (each lane's columns are ordered to
+  /// match the visible column order). Empty when the board is flat.
+  final List<BoardLaneData> lanes;
+
+  /// Project taxonomy populating the shared filter bar + card chips.
   final List<Milestone> milestones;
   final List<TaxonomyItem> types;
   final List<TaxonomyItem> priorities;
@@ -82,28 +70,34 @@ class TaskBoardLoaded extends TaskBoardState {
   final List<Label> labels;
   final List<Component> components;
 
-  /// Shared work-item filter (identical model to the Issues list).
-  final WorkItemFilter filter;
+  /// The user's transient ad-hoc filter (session-only, not persisted). The
+  /// board's locked filters always win over these.
+  final WorkItemFilter adhocFilter;
 
-  /// Set to true on a 409 from a move — UI surfaces a banner.
+  /// Set when a move hit a 409 — UI surfaces a banner.
   final bool staleData;
 
-  /// Full ordering of status ids for the board columns (a superset that may
-  /// include hidden ones). Empty means "use the taxonomy default order".
-  final List<String> columnOrder;
+  BoardGroupBy? get group => config.group;
 
-  /// Status ids hidden from the board.
-  final Set<String> hiddenColumnIds;
-
-  /// Active swimlane grouping, or null for the flat board.
-  final BoardGroupBy? groupBy;
-
-  /// The user's saved board views (server-backed).
-  final List<BoardView> savedViews;
+  /// Locked + ad-hoc merged (locked win), with the swimlane group dimension
+  /// stripped — what's effectively shown in the filter bar.
+  WorkItemFilter get effectiveFilter {
+    final merged = WorkItemFilter.fromJson({
+      ...adhocFilter.toJson(),
+      ...config.filters.toJson(),
+    });
+    final g = config.group;
+    if (g == null) return merged;
+    final j = merged.toJson()..remove(g.filterKey);
+    return WorkItemFilter.fromJson(j);
+  }
 
   TaskBoardLoaded copyWith({
+    Board? board,
+    BoardConfig? config,
     List<TaxonomyItem>? statuses,
-    List<Issue>? issues,
+    List<BoardColumnData>? flatColumns,
+    List<BoardLaneData>? lanes,
     List<Milestone>? milestones,
     List<TaxonomyItem>? types,
     List<TaxonomyItem>? priorities,
@@ -111,15 +105,14 @@ class TaskBoardLoaded extends TaskBoardState {
     List<Epic>? epics,
     List<Label>? labels,
     List<Component>? components,
-    WorkItemFilter? filter,
+    WorkItemFilter? adhocFilter,
     bool? staleData,
-    List<String>? columnOrder,
-    Set<String>? hiddenColumnIds,
-    Object? groupBy = _keepGroup,
-    List<BoardView>? savedViews,
   }) => TaskBoardLoaded(
+    board: board ?? this.board,
+    config: config ?? this.config,
     statuses: statuses ?? this.statuses,
-    issues: issues ?? this.issues,
+    flatColumns: flatColumns ?? this.flatColumns,
+    lanes: lanes ?? this.lanes,
     milestones: milestones ?? this.milestones,
     types: types ?? this.types,
     priorities: priorities ?? this.priorities,
@@ -127,91 +120,17 @@ class TaskBoardLoaded extends TaskBoardState {
     epics: epics ?? this.epics,
     labels: labels ?? this.labels,
     components: components ?? this.components,
-    filter: filter ?? this.filter,
+    adhocFilter: adhocFilter ?? this.adhocFilter,
     staleData: staleData ?? this.staleData,
-    columnOrder: columnOrder ?? this.columnOrder,
-    hiddenColumnIds: hiddenColumnIds ?? this.hiddenColumnIds,
-    groupBy: groupBy == _keepGroup ? this.groupBy : groupBy as BoardGroupBy?,
-    savedViews: savedViews ?? this.savedViews,
   );
-
-  static const _keepGroup = Object();
-
-  /// The default column ordering for [statuses]: the `is_new` status first, the
-  /// `is_closed` statuses last, the rest by their taxonomy `order` in between.
-  static List<String> defaultColumnOrder(List<TaxonomyItem> statuses) {
-    final sorted = [...statuses]
-      ..sort((a, b) {
-        int rank(TaxonomyItem s) {
-          if (s.isNew ?? false) return 0;
-          if (s.isClosed ?? false) return 2;
-          return 1;
-        }
-
-        final ra = rank(a);
-        final rb = rank(b);
-        if (ra != rb) return ra.compareTo(rb);
-        return a.order.compareTo(b.order);
-      });
-    return [for (final s in sorted) s.id];
-  }
-
-  /// Visible status columns, in the configured order. Falls back to the default
-  /// ordering when no order is set, and appends any statuses missing from the
-  /// stored order (e.g. created after a view was saved).
-  List<TaxonomyItem> get orderedVisibleStatuses {
-    final byId = {for (final s in statuses) s.id: s};
-    final order = columnOrder.isEmpty
-        ? defaultColumnOrder(statuses)
-        : [
-            ...columnOrder.where(byId.containsKey),
-            for (final s in statuses)
-              if (!columnOrder.contains(s.id)) s.id,
-          ];
-    return [
-      for (final id in order)
-        if (byId[id] != null && !hiddenColumnIds.contains(id)) byId[id]!,
-    ];
-  }
-
-  Set<String> get _closedStatusIds => {
-    for (final s in statuses)
-      if (s.isClosed ?? false) s.id,
-  };
-
-  /// Top-level issues passing the active filter (board cards). Sub-tasks live
-  /// under their parent and are not surfaced as cards.
-  List<Issue> get visibleIssues {
-    final closed = _closedStatusIds;
-    return [
-      for (final i in issues)
-        if (i.parentId == null && filter.matches(i, closedStatusIds: closed)) i,
-    ];
-  }
-
-  /// Buckets [items] by `statusId`. Columns always include the visible statuses
-  /// (plus the trailing null column) so empty columns still render.
-  Map<String?, List<Issue>> bucketFor(List<Issue> items) {
-    final out = <String?, List<Issue>>{null: []};
-    for (final s in orderedVisibleStatuses) {
-      out[s.id] = [];
-    }
-    for (final t in items) {
-      out.putIfAbsent(t.statusId, () => []).add(t);
-    }
-    for (final list in out.values) {
-      list.sort((a, b) => a.order.compareTo(b.order));
-    }
-    return out;
-  }
-
-  /// Issues bucketed by `statusId`, after filters (the flat board).
-  Map<String?, List<Issue>> get bucketed => bucketFor(visibleIssues);
 
   @override
   List<Object?> get props => [
+    board.id,
+    config.toMap(),
     statuses,
-    issues,
+    flatColumns,
+    lanes,
     milestones,
     types,
     priorities,
@@ -219,12 +138,8 @@ class TaskBoardLoaded extends TaskBoardState {
     epics,
     labels,
     components,
-    filter,
+    adhocFilter,
     staleData,
-    columnOrder,
-    hiddenColumnIds,
-    groupBy,
-    savedViews,
   ];
 }
 
@@ -233,277 +148,300 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     required BacklogRepository repo,
     required CatalogRepository catalog,
     required MilestonesRepository milestones,
-    required WorkItemFilterStore filterStore,
     required this.projectId,
+    required this.boardId,
   }) : _repo = repo,
        _catalog = catalog,
        _milestones = milestones,
-       _filterStore = filterStore,
-       _filter = filterStore.load(_view, projectId),
        super(const TaskBoardLoading());
-
-  static const _view = 'board';
 
   final BacklogRepository _repo;
   final CatalogRepository _catalog;
   final MilestonesRepository _milestones;
-  final WorkItemFilterStore _filterStore;
   final String projectId;
-  WorkItemFilter _filter;
+  final String boardId;
 
-  WorkItemFilter get filter => _filter;
+  // Cached after the first full load so data-only refetches (filter changes,
+  // card moves) don't re-pull the whole taxonomy.
+  Board? _board;
+  BoardConfig _config = const BoardConfig();
+  List<TaxonomyItem> _statuses = const [];
+  List<TaxonomyItem> _types = const [];
+  List<TaxonomyItem> _priorities = const [];
+  List<TaxonomyItem> _sizes = const [];
+  List<Epic> _epics = const [];
+  List<Label> _labels = const [];
+  List<Component> _components = const [];
+  List<Milestone> _milestonesList = const [];
+  WorkItemFilter _adhoc = const WorkItemFilter();
 
-  // Board layout, kept in sync with state so it survives reloads (a card move
-  // triggers `load()`). Restored from the per-user "last used" board on first
-  // load, or from the taxonomy defaults when none is saved.
-  List<String> _columnOrder = const [];
-  Set<String> _hiddenColumnIds = const {};
-  BoardGroupBy? _groupBy;
-  List<BoardView> _savedViews = const [];
-  bool _restored = false;
-
+  /// Full load: board + config + taxonomy, then board data.
   Future<void> load() async {
     if (!isClosed) emit(const TaskBoardLoading());
 
-    // On the very first load, restore the per-user last-used board + view list.
-    if (!_restored) {
-      _restored = true;
-      final viewsRes = await _catalog.listBoardViews(projectId);
-      _savedViews = viewsRes.valueOrNull ?? const [];
-      final lastRes = await _catalog.getLastUsedBoard(projectId);
-      final last = lastRes.valueOrNull;
-      if (last != null) _readConfig(last);
+    final boardRes = await _catalog.getBoard(projectId, boardId);
+    final board = boardRes.valueOrNull;
+    if (board == null) {
+      if (!isClosed) emit(const TaskBoardFailed());
+      return;
     }
+    _board = board;
+    _config = BoardConfig.fromMap(board.config);
+    unawaited(_catalog.setLastOpenedBoard(projectId, boardId));
 
     final statusRes = await _catalog.listTaxonomy(
       projectId,
       TaxonomyKind.issueStatus,
     );
-    final issueRes = await _repo.listIssues(projectId);
-    final msRes = await _milestones.list(projectId);
-    final epicRes = await _repo.listEpics(projectId);
-    final labelRes = await _catalog.listLabels(projectId);
-    final compRes = await _catalog.listComponents(projectId);
-    final typeRes = await _catalog.listTaxonomy(
-      projectId,
-      TaxonomyKind.issueType,
-    );
-    final prioRes = await _catalog.listTaxonomy(
-      projectId,
-      TaxonomyKind.priority,
-    );
-    final sizeRes = await _catalog.listTaxonomy(projectId, TaxonomyKind.size);
     final statuses = statusRes.valueOrNull;
-    final issues = issueRes.valueOrNull;
-    if (statuses == null || issues == null) {
+    if (statuses == null) {
       if (!isClosed) emit(const TaskBoardFailed());
       return;
     }
-    // Default the order to the taxonomy ordering when nothing was restored.
-    if (_columnOrder.isEmpty) {
-      _columnOrder = TaskBoardLoaded.defaultColumnOrder(statuses);
+    _statuses = statuses;
+    _types =
+        (await _catalog.listTaxonomy(
+          projectId,
+          TaxonomyKind.issueType,
+        )).valueOrNull ??
+        const [];
+    _priorities =
+        (await _catalog.listTaxonomy(
+          projectId,
+          TaxonomyKind.priority,
+        )).valueOrNull ??
+        const [];
+    _sizes =
+        (await _catalog.listTaxonomy(
+          projectId,
+          TaxonomyKind.size,
+        )).valueOrNull ??
+        const [];
+    _epics = (await _repo.listEpics(projectId)).valueOrNull ?? const [];
+    _labels = (await _catalog.listLabels(projectId)).valueOrNull ?? const [];
+    _components =
+        (await _catalog.listComponents(projectId)).valueOrNull ?? const [];
+    _milestonesList =
+        (await _milestones.list(projectId)).valueOrNull ?? const [];
+
+    // Default the visible columns to the taxonomy order when the board has none.
+    if (_config.visibleColumnIds.isEmpty && _config.columnOrder.isEmpty) {
+      final order = BoardConfig.defaultColumnOrder(statuses);
+      _config = _config.copyWith(columnOrder: order, visibleColumnIds: order);
     }
+
+    await _refetchData();
+  }
+
+  /// The visible status ids in display order, falling back to the taxonomy
+  /// default and appending any statuses missing from the saved order.
+  List<String> get _visibleColumnIds {
+    final byId = {for (final s in _statuses) s.id: s};
+    final order = _config.columnOrder.isEmpty
+        ? BoardConfig.defaultColumnOrder(_statuses)
+        : _config.columnOrder;
+    final hidden = _config.hiddenColumnIds;
+    final visible = _config.visibleColumnIds.isEmpty
+        ? order
+        : _config.visibleColumnIds;
+    return [
+      for (final id in order)
+        if (byId.containsKey(id) &&
+            !hidden.contains(id) &&
+            visible.contains(id))
+          id,
+    ];
+  }
+
+  WorkItemFilter _effectiveFilter() {
+    final merged = WorkItemFilter.fromJson({
+      ..._adhoc.toJson(),
+      ..._config.filters.toJson(),
+    });
+    final g = _config.group;
+    if (g == null) return merged;
+    final j = merged.toJson()..remove(g.filterKey);
+    return WorkItemFilter.fromJson(j);
+  }
+
+  /// Data-only refetch using the cached board/taxonomy. Emits a loaded state
+  /// without flashing the spinner.
+  Future<void> _refetchData() async {
+    final board = _board;
+    if (board == null) return;
+    final visible = _visibleColumnIds;
+    final dataRes = await _catalog.fetchBoardData(
+      projectId,
+      filter: _effectiveFilter().toJson(),
+      group: _config.group?.wire,
+      columns: visible,
+      columnLimit: _config.columnLimit,
+    );
+    final data = dataRes.valueOrNull;
+    if (data == null) {
+      if (!isClosed && state is! TaskBoardLoaded) emit(const TaskBoardFailed());
+      return;
+    }
+
+    final flat = data.isGrouped
+        ? const <BoardColumnData>[]
+        : _orderColumns(data.columns, visible);
+    final lanes = data.isGrouped
+        ? [
+            for (final lane in data.lanes)
+              BoardLaneData(
+                key: lane.key,
+                total: lane.total,
+                columns: _orderColumns(lane.columns, visible),
+              ),
+          ]
+        : const <BoardLaneData>[];
+
     if (!isClosed) {
       emit(
         TaskBoardLoaded(
-          statuses: statuses,
-          issues: issues,
-          milestones: msRes.valueOrNull ?? const [],
-          types: typeRes.valueOrNull ?? const [],
-          priorities: prioRes.valueOrNull ?? const [],
-          sizes: sizeRes.valueOrNull ?? const [],
-          epics: epicRes.valueOrNull ?? const [],
-          labels: labelRes.valueOrNull ?? const [],
-          components: compRes.valueOrNull ?? const [],
-          filter: _filter,
-          columnOrder: _columnOrder,
-          hiddenColumnIds: _hiddenColumnIds,
-          groupBy: _groupBy,
-          savedViews: _savedViews,
+          board: board,
+          config: _config,
+          statuses: _statuses,
+          flatColumns: flat,
+          lanes: lanes,
+          milestones: _milestonesList,
+          types: _types,
+          priorities: _priorities,
+          sizes: _sizes,
+          epics: _epics,
+          labels: _labels,
+          components: _components,
+          adhocFilter: _adhoc,
         ),
       );
     }
   }
 
-  void setFilter(WorkItemFilter f) {
-    _filter = f;
-    unawaited(_filterStore.save(_view, projectId, f));
-    final s = state;
-    if (s is TaskBoardLoaded) emit(s.copyWith(filter: f));
-    unawaited(_persistLastUsed());
-  }
-
-  /// Show/hide and reorder the board columns. [order] is the full ordering of
-  /// status ids; [hidden] the subset that should not render.
-  void setColumns({required List<String> order, required Set<String> hidden}) {
-    _columnOrder = order;
-    _hiddenColumnIds = hidden;
-    final s = state;
-    if (s is TaskBoardLoaded) {
-      emit(s.copyWith(columnOrder: order, hiddenColumnIds: hidden));
-    }
-    unawaited(_persistLastUsed());
-  }
-
-  /// Set (or clear, with null) the active swimlane grouping.
-  void setGrouping(BoardGroupBy? groupBy) {
-    _groupBy = groupBy;
-    final s = state;
-    if (s is TaskBoardLoaded) emit(s.copyWith(groupBy: groupBy));
-    unawaited(_persistLastUsed());
-  }
-
-  /// Persist the current layout as a named, server-backed board view.
-  Future<void> saveView(String name) async {
-    final res = await _catalog.createBoardView(
-      projectId,
-      name,
-      _currentConfig(),
-    );
-    final created = res.valueOrNull;
-    if (created == null) return;
-    _savedViews = [..._savedViews, created];
-    final s = state;
-    if (s is TaskBoardLoaded) emit(s.copyWith(savedViews: _savedViews));
-  }
-
-  /// Apply a saved view's config to the live board.
-  void applyView(BoardView view) {
-    _readConfig(view.config);
-    final s = state;
-    if (s is TaskBoardLoaded) {
-      emit(
-        s.copyWith(
-          filter: _filter,
-          columnOrder: _columnOrder,
-          hiddenColumnIds: _hiddenColumnIds,
-          groupBy: _groupBy,
-        ),
-      );
-    }
-    unawaited(_filterStore.save(_view, projectId, _filter));
-    unawaited(_persistLastUsed());
-  }
-
-  /// Delete a saved view.
-  Future<void> deleteView(String viewId) async {
-    final res = await _catalog.deleteBoardView(projectId, viewId);
-    if (res.isErr) return;
-    _savedViews = [
-      for (final v in _savedViews)
-        if (v.id != viewId) v,
-    ];
-    final s = state;
-    if (s is TaskBoardLoaded) emit(s.copyWith(savedViews: _savedViews));
-  }
-
-  /// The current board layout serialized for persistence. Round-trips via
-  /// [_readConfig].
-  Map<String, dynamic> _currentConfig() {
-    final order = _columnOrder;
-    final visible = [
-      for (final id in order)
-        if (!_hiddenColumnIds.contains(id)) id,
-    ];
-    return {
-      'visible': visible,
-      'order': order,
-      'group': _groupBy?.wire,
-      'filter': _filter.toJson(),
+  /// Order [cols] to match [visibleIds]; append the no-status column and any
+  /// extra returned statuses at the end. Missing visible columns render empty.
+  List<BoardColumnData> _orderColumns(
+    List<BoardColumnData> cols,
+    List<String> visibleIds,
+  ) {
+    final byId = <String, BoardColumnData>{
+      for (final c in cols)
+        if (c.statusId != null) c.statusId!: c,
     };
-  }
-
-  /// Restore layout fields from a persisted config blob (best-effort).
-  void _readConfig(Map<String, dynamic> config) {
-    final order = (config['order'] as List<dynamic>?)
-        ?.map((e) => e as String)
-        .toList();
-    final visible = (config['visible'] as List<dynamic>?)
-        ?.map((e) => e as String)
-        .toSet();
-    if (order != null) _columnOrder = order;
-    if (visible != null && order != null) {
-      _hiddenColumnIds = {
-        for (final id in order)
-          if (!visible.contains(id)) id,
-      };
+    final out = <BoardColumnData>[
+      for (final id in visibleIds)
+        byId[id] ?? BoardColumnData(statusId: id, total: 0, cards: const []),
+    ];
+    // Extra statuses returned but not in the visible set (e.g. just created).
+    for (final c in cols) {
+      if (c.statusId != null && !visibleIds.contains(c.statusId)) out.add(c);
     }
-    _groupBy = BoardGroupBy.fromWire(config['group'] as String?);
-    final filterJson = config['filter'];
-    if (filterJson is Map<String, dynamic>) {
-      _filter = WorkItemFilter.fromJson(filterJson);
+    final noStatus = cols.where((c) => c.statusId == null).firstOrNull;
+    if (noStatus != null) out.add(noStatus);
+    return out;
+  }
+
+  /// Silently refetch the board data (no spinner) — used after a detail sheet
+  /// closes so any status/assignee edits are reflected.
+  Future<void> refresh() => _refetchData();
+
+  /// Replace the user's ad-hoc filter. Locked + group dimensions are stripped
+  /// so the ad-hoc layer stays purely additive.
+  void setAdhocFilter(WorkItemFilter f) {
+    final j = f.toJson()
+      ..removeWhere((k, _) => _config.lockedDimensions.contains(k));
+    final g = _config.group;
+    if (g != null) j.remove(g.filterKey);
+    _adhoc = WorkItemFilter.fromJson(j);
+    unawaited(_refetchData());
+  }
+
+  /// Append the next page of cards to one column (the "Load more" affordance).
+  Future<void> loadMoreColumn({
+    required String? statusId,
+    required int offset,
+    String? laneKey,
+  }) async {
+    final s = state;
+    if (s is! TaskBoardLoaded) return;
+    final filterMap = _effectiveFilter().toJson();
+    filterMap['status'] = statusId ?? 'none';
+    final g = _config.group;
+    if (g != null && laneKey != null) filterMap[g.filterKey] = laneKey;
+
+    final res = await _repo.listIssuesPaged(
+      projectId,
+      filter: filterMap,
+      limit: _config.columnLimit,
+      offset: offset,
+    );
+    final page = res.valueOrNull;
+    if (page == null) return;
+
+    final cur = state;
+    if (cur is! TaskBoardLoaded) return;
+
+    BoardColumnData appendTo(BoardColumnData col) {
+      final seen = {for (final c in col.cards) c.id};
+      final merged = [
+        ...col.cards,
+        for (final i in page.items)
+          if (!seen.contains(i.id)) i,
+      ];
+      return BoardColumnData(
+        statusId: col.statusId,
+        total: col.total,
+        cards: merged,
+      );
+    }
+
+    if (g == null) {
+      final next = [
+        for (final c in cur.flatColumns)
+          if (c.statusId == statusId) appendTo(c) else c,
+      ];
+      if (!isClosed) emit(cur.copyWith(flatColumns: next));
+    } else {
+      final next = [
+        for (final lane in cur.lanes)
+          if (lane.key == laneKey)
+            BoardLaneData(
+              key: lane.key,
+              total: lane.total,
+              columns: [
+                for (final c in lane.columns)
+                  if (c.statusId == statusId) appendTo(c) else c,
+              ],
+            )
+          else
+            lane,
+      ];
+      if (!isClosed) emit(cur.copyWith(lanes: next));
     }
   }
 
-  Future<void> _persistLastUsed() async {
-    await _catalog.setLastUsedBoard(projectId, _currentConfig());
-  }
-
-  /// Optimistic move of an issue to a different `statusId`. On 409 we set
-  /// `staleData = true` and reload to reconcile with the server.
+  /// Move an issue to a different `statusId`, then refetch the board data.
   Future<void> moveTask({
     required String taskId,
     required String? targetStatusId,
   }) async {
-    final s = state;
-    if (s is! TaskBoardLoaded) return;
-    final i = s.issues.indexWhere((t) => t.id == taskId);
-    if (i < 0) return;
-    final cur = s.issues[i];
-    if (cur.statusId == targetStatusId) return;
-
-    // Optimistic local swap.
-    final optimistic = [...s.issues];
-    optimistic[i] = Issue(
-      id: cur.id,
-      projectId: cur.projectId,
-      reference: cur.reference,
-      subject: cur.subject,
-      description: cur.description,
-      labels: cur.labels,
-      components: cur.components,
-      statusId: targetStatusId,
-      typeId: cur.typeId,
-      priorityId: cur.priorityId,
-      sizeId: cur.sizeId,
-      epicId: cur.epicId,
-      parentId: cur.parentId,
-      milestoneId: cur.milestoneId,
-      ownerId: cur.ownerId,
-      assignedTo: cur.assignedTo,
-      order: cur.order,
-      version: cur.version,
-      createdAt: cur.createdAt,
-      modifiedAt: cur.modifiedAt,
-      etag: cur.etag,
-    );
-    emit(s.copyWith(issues: optimistic, staleData: false));
-
-    // Fetch fresh issue to get a current ETag before PATCH.
     final freshRes = await _repo.getIssue(projectId, taskId);
     final fresh = freshRes.valueOrNull;
     if (fresh == null || fresh.etag == null) {
-      await load();
+      await _refetchData();
       return;
     }
+    if (fresh.statusId == targetStatusId) return;
     final patch = await _repo.updateIssue(
       projectId,
       taskId,
       body: UpdateIssueRequest(statusId: targetStatusId),
       etag: fresh.etag!,
     );
-    final updated = patch.valueOrNull;
-    if (updated == null) {
-      if (!isClosed) emit(s.copyWith(staleData: true));
-      await load();
-      return;
+    if (patch.valueOrNull == null) {
+      final s = state;
+      if (s is TaskBoardLoaded && !isClosed) emit(s.copyWith(staleData: true));
     }
-    final cur2 = state;
-    if (cur2 is! TaskBoardLoaded) return;
-    final j = cur2.issues.indexWhere((t) => t.id == taskId);
-    if (j < 0) return;
-    final next = [...cur2.issues];
-    next[j] = updated;
-    emit(cur2.copyWith(issues: next));
+    await _refetchData();
   }
 }

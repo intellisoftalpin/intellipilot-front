@@ -12,6 +12,10 @@ import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
+import 'package:intellipilot/features/board/presentation/boards_nav_refresh.dart';
+import 'package:intellipilot/features/board/presentation/widgets/board_settings_dialog.dart';
+import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
+import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/palette/presentation/cmd_k_dialog.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
@@ -526,11 +530,6 @@ class _ProjectRailState extends State<_ProjectRail> {
         path: Routes.projectDetailFor(widget.projectId),
       ),
       _RailItem(
-        icon: Icons.view_kanban_outlined,
-        label: t.railBoard,
-        path: Routes.projectBoardFor(widget.projectId),
-      ),
-      _RailItem(
         icon: Icons.bug_report_outlined,
         label: t.railIssues,
         path: Routes.projectIssuesFor(widget.projectId),
@@ -562,7 +561,14 @@ class _ProjectRailState extends State<_ProjectRail> {
       ),
     ];
 
-    final selectedIndex = _selectedIndexFor(widget.currentRoute, items);
+    // The Boards section owns its own selection; when the user is on any board
+    // route we suppress generic-row highlighting so Overview (a prefix of every
+    // project path) doesn't also light up.
+    final boardBase = Routes.projectBoardFor(widget.projectId);
+    final onBoard = widget.currentRoute.startsWith(boardBase);
+    final selectedIndex = onBoard
+        ? -1
+        : _selectedIndexFor(widget.currentRoute, items);
     final expanded = _currentExpanded;
     final theme = Theme.of(context);
 
@@ -596,7 +602,7 @@ class _ProjectRailState extends State<_ProjectRail> {
               ),
             ),
             const SizedBox(height: 8),
-            for (var i = 0; i < items.length; i++)
+            for (var i = 0; i < items.length; i++) ...[
               _RailRow(
                 icon: items[i].icon,
                 label: expanded ? Text(items[i].label) : null,
@@ -604,6 +610,16 @@ class _ProjectRailState extends State<_ProjectRail> {
                 selected: i == selectedIndex,
                 onTap: () => context.go(items[i].path),
               ),
+              // Inject the expandable Boards section right after Overview
+              // (index 1) so the rail order stays Overview → Boards → Issues.
+              if (i == 1)
+                _BoardsRailSection(
+                  projectId: widget.projectId,
+                  currentRoute: widget.currentRoute,
+                  railExpanded: expanded,
+                  active: onBoard,
+                ),
+            ],
           ],
         ),
       ),
@@ -742,6 +758,317 @@ class _RailRow extends StatelessWidget {
     return label == null
         ? Tooltip(message: tooltip, child: tappable)
         : tappable;
+  }
+}
+
+/// Expandable "Boards" rail entry. Lists the project's boards as children
+/// (each linking to its board route) plus a "New board" action. The
+/// expanded/collapsed state is persisted in the UI Hive box. When the rail
+/// itself is collapsed (icon-only) this renders as a single icon row that
+/// navigates to the board resolver.
+class _BoardsRailSection extends StatefulWidget {
+  const _BoardsRailSection({
+    required this.projectId,
+    required this.currentRoute,
+    required this.railExpanded,
+    required this.active,
+  });
+
+  final String projectId;
+  final String currentRoute;
+  final bool railExpanded;
+  final bool active;
+
+  @override
+  State<_BoardsRailSection> createState() => _BoardsRailSectionState();
+}
+
+class _BoardsRailSectionState extends State<_BoardsRailSection> {
+  static const _prefsKey = 'project_rail.boards_expanded';
+
+  late final KeyValueStorage _storage = getIt<KeyValueStorage>(
+    instanceName: HiveBoxes.ui,
+  );
+
+  List<Board> _boards = const [];
+  late bool _expanded = _storage.get<bool>(_prefsKey) ?? true;
+
+  @override
+  void initState() {
+    super.initState();
+    boardsNavRevision.addListener(_fetch);
+    unawaited(_fetch());
+  }
+
+  @override
+  void didUpdateWidget(covariant _BoardsRailSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.projectId != widget.projectId) unawaited(_fetch());
+  }
+
+  @override
+  void dispose() {
+    boardsNavRevision.removeListener(_fetch);
+    super.dispose();
+  }
+
+  Future<void> _fetch() async {
+    final res = await getIt<CatalogRepository>().listBoards(widget.projectId);
+    if (!mounted) return;
+    setState(() => _boards = res.valueOrNull ?? const []);
+  }
+
+  Future<void> _toggle() async {
+    setState(() => _expanded = !_expanded);
+    await _storage.set<bool>(_prefsKey, _expanded);
+  }
+
+  Future<void> _createBoard() async {
+    final created = await showBoardSettingsDialog(
+      context,
+      projectId: widget.projectId,
+    );
+    if (created == null || !mounted) return;
+    bumpBoardsNav();
+    if (mounted) {
+      context.go(Routes.projectBoardFor(widget.projectId, created.id));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+
+    // Collapsed rail: a single icon row leading to the board resolver.
+    if (!widget.railExpanded) {
+      return _RailRow(
+        icon: Icons.view_kanban_outlined,
+        label: null,
+        tooltip: t.railBoards,
+        selected: widget.active,
+        onTap: () => context.go(Routes.projectBoardFor(widget.projectId)),
+      );
+    }
+
+    final theme = Theme.of(context);
+    final activeBoardId = _activeBoardId();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _BoardsParentRow(
+          expanded: _expanded,
+          // Highlight the parent only when on the resolver (no specific board).
+          selected: widget.active && activeBoardId == null,
+          onTap: () => context.go(Routes.projectBoardFor(widget.projectId)),
+          onToggle: _toggle,
+        ),
+        if (_expanded) ...[
+          for (final b in _boards)
+            _BoardChildRow(
+              label: b.name,
+              color: b.color,
+              shared: b.isShared,
+              selected: b.id == activeBoardId,
+              onTap: () => context.go(
+                Routes.projectBoardFor(widget.projectId, b.id),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(left: 36, right: 12, bottom: 4),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: _createBoard,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 8,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.add,
+                      size: 18,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      t.boardNewAction,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// The board id in the current route, or null on the resolver route.
+  String? _activeBoardId() {
+    if (!widget.active) return null;
+    final segs = Uri.tryParse(widget.currentRoute)?.pathSegments ?? const [];
+    final i = segs.indexOf('boards');
+    if (i >= 0 && i + 1 < segs.length) return segs[i + 1];
+    return null;
+  }
+}
+
+class _BoardsParentRow extends StatelessWidget {
+  const _BoardsParentRow({
+    required this.expanded,
+    required this.selected,
+    required this.onTap,
+    required this.onToggle,
+  });
+
+  final bool expanded;
+  final bool selected;
+  final VoidCallback onTap;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = AppLocalizations.of(context);
+    final fg = selected
+        ? theme.colorScheme.onPrimaryContainer
+        : theme.colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: selected ? theme.colorScheme.primaryContainer : null,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: InkWell(
+                onTap: onTap,
+                child: Row(
+                  children: [
+                    Icon(Icons.view_kanban_outlined, size: 20, color: fg),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        t.railBoards,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: fg,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            InkWell(
+              onTap: onToggle,
+              borderRadius: BorderRadius.circular(4),
+              child: Icon(
+                expanded ? Icons.expand_less : Icons.expand_more,
+                size: 18,
+                color: fg,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BoardChildRow extends StatelessWidget {
+  const _BoardChildRow({
+    required this.label,
+    required this.color,
+    required this.shared,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String color;
+  final bool shared;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fg = selected
+        ? theme.colorScheme.onPrimaryContainer
+        : theme.colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.only(left: 24, right: 12, top: 2, bottom: 2),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: selected ? theme.colorScheme.primaryContainer : null,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              _BoardDot(color: color),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: fg,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                  ),
+                ),
+              ),
+              if (shared) Icon(Icons.group_outlined, size: 14, color: fg),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BoardDot extends StatelessWidget {
+  const _BoardDot({required this.color});
+  final String color;
+
+  @override
+  Widget build(BuildContext context) {
+    final parsed = _hex(color);
+    final theme = Theme.of(context);
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: parsed ?? theme.colorScheme.outlineVariant,
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+
+  Color? _hex(String hex) {
+    var s = hex.trim();
+    if (s.isEmpty) return null;
+    if (s.startsWith('#')) s = s.substring(1);
+    if (s.length == 6) s = 'ff$s';
+    if (s.length != 8) return null;
+    final v = int.tryParse(s, radix: 16);
+    return v == null ? null : Color(v);
   }
 }
 

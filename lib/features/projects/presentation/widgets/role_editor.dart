@@ -103,6 +103,7 @@ class RoleEditor extends StatelessWidget {
     PermissionDomain.repositories => t.permDomainRepositories,
     PermissionDomain.customers => t.permDomainCustomers,
     PermissionDomain.releases => t.permDomainReleases,
+    PermissionDomain.boards => t.railBoards,
   };
 
   String _permissionLabel(Permission p) {

@@ -1431,72 +1431,107 @@ class DemoCatalogRepository implements CatalogRepository {
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
-  // ---- kanban board views (per user) ----
+  // ---- kanban boards (personal + shared) ----
 
-  final Map<String, List<BoardView>> _boardViews = {};
-  final Map<String, Map<String, dynamic>> _lastBoard = {};
-  int _boardViewSeq = 0;
+  final Map<String, List<Board>> _boards = {};
+  final Map<String, String> _lastBoard = {};
+  int _boardSeq = 0;
+
+  List<Board> _boardsFor(String projectId) => _boards.putIfAbsent(
+    projectId,
+    () => [
+      Board(
+        id: 'board-default-$projectId',
+        projectId: projectId,
+        visibility: 'shared',
+        name: 'Board',
+        color: '',
+        config: const {},
+        order: 0,
+      ),
+    ],
+  );
 
   @override
-  Future<Result<List<BoardView>, AppFailure>> listBoardViews(
-    String projectId,
-  ) async {
+  Future<Result<List<Board>, AppFailure>> listBoards(String projectId) async {
     await _tick();
-    return Ok(List.unmodifiable(_boardViews[projectId] ?? const []));
+    return Ok(List.unmodifiable(_boardsFor(projectId)));
   }
 
   @override
-  Future<Result<BoardView, AppFailure>> createBoardView(
+  Future<Result<Board, AppFailure>> getBoard(
     String projectId,
-    String name,
-    Map<String, dynamic> config,
+    String boardId,
   ) async {
     await _tick();
-    final view = BoardView(
-      id: 'bv-${_boardViewSeq++}',
+    final b = _boardsFor(projectId).where((x) => x.id == boardId).firstOrNull;
+    if (b == null) return const Err(NotFoundFailure());
+    return Ok(b);
+  }
+
+  @override
+  Future<Result<Board, AppFailure>> createBoard(
+    String projectId, {
+    required String name,
+    String color = '',
+    bool shared = false,
+    Map<String, dynamic> config = const {},
+  }) async {
+    await _tick();
+    final list = _boardsFor(projectId);
+    final b = Board(
+      id: 'board-${_boardSeq++}',
       projectId: projectId,
-      userId: 'demo-user',
+      ownerId: 'demo-user',
+      visibility: shared ? 'shared' : 'personal',
       name: name,
+      color: color,
       config: config,
+      order: list.length.toDouble(),
     );
-    (_boardViews[projectId] ??= []).add(view);
-    return Ok(view);
+    list.add(b);
+    return Ok(b);
   }
 
   @override
-  Future<Result<BoardView, AppFailure>> updateBoardView(
+  Future<Result<Board, AppFailure>> updateBoard(
     String projectId,
-    String viewId,
-    String name,
-    Map<String, dynamic> config,
-  ) async {
+    String boardId, {
+    required String name,
+    String color = '',
+    Map<String, dynamic> config = const {},
+  }) async {
     await _tick();
-    final list = _boardViews[projectId] ?? [];
-    final i = list.indexWhere((v) => v.id == viewId);
+    final list = _boardsFor(projectId);
+    final i = list.indexWhere((b) => b.id == boardId);
     if (i < 0) return const Err(NotFoundFailure());
-    final updated = BoardView(
-      id: viewId,
+    final old = list[i];
+    final updated = Board(
+      id: old.id,
       projectId: projectId,
-      userId: 'demo-user',
+      ownerId: old.ownerId,
+      visibility: old.visibility,
       name: name,
+      color: color,
       config: config,
+      order: old.order,
     );
     list[i] = updated;
     return Ok(updated);
   }
 
   @override
-  Future<Result<Unit, AppFailure>> deleteBoardView(
+  Future<Result<Unit, AppFailure>> deleteBoard(
     String projectId,
-    String viewId,
+    String boardId,
   ) async {
     await _tick();
-    _boardViews[projectId]?.removeWhere((v) => v.id == viewId);
+    _boards[projectId]?.removeWhere((b) => b.id == boardId);
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
   @override
-  Future<Result<Map<String, dynamic>?, AppFailure>> getLastUsedBoard(
+  Future<Result<String?, AppFailure>> getLastOpenedBoard(
     String projectId,
   ) async {
     await _tick();
@@ -1504,13 +1539,49 @@ class DemoCatalogRepository implements CatalogRepository {
   }
 
   @override
-  Future<Result<Unit, AppFailure>> setLastUsedBoard(
+  Future<Result<Unit, AppFailure>> setLastOpenedBoard(
     String projectId,
-    Map<String, dynamic> config,
+    String boardId,
   ) async {
     await _tick();
-    _lastBoard[projectId] = config;
+    _lastBoard[projectId] = boardId;
     return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<BoardData, AppFailure>> fetchBoardData(
+    String projectId, {
+    Map<String, dynamic> filter = const {},
+    String? group,
+    List<String>? columns,
+    int columnLimit = 50,
+  }) async {
+    await _tick();
+    final f = WorkItemFilter.fromJson(Map<String, dynamic>.from(filter));
+    final issues =
+        _s.issues
+            .where(
+              (i) =>
+                  i.projectId == projectId &&
+                  i.parentId == null &&
+                  f.matches(i, closedStatusIds: const {}),
+            )
+            .toList()
+          ..sort((a, b) => a.order.compareTo(b.order));
+    final byStatus = <String?, List<Issue>>{};
+    for (final i in issues) {
+      byStatus.putIfAbsent(i.statusId, () => []).add(i);
+    }
+    final cols = byStatus.entries
+        .map(
+          (e) => BoardColumnData(
+            statusId: e.key,
+            total: e.value.length,
+            cards: e.value.take(columnLimit).toList(),
+          ),
+        )
+        .toList();
+    return Ok(BoardData(columns: cols));
   }
 }
 
