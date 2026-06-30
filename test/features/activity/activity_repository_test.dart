@@ -144,8 +144,7 @@ void main() {
       expect(form.files.single.value.filename, 'logo.png');
     });
 
-    test('signAttachmentUrl returns the {url, expires_at} envelope',
-        () async {
+    test('signAttachmentUrl returns the {url, expires_at} envelope', () async {
       final adapter = _Adapter(
         (_) async => _ok(
           '{"url":"/api/v1/projects/p1/attachments/a1/download?exp=1&sig=z",'

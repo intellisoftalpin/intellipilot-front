@@ -113,7 +113,7 @@ class Issue {
     this.ownerId,
     this.assignedTo,
     this.category,
-    this.customerId,
+    this.customerIds = const [],
     this.startDate,
     this.dueDate,
     this.resolution,
@@ -141,7 +141,9 @@ class Issue {
       ownerId: json['owner_id'] as String?,
       assignedTo: json['assigned_to'] as String?,
       category: json['category'] as String?,
-      customerId: json['customer_id'] as String?,
+      customerIds: (json['customer_ids'] as List<dynamic>? ?? const [])
+          .map((e) => e as String)
+          .toList(),
       startDate: json['start_date'] as String?,
       dueDate: json['due_date'] as String?,
       resolution: json['resolution'] as String?,
@@ -182,7 +184,9 @@ class Issue {
 
   /// One of the fixed `IssueCategory` wire values (nullable).
   final String? category;
-  final String? customerId;
+
+  /// Requesting customers (many-to-many).
+  final List<String> customerIds;
 
   /// `YYYY-MM-DD` dates (nullable).
   final String? startDate;
@@ -303,7 +307,7 @@ class CreateIssueRequest {
     this.milestoneId,
     this.assignedTo,
     this.category,
-    this.customerId,
+    this.customerIds = const [],
     this.startDate,
     this.dueDate,
     this.resolution,
@@ -324,7 +328,7 @@ class CreateIssueRequest {
   final String? milestoneId;
   final String? assignedTo;
   final String? category;
-  final String? customerId;
+  final List<String> customerIds;
   final String? startDate;
   final String? dueDate;
   final String? resolution;
@@ -345,7 +349,7 @@ class CreateIssueRequest {
     if (milestoneId != null) 'milestone_id': milestoneId,
     if (assignedTo != null) 'assigned_to': assignedTo,
     if (category != null) 'category': category,
-    if (customerId != null) 'customer_id': customerId,
+    'customer_ids': customerIds,
     if (startDate != null) 'start_date': startDate,
     if (dueDate != null) 'due_date': dueDate,
     if (resolution != null) 'resolution': resolution,
@@ -370,7 +374,7 @@ class UpdateIssueRequest {
     this.assignedTo = const _Absent(),
     this.ownerId = const _Absent(),
     this.category = const _Absent(),
-    this.customerId = const _Absent(),
+    this.customerIds,
     this.startDate = const _Absent(),
     this.dueDate = const _Absent(),
     this.resolution = const _Absent(),
@@ -392,7 +396,9 @@ class UpdateIssueRequest {
   final Object? assignedTo;
   final Object? ownerId;
   final Object? category;
-  final Object? customerId;
+
+  /// Full replacement of the issue's customers when present.
+  final List<String>? customerIds;
   final Object? startDate;
   final Object? dueDate;
   final Object? resolution;
@@ -416,7 +422,7 @@ class UpdateIssueRequest {
     if (assignedTo is! _Absent) 'assigned_to': assignedTo,
     if (ownerId is! _Absent) 'owner_id': ownerId,
     if (category is! _Absent) 'category': category,
-    if (customerId is! _Absent) 'customer_id': customerId,
+    if (customerIds != null) 'customer_ids': customerIds,
     if (startDate is! _Absent) 'start_date': startDate,
     if (dueDate is! _Absent) 'due_date': dueDate,
     if (resolution is! _Absent) 'resolution': resolution,

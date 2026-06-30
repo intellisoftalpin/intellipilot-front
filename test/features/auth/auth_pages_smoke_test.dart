@@ -27,8 +27,7 @@ Widget _wrap(Widget child) {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: Navigator(
-        onGenerateRoute: (_) =>
-            MaterialPageRoute<void>(builder: (_) => child),
+        onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => child),
       ),
     ),
   );
@@ -49,8 +48,9 @@ void main() {
 
   tearDown(resetDependencies);
 
-  testWidgets('LoginPage shows form and error banner on submit failure',
-      (tester) async {
+  testWidgets('LoginPage shows form and error banner on submit failure', (
+    tester,
+  ) async {
     await tester.pumpWidget(_wrap(const LoginPage()));
     await tester.pumpAndSettle();
 
@@ -78,8 +78,7 @@ void main() {
     expect(find.textContaining('incorrect'), findsOneWidget);
   });
 
-  testWidgets('LoginPage surfaces MFA notice on mfa_required',
-      (tester) async {
+  testWidgets('LoginPage surfaces MFA notice on mfa_required', (tester) async {
     repo.loginHandler = (_, _) async => const Ok<LoginResult, AppFailure>(
       LoginMfaRequired(mfaToken: 'mfa', methods: ['totp']),
     );
@@ -110,8 +109,8 @@ void main() {
   });
 
   testWidgets('RegisterPage shows ConflictFailure copy on 409', (tester) async {
-    repo.registerHandler =
-        () async => const Err<Unit, AppFailure>(ConflictFailure());
+    repo.registerHandler = () async =>
+        const Err<Unit, AppFailure>(ConflictFailure());
 
     await tester.pumpWidget(_wrap(const RegisterPage()));
     await tester.pumpAndSettle();
@@ -133,8 +132,9 @@ void main() {
     expect(find.textContaining('already in use'), findsOneWidget);
   });
 
-  testWidgets('ForgotPasswordPage shows success panel with dev token banner',
-      (tester) async {
+  testWidgets('ForgotPasswordPage shows success panel with dev token banner', (
+    tester,
+  ) async {
     repo.requestResetHandler = (_) async =>
         const Ok<PasswordResetRequestResponse, AppFailure>(
           PasswordResetRequestResponse(status: 'ok', resetToken: 'TOK123'),
@@ -167,8 +167,9 @@ void main() {
     },
   );
 
-  testWidgets('ResetPasswordPage submit failure shows the error banner',
-      (tester) async {
+  testWidgets('ResetPasswordPage submit failure shows the error banner', (
+    tester,
+  ) async {
     repo.confirmResetHandler = () async => const Err<Unit, AppFailure>(
       ValidationFailure(fieldErrors: []),
     );

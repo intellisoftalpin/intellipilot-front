@@ -29,15 +29,14 @@ ResponseBody _ok(
   String body, {
   int status = 200,
   Map<String, List<String>>? extraHeaders,
-}) =>
-    ResponseBody.fromString(
-      body,
-      status,
-      headers: {
-        Headers.contentTypeHeader: ['application/json'],
-        ...?extraHeaders,
-      },
-    );
+}) => ResponseBody.fromString(
+  body,
+  status,
+  headers: {
+    Headers.contentTypeHeader: ['application/json'],
+    ...?extraHeaders,
+  },
+);
 
 ApiClient _client(_Adapter adapter) {
   final dio = Dio()..httpClientAdapter = adapter;
@@ -147,6 +146,7 @@ void main() {
           {
             'subject': 'A',
             'description': '',
+            'customer_ids': <String>[],
             'labels': <String>[],
             'components': <String>[],
           },
@@ -154,6 +154,7 @@ void main() {
             'subject': 'B',
             'description': '',
             'epic_id': 'e1',
+            'customer_ids': <String>[],
             'labels': <String>[],
             'components': <String>[],
           },

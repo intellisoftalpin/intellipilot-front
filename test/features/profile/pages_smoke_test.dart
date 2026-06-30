@@ -47,8 +47,9 @@ void main() {
 
   tearDown(resetDependencies);
 
-  testWidgets('ProfilePage renders fields seeded from the loaded user',
-      (tester) async {
+  testWidgets('ProfilePage renders fields seeded from the loaded user', (
+    tester,
+  ) async {
     await tester.pumpWidget(_wrap(const ProfilePage()));
     await tester.pumpAndSettle();
     expect(find.text('u@e.com'), findsOneWidget);
@@ -73,8 +74,9 @@ void main() {
     expect(find.text('Profile updated.'), findsOneWidget);
   });
 
-  testWidgets('AccountPage shows export + danger zone sections',
-      (tester) async {
+  testWidgets('AccountPage shows export + danger zone sections', (
+    tester,
+  ) async {
     await tester.pumpWidget(_wrap(const AccountPage()));
     await tester.pumpAndSettle();
     expect(find.text('Export your data'), findsOneWidget);

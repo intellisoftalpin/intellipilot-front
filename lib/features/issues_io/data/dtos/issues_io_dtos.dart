@@ -86,18 +86,21 @@ class ImportMapping {
     this.statuses = const [],
     this.priorities = const [],
     this.components = const [],
+    this.users = const [],
   });
 
   final List<ValueChoice> types;
   final List<ValueChoice> statuses;
   final List<ValueChoice> priorities;
   final List<ValueChoice> components;
+  final List<ValueChoice> users;
 
   Map<String, dynamic> toJson() => {
     'types': types.map((c) => c.toJson()).toList(),
     'statuses': statuses.map((c) => c.toJson()).toList(),
     'priorities': priorities.map((c) => c.toJson()).toList(),
     'components': components.map((c) => c.toJson()).toList(),
+    'users': users.map((c) => c.toJson()).toList(),
   };
 }
 

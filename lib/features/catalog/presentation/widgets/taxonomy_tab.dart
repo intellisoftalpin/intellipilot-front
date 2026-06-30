@@ -203,6 +203,7 @@ class _TaxonomyKindView extends StatelessWidget {
         ? existing!.color
         : ColorPalette.swatches.first;
     var isClosed = existing?.isClosed ?? false;
+    var isNew = existing?.isNew ?? false;
     var emoji = existing?.emoji ?? '';
     final cubit = context.read<TaxonomyCubit>();
 
@@ -261,6 +262,15 @@ class _TaxonomyKindView extends StatelessWidget {
                     onChanged: (v) => setState(() => isClosed = v),
                   ),
                 ],
+                if (kind.hasNew) ...[
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(t.taxonomyIsNew),
+                    subtitle: Text(t.taxonomyIsNewHint),
+                    value: isNew,
+                    onChanged: (v) => setState(() => isNew = v),
+                  ),
+                ],
                 if (kind.hasValue) ...[
                   const SizedBox(height: 12),
                   TextField(
@@ -299,6 +309,7 @@ class _TaxonomyKindView extends StatelessWidget {
                       color: color,
                       emoji: kind.hasEmoji ? emoji : '',
                       isClosed: kind.hasClosed ? isClosed : null,
+                      isNew: kind.hasNew ? isNew : null,
                       value: value,
                     ),
                   );
@@ -310,6 +321,7 @@ class _TaxonomyKindView extends StatelessWidget {
                       color: color,
                       emoji: kind.hasEmoji ? emoji : null,
                       isClosed: kind.hasClosed ? isClosed : null,
+                      isNew: kind.hasNew ? isNew : null,
                       value: value,
                     ),
                   );
@@ -360,6 +372,7 @@ class _ItemSubtitle extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final parts = <String>[item.slug];
+    if (item.isNew ?? false) parts.add(t.taxonomyNewBadge);
     if (item.isClosed ?? false) parts.add(t.taxonomyClosedBadge);
     if (item.value != null) {
       parts.add('${t.taxonomyValueLabel}: ${item.value}');

@@ -37,8 +37,8 @@ void main() {
     blocTest<ProfileCubit, ProfileState>(
       'load() emits LoadFailed on transport failure',
       build: () {
-        repo.getProfileHandler =
-            () async => const Err<UserProfile, AppFailure>(NetworkFailure());
+        repo.getProfileHandler = () async =>
+            const Err<UserProfile, AppFailure>(NetworkFailure());
         return ProfileCubit(repo: repo, locale: locale);
       },
       act: (c) => c.load(),
@@ -98,8 +98,8 @@ void main() {
     blocTest<ProfileCubit, ProfileState>(
       'save() records lastError on transport failure',
       build: () {
-        repo.updateProfileHandler =
-            (_) async => const Err<UserProfile, AppFailure>(NetworkFailure());
+        repo.updateProfileHandler = (_) async =>
+            const Err<UserProfile, AppFailure>(NetworkFailure());
         return ProfileCubit(repo: repo, locale: locale);
       },
       seed: () => ProfileLoaded(
@@ -144,8 +144,7 @@ void main() {
       ),
       expect: () => [
         predicate<AccountDeletionState>(
-          (s) =>
-              s is AccountDeletionFailed && s.failure is ValidationFailure,
+          (s) => s is AccountDeletionFailed && s.failure is ValidationFailure,
           'failed with ValidationFailure',
         ),
       ],
@@ -171,8 +170,10 @@ void main() {
         typedConfirmation: 'user1',
         expectedUsername: 'user1',
       ),
-      expect: () =>
-          [isA<AccountDeletionRunning>(), isA<AccountDeletionScheduled>()],
+      expect: () => [
+        isA<AccountDeletionRunning>(),
+        isA<AccountDeletionScheduled>(),
+      ],
       verify: (_) async {
         expect(repo.deleteCalls, 1);
         await Future<void>.delayed(const Duration(milliseconds: 5));
@@ -183,17 +184,18 @@ void main() {
     blocTest<AccountDeletionCubit, AccountDeletionState>(
       'transport failure surfaces AccountDeletionFailed',
       build: () {
-        repo.deleteAccountHandler =
-            () async =>
-                const Err<AccountErasureResponse, AppFailure>(ServerFailure());
+        repo.deleteAccountHandler = () async =>
+            const Err<AccountErasureResponse, AppFailure>(ServerFailure());
         return AccountDeletionCubit(repo: repo, session: session);
       },
       act: (c) => c.deleteAccount(
         typedConfirmation: 'user1',
         expectedUsername: 'user1',
       ),
-      expect: () =>
-          [isA<AccountDeletionRunning>(), isA<AccountDeletionFailed>()],
+      expect: () => [
+        isA<AccountDeletionRunning>(),
+        isA<AccountDeletionFailed>(),
+      ],
     );
   });
 
@@ -232,8 +234,8 @@ void main() {
     blocTest<GdprExportCubit, GdprExportState>(
       'transport failure -> Failed',
       build: () {
-        repo.exportDataHandler =
-            () async => const Err<Map<String, dynamic>, AppFailure>(
+        repo.exportDataHandler = () async =>
+            const Err<Map<String, dynamic>, AppFailure>(
               ServerFailure(),
             );
         return GdprExportCubit(

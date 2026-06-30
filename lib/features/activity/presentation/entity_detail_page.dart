@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
+import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/models/intellibot.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
@@ -436,7 +437,15 @@ class _DetailView extends StatelessWidget {
                     : Routes.projectIssuesFor(data.project.id),
               ),
             ),
-            Crumb(label: key, mono: true),
+            Crumb(
+              label: key,
+              mono: true,
+              onTap: kind == EntityKind.issue
+                  ? () => context.go(
+                      Routes.issueByKeyFor(data.project.id, key),
+                    )
+                  : null,
+            ),
           ],
         ),
         actions: [
@@ -715,21 +724,6 @@ class _ActionBar extends StatelessWidget {
       runSpacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
-          builder: (context, state) {
-            if (state is! ProjectDetailLoaded ||
-                !state.has(_modifyPermission(kind))) {
-              return const SizedBox.shrink();
-            }
-            return FilledButton.tonalIcon(
-              icon: const Icon(Icons.edit_outlined, size: 16),
-              onPressed: () => context.go(
-                Routes.entityEditFor(projectId, kind, entityId),
-              ),
-              label: Text(t.actionEdit),
-            );
-          },
-        ),
         FilledButton.tonalIcon(
           icon: const Icon(Icons.chat_bubble_outline, size: 16),
           onPressed: () {
@@ -756,11 +750,6 @@ class _ActionBar extends StatelessWidget {
       ],
     );
   }
-
-  Permission _modifyPermission(EntityKind kind) => switch (kind) {
-    EntityKind.epic => Permission.epicModify,
-    EntityKind.issue => Permission.issueModify,
-  };
 }
 
 class _StatusPill extends StatelessWidget {
@@ -1237,11 +1226,27 @@ class _DetailsTable extends StatelessWidget {
           if (issue.category == IssueCategory.customerRequest.wire)
             _customerRow(
               context,
-              currentId: issue.customerId,
+              currentIds: issue.customerIds,
               canEdit: canEdit,
             ),
-          _kvRow(context, 'Start date', issue.startDate ?? '—'),
-          _kvRow(context, 'Due date', issue.dueDate ?? '—'),
+          _kvRowWith(
+            context,
+            'Start date',
+            _DateValue(
+              value: issue.startDate,
+              canEdit: canEdit,
+              onTap: () => _pickIssueDate(context, isStart: true),
+            ),
+          ),
+          _kvRowWith(
+            context,
+            'Due date',
+            _DateValue(
+              value: issue.dueDate,
+              canEdit: canEdit,
+              onTap: () => _pickIssueDate(context, isStart: false),
+            ),
+          ),
           _resolutionRow(
             context,
             current: issue.resolution,
@@ -1454,32 +1459,34 @@ class _DetailsTable extends StatelessWidget {
       onPicked: (id) => _patchEntity(
         issuePatch: () => id == IssueCategory.customerRequest.wire
             ? UpdateIssueRequest(category: id)
-            // Leaving customer_request clears any linked customer.
-            : UpdateIssueRequest(category: id, customerId: null),
+            // Leaving customer_request clears any linked customers.
+            : UpdateIssueRequest(category: id, customerIds: const []),
       ),
     );
   }
 
   Widget _customerRow(
     BuildContext context, {
-    required String? currentId,
+    required List<String> currentIds,
     required bool canEdit,
   }) {
-    final customers = data.customersById.values.toList()
+    final all = data.customersById.values.toList()
       ..sort((a, b) => a.name.compareTo(b.name));
-    final current = currentId == null ? null : data.customersById[currentId];
-    return _editableRow(
+    return _kvRowWith(
       context,
-      label: 'Customer',
-      displayText: current?.name ?? '—',
-      currentId: currentId,
-      noneLabel: '—',
-      canEdit: canEdit,
-      candidates: [
-        for (final c in customers) _Candidate(id: c.id, label: c.name),
-      ],
-      onPicked: (id) => _patchEntity(
-        issuePatch: () => UpdateIssueRequest(customerId: id),
+      'Customers',
+      _MultiSelectCell(
+        displayText: _customerList(currentIds, data.customersById),
+        candidates: [
+          for (final c in all) _MultiCandidate(id: c.id, label: c.name),
+        ],
+        selectedIds: currentIds,
+        title: 'Customers',
+        emptyLabel: '—',
+        canEdit: canEdit,
+        onSaved: (next) => _patchEntity(
+          issuePatch: () => UpdateIssueRequest(customerIds: next),
+        ),
       ),
     );
   }
@@ -1641,6 +1648,35 @@ class _DetailsTable extends StatelessWidget {
       ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
   String _componentList(List<String> ids, Map<String, Component> by) =>
       ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
+  String _customerList(List<String> ids, Map<String, Customer> by) =>
+      ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
+
+  /// Opens a date picker for the issue's start / due date and PATCHes the
+  /// chosen `YYYY-MM-DD` value (mirrors the epic date editing flow).
+  Future<void> _pickIssueDate(
+    BuildContext context, {
+    required bool isStart,
+  }) async {
+    final entity = data.entity;
+    if (entity is! _IssueRec) return;
+    final raw = isStart ? entity.issue.startDate : entity.issue.dueDate;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.tryParse(raw ?? '') ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null) return;
+    final s =
+        '${picked.year.toString().padLeft(4, '0')}-'
+        '${picked.month.toString().padLeft(2, '0')}-'
+        '${picked.day.toString().padLeft(2, '0')}';
+    await _patchEntity(
+      issuePatch: () => isStart
+          ? UpdateIssueRequest(startDate: s)
+          : UpdateIssueRequest(dueDate: s),
+    );
+  }
 }
 
 class _Candidate {
@@ -3033,7 +3069,7 @@ class _EpicCoverFieldState extends State<_EpicCoverField> {
     );
     if (!mounted) return;
     setState(() => _busy = false);
-    if (res.isOk) widget.onChanged();
+    res.when(ok: (_) => widget.onChanged(), err: _showError);
   }
 
   Future<void> _remove() async {
@@ -3044,7 +3080,14 @@ class _EpicCoverFieldState extends State<_EpicCoverField> {
     );
     if (!mounted) return;
     setState(() => _busy = false);
-    if (res.isOk) widget.onChanged();
+    res.when(ok: (_) => widget.onChanged(), err: _showError);
+  }
+
+  void _showError(AppFailure f) {
+    final t = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(f.serverMessage ?? t.attachmentsUploadFailed)),
+    );
   }
 
   @override

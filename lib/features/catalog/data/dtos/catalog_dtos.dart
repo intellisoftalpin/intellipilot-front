@@ -12,6 +12,10 @@ enum TaxonomyKind {
   /// Kinds that carry an `is_closed` flag (the status kind).
   bool get hasClosed => this == TaxonomyKind.issueStatus;
 
+  /// Kinds that carry an `is_new` flag — the default landing column; at most
+  /// one status per project carries it (the status kind).
+  bool get hasNew => this == TaxonomyKind.issueStatus;
+
   /// Kinds that carry a numeric `value` (size only — the ordinal 1..6 that
   /// drives the scaled size badge).
   bool get hasValue => this == TaxonomyKind.size;
@@ -41,6 +45,7 @@ class TaxonomyItem {
     required this.createdAt,
     this.emoji = '',
     this.isClosed,
+    this.isNew,
     this.value,
   });
 
@@ -55,6 +60,7 @@ class TaxonomyItem {
       emoji: (json['emoji'] as String?) ?? '',
       order: (json['order'] as num?)?.toDouble() ?? 0.0,
       isClosed: json['is_closed'] as bool?,
+      isNew: json['is_new'] as bool?,
       value: (json['value'] as num?)?.toDouble(),
       createdAt: DateTime.parse(json['created_at'] as String),
     );
@@ -69,6 +75,9 @@ class TaxonomyItem {
   final String emoji;
   final double order;
   final bool? isClosed;
+
+  /// The "new" (default) status flag — status kind only; at most one per project.
+  final bool? isNew;
   final double? value;
   final DateTime createdAt;
 }
@@ -80,6 +89,7 @@ class CreateTaxonomyItemRequest {
     this.color = '',
     this.emoji = '',
     this.isClosed,
+    this.isNew,
     this.value,
   });
 
@@ -88,6 +98,7 @@ class CreateTaxonomyItemRequest {
   final String color;
   final String emoji;
   final bool? isClosed;
+  final bool? isNew;
   final double? value;
 
   Map<String, dynamic> toJson() => {
@@ -96,6 +107,7 @@ class CreateTaxonomyItemRequest {
     'color': color,
     'emoji': emoji,
     if (isClosed != null) 'is_closed': isClosed,
+    if (isNew != null) 'is_new': isNew,
     if (value != null) 'value': value,
   };
 }
@@ -106,6 +118,7 @@ class UpdateTaxonomyItemRequest {
     this.color,
     this.emoji,
     this.isClosed,
+    this.isNew,
     this.value,
   });
 
@@ -113,6 +126,7 @@ class UpdateTaxonomyItemRequest {
   final String? color;
   final String? emoji;
   final bool? isClosed;
+  final bool? isNew;
   final double? value;
 
   Map<String, dynamic> toJson() => {
@@ -120,6 +134,7 @@ class UpdateTaxonomyItemRequest {
     if (color != null) 'color': color,
     if (emoji != null) 'emoji': emoji,
     if (isClosed != null) 'is_closed': isClosed,
+    if (isNew != null) 'is_new': isNew,
     if (value != null) 'value': value,
   };
 }
@@ -828,4 +843,30 @@ abstract final class ColorPalette {
     '#ff7518',
     '#34495e',
   ];
+}
+
+/// A per-user saved kanban board state. [config] is an opaque blob the board
+/// cubit owns (visible columns, order, filter, grouping).
+class BoardView {
+  const BoardView({
+    required this.id,
+    required this.projectId,
+    required this.userId,
+    required this.name,
+    required this.config,
+  });
+
+  factory BoardView.fromJson(Map<String, dynamic> json) => BoardView(
+    id: json['id'] as String,
+    projectId: json['project_id'] as String,
+    userId: json['user_id'] as String,
+    name: json['name'] as String,
+    config: (json['config'] as Map<String, dynamic>?) ?? const {},
+  );
+
+  final String id;
+  final String projectId;
+  final String userId;
+  final String name;
+  final Map<String, dynamic> config;
 }

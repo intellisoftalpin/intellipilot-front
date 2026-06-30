@@ -7,6 +7,8 @@ import 'package:intellipilot/features/backlog/presentation/cubits/issues_cubit.d
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/issues_io/data/dtos/issues_io_dtos.dart';
 import 'package:intellipilot/features/issues_io/domain/issues_io_repository.dart';
+import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
+import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// Sentinel dropdown values that aren't a taxonomy id.
@@ -53,6 +55,11 @@ class _ImportDialogState extends State<_ImportDialog> {
   final Map<String, String> _statuses = {};
   final Map<String, String> _priorities = {};
   final Map<String, String> _components = {};
+  // Jira user string -> pilot user id (or _skip sentinel for unassigned).
+  final Map<String, String> _users = {};
+
+  // Existing project members, used to populate the Users mapping dropdowns.
+  List<Membership> _members = const [];
 
   // Final summary.
   ImportResult? _result;
@@ -72,7 +79,11 @@ class _ImportDialogState extends State<_ImportDialog> {
       filename: picked.name,
       bytes: picked.bytes,
     );
+    final membersRes = await getIt<ProjectsRepository>().listMembers(
+      widget.projectId,
+    );
     if (!mounted) return;
+    _members = membersRes.valueOrNull ?? const <Membership>[];
     res.when(
       ok: (p) => setState(() {
         _busy = false;
@@ -101,6 +112,9 @@ class _ImportDialogState extends State<_ImportDialog> {
     for (final v in p.components) {
       _components[v.value] = v.matchedId ?? _skip;
     }
+    for (final u in p.unmatchedUsers) {
+      _users[u] = _skip;
+    }
   }
 
   ImportMapping _buildMapping() {
@@ -118,6 +132,7 @@ class _ImportDialogState extends State<_ImportDialog> {
       statuses: choices(_statuses),
       priorities: choices(_priorities),
       components: choices(_components),
+      users: choices(_users),
     );
   }
 
@@ -217,21 +232,7 @@ class _ImportDialogState extends State<_ImportDialog> {
             true,
           ),
         if (p.components.isNotEmpty) _componentSection(t, p.components),
-        if (p.unmatchedUsers.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text(
-            t.importUnmatchedUsers,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          Text(
-            p.unmatchedUsers.join(', '),
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          Text(
-            t.importUnmatchedUsersHint,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
+        if (p.unmatchedUsers.isNotEmpty) _usersSection(t, p.unmatchedUsers),
         for (final w in p.warnings) ...[
           const SizedBox(height: 8),
           Row(
@@ -310,6 +311,38 @@ class _ImportDialogState extends State<_ImportDialog> {
                 ),
               ],
               (sel) => setState(() => _components[v.value] = sel),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Maps each unmatched Jira user to an existing project member, or leaves
+  /// the issues unassigned via the skip sentinel.
+  Widget _usersSection(AppLocalizations t, List<String> users) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t.importUnmatchedUsers,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          for (final u in users)
+            _row(
+              u,
+              _users[u] ?? _skip,
+              [
+                DropdownMenuItem(value: _skip, child: Text(t.importSkip)),
+                ..._members.map(
+                  (m) => DropdownMenuItem(
+                    value: m.userId,
+                    child: Text(m.displayName),
+                  ),
+                ),
+              ],
+              (sel) => setState(() => _users[u] = sel),
             ),
         ],
       ),

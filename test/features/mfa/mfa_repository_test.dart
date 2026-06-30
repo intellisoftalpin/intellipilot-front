@@ -25,14 +25,13 @@ class _Adapter implements HttpClientAdapter {
   }
 }
 
-ResponseBody _ok(String body, {int status = 200}) =>
-    ResponseBody.fromString(
-      body,
-      status,
-      headers: {
-        Headers.contentTypeHeader: ['application/json'],
-      },
-    );
+ResponseBody _ok(String body, {int status = 200}) => ResponseBody.fromString(
+  body,
+  status,
+  headers: {
+    Headers.contentTypeHeader: ['application/json'],
+  },
+);
 
 ApiClient _client(_Adapter adapter) {
   final dio = Dio()..httpClientAdapter = adapter;
@@ -97,8 +96,7 @@ void main() {
     expect(res.valueOrNull?.first.lastUsedAt, isNull);
   });
 
-  test('startPasskeyRegistration unwraps state_id + creation_options',
-      () async {
+  test('startPasskeyRegistration unwraps state_id + creation_options', () async {
     final adapter = _Adapter(
       (_) async => _ok(
         '{"state_id":"abc","creation_options":{"publicKey":{"rp":{"name":"x"}}}}',
@@ -110,15 +108,17 @@ void main() {
     expect(res.valueOrNull?.options['publicKey'], isA<Map<String, dynamic>>());
   });
 
-  test('regenerateRecoveryCodes returns 409 ConflictFailure when no 2FA',
-      () async {
-    final adapter = _Adapter(
-      (_) async => _ok('{"title":"no_2fa"}', status: 409),
-    );
-    final repo = MfaRepositoryImpl(_client(adapter));
-    final res = await repo.regenerateRecoveryCodes();
-    expect(res.failureOrNull, isA<ConflictFailure>());
-  });
+  test(
+    'regenerateRecoveryCodes returns 409 ConflictFailure when no 2FA',
+    () async {
+      final adapter = _Adapter(
+        (_) async => _ok('{"title":"no_2fa"}', status: 409),
+      );
+      final repo = MfaRepositoryImpl(_client(adapter));
+      final res = await repo.regenerateRecoveryCodes();
+      expect(res.failureOrNull, isA<ConflictFailure>());
+    },
+  );
 
   test('finishPasskeyAuthentication parses TokenResponse', () async {
     final adapter = _Adapter(

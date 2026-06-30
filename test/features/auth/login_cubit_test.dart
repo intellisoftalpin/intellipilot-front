@@ -37,8 +37,7 @@ void main() {
         return make();
       },
       act: (c) => c.submit(email: 'u@e.com', password: 'pw12345678'),
-      expect: () =>
-          [isA<LoginSubmitting>(), isA<LoginSucceeded>()],
+      expect: () => [isA<LoginSubmitting>(), isA<LoginSucceeded>()],
       verify: (_) async {
         // SessionBloc transitions to Authenticated after the event lands.
         await Future<void>.delayed(const Duration(milliseconds: 5));
@@ -49,10 +48,9 @@ void main() {
     blocTest<LoginCubit, LoginState>(
       'mfa branch: emits LoginMfaChallenged when backend asks for 2FA',
       build: () {
-        repo.loginHandler =
-            (_, _) async => const Ok<LoginResult, AppFailure>(
-              LoginMfaRequired(mfaToken: 'mfa', methods: ['totp']),
-            );
+        repo.loginHandler = (_, _) async => const Ok<LoginResult, AppFailure>(
+          LoginMfaRequired(mfaToken: 'mfa', methods: ['totp']),
+        );
         return make();
       },
       act: (c) => c.submit(email: 'u@e.com', password: 'pw12345678'),
@@ -70,8 +68,7 @@ void main() {
       expect: () => [
         isA<LoginSubmitting>(),
         predicate<LoginState>(
-          (s) =>
-              s is LoginFailed && s.failure is UnauthorizedFailure,
+          (s) => s is LoginFailed && s.failure is UnauthorizedFailure,
           'failed with UnauthorizedFailure',
         ),
       ],
@@ -80,8 +77,7 @@ void main() {
     blocTest<LoginCubit, LoginState>(
       'reset() goes back to LoginIdle',
       build: make,
-      seed: () =>
-          const LoginFailed(failure: UnauthorizedFailure()),
+      seed: () => const LoginFailed(failure: UnauthorizedFailure()),
       act: (c) => c.reset(),
       expect: () => [isA<LoginIdle>()],
     );

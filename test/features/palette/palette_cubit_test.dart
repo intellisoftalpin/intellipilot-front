@@ -16,8 +16,7 @@ class _FakeProjects implements ProjectsRepository {
   final List<Project> _items;
 
   @override
-  Future<Result<List<Project>, AppFailure>> listProjects() async =>
-      Ok(_items);
+  Future<Result<List<Project>, AppFailure>> listProjects() async => Ok(_items);
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>
@@ -102,8 +101,7 @@ void main() {
       expect(out.whereType<WikiResult>().length, 1);
     });
 
-    test('#NNN query produces an EntityResult via the ref resolver',
-        () async {
+    test('#NNN query produces an EntityResult via the ref resolver', () async {
       final cubit = PaletteCubit(
         projects: _FakeProjects(const []),
         backlog: _FakeBacklog(

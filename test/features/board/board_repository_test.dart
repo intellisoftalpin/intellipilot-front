@@ -94,8 +94,7 @@ void main() {
       );
     });
 
-    test('null status column parses into BoardColumn with no status',
-        () async {
+    test('null status column parses into BoardColumn with no status', () async {
       final repo = BoardRepositoryImpl(
         _client(
           _Adapter(

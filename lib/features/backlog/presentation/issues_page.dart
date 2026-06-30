@@ -275,7 +275,25 @@ class _IssuesViewState extends State<_IssuesView> {
       state: s,
       projectId: widget.projectId,
     );
-    if (body != null) await cubit.create(body);
+    if (body == null || !context.mounted) return;
+    // Create with just subject + type, then drop the user straight into the
+    // sidebar to fill in the rest (mirrors the epic create flow).
+    final res = await getIt<BacklogRepository>().createIssue(
+      widget.projectId,
+      body,
+    );
+    final created = res.valueOrNull;
+    if (created == null || !context.mounted) return;
+    setState(() => _selectedId = created.id);
+    await showEntityDetailSheet(
+      context,
+      projectId: widget.projectId,
+      kind: EntityKind.issue,
+      entityId: created.id,
+    );
+    if (!context.mounted) return;
+    setState(() => _selectedId = null);
+    await cubit.load();
   }
 
   Future<void> _export(BuildContext context, ExportFormat format) async {
@@ -415,7 +433,21 @@ class _EmptyIssues extends StatelessWidget {
                   state: state,
                   projectId: cubit.projectId,
                 );
-                if (body != null) await cubit.create(body);
+                if (body == null || !context.mounted) return;
+                final res = await getIt<BacklogRepository>().createIssue(
+                  cubit.projectId,
+                  body,
+                );
+                final created = res.valueOrNull;
+                if (created == null || !context.mounted) return;
+                await showEntityDetailSheet(
+                  context,
+                  projectId: cubit.projectId,
+                  kind: EntityKind.issue,
+                  entityId: created.id,
+                );
+                if (!context.mounted) return;
+                await cubit.load();
               },
               label: Text(t.actionNewIssue),
             )
@@ -516,33 +548,8 @@ class _IssueRow extends StatelessWidget {
                 ],
                 onSelected: (v) async {
                   if (v == 'edit') {
-                    final cubit = context.read<IssuesCubit>();
-                    final body = await showIssueEditDialog(
-                      context,
-                      state: state,
-                      projectId: cubit.projectId,
-                      existing: issue,
-                    );
-                    if (body == null || !context.mounted) return;
-                    await cubit.update(
-                      issue.id,
-                      UpdateIssueRequest(
-                        subject: body.subject,
-                        description: body.description,
-                        statusId: body.statusId,
-                        typeId: body.typeId,
-                        priorityId: body.priorityId,
-                        sizeId: body.sizeId,
-                        assignedTo: body.assignedTo,
-                        epicId: body.epicId,
-                        milestoneId: body.milestoneId,
-                        category: body.category,
-                        startDate: body.startDate,
-                        dueDate: body.dueDate,
-                        labels: body.labels,
-                        components: body.components,
-                      ),
-                    );
+                    // Editing now happens inline on the detail sidebar.
+                    onSelect(issue.id);
                   } else if (v == 'delete') {
                     final ok = await showDialog<bool>(
                       context: context,

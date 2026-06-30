@@ -46,6 +46,10 @@ abstract interface class BacklogRepository {
   // ---- issues (unified: Story / Task / Bug / sub-task) ----
   Future<Result<List<Issue>, AppFailure>> listIssues(String projectId);
   Future<Result<Issue, AppFailure>> getIssue(String projectId, String id);
+
+  /// Resolve a human-readable issue key's numeric ref (e.g. 398 from `PS-398`)
+  /// to the full issue — backs key-based deep links.
+  Future<Result<Issue, AppFailure>> getIssueByRef(String projectId, int ref);
   Future<Result<Issue, AppFailure>> createIssue(
     String projectId,
     CreateIssueRequest body,

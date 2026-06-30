@@ -796,6 +796,100 @@ class CatalogRepositoryImpl implements CatalogRepository {
     String userId,
   ) => _delete('$_base/$projectId/issues/$issueId/watchers/$userId');
 
+  // ---- kanban board views (per user) ----
+
+  @override
+  Future<Result<List<BoardView>, AppFailure>> listBoardViews(
+    String projectId,
+  ) async {
+    final res = await _api.get('$_base/$projectId/board-views');
+    return res.when(
+      ok: (r) {
+        final body = r.data as Map<String, dynamic>;
+        final raw = body['views'] as List<dynamic>? ?? const [];
+        return Ok(
+          raw
+              .map((e) => BoardView.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
+      },
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<BoardView, AppFailure>> createBoardView(
+    String projectId,
+    String name,
+    Map<String, dynamic> config,
+  ) async {
+    final res = await _api.post(
+      '$_base/$projectId/board-views',
+      body: {'name': name, 'config': config},
+    );
+    return res.when(
+      ok: (r) => Ok(BoardView.fromJson(r.data as Map<String, dynamic>)),
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<BoardView, AppFailure>> updateBoardView(
+    String projectId,
+    String viewId,
+    String name,
+    Map<String, dynamic> config,
+  ) async {
+    try {
+      final response = await _api.dio.put<dynamic>(
+        '$_base/$projectId/board-views/$viewId',
+        data: {'name': name, 'config': config},
+      );
+      return Ok(BoardView.fromJson(response.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteBoardView(
+    String projectId,
+    String viewId,
+  ) => _delete('$_base/$projectId/board-views/$viewId');
+
+  @override
+  Future<Result<Map<String, dynamic>?, AppFailure>> getLastUsedBoard(
+    String projectId,
+  ) async {
+    final res = await _api.get('$_base/$projectId/board-views/last-used');
+    return res.when(
+      ok: (r) {
+        final body = r.data as Map<String, dynamic>;
+        return Ok(body['config'] as Map<String, dynamic>?);
+      },
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> setLastUsedBoard(
+    String projectId,
+    Map<String, dynamic> config,
+  ) async {
+    try {
+      await _api.dio.put<dynamic>(
+        '$_base/$projectId/board-views/last-used',
+        data: config,
+      );
+      return const Ok<Unit, AppFailure>(Unit.instance);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 204) {
+        return const Ok<Unit, AppFailure>(Unit.instance);
+      }
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
   /// Shared DELETE helper that tolerates the 204 No Content status.
   Future<Result<Unit, AppFailure>> _delete(String path) async {
     try {

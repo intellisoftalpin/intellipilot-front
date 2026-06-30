@@ -22,13 +22,14 @@ void main() {
     blocTest<TotpSetupCubit, TotpSetupState>(
       'start() emits Starting then AwaitingCode on success',
       build: () {
-        repo.startTotpHandler = () async => const Ok<TotpStartResponse, AppFailure>(
-          TotpStartResponse(
-            secretBase32: 'ABCDEF',
-            provisioningUri: 'otpauth://totp/...',
-            qrPngBase64: 'iVBORw0KGgo=',
-          ),
-        );
+        repo.startTotpHandler = () async =>
+            const Ok<TotpStartResponse, AppFailure>(
+              TotpStartResponse(
+                secretBase32: 'ABCDEF',
+                provisioningUri: 'otpauth://totp/...',
+                qrPngBase64: 'iVBORw0KGgo=',
+              ),
+            );
         return TotpSetupCubit(repo);
       },
       act: (c) => c.start(),
@@ -38,8 +39,8 @@ void main() {
     blocTest<TotpSetupCubit, TotpSetupState>(
       'confirm() success emits Confirming then Enabled',
       build: () {
-        repo.confirmTotpHandler =
-            (_) async => const Ok<RecoveryCodesResponse, AppFailure>(
+        repo.confirmTotpHandler = (_) async =>
+            const Ok<RecoveryCodesResponse, AppFailure>(
               RecoveryCodesResponse(codes: ['aaa', 'bbb', 'ccc']),
             );
         return TotpSetupCubit(repo);
@@ -89,8 +90,8 @@ void main() {
     blocTest<RecoveryCodesCubit, RecoveryCodesState>(
       'regenerate() success emits Revealed',
       build: () {
-        repo.regenerateHandler =
-            () async => const Ok<RecoveryCodesResponse, AppFailure>(
+        repo.regenerateHandler = () async =>
+            const Ok<RecoveryCodesResponse, AppFailure>(
               RecoveryCodesResponse(codes: ['x', 'y']),
             );
         return RecoveryCodesCubit(repo);
@@ -102,8 +103,8 @@ void main() {
     blocTest<RecoveryCodesCubit, RecoveryCodesState>(
       'regenerate() failure emits Failed',
       build: () {
-        repo.regenerateHandler =
-            () async => const Err<RecoveryCodesResponse, AppFailure>(
+        repo.regenerateHandler = () async =>
+            const Err<RecoveryCodesResponse, AppFailure>(
               ConflictFailure(),
             );
         return RecoveryCodesCubit(repo);
@@ -126,14 +127,13 @@ void main() {
     blocTest<MfaVerifyCubit, MfaVerifyState>(
       'success dispatches SessionEstablished and emits Succeeded',
       build: () {
-        auth.verifyMfaHandler = () async =>
-            const Ok<TokenResponse, AppFailure>(
-              TokenResponse(
-                accessToken: 't',
-                tokenType: 'Bearer',
-                expiresIn: 600,
-              ),
-            );
+        auth.verifyMfaHandler = () async => const Ok<TokenResponse, AppFailure>(
+          TokenResponse(
+            accessToken: 't',
+            tokenType: 'Bearer',
+            expiresIn: 600,
+          ),
+        );
         return MfaVerifyCubit(repo: auth, session: session);
       },
       act: (c) => c.submit(mfaToken: 'mfa', method: 'totp', code: '123456'),
@@ -190,7 +190,9 @@ void main() {
             const Ok<PasskeyCeremony, AppFailure>(
               PasskeyCeremony(
                 stateId: 's1',
-                options: {'rp': {'name': 'r'}},
+                options: {
+                  'rp': {'name': 'r'},
+                },
               ),
             );
         repo.listPasskeysHandler = () async =>
@@ -282,8 +284,8 @@ void main() {
     blocTest<PasskeysCubit, PasskeysState>(
       'remove() records error on failure',
       build: () {
-        repo.deletePasskeyHandler =
-            (_) async => const Err<Unit, AppFailure>(NotFoundFailure());
+        repo.deletePasskeyHandler = (_) async =>
+            const Err<Unit, AppFailure>(NotFoundFailure());
         return PasskeysCubit(repo: repo, passkeys: passkeys);
       },
       seed: () => PasskeysLoaded(
@@ -349,7 +351,10 @@ void main() {
         );
       },
       act: (c) => c.signIn('u@e.com'),
-      expect: () => [isA<PasskeySignInRunning>(), isA<PasskeySignInSucceeded>()],
+      expect: () => [
+        isA<PasskeySignInRunning>(),
+        isA<PasskeySignInSucceeded>(),
+      ],
       verify: (_) async {
         await Future<void>.delayed(const Duration(milliseconds: 5));
         expect(session.state, isA<SessionAuthenticated>());

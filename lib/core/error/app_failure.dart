@@ -18,6 +18,19 @@ sealed class AppFailure {
   String toString() => 'AppFailure.$debugLabel(problem: $problem)';
 }
 
+extension AppFailureMessage on AppFailure {
+  /// The backend's human-readable reason (Problem `detail`, else `title`),
+  /// when present — e.g. "could not write the icon image to storage". UI code
+  /// should fall back to a localized string when this is null.
+  String? get serverMessage {
+    final d = problem?.detail;
+    if (d != null && d.isNotEmpty) return d;
+    final tt = problem?.title;
+    if (tt != null && tt.isNotEmpty) return tt;
+    return null;
+  }
+}
+
 final class NetworkFailure extends AppFailure {
   const NetworkFailure({super.cause}) : super(problem: null);
   @override

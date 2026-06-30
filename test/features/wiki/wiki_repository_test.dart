@@ -29,15 +29,14 @@ ResponseBody _ok(
   String body, {
   int status = 200,
   Map<String, List<String>>? extra,
-}) =>
-    ResponseBody.fromString(
-      body,
-      status,
-      headers: {
-        Headers.contentTypeHeader: ['application/json'],
-        ...?extra,
-      },
-    );
+}) => ResponseBody.fromString(
+  body,
+  status,
+  headers: {
+    Headers.contentTypeHeader: ['application/json'],
+    ...?extra,
+  },
+);
 
 ApiClient _client(_Adapter adapter) {
   final dio = Dio()..httpClientAdapter = adapter;

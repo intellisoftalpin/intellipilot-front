@@ -207,6 +207,20 @@ class BacklogRepositoryImpl implements BacklogRepository {
   }
 
   @override
+  Future<Result<Issue, AppFailure>> getIssueByRef(
+    String projectId,
+    int ref,
+  ) async {
+    final res = await _api.get('$_base/$projectId/issues/by-ref/$ref');
+    return res.when(
+      ok: (r) => Ok(
+        Issue.fromJson(r.data as Map<String, dynamic>, etag: _etag(r)),
+      ),
+      err: Err.new,
+    );
+  }
+
+  @override
   Future<Result<Issue, AppFailure>> createIssue(
     String projectId,
     CreateIssueRequest body,

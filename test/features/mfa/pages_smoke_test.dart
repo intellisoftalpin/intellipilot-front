@@ -30,8 +30,7 @@ Widget _wrap(Widget child) => MultiBlocProvider(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Navigator(
-      onGenerateRoute: (_) =>
-          MaterialPageRoute<void>(builder: (_) => child),
+      onGenerateRoute: (_) => MaterialPageRoute<void>(builder: (_) => child),
     ),
   ),
 );
@@ -62,25 +61,24 @@ void main() {
     expect(find.text('Manage passkeys'), findsOneWidget);
   });
 
-  testWidgets('TotpSetupPage shows QR + secret when start succeeds',
-      (tester) async {
-    mfa.startTotpHandler = () async =>
-        const Ok<TotpStartResponse, AppFailure>(
-          TotpStartResponse(
-            secretBase32: 'JBSWY3DPEHPK3PXP',
-            provisioningUri: 'otpauth://totp/x',
-            qrPngBase64:
-                'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAfbLI3wAAAABJRU5ErkJggg==',
-          ),
-        );
+  testWidgets('TotpSetupPage shows QR + secret when start succeeds', (
+    tester,
+  ) async {
+    mfa.startTotpHandler = () async => const Ok<TotpStartResponse, AppFailure>(
+      TotpStartResponse(
+        secretBase32: 'JBSWY3DPEHPK3PXP',
+        provisioningUri: 'otpauth://totp/x',
+        qrPngBase64:
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAfbLI3wAAAABJRU5ErkJggg==',
+      ),
+    );
     await tester.pumpWidget(_wrap(const TotpSetupPage()));
     await tester.pumpAndSettle();
     expect(find.text('JBSWY3DPEHPK3PXP'), findsOneWidget);
     expect(find.text('6-digit code'), findsOneWidget);
   });
 
-  testWidgets('RecoveryCodesPage shows codes after regenerate',
-      (tester) async {
+  testWidgets('RecoveryCodesPage shows codes after regenerate', (tester) async {
     mfa.regenerateHandler = () async =>
         const Ok<RecoveryCodesResponse, AppFailure>(
           RecoveryCodesResponse(codes: ['code-1', 'code-2']),
@@ -93,24 +91,28 @@ void main() {
     expect(find.text('code-2'), findsOneWidget);
   });
 
-  testWidgets('PasskeysPage shows empty state when no passkeys', (tester) async {
-    mfa.listPasskeysHandler =
-        () async => const Ok<List<PasskeyListItem>, AppFailure>([]);
+  testWidgets('PasskeysPage shows empty state when no passkeys', (
+    tester,
+  ) async {
+    mfa.listPasskeysHandler = () async =>
+        const Ok<List<PasskeyListItem>, AppFailure>([]);
     await tester.pumpWidget(_wrap(const PasskeysPage()));
     await tester.pumpAndSettle();
     expect(find.textContaining("haven't added"), findsOneWidget);
   });
 
-  testWidgets('MfaVerifyPage shows context-lost message without challenge',
-      (tester) async {
+  testWidgets('MfaVerifyPage shows context-lost message without challenge', (
+    tester,
+  ) async {
     // SessionBloc is in SessionUnknown by default → not SessionMfaRequired.
     await tester.pumpWidget(_wrap(const MfaVerifyPage()));
     await tester.pumpAndSettle();
     expect(find.textContaining('sign-in session expired'), findsOneWidget);
   });
 
-  testWidgets('MfaVerifyPage renders form when session is MfaRequired',
-      (tester) async {
+  testWidgets('MfaVerifyPage renders form when session is MfaRequired', (
+    tester,
+  ) async {
     getIt<SessionBloc>().add(
       const SessionMfaChallenged(
         mfaToken: 'mfa-1',
@@ -124,8 +126,9 @@ void main() {
     expect(find.text('Recovery code'), findsOneWidget);
   });
 
-  testWidgets('PasskeySignInPage shows unsupported notice on stub',
-      (tester) async {
+  testWidgets('PasskeySignInPage shows unsupported notice on stub', (
+    tester,
+  ) async {
     // StubPasskeyService defaults to supported=true; replace with unsupported.
     await resetDependencies();
     await configureForTests(

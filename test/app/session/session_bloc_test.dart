@@ -127,10 +127,9 @@ void main() {
     blocTest<SessionBloc, SessionState>(
       'SessionRefreshRequested failure -> Unauthenticated(refreshFailed)',
       build: () {
-        repo.refreshHandler =
-            () async => const Err<TokenResponse, AppFailure>(
-              UnauthorizedFailure(),
-            );
+        repo.refreshHandler = () async => const Err<TokenResponse, AppFailure>(
+          UnauthorizedFailure(),
+        );
         return make();
       },
       seed: () => SessionAuthenticated(
@@ -149,12 +148,14 @@ void main() {
       },
     );
 
-    test('SessionRefreshing exposes the stale access token via state.props',
-        () {
-      const s = SessionRefreshing(staleAccessToken: 'stale-1');
-      expect(s.staleAccessToken, 'stale-1');
-      expect(s.props, const ['stale-1']);
-    });
+    test(
+      'SessionRefreshing exposes the stale access token via state.props',
+      () {
+        const s = SessionRefreshing(staleAccessToken: 'stale-1');
+        expect(s.staleAccessToken, 'stale-1');
+        expect(s.props, const ['stale-1']);
+      },
+    );
 
     test('currentAccessToken is null while unauthenticated', () {
       expect(make().currentAccessToken, isNull);

@@ -27,6 +27,26 @@ class TaskBoardFailed extends TaskBoardState {
   const TaskBoardFailed();
 }
 
+/// Swimlane grouping dimensions for the board. `null` (the default) is the
+/// flat single-board layout.
+enum BoardGroupBy {
+  component('component'),
+  assignee('assignee'),
+  epic('epic'),
+  priority('priority');
+
+  const BoardGroupBy(this.wire);
+  final String wire;
+
+  static BoardGroupBy? fromWire(String? wire) {
+    if (wire == null) return null;
+    for (final g in BoardGroupBy.values) {
+      if (g.wire == wire) return g;
+    }
+    return null;
+  }
+}
+
 class TaskBoardLoaded extends TaskBoardState {
   const TaskBoardLoaded({
     required this.statuses,
@@ -40,6 +60,10 @@ class TaskBoardLoaded extends TaskBoardState {
     this.components = const [],
     this.filter = const WorkItemFilter(),
     this.staleData = false,
+    this.columnOrder = const [],
+    this.hiddenColumnIds = const {},
+    this.groupBy,
+    this.savedViews = const [],
   });
 
   /// The `issue_status` taxonomy items, ordered — these are the board columns.
@@ -64,6 +88,19 @@ class TaskBoardLoaded extends TaskBoardState {
   /// Set to true on a 409 from a move — UI surfaces a banner.
   final bool staleData;
 
+  /// Full ordering of status ids for the board columns (a superset that may
+  /// include hidden ones). Empty means "use the taxonomy default order".
+  final List<String> columnOrder;
+
+  /// Status ids hidden from the board.
+  final Set<String> hiddenColumnIds;
+
+  /// Active swimlane grouping, or null for the flat board.
+  final BoardGroupBy? groupBy;
+
+  /// The user's saved board views (server-backed).
+  final List<BoardView> savedViews;
+
   TaskBoardLoaded copyWith({
     List<TaxonomyItem>? statuses,
     List<Issue>? issues,
@@ -76,6 +113,10 @@ class TaskBoardLoaded extends TaskBoardState {
     List<Component>? components,
     WorkItemFilter? filter,
     bool? staleData,
+    List<String>? columnOrder,
+    Set<String>? hiddenColumnIds,
+    Object? groupBy = _keepGroup,
+    List<BoardView>? savedViews,
   }) => TaskBoardLoaded(
     statuses: statuses ?? this.statuses,
     issues: issues ?? this.issues,
@@ -88,23 +129,74 @@ class TaskBoardLoaded extends TaskBoardState {
     components: components ?? this.components,
     filter: filter ?? this.filter,
     staleData: staleData ?? this.staleData,
+    columnOrder: columnOrder ?? this.columnOrder,
+    hiddenColumnIds: hiddenColumnIds ?? this.hiddenColumnIds,
+    groupBy: groupBy == _keepGroup ? this.groupBy : groupBy as BoardGroupBy?,
+    savedViews: savedViews ?? this.savedViews,
   );
 
-  /// Issues bucketed by `statusId`, after filters. Only top-level issues are
-  /// cards (sub-tasks live under their parent). Columns always come from the
-  /// status taxonomy so the board renders even with zero issues.
-  Map<String?, List<Issue>> get bucketed {
-    final closed = {
-      for (final s in statuses)
-        if (s.isClosed ?? false) s.id,
-    };
+  static const _keepGroup = Object();
+
+  /// The default column ordering for [statuses]: the `is_new` status first, the
+  /// `is_closed` statuses last, the rest by their taxonomy `order` in between.
+  static List<String> defaultColumnOrder(List<TaxonomyItem> statuses) {
+    final sorted = [...statuses]
+      ..sort((a, b) {
+        int rank(TaxonomyItem s) {
+          if (s.isNew ?? false) return 0;
+          if (s.isClosed ?? false) return 2;
+          return 1;
+        }
+
+        final ra = rank(a);
+        final rb = rank(b);
+        if (ra != rb) return ra.compareTo(rb);
+        return a.order.compareTo(b.order);
+      });
+    return [for (final s in sorted) s.id];
+  }
+
+  /// Visible status columns, in the configured order. Falls back to the default
+  /// ordering when no order is set, and appends any statuses missing from the
+  /// stored order (e.g. created after a view was saved).
+  List<TaxonomyItem> get orderedVisibleStatuses {
+    final byId = {for (final s in statuses) s.id: s};
+    final order = columnOrder.isEmpty
+        ? defaultColumnOrder(statuses)
+        : [
+            ...columnOrder.where(byId.containsKey),
+            for (final s in statuses)
+              if (!columnOrder.contains(s.id)) s.id,
+          ];
+    return [
+      for (final id in order)
+        if (byId[id] != null && !hiddenColumnIds.contains(id)) byId[id]!,
+    ];
+  }
+
+  Set<String> get _closedStatusIds => {
+    for (final s in statuses)
+      if (s.isClosed ?? false) s.id,
+  };
+
+  /// Top-level issues passing the active filter (board cards). Sub-tasks live
+  /// under their parent and are not surfaced as cards.
+  List<Issue> get visibleIssues {
+    final closed = _closedStatusIds;
+    return [
+      for (final i in issues)
+        if (i.parentId == null && filter.matches(i, closedStatusIds: closed)) i,
+    ];
+  }
+
+  /// Buckets [items] by `statusId`. Columns always include the visible statuses
+  /// (plus the trailing null column) so empty columns still render.
+  Map<String?, List<Issue>> bucketFor(List<Issue> items) {
     final out = <String?, List<Issue>>{null: []};
-    for (final s in statuses) {
+    for (final s in orderedVisibleStatuses) {
       out[s.id] = [];
     }
-    for (final t in issues.where(
-      (i) => i.parentId == null && filter.matches(i, closedStatusIds: closed),
-    )) {
+    for (final t in items) {
       out.putIfAbsent(t.statusId, () => []).add(t);
     }
     for (final list in out.values) {
@@ -112,6 +204,9 @@ class TaskBoardLoaded extends TaskBoardState {
     }
     return out;
   }
+
+  /// Issues bucketed by `statusId`, after filters (the flat board).
+  Map<String?, List<Issue>> get bucketed => bucketFor(visibleIssues);
 
   @override
   List<Object?> get props => [
@@ -126,6 +221,10 @@ class TaskBoardLoaded extends TaskBoardState {
     components,
     filter,
     staleData,
+    columnOrder,
+    hiddenColumnIds,
+    groupBy,
+    savedViews,
   ];
 }
 
@@ -154,8 +253,28 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
 
   WorkItemFilter get filter => _filter;
 
+  // Board layout, kept in sync with state so it survives reloads (a card move
+  // triggers `load()`). Restored from the per-user "last used" board on first
+  // load, or from the taxonomy defaults when none is saved.
+  List<String> _columnOrder = const [];
+  Set<String> _hiddenColumnIds = const {};
+  BoardGroupBy? _groupBy;
+  List<BoardView> _savedViews = const [];
+  bool _restored = false;
+
   Future<void> load() async {
     if (!isClosed) emit(const TaskBoardLoading());
+
+    // On the very first load, restore the per-user last-used board + view list.
+    if (!_restored) {
+      _restored = true;
+      final viewsRes = await _catalog.listBoardViews(projectId);
+      _savedViews = viewsRes.valueOrNull ?? const [];
+      final lastRes = await _catalog.getLastUsedBoard(projectId);
+      final last = lastRes.valueOrNull;
+      if (last != null) _readConfig(last);
+    }
+
     final statusRes = await _catalog.listTaxonomy(
       projectId,
       TaxonomyKind.issueStatus,
@@ -180,6 +299,10 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
       if (!isClosed) emit(const TaskBoardFailed());
       return;
     }
+    // Default the order to the taxonomy ordering when nothing was restored.
+    if (_columnOrder.isEmpty) {
+      _columnOrder = TaskBoardLoaded.defaultColumnOrder(statuses);
+    }
     if (!isClosed) {
       emit(
         TaskBoardLoaded(
@@ -193,6 +316,10 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
           labels: labelRes.valueOrNull ?? const [],
           components: compRes.valueOrNull ?? const [],
           filter: _filter,
+          columnOrder: _columnOrder,
+          hiddenColumnIds: _hiddenColumnIds,
+          groupBy: _groupBy,
+          savedViews: _savedViews,
         ),
       );
     }
@@ -203,6 +330,113 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     unawaited(_filterStore.save(_view, projectId, f));
     final s = state;
     if (s is TaskBoardLoaded) emit(s.copyWith(filter: f));
+    unawaited(_persistLastUsed());
+  }
+
+  /// Show/hide and reorder the board columns. [order] is the full ordering of
+  /// status ids; [hidden] the subset that should not render.
+  void setColumns({required List<String> order, required Set<String> hidden}) {
+    _columnOrder = order;
+    _hiddenColumnIds = hidden;
+    final s = state;
+    if (s is TaskBoardLoaded) {
+      emit(s.copyWith(columnOrder: order, hiddenColumnIds: hidden));
+    }
+    unawaited(_persistLastUsed());
+  }
+
+  /// Set (or clear, with null) the active swimlane grouping.
+  void setGrouping(BoardGroupBy? groupBy) {
+    _groupBy = groupBy;
+    final s = state;
+    if (s is TaskBoardLoaded) emit(s.copyWith(groupBy: groupBy));
+    unawaited(_persistLastUsed());
+  }
+
+  /// Persist the current layout as a named, server-backed board view.
+  Future<void> saveView(String name) async {
+    final res = await _catalog.createBoardView(
+      projectId,
+      name,
+      _currentConfig(),
+    );
+    final created = res.valueOrNull;
+    if (created == null) return;
+    _savedViews = [..._savedViews, created];
+    final s = state;
+    if (s is TaskBoardLoaded) emit(s.copyWith(savedViews: _savedViews));
+  }
+
+  /// Apply a saved view's config to the live board.
+  void applyView(BoardView view) {
+    _readConfig(view.config);
+    final s = state;
+    if (s is TaskBoardLoaded) {
+      emit(
+        s.copyWith(
+          filter: _filter,
+          columnOrder: _columnOrder,
+          hiddenColumnIds: _hiddenColumnIds,
+          groupBy: _groupBy,
+        ),
+      );
+    }
+    unawaited(_filterStore.save(_view, projectId, _filter));
+    unawaited(_persistLastUsed());
+  }
+
+  /// Delete a saved view.
+  Future<void> deleteView(String viewId) async {
+    final res = await _catalog.deleteBoardView(projectId, viewId);
+    if (res.isErr) return;
+    _savedViews = [
+      for (final v in _savedViews)
+        if (v.id != viewId) v,
+    ];
+    final s = state;
+    if (s is TaskBoardLoaded) emit(s.copyWith(savedViews: _savedViews));
+  }
+
+  /// The current board layout serialized for persistence. Round-trips via
+  /// [_readConfig].
+  Map<String, dynamic> _currentConfig() {
+    final order = _columnOrder;
+    final visible = [
+      for (final id in order)
+        if (!_hiddenColumnIds.contains(id)) id,
+    ];
+    return {
+      'visible': visible,
+      'order': order,
+      'group': _groupBy?.wire,
+      'filter': _filter.toJson(),
+    };
+  }
+
+  /// Restore layout fields from a persisted config blob (best-effort).
+  void _readConfig(Map<String, dynamic> config) {
+    final order = (config['order'] as List<dynamic>?)
+        ?.map((e) => e as String)
+        .toList();
+    final visible = (config['visible'] as List<dynamic>?)
+        ?.map((e) => e as String)
+        .toSet();
+    if (order != null) _columnOrder = order;
+    if (visible != null && order != null) {
+      _hiddenColumnIds = {
+        for (final id in order)
+          if (!visible.contains(id)) id,
+      };
+    }
+    _groupBy = BoardGroupBy.fromWire(config['group'] as String?);
+    final filterJson = config['filter'];
+    if (filterJson is Map<String, dynamic>) {
+      _filter = WorkItemFilter.fromJson(filterJson);
+    }
+  }
+
+  Future<void> _persistLastUsed() async {
+    await _catalog.setLastUsedBoard(projectId, _currentConfig());
   }
 
   /// Optimistic move of an issue to a different `statusId`. On 409 we set

@@ -563,7 +563,7 @@ void seedDemoStore(DemoStore s) {
       priorityId: 'pri-high',
       sizeId: 'sz-l',
       category: 'customer_request',
-      customerId: 'cust-acme',
+      customerIds: const ['cust-acme'],
       labels: const ['lbl-backend'],
       components: const ['cmp-api'],
       ownerId: userId,

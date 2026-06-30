@@ -25,14 +25,13 @@ class _Adapter implements HttpClientAdapter {
   }
 }
 
-ResponseBody _ok(String body, {int status = 200}) =>
-    ResponseBody.fromString(
-      body,
-      status,
-      headers: {
-        Headers.contentTypeHeader: ['application/json'],
-      },
-    );
+ResponseBody _ok(String body, {int status = 200}) => ResponseBody.fromString(
+  body,
+  status,
+  headers: {
+    Headers.contentTypeHeader: ['application/json'],
+  },
+);
 
 ApiClient _client(_Adapter adapter) {
   final dio = Dio()..httpClientAdapter = adapter;
@@ -142,7 +141,9 @@ void main() {
 
     test('TaxonomyKind.hasValue only true for size kind', () {
       expect(TaxonomyKind.size.hasValue, isTrue);
-      for (final k in TaxonomyKind.values.where((k) => k != TaxonomyKind.size)) {
+      for (final k in TaxonomyKind.values.where(
+        (k) => k != TaxonomyKind.size,
+      )) {
         expect(k.hasValue, isFalse, reason: '${k.wire} should not carry value');
       }
     });

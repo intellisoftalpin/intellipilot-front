@@ -40,8 +40,8 @@ void main() {
     blocTest<ForgotPasswordCubit, ForgotPasswordState>(
       'emits failure on transport failure',
       build: () {
-        repo.requestResetHandler =
-            (_) async => const Err<PasswordResetRequestResponse, AppFailure>(
+        repo.requestResetHandler = (_) async =>
+            const Err<PasswordResetRequestResponse, AppFailure>(
               NetworkFailure(),
             );
         return ForgotPasswordCubit(repo);
@@ -62,22 +62,25 @@ void main() {
     blocTest<ResetPasswordCubit, ResetPasswordState>(
       'emits success on Ok',
       build: () => ResetPasswordCubit(repo),
-      act: (c) =>
-          c.submit(token: 'tok', newPassword: 'pw12345678'),
-      expect: () =>
-          [isA<ResetPasswordSubmitting>(), isA<ResetPasswordSucceeded>()],
+      act: (c) => c.submit(token: 'tok', newPassword: 'pw12345678'),
+      expect: () => [
+        isA<ResetPasswordSubmitting>(),
+        isA<ResetPasswordSucceeded>(),
+      ],
     );
 
     blocTest<ResetPasswordCubit, ResetPasswordState>(
       'emits failure when repo returns Err',
       build: () {
-        repo.confirmResetHandler =
-            () async => const Err<Unit, AppFailure>(NetworkFailure());
+        repo.confirmResetHandler = () async =>
+            const Err<Unit, AppFailure>(NetworkFailure());
         return ResetPasswordCubit(repo);
       },
       act: (c) => c.submit(token: 'tok', newPassword: 'pw12345678'),
-      expect: () =>
-          [isA<ResetPasswordSubmitting>(), isA<ResetPasswordFailed>()],
+      expect: () => [
+        isA<ResetPasswordSubmitting>(),
+        isA<ResetPasswordFailed>(),
+      ],
     );
   });
 
@@ -89,8 +92,8 @@ void main() {
     blocTest<RegisterCubit, RegisterState>(
       'emits success on Ok',
       build: () {
-        repo.registerHandler =
-            () async => const Ok<Unit, AppFailure>(Unit.instance);
+        repo.registerHandler = () async =>
+            const Ok<Unit, AppFailure>(Unit.instance);
         return RegisterCubit(repo);
       },
       act: (c) => c.submit(
@@ -99,17 +102,15 @@ void main() {
         password: 'pw12345678',
         fullName: '',
       ),
-      expect: () =>
-          [isA<RegisterSubmitting>(), isA<RegisterSucceeded>()],
+      expect: () => [isA<RegisterSubmitting>(), isA<RegisterSucceeded>()],
     );
 
     blocTest<RegisterCubit, RegisterState>(
       'emits failure with fieldErrors on ValidationFailure',
       build: () {
-        repo.registerHandler =
-            () async => const Err<Unit, AppFailure>(
-              ValidationFailure(fieldErrors: []),
-            );
+        repo.registerHandler = () async => const Err<Unit, AppFailure>(
+          ValidationFailure(fieldErrors: []),
+        );
         return RegisterCubit(repo);
       },
       act: (c) => c.submit(

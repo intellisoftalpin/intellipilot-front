@@ -1429,6 +1429,88 @@ class DemoCatalogRepository implements CatalogRepository {
     _s.watchersByIssue[issueId]?.remove(userId);
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
+
+  // ---- kanban board views (per user) ----
+
+  final Map<String, List<BoardView>> _boardViews = {};
+  final Map<String, Map<String, dynamic>> _lastBoard = {};
+  int _boardViewSeq = 0;
+
+  @override
+  Future<Result<List<BoardView>, AppFailure>> listBoardViews(
+    String projectId,
+  ) async {
+    await _tick();
+    return Ok(List.unmodifiable(_boardViews[projectId] ?? const []));
+  }
+
+  @override
+  Future<Result<BoardView, AppFailure>> createBoardView(
+    String projectId,
+    String name,
+    Map<String, dynamic> config,
+  ) async {
+    await _tick();
+    final view = BoardView(
+      id: 'bv-${_boardViewSeq++}',
+      projectId: projectId,
+      userId: 'demo-user',
+      name: name,
+      config: config,
+    );
+    (_boardViews[projectId] ??= []).add(view);
+    return Ok(view);
+  }
+
+  @override
+  Future<Result<BoardView, AppFailure>> updateBoardView(
+    String projectId,
+    String viewId,
+    String name,
+    Map<String, dynamic> config,
+  ) async {
+    await _tick();
+    final list = _boardViews[projectId] ?? [];
+    final i = list.indexWhere((v) => v.id == viewId);
+    if (i < 0) return const Err(NotFoundFailure());
+    final updated = BoardView(
+      id: viewId,
+      projectId: projectId,
+      userId: 'demo-user',
+      name: name,
+      config: config,
+    );
+    list[i] = updated;
+    return Ok(updated);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteBoardView(
+    String projectId,
+    String viewId,
+  ) async {
+    await _tick();
+    _boardViews[projectId]?.removeWhere((v) => v.id == viewId);
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>?, AppFailure>> getLastUsedBoard(
+    String projectId,
+  ) async {
+    await _tick();
+    return Ok(_lastBoard[projectId]);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> setLastUsedBoard(
+    String projectId,
+    Map<String, dynamic> config,
+  ) async {
+    await _tick();
+    _lastBoard[projectId] = config;
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1478,7 +1560,7 @@ class DemoBacklogRepository implements BacklogRepository {
       ownerId: next.ownerId,
       assignedTo: next.assignedTo,
       category: next.category,
-      customerId: next.customerId,
+      customerIds: next.customerIds,
       startDate: next.startDate,
       dueDate: next.dueDate,
       resolution: next.resolution,
@@ -1662,6 +1744,19 @@ class DemoBacklogRepository implements BacklogRepository {
   }
 
   @override
+  Future<Result<Issue, AppFailure>> getIssueByRef(
+    String projectId,
+    int ref,
+  ) async {
+    await _tick();
+    final iss = _s.issues
+        .where((i) => i.reference == ref && i.projectId == projectId)
+        .firstOrNull;
+    if (iss == null) return const Err(NotFoundFailure());
+    return Ok(iss);
+  }
+
+  @override
   Future<Result<Issue, AppFailure>> createIssue(
     String projectId,
     CreateIssueRequest body,
@@ -1689,7 +1784,7 @@ class DemoBacklogRepository implements BacklogRepository {
       milestoneId: body.milestoneId,
       assignedTo: body.assignedTo,
       category: body.category,
-      customerId: body.customerId,
+      customerIds: body.customerIds,
       startDate: body.startDate,
       dueDate: body.dueDate,
       resolution: body.resolution,
@@ -1782,9 +1877,11 @@ class DemoBacklogRepository implements BacklogRepository {
       category: patch.containsKey('category')
           ? patch['category'] as String?
           : cur.category,
-      customerId: patch.containsKey('customer_id')
-          ? patch['customer_id'] as String?
-          : cur.customerId,
+      customerIds: patch.containsKey('customer_ids')
+          ? (patch['customer_ids'] as List<dynamic>)
+                .map((e) => e as String)
+                .toList()
+          : cur.customerIds,
       startDate: patch.containsKey('start_date')
           ? patch['start_date'] as String?
           : cur.startDate,

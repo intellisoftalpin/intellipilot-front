@@ -7,6 +7,7 @@ import 'dart:typed_data';
 import 'package:bloc/bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
+import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 
@@ -56,26 +57,35 @@ class AttachmentsLoaded extends AttachmentsState {
     required this.items,
     this.upload,
     this.error,
+    this.errorMessage,
   });
 
   final List<Attachment> items;
   final UploadProgress? upload;
+
+  /// Machine code for the failure (`too_large` / `upload_failed`).
   final String? error;
+
+  /// The backend's human-readable reason, when available (e.g. a storage
+  /// permission error). Falls back to a localized string in the UI.
+  final String? errorMessage;
 
   AttachmentsLoaded copyWith({
     List<Attachment>? items,
     UploadProgress? upload,
     bool clearUpload = false,
     String? error,
+    String? errorMessage,
     bool clearError = false,
   }) => AttachmentsLoaded(
     items: items ?? this.items,
     upload: clearUpload ? null : upload ?? this.upload,
     error: clearError ? null : error ?? this.error,
+    errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
   );
 
   @override
-  List<Object?> get props => [items, upload, error];
+  List<Object?> get props => [items, upload, error, errorMessage];
 }
 
 class AttachmentsCubit extends Cubit<AttachmentsState> {
@@ -159,7 +169,14 @@ class AttachmentsCubit extends Cubit<AttachmentsState> {
     if (cur is! AttachmentsLoaded) return false;
     final att = res.valueOrNull;
     if (att == null) {
-      emit(cur.copyWith(clearUpload: true, error: 'upload_failed'));
+      final detail = res.when(ok: (_) => null, err: (f) => f.serverMessage);
+      emit(
+        cur.copyWith(
+          clearUpload: true,
+          error: 'upload_failed',
+          errorMessage: detail,
+        ),
+      );
       return false;
     }
     emit(

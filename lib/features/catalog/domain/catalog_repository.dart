@@ -240,4 +240,31 @@ abstract interface class CatalogRepository {
     String issueId,
     String userId,
   );
+
+  // ---- kanban board views (per user) ----
+  Future<Result<List<BoardView>, AppFailure>> listBoardViews(String projectId);
+  Future<Result<BoardView, AppFailure>> createBoardView(
+    String projectId,
+    String name,
+    Map<String, dynamic> config,
+  );
+  Future<Result<BoardView, AppFailure>> updateBoardView(
+    String projectId,
+    String viewId,
+    String name,
+    Map<String, dynamic> config,
+  );
+  Future<Result<Unit, AppFailure>> deleteBoardView(
+    String projectId,
+    String viewId,
+  );
+
+  /// The user's remembered last-used board config (null if none).
+  Future<Result<Map<String, dynamic>?, AppFailure>> getLastUsedBoard(
+    String projectId,
+  );
+  Future<Result<Unit, AppFailure>> setLastUsedBoard(
+    String projectId,
+    Map<String, dynamic> config,
+  );
 }

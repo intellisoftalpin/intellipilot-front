@@ -363,8 +363,10 @@ class _ProjectIconFieldState extends State<_ProjectIconField> {
     );
     if (!mounted) return;
     setState(() => _busy = false);
-    final updated = res.valueOrNull;
-    if (updated != null) context.read<ProjectDetailCubit>().replace(updated);
+    res.when(
+      ok: (updated) => context.read<ProjectDetailCubit>().replace(updated),
+      err: _showError,
+    );
   }
 
   Future<void> _remove() async {
@@ -374,8 +376,17 @@ class _ProjectIconFieldState extends State<_ProjectIconField> {
     );
     if (!mounted) return;
     setState(() => _busy = false);
-    final updated = res.valueOrNull;
-    if (updated != null) context.read<ProjectDetailCubit>().replace(updated);
+    res.when(
+      ok: (updated) => context.read<ProjectDetailCubit>().replace(updated),
+      err: _showError,
+    );
+  }
+
+  void _showError(AppFailure f) {
+    final t = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(f.serverMessage ?? t.attachmentsUploadFailed)),
+    );
   }
 
   @override

@@ -29,7 +29,7 @@ class AttachmentsView extends StatelessWidget {
         final messenger = ScaffoldMessenger.of(context);
         final message = switch (state.error) {
           'too_large' => t.attachmentsTooLarge(25),
-          _ => t.attachmentsUploadFailed,
+          _ => state.errorMessage ?? t.attachmentsUploadFailed,
         };
         messenger.showSnackBar(SnackBar(content: Text(message)));
       },

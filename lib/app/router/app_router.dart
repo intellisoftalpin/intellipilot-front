@@ -4,7 +4,7 @@ import 'package:intellipilot/app/shell/main_shell.dart';
 import 'package:intellipilot/core/utils/listenable_stream.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
-import 'package:intellipilot/features/activity/presentation/entity_edit_page.dart';
+import 'package:intellipilot/features/activity/presentation/issue_key_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_activity_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_app_tokens_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_settings_page.dart';
@@ -117,11 +117,11 @@ abstract class Routes {
     EntityKind kind,
     String entityId,
   ) => '/projects/$projectId/items/${kind.slug}/$entityId';
-  static String entityEditFor(
-    String projectId,
-    EntityKind kind,
-    String entityId,
-  ) => '/projects/$projectId/items/${kind.slug}/$entityId/edit';
+
+  /// Clean, human-readable full-page issue URL keyed by its issue key
+  /// (e.g. `/projects/{id}/issues/PS-398`).
+  static String issueByKeyFor(String projectId, String key) =>
+      '/projects/$projectId/issues/$key';
   static String acceptInvitationFor(String token) => '/i/$token';
 }
 
@@ -318,20 +318,13 @@ GoRouter buildRouter({required SessionBloc session}) {
             },
           ),
           GoRoute(
-            path: '/projects/:projectId/items/:kind/:entityId/edit',
-            name: 'entity_edit',
-            builder: (context, state) {
-              final slug = state.pathParameters['kind']!;
-              final kind = EntityKind.values.firstWhere(
-                (k) => k.slug == slug,
-                orElse: () => EntityKind.issue,
-              );
-              return EntityEditPage(
-                projectId: state.pathParameters['projectId']!,
-                kind: kind,
-                entityId: state.pathParameters['entityId']!,
-              );
-            },
+            // Clean, human-readable full-page issue view keyed by issue key.
+            path: '/projects/:projectId/issues/:key',
+            name: 'issue_by_key',
+            builder: (context, state) => IssueKeyPage(
+              projectId: state.pathParameters['projectId']!,
+              issueKey: state.pathParameters['key']!,
+            ),
           ),
           GoRoute(
             path: Routes.adminUsers,

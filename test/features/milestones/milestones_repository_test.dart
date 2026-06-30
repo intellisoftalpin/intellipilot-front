@@ -25,14 +25,13 @@ class _Adapter implements HttpClientAdapter {
   }
 }
 
-ResponseBody _ok(String body, {int status = 200}) =>
-    ResponseBody.fromString(
-      body,
-      status,
-      headers: {
-        Headers.contentTypeHeader: ['application/json'],
-      },
-    );
+ResponseBody _ok(String body, {int status = 200}) => ResponseBody.fromString(
+  body,
+  status,
+  headers: {
+    Headers.contentTypeHeader: ['application/json'],
+  },
+);
 
 ApiClient _client(_Adapter adapter) {
   final dio = Dio()..httpClientAdapter = adapter;
@@ -71,21 +70,23 @@ void main() {
       });
     });
 
-    test('update with null start_date clears it; absent leaves it alone',
-        () async {
-      final adapter = _Adapter((_) async => _ok(_milestoneJson));
-      final repo = MilestonesRepositoryImpl(_client(adapter));
-      await repo.update(
-        'p1',
-        'm1',
-        body: const UpdateMilestoneRequest(name: 'Renamed', startDate: null),
-      );
-      expect(adapter.lastRequest?.method, 'PATCH');
-      expect(adapter.lastRequest?.data, {
-        'name': 'Renamed',
-        'start_date': null,
-      });
-    });
+    test(
+      'update with null start_date clears it; absent leaves it alone',
+      () async {
+        final adapter = _Adapter((_) async => _ok(_milestoneJson));
+        final repo = MilestonesRepositoryImpl(_client(adapter));
+        await repo.update(
+          'p1',
+          'm1',
+          body: const UpdateMilestoneRequest(name: 'Renamed', startDate: null),
+        );
+        expect(adapter.lastRequest?.method, 'PATCH');
+        expect(adapter.lastRequest?.data, {
+          'name': 'Renamed',
+          'start_date': null,
+        });
+      },
+    );
 
     test('close posts to /close', () async {
       final adapter = _Adapter((_) async => _ok('{}'));
@@ -97,20 +98,22 @@ void main() {
       );
     });
 
-    test('stats unwraps the bare {total_points, completed_points, …} body',
-        () async {
-      final adapter = _Adapter(
-        (_) async => _ok(
-          '{"total_points":12.5,"completed_points":7.0,'
-          '"total_tasks":20,"completed_tasks":15}',
-        ),
-      );
-      final repo = MilestonesRepositoryImpl(_client(adapter));
-      final res = await repo.stats('p1', 'm1');
-      final s = res.valueOrNull;
-      expect(s?.totalPoints, 12.5);
-      expect(s?.completedTasks, 15);
-      expect(s?.pointsFraction, closeTo(7 / 12.5, 1e-9));
-    });
+    test(
+      'stats unwraps the bare {total_points, completed_points, …} body',
+      () async {
+        final adapter = _Adapter(
+          (_) async => _ok(
+            '{"total_points":12.5,"completed_points":7.0,'
+            '"total_tasks":20,"completed_tasks":15}',
+          ),
+        );
+        final repo = MilestonesRepositoryImpl(_client(adapter));
+        final res = await repo.stats('p1', 'm1');
+        final s = res.valueOrNull;
+        expect(s?.totalPoints, 12.5);
+        expect(s?.completedTasks, 15);
+        expect(s?.pointsFraction, closeTo(7 / 12.5, 1e-9));
+      },
+    );
   });
 }

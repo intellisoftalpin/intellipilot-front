@@ -26,14 +26,13 @@ class _Adapter implements HttpClientAdapter {
   }
 }
 
-ResponseBody _ok(String body, {int status = 200}) =>
-    ResponseBody.fromString(
-      body,
-      status,
-      headers: {
-        Headers.contentTypeHeader: ['application/json'],
-      },
-    );
+ResponseBody _ok(String body, {int status = 200}) => ResponseBody.fromString(
+  body,
+  status,
+  headers: {
+    Headers.contentTypeHeader: ['application/json'],
+  },
+);
 
 ApiClient _client(_Adapter adapter) {
   final dio = Dio()..httpClientAdapter = adapter;

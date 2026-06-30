@@ -61,22 +61,24 @@ void main() {
       expect((ok as LoginTokens).tokens.accessToken, 'a');
     });
 
-    test('login() returns LoginMfaRequired when mfa_required is true',
-        () async {
-      final client = _client(
-        _StubAdapter(
-          (_) async => _ok(
-            '{"mfa_required":true,"mfa_token":"mfa1","methods":["totp"]}',
+    test(
+      'login() returns LoginMfaRequired when mfa_required is true',
+      () async {
+        final client = _client(
+          _StubAdapter(
+            (_) async => _ok(
+              '{"mfa_required":true,"mfa_token":"mfa1","methods":["totp"]}',
+            ),
           ),
-        ),
-      );
-      final repo = AuthRepositoryImpl(client);
-      final res = await repo.login(email: 'u@e.com', password: 'pw12345678');
-      expect(res.valueOrNull, isA<LoginMfaRequired>());
-      final mfa = res.valueOrNull! as LoginMfaRequired;
-      expect(mfa.mfaToken, 'mfa1');
-      expect(mfa.methods, ['totp']);
-    });
+        );
+        final repo = AuthRepositoryImpl(client);
+        final res = await repo.login(email: 'u@e.com', password: 'pw12345678');
+        expect(res.valueOrNull, isA<LoginMfaRequired>());
+        final mfa = res.valueOrNull! as LoginMfaRequired;
+        expect(mfa.mfaToken, 'mfa1');
+        expect(mfa.methods, ['totp']);
+      },
+    );
 
     test('login() returns UnauthorizedFailure on 401', () async {
       final client = _client(
@@ -145,20 +147,22 @@ void main() {
       expect(res.isOk, true);
     });
 
-    test('confirmPasswordReset() maps 400 to UnknownFailure (default)',
-        () async {
-      final client = _client(
-        _StubAdapter(
-          (_) async => _ok('{"title":"invalid_token"}', status: 400),
-        ),
-      );
-      final repo = AuthRepositoryImpl(client);
-      final res = await repo.confirmPasswordReset(
-        token: 'bad',
-        newPassword: 'pw12345678',
-      );
-      expect(res.isErr, true);
-    });
+    test(
+      'confirmPasswordReset() maps 400 to UnknownFailure (default)',
+      () async {
+        final client = _client(
+          _StubAdapter(
+            (_) async => _ok('{"title":"invalid_token"}', status: 400),
+          ),
+        );
+        final repo = AuthRepositoryImpl(client);
+        final res = await repo.confirmPasswordReset(
+          token: 'bad',
+          newPassword: 'pw12345678',
+        );
+        expect(res.isErr, true);
+      },
+    );
 
     test('logout() treats 204 as success', () async {
       final client = _client(

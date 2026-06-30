@@ -26,14 +26,13 @@ class _Adapter implements HttpClientAdapter {
   }
 }
 
-ResponseBody _ok(String body, {int status = 200}) =>
-    ResponseBody.fromString(
-      body,
-      status,
-      headers: {
-        Headers.contentTypeHeader: ['application/json'],
-      },
-    );
+ResponseBody _ok(String body, {int status = 200}) => ResponseBody.fromString(
+  body,
+  status,
+  headers: {
+    Headers.contentTypeHeader: ['application/json'],
+  },
+);
 
 ApiClient _client(_Adapter adapter) {
   final dio = Dio()..httpClientAdapter = adapter;
@@ -50,27 +49,31 @@ const _userJson =
 
 void main() {
   test('getProfile parses the user payload', () async {
-    final repo = ProfileRepositoryImpl(_client(_Adapter((_) async => _ok(_userJson))));
+    final repo = ProfileRepositoryImpl(
+      _client(_Adapter((_) async => _ok(_userJson))),
+    );
     final res = await repo.getProfile();
     expect(res.valueOrNull?.email, 'u@e.com');
     expect(res.valueOrNull?.username, 'user1');
   });
 
-  test('updateProfile sends only present fields and returns the updated user',
-      () async {
-    final adapter = _Adapter(
-      (_) async => _ok(
-        _userJson.replaceAll('"User One"', '"Updated"'),
-      ),
-    );
-    final repo = ProfileRepositoryImpl(_client(adapter));
-    final res = await repo.updateProfile(
-      const ProfileUpdateRequest(fullName: 'Updated'),
-    );
-    expect(res.valueOrNull?.fullName, 'Updated');
-    expect(adapter.lastRequest?.method, 'PATCH');
-    expect(adapter.lastRequest?.data, {'full_name': 'Updated'});
-  });
+  test(
+    'updateProfile sends only present fields and returns the updated user',
+    () async {
+      final adapter = _Adapter(
+        (_) async => _ok(
+          _userJson.replaceAll('"User One"', '"Updated"'),
+        ),
+      );
+      final repo = ProfileRepositoryImpl(_client(adapter));
+      final res = await repo.updateProfile(
+        const ProfileUpdateRequest(fullName: 'Updated'),
+      );
+      expect(res.valueOrNull?.fullName, 'Updated');
+      expect(adapter.lastRequest?.method, 'PATCH');
+      expect(adapter.lastRequest?.data, {'full_name': 'Updated'});
+    },
+  );
 
   test('updateProfile returns ValidationFailure on 422', () async {
     final adapter = _Adapter(
