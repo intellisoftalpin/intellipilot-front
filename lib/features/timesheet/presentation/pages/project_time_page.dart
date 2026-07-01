@@ -1,16 +1,24 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/io/file_downloader.dart';
 import 'package:intellipilot/core/widgets/loading_indicator.dart';
+import 'package:intellipilot/features/profile/domain/profile_repository.dart';
+import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
+import 'package:intellipilot/features/projects/domain/permission.dart';
+import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/timesheet/data/dtos/timesheet_dtos.dart';
 import 'package:intellipilot/features/timesheet/domain/timesheet_repository.dart';
+import 'package:intellipilot/features/timesheet/presentation/widgets/team_month_grid.dart';
+import 'package:intellipilot/features/timesheet/presentation/widgets/timesheet_dialogs.dart';
 import 'package:intellipilot/features/timesheet/presentation/widgets/timesheet_format.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 import 'package:intl/intl.dart';
 
-/// Per-project team timesheet (managers): a members × days grid for a month,
-/// with per-month lock/unlock and CSV/XLSX export.
+/// Per-project team timesheet (managers): a compact members × days grid for a
+/// month, per-month lock/unlock, CSV/XLSX export, plus quick time logging
+/// (for yourself, or — with `time.manage` — on behalf of another member).
 class ProjectTimePage extends StatefulWidget {
   const ProjectTimePage({required this.projectId, super.key});
   final String projectId;
@@ -26,12 +34,64 @@ class _ProjectTimePageState extends State<ProjectTimePage> {
   Set<int> _lockedMonths = {};
   bool _loading = true;
 
+  // Logging context, resolved once on first load.
+  String? _projectName;
+  List<Membership> _projectMembers = const [];
+  bool _canManage = false;
+  bool _canLog = false;
+
   TimesheetRepository get _repo => getIt<TimesheetRepository>();
 
   @override
   void initState() {
     super.initState();
+    unawaited(_loadContext());
     unawaited(_load());
+  }
+
+  Future<void> _loadContext() async {
+    final projects = getIt<ProjectsRepository>();
+    final profile = (await getIt<ProfileRepository>().getProfile()).valueOrNull;
+    final project = (await projects.getProject(widget.projectId)).valueOrNull;
+    final members =
+        (await projects.listMembers(widget.projectId)).valueOrNull ??
+        const <Membership>[];
+    final roles =
+        (await projects.listRoles(widget.projectId)).valueOrNull ??
+        const <Role>[];
+
+    var canManage = false;
+    var canLog = false;
+    if (profile != null) {
+      Membership? mine;
+      for (final m in members) {
+        if (m.userId == profile.id) {
+          mine = m;
+          break;
+        }
+      }
+      if (mine != null) {
+        for (final r in roles) {
+          if (r.id == mine.roleId) {
+            canManage =
+                r.isAdmin || r.permissions.contains(Permission.timeManage);
+            canLog =
+                r.isAdmin ||
+                r.permissions.contains(Permission.timeLog) ||
+                canManage;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _projectName = project?.name;
+      _projectMembers = members;
+      _canManage = canManage;
+      _canLog = canLog;
+    });
   }
 
   Future<void> _load() async {
@@ -79,6 +139,51 @@ class _ProjectTimePageState extends State<ProjectTimePage> {
     if (res.isOk) await _load();
   }
 
+  /// Self-logging submit: posts to `/me/time-entries` (project pre-scoped).
+  Future<AppFailure?> _selfSubmit({
+    required String date,
+    required int minutes,
+    EntryKind kind = EntryKind.work,
+    String? issueId,
+    String? projectId,
+    String? meetingType,
+    String? note,
+  }) async {
+    final res = await _repo.logTime(
+      kind: kind,
+      issueId: issueId,
+      projectId: projectId,
+      meetingType: meetingType,
+      date: date,
+      minutes: minutes,
+      note: note,
+    );
+    return res.failureOrNull;
+  }
+
+  Future<void> _openSelfLog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => LogTimeDialog(
+        onSubmit: _selfSubmit,
+        scopedProjectId: widget.projectId,
+        scopedProjectName: _projectName,
+      ),
+    );
+    await _load();
+  }
+
+  Future<void> _openMemberLog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _LogForMemberDialog(
+        projectId: widget.projectId,
+        members: _projectMembers,
+      ),
+    );
+    await _load();
+  }
+
   Future<void> _export(ExportFormat fmt) async {
     final t = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -119,6 +224,7 @@ class _ProjectTimePageState extends State<ProjectTimePage> {
       appBar: AppBar(
         title: Text(t.ttTeamTimesheet),
         actions: [
+          if (_canLog) _logButton(t),
           PopupMenuButton<ExportFormat>(
             icon: const Icon(Icons.download_outlined),
             tooltip: t.ttExport,
@@ -179,63 +285,175 @@ class _ProjectTimePageState extends State<ProjectTimePage> {
                 ? const LoadingIndicator()
                 : (_members == null || _members!.isEmpty)
                 ? Center(child: Text(t.ttNoTeamData))
-                : _grid(context),
+                : Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: TeamMonthGrid(
+                      members: _members!,
+                      year: _year,
+                      month: _month,
+                    ),
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _grid(BuildContext context) {
+  Widget _logButton(AppLocalizations t) {
+    if (!_canManage) {
+      return IconButton(
+        icon: const Icon(Icons.add),
+        tooltip: t.ttLogTime,
+        onPressed: _openSelfLog,
+      );
+    }
+    return PopupMenuButton<int>(
+      icon: const Icon(Icons.add),
+      tooltip: t.ttLogTime,
+      onSelected: (v) => v == 0 ? _openSelfLog() : _openMemberLog(),
+      itemBuilder: (_) => [
+        PopupMenuItem(value: 0, child: Text(t.ttLogMyTime)),
+        PopupMenuItem(value: 1, child: Text(t.ttLogForMember)),
+      ],
+    );
+  }
+}
+
+/// Manager-only dialog to log time on behalf of a project member via
+/// `/projects/{id}/time-entries`.
+class _LogForMemberDialog extends StatefulWidget {
+  const _LogForMemberDialog({required this.projectId, required this.members});
+  final String projectId;
+  final List<Membership> members;
+
+  @override
+  State<_LogForMemberDialog> createState() => _LogForMemberDialogState();
+}
+
+class _LogForMemberDialogState extends State<_LogForMemberDialog> {
+  final _hours = TextEditingController();
+  final _note = TextEditingController();
+  DateTime _date = DateTime.now();
+  String? _userId;
+  String? _error;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _hours.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final days = [for (var d = 1; d <= lastDay(_year, _month); d++) d];
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: SingleChildScrollView(
-        child: DataTable(
-          headingRowHeight: 36,
-          dataRowMinHeight: 36,
-          dataRowMaxHeight: 44,
-          columns: [
-            DataColumn(label: Text(t.ttMember)),
-            DataColumn(label: Text(t.ttTotal)),
-            for (final d in days) DataColumn(label: Text('$d')),
-          ],
-          rows: [
-            for (final m in _members!)
-              DataRow(
-                cells: [
-                  DataCell(Text(m.displayName)),
-                  DataCell(
-                    Text(
-                      fmtMins(m.totalMinutes),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  for (final d in days)
-                    DataCell(
-                      _cell(context, m.days[isoDate(_year, _month, d)] ?? 0),
+    return AlertDialog(
+      title: Text(t.ttLogForMember),
+      content: SizedBox(
+        width: 380,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _userId,
+                isExpanded: true,
+                decoration: InputDecoration(labelText: t.ttMember),
+                items: [
+                  for (final m in widget.members)
+                    DropdownMenuItem(
+                      value: m.userId,
+                      child: Text(
+                        m.fullName.isNotEmpty ? m.fullName : m.username,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                 ],
+                onChanged: (v) => setState(() => _userId = v),
               ),
-          ],
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _date,
+                    firstDate: DateTime(2015),
+                    lastDate: DateTime(2100),
+                  );
+                  if (picked != null) setState(() => _date = picked);
+                },
+                child: InputDecorator(
+                  decoration: InputDecoration(labelText: t.ttDate),
+                  child: Text(isoFrom(_date)),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _hours,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: InputDecoration(labelText: t.ttHours),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _note,
+                decoration: InputDecoration(labelText: t.ttNote),
+                maxLines: 2,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: _busy ? null : () => Navigator.pop(context),
+          child: Text(t.actionCancel),
+        ),
+        FilledButton(onPressed: _busy ? null : _submit, child: Text(t.ttSave)),
+      ],
     );
   }
 
-  Widget _cell(BuildContext context, int minutes) {
-    if (minutes == 0) return const Text('·');
-    final hours = minutes / 60;
-    final theme = Theme.of(context);
-    // Light heatmap: deeper as the day fills up toward 8h.
-    final alpha = (hours / 8).clamp(0.0, 1.0) * 0.5;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      color: theme.colorScheme.primary.withValues(alpha: alpha),
-      child: Text(
-        hours.toStringAsFixed(hours.truncateToDouble() == hours ? 0 : 1),
-      ),
+  Future<void> _submit() async {
+    final t = AppLocalizations.of(context);
+    final userId = _userId;
+    if (userId == null) {
+      setState(() => _error = t.ttSelectMember);
+      return;
+    }
+    final h = double.tryParse(_hours.text.replaceAll(',', '.'));
+    if (h == null || h <= 0) {
+      setState(() => _error = t.ttInvalidHours);
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final res = await getIt<TimesheetRepository>().adminLogTime(
+      widget.projectId,
+      userId: userId,
+      date: isoFrom(_date),
+      minutes: (h * 60).round().clamp(1, 1440),
+      note: _note.text.trim().isEmpty ? null : _note.text.trim(),
     );
+    if (!mounted) return;
+    if (res.isErr) {
+      setState(() {
+        _busy = false;
+        _error = t.ttActionFailed;
+      });
+      return;
+    }
+    Navigator.pop(context);
   }
 }

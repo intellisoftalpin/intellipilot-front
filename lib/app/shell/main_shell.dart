@@ -520,11 +520,6 @@ class _ProjectRailState extends State<_ProjectRail> {
     final t = AppLocalizations.of(context);
     final items = [
       _RailItem(
-        icon: Icons.home_outlined,
-        label: t.navDashboard,
-        path: Routes.home,
-      ),
-      _RailItem(
         icon: Icons.dashboard_outlined,
         label: t.railOverview,
         path: Routes.projectDetailFor(widget.projectId),

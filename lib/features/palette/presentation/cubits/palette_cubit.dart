@@ -8,6 +8,8 @@ import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/palette/data/dtos/palette_dtos.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
+import 'package:intellipilot/features/search/data/dtos/search_dtos.dart';
+import 'package:intellipilot/features/search/domain/search_repository.dart';
 import 'package:intellipilot/features/wiki/data/dtos/wiki_dtos.dart';
 import 'package:intellipilot/features/wiki/domain/wiki_repository.dart';
 
@@ -40,17 +42,24 @@ class PaletteCubit extends Cubit<PaletteState> {
     required ProjectsRepository projects,
     required BacklogRepository backlog,
     required WikiRepository wiki,
+    required SearchRepository search,
     this.activeProjectId,
     List<CommandResult> commands = const [],
   }) : _projects = projects,
        _backlog = backlog,
        _wiki = wiki,
+       _search = search,
        _commands = commands,
        super(const PaletteState());
 
   final ProjectsRepository _projects;
   final BacklogRepository _backlog;
   final WikiRepository _wiki;
+  final SearchRepository _search;
+
+  /// Monotonic token so a slow search response for an old query can't
+  /// clobber the results of a newer one.
+  int _searchSeq = 0;
 
   /// Slugged commands the host page contributes (e.g. "new user story" only
   /// surfaces from the backlog page).
@@ -77,37 +86,64 @@ class PaletteCubit extends Cubit<PaletteState> {
   /// to find the matching entity in [activeProjectId].
   Future<void> setQuery(String query) async {
     emit(state.copyWith(query: query));
+    final seq = ++_searchSeq;
     final projects = (await _projects.listProjects()).valueOrNull ?? const [];
     final pages = activeProjectId == null
         ? const <WikiPage>[]
         : (await _wiki.list(activeProjectId!)).valueOrNull ?? const [];
     final base = _materialise(query, projects, pages);
 
+    // Local `#NNN` reference resolver — kept for instant in-project lookups.
+    final local = <PaletteResult>[];
     final refMatch = RegExp(r'^#(\d+)$').firstMatch(query.trim());
-    if (refMatch == null || activeProjectId == null) {
-      emit(state.copyWith(results: base));
-      return;
+    if (refMatch != null && activeProjectId != null) {
+      final ref = int.parse(refMatch.group(1)!);
+      final resolved = (await _backlog.resolveRef(
+        activeProjectId!,
+        ref,
+      )).valueOrNull;
+      final kind = resolved == null ? null : EntityKind.fromWire(resolved.kind);
+      if (resolved != null && kind != null) {
+        local.add(
+          EntityResult(
+            projectId: activeProjectId!,
+            kind: kind,
+            entityId: resolved.id,
+            label: '#${resolved.ref}',
+            subtitle: kind.wire.replaceAll('_', ' '),
+          ),
+        );
+      }
     }
-    final ref = int.parse(refMatch.group(1)!);
-    final res = await _backlog.resolveRef(activeProjectId!, ref);
-    final resolved = res.valueOrNull;
-    if (resolved == null) {
-      emit(state.copyWith(results: base));
-      return;
-    }
-    final kind = EntityKind.fromWire(resolved.kind);
-    if (kind == null) {
-      emit(state.copyWith(results: base));
-      return;
-    }
-    final hit = EntityResult(
-      projectId: activeProjectId!,
-      kind: kind,
-      entityId: resolved.id,
-      label: '#${resolved.ref}',
-      subtitle: kind.wire.replaceAll('_', ' '),
-    );
-    emit(state.copyWith(results: [hit, ...base]));
+    if (seq != _searchSeq) return;
+    emit(state.copyWith(results: [...local, ...base]));
+
+    // Remote full-text search (issues / epics / wiki / comments).
+    final q = query.trim();
+    if (q.length < 2) return;
+    final searchRes = await _search.search(q, projectId: activeProjectId);
+    if (seq != _searchSeq) return;
+    final hits = searchRes.valueOrNull?.results ?? const <SearchResult>[];
+    if (hits.isEmpty) return;
+    final hitResults = [
+      for (final h in hits)
+        SearchHitResult(
+          entityType: h.entityType,
+          projectId: h.projectId,
+          entityId: h.entityId,
+          label: h.ref != null ? '#${h.ref} ${h.title}'.trim() : h.title,
+          subtitle: _hitSubtitle(h),
+        ),
+    ];
+    emit(state.copyWith(results: [...local, ...hitResults, ...base]));
+  }
+
+  String _hitSubtitle(SearchResult h) {
+    final text = h.snippet
+        .replaceAll(RegExp('<[^>]*>'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    return text.isEmpty ? h.entityType : '${h.entityType} · $text';
   }
 
   List<PaletteResult> _materialise(

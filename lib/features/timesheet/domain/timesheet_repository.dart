@@ -25,6 +25,13 @@ abstract interface class TimesheetRepository {
   // --- personal -------------------------------------------------------
   Future<Result<List<AssignedTask>, AppFailure>> listAssignedIssues();
 
+  /// Search any loggable task across the caller's projects (not just the ones
+  /// assigned to them). Backed by `/me/loggable-issues`.
+  Future<Result<List<AssignedTask>, AppFailure>> searchLoggableIssues(
+    String? query, {
+    String? projectId,
+  });
+
   Future<Result<List<TimeEntry>, AppFailure>> listMyEntries({
     required String from,
     required String to,
@@ -32,10 +39,16 @@ abstract interface class TimesheetRepository {
     String? issueId,
   });
 
+  /// Log worked time for the caller. Either an [issueId] or a [projectId]
+  /// (or both) must be supplied for `work`; `meeting` may carry an optional
+  /// [projectId] and [meetingType].
   Future<Result<TimeEntry, AppFailure>> logTime({
-    required String issueId,
     required String date,
     required int minutes,
+    EntryKind kind = EntryKind.work,
+    String? issueId,
+    String? projectId,
+    String? meetingType,
     String? note,
   });
 
@@ -86,6 +99,17 @@ abstract interface class TimesheetRepository {
     required int month,
   });
 
+  /// Log worked time on behalf of another project member (needs `time.manage`
+  /// in that project). Backed by `/projects/{id}/time-entries`.
+  Future<Result<TimeEntry, AppFailure>> adminLogTime(
+    String projectId, {
+    required String userId,
+    required String date,
+    required int minutes,
+    String? issueId,
+    String? note,
+  });
+
   Future<Result<TimeEntry, AppFailure>> correctEntry(
     String projectId, {
     required String entryId,
@@ -127,6 +151,14 @@ abstract interface class TimesheetRepository {
   });
 
   // --- superadmin -----------------------------------------------------
+
+  /// Cross-project month grid for every user (superadmin only). Backed by
+  /// `/admin/time/summary`.
+  Future<Result<List<TeamMemberMonth>, AppFailure>> adminGlobalMonth({
+    required int year,
+    required int month,
+  });
+
   Future<Result<List<VacationAllowance>, AppFailure>> listAllowances(
     String userId,
   );

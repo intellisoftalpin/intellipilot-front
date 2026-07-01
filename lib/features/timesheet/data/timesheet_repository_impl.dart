@@ -35,6 +35,30 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
   }
 
   @override
+  Future<Result<List<AssignedTask>, AppFailure>> searchLoggableIssues(
+    String? query, {
+    String? projectId,
+  }) async {
+    final res = await _api.get(
+      '/api/v1/me/loggable-issues',
+      query: {
+        'search': ?query,
+        'project_id': ?projectId,
+      },
+    );
+    return res.when(
+      ok: (r) {
+        final body = r.data as Map<String, dynamic>;
+        final list = (body['issues'] as List<dynamic>? ?? const [])
+            .map((e) => AssignedTask.fromJson(e as Map<String, dynamic>))
+            .toList();
+        return Ok(list);
+      },
+      err: Err.new,
+    );
+  }
+
+  @override
   Future<Result<List<TimeEntry>, AppFailure>> listMyEntries({
     required String from,
     required String to,
@@ -55,15 +79,21 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
 
   @override
   Future<Result<TimeEntry, AppFailure>> logTime({
-    required String issueId,
     required String date,
     required int minutes,
+    EntryKind kind = EntryKind.work,
+    String? issueId,
+    String? projectId,
+    String? meetingType,
     String? note,
   }) async {
     final res = await _api.post(
       '/api/v1/me/time-entries',
       body: {
-        'issue_id': issueId,
+        'kind': kind.wire,
+        'issue_id': ?issueId,
+        'project_id': ?projectId,
+        'meeting_type': ?meetingType,
         'date': date,
         'minutes': minutes,
         'note': ?note,
@@ -195,6 +225,31 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
   }
 
   @override
+  Future<Result<TimeEntry, AppFailure>> adminLogTime(
+    String projectId, {
+    required String userId,
+    required String date,
+    required int minutes,
+    String? issueId,
+    String? note,
+  }) async {
+    final res = await _api.post(
+      '/api/v1/projects/$projectId/time-entries',
+      body: {
+        'user_id': userId,
+        'issue_id': ?issueId,
+        'date': date,
+        'minutes': minutes,
+        'note': ?note,
+      },
+    );
+    return res.when(
+      ok: (r) => Ok(TimeEntry.fromJson(r.data as Map<String, dynamic>)),
+      err: Err.new,
+    );
+  }
+
+  @override
   Future<Result<TimeEntry, AppFailure>> correctEntry(
     String projectId, {
     required String entryId,
@@ -308,6 +363,27 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
   });
 
   // --- superadmin -----------------------------------------------------
+
+  @override
+  Future<Result<List<TeamMemberMonth>, AppFailure>> adminGlobalMonth({
+    required int year,
+    required int month,
+  }) async {
+    final res = await _api.get(
+      '/api/v1/admin/time/summary',
+      query: {'year': year, 'month': month},
+    );
+    return res.when(
+      ok: (r) {
+        final body = r.data as Map<String, dynamic>;
+        final list = (body['members'] as List<dynamic>? ?? const [])
+            .map((e) => TeamMemberMonth.fromJson(e as Map<String, dynamic>))
+            .toList();
+        return Ok(list);
+      },
+      err: Err.new,
+    );
+  }
 
   @override
   Future<Result<List<VacationAllowance>, AppFailure>> listAllowances(

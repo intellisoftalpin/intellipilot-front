@@ -135,13 +135,19 @@ class TimesheetCubit extends Cubit<TimesheetState> {
   }
 
   Future<AppFailure?> logTime({
-    required String issueId,
     required String date,
     required int minutes,
+    EntryKind kind = EntryKind.work,
+    String? issueId,
+    String? projectId,
+    String? meetingType,
     String? note,
   }) => _mutate(
     () => _repo.logTime(
+      kind: kind,
       issueId: issueId,
+      projectId: projectId,
+      meetingType: meetingType,
       date: date,
       minutes: minutes,
       note: note,

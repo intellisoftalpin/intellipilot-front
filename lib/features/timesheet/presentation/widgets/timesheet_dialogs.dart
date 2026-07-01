@@ -1,10 +1,30 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/core/error/app_failure.dart';
+import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
+import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/timesheet/data/dtos/timesheet_dtos.dart';
 import 'package:intellipilot/features/timesheet/domain/timesheet_repository.dart';
 import 'package:intellipilot/features/timesheet/presentation/cubits/timesheet_cubit.dart';
 import 'package:intellipilot/features/timesheet/presentation/widgets/timesheet_format.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
+
+/// Submit signature for [LogTimeDialog]. Matches `TimesheetCubit.logTime` so
+/// the personal timesheet can pass its cubit method directly, while the
+/// project view supplies a repository-backed closure. Returns a failure (or
+/// null on success).
+typedef LogTimeSubmit =
+    Future<AppFailure?> Function({
+      required String date,
+      required int minutes,
+      EntryKind kind,
+      String? issueId,
+      String? projectId,
+      String? meetingType,
+      String? note,
+    });
 
 int? _minutesFromHours(String raw) {
   final h = double.tryParse(raw.replaceAll(',', '.'));
@@ -13,11 +33,25 @@ int? _minutesFromHours(String raw) {
   return m.clamp(1, 1440);
 }
 
-/// Log worked time against one of the caller's assigned tasks.
+/// Log worked time (against a task or a project) or a meeting. Decoupled from
+/// any cubit: the caller passes [onSubmit] — the personal timesheet forwards
+/// `TimesheetCubit.logTime`, the project view a repository closure.
 class LogTimeDialog extends StatefulWidget {
-  const LogTimeDialog({required this.cubit, this.initialDate, super.key});
-  final TimesheetCubit cubit;
+  const LogTimeDialog({
+    required this.onSubmit,
+    this.initialDate,
+    this.scopedProjectId,
+    this.scopedProjectName,
+    super.key,
+  });
+
+  final LogTimeSubmit onSubmit;
   final DateTime? initialDate;
+
+  /// When set, the dialog is locked to this project (project time page):
+  /// work entries attach to it and the project picker is hidden.
+  final String? scopedProjectId;
+  final String? scopedProjectName;
 
   @override
   State<LogTimeDialog> createState() => _LogTimeDialogState();
@@ -26,16 +60,65 @@ class LogTimeDialog extends StatefulWidget {
 class _LogTimeDialogState extends State<LogTimeDialog> {
   final _hours = TextEditingController();
   final _note = TextEditingController();
+  final _search = TextEditingController();
   late DateTime _date = widget.initialDate ?? DateTime.now();
+
+  EntryKind _mode = EntryKind.work;
   AssignedTask? _task;
+  String? _projectId;
+  MeetingType? _meetingType;
+
+  List<Project> _projects = const [];
+  List<AssignedTask> _results = const [];
+  Timer? _debounce;
+  bool _searching = false;
   String? _error;
   bool _busy = false;
 
+  bool get _scoped => widget.scopedProjectId != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _projectId = widget.scopedProjectId;
+    unawaited(_loadProjects());
+    unawaited(_runSearch(''));
+  }
+
   @override
   void dispose() {
+    _debounce?.cancel();
     _hours.dispose();
     _note.dispose();
+    _search.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadProjects() async {
+    final res = await getIt<ProjectsRepository>().listProjects();
+    if (!mounted) return;
+    setState(() => _projects = res.valueOrNull ?? const []);
+  }
+
+  void _onSearchChanged(String q) {
+    _debounce?.cancel();
+    _debounce = Timer(
+      const Duration(milliseconds: 300),
+      () => unawaited(_runSearch(q)),
+    );
+  }
+
+  Future<void> _runSearch(String q) async {
+    setState(() => _searching = true);
+    final res = await getIt<TimesheetRepository>().searchLoggableIssues(
+      q.trim().isEmpty ? null : q.trim(),
+      projectId: widget.scopedProjectId,
+    );
+    if (!mounted) return;
+    setState(() {
+      _results = res.valueOrNull ?? const [];
+      _searching = false;
+    });
   }
 
   @override
@@ -44,38 +127,36 @@ class _LogTimeDialogState extends State<LogTimeDialog> {
     return AlertDialog(
       title: Text(t.ttLogTime),
       content: SizedBox(
-        width: 380,
+        width: 420,
         child: SingleChildScrollView(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              FutureBuilder(
-                future: getIt<TimesheetRepository>().listAssignedIssues(),
-                builder: (context, snap) {
-                  final tasks =
-                      snap.data?.valueOrNull ?? const <AssignedTask>[];
-                  if (snap.connectionState != ConnectionState.done) {
-                    return const LinearProgressIndicator();
-                  }
-                  if (tasks.isEmpty) return Text(t.ttNoAssignedTasks);
-                  return DropdownButtonFormField<AssignedTask>(
-                    initialValue: _task,
-                    isExpanded: true,
-                    decoration: InputDecoration(labelText: t.ttPickTask),
-                    items: [
-                      for (final task in tasks)
-                        DropdownMenuItem(
-                          value: task,
-                          child: Text(
-                            task.label,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                    ],
-                    onChanged: (v) => setState(() => _task = v),
-                  );
-                },
+              SegmentedButton<EntryKind>(
+                segments: [
+                  ButtonSegment(
+                    value: EntryKind.work,
+                    icon: const Icon(Icons.work_outline, size: 18),
+                    label: Text(t.ttModeWork),
+                  ),
+                  ButtonSegment(
+                    value: EntryKind.meeting,
+                    icon: const Icon(Icons.groups_outlined, size: 18),
+                    label: Text(t.ttModeMeeting),
+                  ),
+                ],
+                selected: {_mode},
+                onSelectionChanged: (s) => setState(() {
+                  _mode = s.first;
+                  _error = null;
+                }),
               ),
+              const SizedBox(height: 12),
+              if (_mode == EntryKind.work)
+                ..._workFields(t)
+              else
+                ..._meetingFields(t),
               const SizedBox(height: 8),
               _DateField(
                 label: t.ttDate,
@@ -93,7 +174,9 @@ class _LogTimeDialogState extends State<LogTimeDialog> {
               const SizedBox(height: 8),
               TextField(
                 controller: _note,
-                decoration: InputDecoration(labelText: t.ttNote),
+                decoration: InputDecoration(
+                  labelText: _noteRequired ? t.ttNoteRequired : t.ttNote,
+                ),
                 maxLines: 2,
               ),
               if (_error != null) ...[
@@ -117,11 +200,157 @@ class _LogTimeDialogState extends State<LogTimeDialog> {
     );
   }
 
+  /// A work entry with no task requires a note (backend rule).
+  bool get _noteRequired => _mode == EntryKind.work && _task == null;
+
+  List<Widget> _workFields(AppLocalizations t) {
+    if (_task != null) {
+      final task = _task!;
+      return [
+        Card(
+          margin: EdgeInsets.zero,
+          child: ListTile(
+            leading: const Icon(Icons.check_circle_outline),
+            title: Text(
+              task.subject,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text('${task.projectName} · #${task.reference}'),
+            trailing: IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: t.ttNoTask,
+              onPressed: () => setState(() => _task = null),
+            ),
+          ),
+        ),
+      ];
+    }
+    return [
+      TextField(
+        controller: _search,
+        decoration: InputDecoration(
+          labelText: t.ttSearchTask,
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _searching
+              ? const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
+              : null,
+        ),
+        onChanged: _onSearchChanged,
+      ),
+      const SizedBox(height: 4),
+      if (_results.isNotEmpty)
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 180),
+          child: Material(
+            type: MaterialType.transparency,
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                for (final task in _results)
+                  ListTile(
+                    dense: true,
+                    title: Text(
+                      task.subject,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text('${task.projectName} · #${task.reference}'),
+                    onTap: () => setState(() {
+                      _task = task;
+                      _error = null;
+                    }),
+                  ),
+              ],
+            ),
+          ),
+        )
+      else if (!_searching)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            t.ttNoTasksFound,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      // No-task entries need a project (unless already scoped to one).
+      if (!_scoped) ...[
+        const SizedBox(height: 8),
+        _projectPicker(t, label: t.ttProjectForNoTask),
+      ] else
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            '${t.ttProject}: ${widget.scopedProjectName ?? ''}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+    ];
+  }
+
+  List<Widget> _meetingFields(AppLocalizations t) {
+    return [
+      DropdownButtonFormField<MeetingType?>(
+        initialValue: _meetingType,
+        isExpanded: true,
+        decoration: InputDecoration(labelText: t.ttMeetingType),
+        items: [
+          DropdownMenuItem(value: null, child: Text(t.ttMeetingUnset)),
+          for (final m in MeetingType.values)
+            DropdownMenuItem(value: m, child: Text(meetingTypeLabel(t, m))),
+        ],
+        onChanged: (v) => setState(() => _meetingType = v),
+      ),
+      const SizedBox(height: 8),
+      if (!_scoped)
+        _projectPicker(t, label: t.ttProjectOptional)
+      else
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(
+            '${t.ttProject}: ${widget.scopedProjectName ?? ''}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+    ];
+  }
+
+  Widget _projectPicker(AppLocalizations t, {required String label}) {
+    return DropdownButtonFormField<String?>(
+      initialValue: _projectId,
+      isExpanded: true,
+      decoration: InputDecoration(labelText: label),
+      items: [
+        DropdownMenuItem(value: null, child: Text(t.ttProjectNone)),
+        for (final p in _projects)
+          DropdownMenuItem(value: p.id, child: Text(p.name)),
+      ],
+      onChanged: (v) => setState(() {
+        _projectId = v;
+        _error = null;
+      }),
+    );
+  }
+
   Future<void> _submit() async {
     final t = AppLocalizations.of(context);
     final minutes = _minutesFromHours(_hours.text);
-    if (_task == null) {
-      setState(() => _error = t.ttSelectTaskFirst);
+    final note = _note.text.trim();
+    final effectiveProject = widget.scopedProjectId ?? _projectId;
+
+    if (_mode == EntryKind.work && _task == null && effectiveProject == null) {
+      setState(() => _error = t.ttNeedTaskOrProject);
+      return;
+    }
+    if (_noteRequired && note.isEmpty) {
+      setState(() => _error = t.ttNoteRequiredError);
       return;
     }
     if (minutes == null) {
@@ -132,11 +361,14 @@ class _LogTimeDialogState extends State<LogTimeDialog> {
       _busy = true;
       _error = null;
     });
-    final fail = await widget.cubit.logTime(
-      issueId: _task!.id,
+    final fail = await widget.onSubmit(
+      kind: _mode,
+      issueId: _mode == EntryKind.work ? _task?.id : null,
+      projectId: _task != null ? null : effectiveProject,
+      meetingType: _mode == EntryKind.meeting ? _meetingType?.wire : null,
       date: isoFrom(_date),
       minutes: minutes,
-      note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+      note: note.isEmpty ? null : note,
     );
     if (!mounted) return;
     if (fail != null) {

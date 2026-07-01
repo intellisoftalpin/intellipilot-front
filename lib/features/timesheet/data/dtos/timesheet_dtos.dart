@@ -3,21 +3,45 @@
 
 /// Category of a time entry. Wire strings match the backend exactly.
 enum EntryKind {
-  work('work'),
-  vacation('vacation'),
-  illness('illness'),
-  dayOff('day_off'),
-  holiday('holiday');
+  work('work', isAbsence: false),
+  meeting('meeting', isAbsence: false),
+  vacation('vacation', isAbsence: true),
+  illness('illness', isAbsence: true),
+  dayOff('day_off', isAbsence: true),
+  holiday('holiday', isAbsence: true);
 
-  const EntryKind(this.wire);
+  const EntryKind(this.wire, {required this.isAbsence});
   final String wire;
 
-  bool get isAbsence => this != EntryKind.work;
+  /// True for the leave kinds (vacation / illness / …) — false for `work`
+  /// and `meeting`, which log actual worked time.
+  final bool isAbsence;
 
   static EntryKind fromWire(String w) => EntryKind.values.firstWhere(
     (e) => e.wire == w,
     orElse: () => EntryKind.work,
   );
+}
+
+/// The kind of a `meeting` time entry. Wire strings match the backend.
+enum MeetingType {
+  daily('daily'),
+  planning('planning'),
+  troubleshooting('troubleshooting'),
+  retro('retro'),
+  refinement('refinement'),
+  other('other');
+
+  const MeetingType(this.wire);
+  final String wire;
+
+  static MeetingType? fromWire(String? w) {
+    if (w == null) return null;
+    for (final m in MeetingType.values) {
+      if (m.wire == w) return m;
+    }
+    return null;
+  }
 }
 
 class TimeEntry {
@@ -37,6 +61,7 @@ class TimeEntry {
     this.projectName,
     this.username,
     this.fullName,
+    this.meetingType,
   });
 
   factory TimeEntry.fromJson(Map<String, dynamic> j) => TimeEntry(
@@ -55,6 +80,7 @@ class TimeEntry {
     projectName: j['project_name'] as String?,
     username: j['username'] as String?,
     fullName: j['full_name'] as String?,
+    meetingType: j['meeting_type'] as String?,
   );
 
   final String id;
@@ -73,11 +99,18 @@ class TimeEntry {
   final String? username;
   final String? fullName;
 
+  /// Only set for `meeting` entries (nullable). One of the [MeetingType] wire
+  /// values.
+  final String? meetingType;
+
   double get hours => minutes / 60.0;
 
   /// Best human label for the linked work item (or absence kind).
   String get label {
     if (kind.isAbsence) return kind.wire;
+    if (kind == EntryKind.meeting) {
+      return projectName != null ? 'meeting · $projectName' : 'meeting';
+    }
     if (issueRef != null) {
       return '#$issueRef ${issueSubject ?? ''}'.trim();
     }
@@ -230,12 +263,14 @@ class AssignedTask {
     required this.projectName,
     required this.reference,
     required this.subject,
+    this.projectSlug = '',
   });
 
   factory AssignedTask.fromJson(Map<String, dynamic> j) => AssignedTask(
     id: j['id'] as String,
     projectId: j['project_id'] as String,
     projectName: j['project_name'] as String? ?? '',
+    projectSlug: j['project_slug'] as String? ?? '',
     reference: (j['reference'] as num).toInt(),
     subject: j['subject'] as String? ?? '',
   );
@@ -243,6 +278,7 @@ class AssignedTask {
   final String id;
   final String projectId;
   final String projectName;
+  final String projectSlug;
   final int reference;
   final String subject;
 

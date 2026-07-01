@@ -40,6 +40,9 @@ import 'package:intellipilot/features/profile/data/profile_repository_impl.dart'
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/projects_repository_impl.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
+import 'package:intellipilot/features/search/data/dtos/search_dtos.dart';
+import 'package:intellipilot/features/search/data/search_repository_impl.dart';
+import 'package:intellipilot/features/search/domain/search_repository.dart';
 import 'package:intellipilot/features/timesheet/data/timesheet_repository_impl.dart';
 import 'package:intellipilot/features/timesheet/domain/timesheet_repository.dart';
 import 'package:intellipilot/features/wiki/data/wiki_repository_impl.dart';
@@ -163,6 +166,9 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<TimesheetRepository>(
     () => TimesheetRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<SearchRepository>(
+    () => SearchRepositoryImpl(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<IssuesIoRepository>(
     () => IssuesIoRepositoryImpl(getIt<ApiClient>()),
   );
@@ -254,6 +260,7 @@ Future<void> configureForTests({
     )
     ..registerSingleton<FilePicker>(filePicker ?? const _StubFilePicker())
     ..registerSingleton<TimesheetRepository>(_NoopTimesheetRepository())
+    ..registerSingleton<SearchRepository>(_NoopSearchRepository())
     ..registerSingleton<DashboardRepository>(_NoopDashboardRepository())
     ..registerSingleton<SessionBloc>(SessionBloc(repository: authRepository))
     ..registerSingleton<ThemeCubit>(ThemeCubit(settingsStorage))
@@ -363,6 +370,17 @@ class _NoopTimesheetRepository implements TimesheetRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
     '_NoopTimesheetRepository.${invocation.memberName}',
+  );
+}
+
+class _NoopSearchRepository implements SearchRepository {
+  @override
+  Future<Result<SearchResponse, AppFailure>> search(
+    String query, {
+    String? projectId,
+    List<String>? types,
+  }) async => const Ok<SearchResponse, AppFailure>(
+    SearchResponse(results: [], fuzzy: false),
   );
 }
 

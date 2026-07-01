@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -449,6 +450,21 @@ class _DetailView extends StatelessWidget {
           ],
         ),
         actions: [
+          if (kind == EntityKind.issue)
+            IconButton(
+              icon: const Icon(Icons.link),
+              tooltip: t.copyLink,
+              onPressed: () {
+                final origin = kIsWeb
+                    ? Uri.base.origin
+                    : getIt<ApiConfig>().baseUrl;
+                final link = '$origin/projects/${data.project.id}/issues/$key';
+                unawaited(Clipboard.setData(ClipboardData(text: link)));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(t.copiedToClipboard)),
+                );
+              },
+            ),
           if (onClose != null)
             IconButton(
               icon: const Icon(Icons.close),
@@ -3486,12 +3502,24 @@ class _InlineTextEditorState extends State<_InlineTextEditor> {
                 ),
           );
     if (!widget.canEdit) return display;
-    return InkWell(
-      onTap: () => setState(() => _editing = true),
-      borderRadius: BorderRadius.circular(4),
-      child: Padding(
-        padding: const EdgeInsets.all(2),
-        child: display,
+    // Give the click-to-edit affordance a generous, full-width hit area with a
+    // hover tint — the multiline (description) variant also reserves a minimum
+    // height so short/empty descriptions stay easy to click.
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: () => setState(() => _editing = true),
+        borderRadius: BorderRadius.circular(4),
+        hoverColor: theme.colorScheme.onSurface.withValues(alpha: 0.04),
+        child: Container(
+          width: double.infinity,
+          alignment: Alignment.topLeft,
+          constraints: BoxConstraints(
+            minHeight: widget.multiline ? 48 : 0,
+          ),
+          padding: EdgeInsets.all(widget.multiline ? 10 : 2),
+          child: display,
+        ),
       ),
     );
   }

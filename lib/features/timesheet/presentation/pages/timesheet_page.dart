@@ -7,9 +7,11 @@ import 'package:intellipilot/core/io/file_downloader.dart';
 import 'package:intellipilot/core/widgets/app_scaffold.dart';
 import 'package:intellipilot/core/widgets/error_view.dart';
 import 'package:intellipilot/core/widgets/loading_indicator.dart';
+import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/timesheet/data/dtos/timesheet_dtos.dart';
 import 'package:intellipilot/features/timesheet/domain/timesheet_repository.dart';
 import 'package:intellipilot/features/timesheet/presentation/cubits/timesheet_cubit.dart';
+import 'package:intellipilot/features/timesheet/presentation/widgets/team_month_grid.dart';
 import 'package:intellipilot/features/timesheet/presentation/widgets/timesheet_dialogs.dart';
 import 'package:intellipilot/features/timesheet/presentation/widgets/timesheet_format.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
@@ -17,8 +19,28 @@ import 'package:intl/intl.dart';
 
 /// Global personal timesheet: month navigation, completeness summary, vacation
 /// balance, the day-by-day entry list, plus log-time / book-absence / export.
-class TimesheetPage extends StatelessWidget {
+class TimesheetPage extends StatefulWidget {
   const TimesheetPage({super.key});
+
+  @override
+  State<TimesheetPage> createState() => _TimesheetPageState();
+}
+
+class _TimesheetPageState extends State<TimesheetPage> {
+  bool _superadmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadProfile());
+  }
+
+  Future<void> _loadProfile() async {
+    final res = await getIt<ProfileRepository>().getProfile();
+    final profile = res.valueOrNull;
+    if (!mounted || profile == null) return;
+    setState(() => _superadmin = profile.isSuperadmin);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,53 +55,78 @@ class TimesheetPage extends StatelessWidget {
         unawaited(cubit.load());
         return cubit;
       },
-      child: const _TimesheetView(),
+      child: _TimesheetView(isSuperadmin: _superadmin),
     );
   }
 }
 
-class _TimesheetView extends StatelessWidget {
-  const _TimesheetView();
+class _TimesheetView extends StatefulWidget {
+  const _TimesheetView({required this.isSuperadmin});
+  final bool isSuperadmin;
+
+  @override
+  State<_TimesheetView> createState() => _TimesheetViewState();
+}
+
+class _TimesheetViewState extends State<_TimesheetView> {
+  bool _global = false;
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return AppScaffold(
-      title: Text(t.ttMyTimesheet),
-      maxContentWidth: 900,
+      title: Text(_global ? t.ttAllUsers : t.ttMyTimesheet),
+      maxContentWidth: _global ? 1400 : 900,
       actions: [
-        BlocBuilder<TimesheetCubit, TimesheetState>(
-          builder: (context, state) => PopupMenuButton<ExportFormat>(
-            icon: const Icon(Icons.download_outlined),
-            tooltip: t.ttExport,
-            enabled: state is TimesheetLoaded,
-            onSelected: (fmt) => _export(context, fmt),
-            itemBuilder: (_) => [
-              PopupMenuItem(
-                value: ExportFormat.csv,
-                child: Text(t.ttExportCsv),
-              ),
-              PopupMenuItem(
-                value: ExportFormat.xlsx,
-                child: Text(t.ttExportXlsx),
-              ),
-            ],
+        if (widget.isSuperadmin)
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(t.ttAllUsers),
+                Switch(
+                  value: _global,
+                  onChanged: (v) => setState(() => _global = v),
+                ),
+              ],
+            ),
           ),
-        ),
+        if (!_global)
+          BlocBuilder<TimesheetCubit, TimesheetState>(
+            builder: (context, state) => PopupMenuButton<ExportFormat>(
+              icon: const Icon(Icons.download_outlined),
+              tooltip: t.ttExport,
+              enabled: state is TimesheetLoaded,
+              onSelected: (fmt) => _export(context, fmt),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: ExportFormat.csv,
+                  child: Text(t.ttExportCsv),
+                ),
+                PopupMenuItem(
+                  value: ExportFormat.xlsx,
+                  child: Text(t.ttExportXlsx),
+                ),
+              ],
+            ),
+          ),
       ],
-      body: BlocBuilder<TimesheetCubit, TimesheetState>(
-        builder: (context, state) {
-          if (state is TimesheetLoading) return const LoadingIndicator();
-          if (state is TimesheetFailed) {
-            return ErrorView(
-              failure: state.failure,
-              onRetry: () => context.read<TimesheetCubit>().load(),
-            );
-          }
-          state as TimesheetLoaded;
-          return _LoadedBody(state: state);
-        },
-      ),
+      body: _global
+          ? const _GlobalTimesheetView()
+          : BlocBuilder<TimesheetCubit, TimesheetState>(
+              builder: (context, state) {
+                if (state is TimesheetLoading) return const LoadingIndicator();
+                if (state is TimesheetFailed) {
+                  return ErrorView(
+                    failure: state.failure,
+                    onRetry: () => context.read<TimesheetCubit>().load(),
+                  );
+                }
+                state as TimesheetLoaded;
+                return _LoadedBody(state: state);
+              },
+            ),
     );
   }
 
@@ -115,6 +162,100 @@ class _TimesheetView extends StatelessWidget {
     if (!ok) {
       messenger.showSnackBar(SnackBar(content: Text(t.ttExportUnsupported)));
     }
+  }
+}
+
+/// Superadmin cross-project month grid (every user, every project).
+class _GlobalTimesheetView extends StatefulWidget {
+  const _GlobalTimesheetView();
+
+  @override
+  State<_GlobalTimesheetView> createState() => _GlobalTimesheetViewState();
+}
+
+class _GlobalTimesheetViewState extends State<_GlobalTimesheetView> {
+  late int _year = DateTime.now().year;
+  late int _month = DateTime.now().month;
+  List<TeamMemberMonth>? _members;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    final res = await getIt<TimesheetRepository>().adminGlobalMonth(
+      year: _year,
+      month: _month,
+    );
+    if (!mounted) return;
+    setState(() {
+      _members = res.valueOrNull ?? const [];
+      _loading = false;
+    });
+  }
+
+  Future<void> _changeMonth(int delta) async {
+    var m = _month + delta;
+    var y = _year;
+    if (m < 1) {
+      m = 12;
+      y -= 1;
+    } else if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+    setState(() {
+      _year = y;
+      _month = m;
+    });
+    await _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final monthLabel = DateFormat.yMMMM(
+      Localizations.localeOf(context).toLanguageTag(),
+    ).format(DateTime(_year, _month));
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () => _changeMonth(-1),
+              ),
+              Text(monthLabel, style: Theme.of(context).textTheme.titleMedium),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () => _changeMonth(1),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: _loading
+              ? const LoadingIndicator()
+              : (_members == null || _members!.isEmpty)
+              ? Center(child: Text(t.ttNoTeamData))
+              : Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: TeamMonthGrid(
+                    members: _members!,
+                    year: _year,
+                    month: _month,
+                  ),
+                ),
+        ),
+      ],
+    );
   }
 }
 
@@ -233,7 +374,7 @@ class _LoadedBodyState extends State<_LoadedBody> {
     await showDialog<void>(
       context: context,
       builder: (_) => LogTimeDialog(
-        cubit: cubit,
+        onSubmit: cubit.logTime,
         initialDate: day == null ? null : DateTime.tryParse(day),
       ),
     );

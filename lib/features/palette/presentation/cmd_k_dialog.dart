@@ -6,10 +6,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/palette/data/dtos/palette_dtos.dart';
 import 'package:intellipilot/features/palette/presentation/cubits/palette_cubit.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
+import 'package:intellipilot/features/search/domain/search_repository.dart';
 import 'package:intellipilot/features/wiki/domain/wiki_repository.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -28,6 +30,7 @@ Future<void> openCmdKDialog(
           projects: getIt<ProjectsRepository>(),
           backlog: getIt<BacklogRepository>(),
           wiki: getIt<WikiRepository>(),
+          search: getIt<SearchRepository>(),
           activeProjectId: activeProjectId,
         );
         unawaited(c.prime());
@@ -85,10 +88,24 @@ class _CmdKState extends State<_CmdK> {
             result.entityId,
           ),
         );
+      case SearchHitResult():
+        context.go(_searchHitRoute(result));
       case CommandResult():
         result.run();
     }
   }
+
+  String _searchHitRoute(SearchHitResult r) => switch (r.entityType) {
+    'issue' => Routes.entityDetailFor(
+      r.projectId,
+      EntityKind.issue,
+      r.entityId,
+    ),
+    'epic' => Routes.entityDetailFor(r.projectId, EntityKind.epic, r.entityId),
+    'wiki' => Routes.wikiPageFor(r.projectId, r.entityId),
+    // Comments have no standalone page — land on the project as a fallback.
+    _ => Routes.projectDetailFor(r.projectId),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -190,6 +207,13 @@ class _CmdKState extends State<_CmdK> {
         return const Icon(Icons.article_outlined);
       case EntityResult():
         return const Icon(Icons.tag);
+      case SearchHitResult():
+        return Icon(switch (r.entityType) {
+          'issue' => Icons.bug_report_outlined,
+          'epic' => Icons.bookmarks_outlined,
+          'wiki' => Icons.article_outlined,
+          _ => Icons.comment_outlined,
+        });
       case CommandResult():
         return const Icon(Icons.flash_on_outlined);
     }

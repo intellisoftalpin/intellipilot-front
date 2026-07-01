@@ -8,6 +8,8 @@ import 'package:intellipilot/features/palette/data/dtos/palette_dtos.dart';
 import 'package:intellipilot/features/palette/presentation/cubits/palette_cubit.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
+import 'package:intellipilot/features/search/data/dtos/search_dtos.dart';
+import 'package:intellipilot/features/search/domain/search_repository.dart';
 import 'package:intellipilot/features/wiki/data/dtos/wiki_dtos.dart';
 import 'package:intellipilot/features/wiki/domain/wiki_repository.dart';
 
@@ -56,6 +58,19 @@ class _FakeWiki implements WikiRepository {
       throw UnimplementedError('${invocation.memberName}');
 }
 
+class _FakeSearch implements SearchRepository {
+  const _FakeSearch();
+
+  @override
+  Future<Result<SearchResponse, AppFailure>> search(
+    String query, {
+    String? projectId,
+    List<String>? types,
+  }) async => const Ok<SearchResponse, AppFailure>(
+    SearchResponse(results: [], fuzzy: false),
+  );
+}
+
 Project _project(String id, String name, String slug) => Project(
   id: id,
   ownerId: 'u',
@@ -93,6 +108,7 @@ void main() {
         ]),
         backlog: _FakeBacklog(null),
         wiki: _FakeWiki([_wikiPage('w1', 'p1', 'Auth playbook', 'playbook')]),
+        search: const _FakeSearch(),
         activeProjectId: 'p1',
       );
       await cubit.setQuery('auth');
@@ -108,6 +124,7 @@ void main() {
           const ResolvedRef(kind: 'issue', id: 'u1', ref: 42),
         ),
         wiki: _FakeWiki(const []),
+        search: const _FakeSearch(),
         activeProjectId: 'p1',
       );
       await cubit.setQuery('#42');
@@ -123,6 +140,7 @@ void main() {
           const ResolvedRef(kind: 'issue', id: 't', ref: 1),
         ),
         wiki: _FakeWiki(const []),
+        search: const _FakeSearch(),
         activeProjectId: null,
       );
       await cubit.setQuery('#1');

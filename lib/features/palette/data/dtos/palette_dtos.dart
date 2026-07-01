@@ -41,6 +41,23 @@ class EntityResult extends PaletteResult {
   final String entityId;
 }
 
+/// A hit from the backend full-text search (`/api/v1/search`). Carries the
+/// raw entity type so the palette can pick the right navigation target.
+class SearchHitResult extends PaletteResult {
+  const SearchHitResult({
+    required this.entityType,
+    required this.projectId,
+    required this.entityId,
+    required super.label,
+    required super.subtitle,
+  });
+
+  /// `issue` | `epic` | `wiki` | `comment`.
+  final String entityType;
+  final String projectId;
+  final String entityId;
+}
+
 class CommandResult extends PaletteResult {
   const CommandResult({
     required this.id,
