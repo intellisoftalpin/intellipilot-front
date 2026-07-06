@@ -66,9 +66,15 @@ class WorkItemFilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final members = MembersScope.of(context);
+    final sortedMembers = members.entries.toList()
+      ..sort(
+        (a, b) => a.value.displayName.toLowerCase().compareTo(
+          b.value.displayName.toLowerCase(),
+        ),
+      );
     final memberOptions = <_Opt>[
       _Opt('none', t.dashKpiUnassigned),
-      for (final e in members.entries) _Opt(e.key, e.value.displayName),
+      for (final e in sortedMembers) _Opt(e.key, e.value.displayName),
     ];
 
     // Row 1: the high-frequency filters. Assignee leads, then status (board
@@ -82,6 +88,14 @@ class WorkItemFilterBar extends StatelessWidget {
           options: memberOptions,
           enabled: !_locked('assignee'),
           onChanged: (v) => onChanged(filter.copyWith(assigneeId: v)),
+        ),
+      if (!_hidden('qa_assignee'))
+        _Dropdown(
+          hint: t.issueFieldQaAssignee,
+          value: filter.qaAssigneeId,
+          options: memberOptions,
+          enabled: !_locked('qa_assignee'),
+          onChanged: (v) => onChanged(filter.copyWith(qaAssigneeId: v)),
         ),
       if (showStatus && !_hidden('status'))
         _Dropdown(
@@ -239,13 +253,21 @@ class _Dropdown extends StatelessWidget {
   final ValueChanged<String?> onChanged;
   final bool enabled;
 
+  /// Sentinel value for the "clear this filter" menu item. A `PopupMenuButton`
+  /// reports a `null` selection as a *dismissal* (it calls `onCanceled`, not
+  /// `onSelected`), so the clear item must carry a non-null value; we map it
+  /// back to `null` in [_handle].
+  static const _clearValue = ' clear';
+
+  void _handle(String? v) => onChanged(v == _clearValue ? null : v);
+
   @override
   Widget build(BuildContext context) {
     if (options.isEmpty) return const SizedBox.shrink();
-    final selected = value == null
+    final selectedLabel = value == null
         ? null
-        : options.where((o) => o.id == value).firstOrNull;
-    final active = selected != null;
+        : (options.where((o) => o.id == value).firstOrNull?.label ?? value);
+    final active = selectedLabel != null;
     final theme = Theme.of(context);
 
     // Locked dimension: a disabled chip that only displays its value. We keep
@@ -256,7 +278,7 @@ class _Dropdown extends StatelessWidget {
         child: Chip(
           avatar: const Icon(Icons.lock_outline, size: 14),
           backgroundColor: theme.colorScheme.surfaceContainerHighest,
-          label: Text(active ? '$hint: ${selected.label}' : hint),
+          label: Text(active ? '$hint: $selectedLabel' : hint),
         ),
       );
     }
@@ -264,9 +286,10 @@ class _Dropdown extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       child: PopupMenuButton<String?>(
-        onSelected: onChanged,
+        onSelected: _handle,
         itemBuilder: (_) => [
-          PopupMenuItem<String?>(value: null, child: Text('— $hint')),
+          // Non-null value so the selection actually fires (see [_clearValue]).
+          PopupMenuItem<String?>(value: _clearValue, child: Text('— $hint')),
           for (final o in options)
             PopupMenuItem<String?>(value: o.id, child: Text(o.label)),
         ],
@@ -275,7 +298,7 @@ class _Dropdown extends StatelessWidget {
           label: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(active ? '$hint: ${selected.label}' : hint),
+              Text(active ? '$hint: $selectedLabel' : hint),
               const Icon(Icons.arrow_drop_down, size: 18),
             ],
           ),

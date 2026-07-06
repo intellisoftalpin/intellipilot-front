@@ -1918,6 +1918,8 @@
   "@issueFieldDueDate": { "description": "Label for the issue due-date field." },
   "issueFieldAssignee": "Assignee",
   "@issueFieldAssignee": { "description": "Label for the issue assignee field." },
+  "issueFieldQaAssignee": "QA",
+  "@issueFieldQaAssignee": { "description": "Label for the QA-assignee filter." },
   "issueFieldCategory": "Category",
   "@issueFieldCategory": { "description": "Label for the issue category field." },
   "milestoneManageEpics": "Manage epics",

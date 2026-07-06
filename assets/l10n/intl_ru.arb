@@ -1000,6 +1000,7 @@
   "actionClearFilters": "Сбросить фильтры",
   "issueFieldDueDate": "Срок выполнения",
   "issueFieldAssignee": "Исполнитель",
+  "issueFieldQaAssignee": "QA",
   "issueFieldCategory": "Категория",
   "milestoneManageEpics": "Управление эпиками",
   "milestoneNoEpics": "В этой вехе пока нет эпиков.",

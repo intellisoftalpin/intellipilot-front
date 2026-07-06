@@ -15,6 +15,7 @@ class WorkItemFilter {
     this.priorityId,
     this.sizeId,
     this.assigneeId,
+    this.qaAssigneeId,
     this.epicId,
     this.milestoneId,
     this.labelId,
@@ -30,6 +31,7 @@ class WorkItemFilter {
     priorityId: j['priority'] as String?,
     sizeId: j['size'] as String?,
     assigneeId: j['assignee'] as String?,
+    qaAssigneeId: j['qa_assignee'] as String?,
     epicId: j['epic'] as String?,
     milestoneId: j['milestone'] as String?,
     labelId: j['label'] as String?,
@@ -55,6 +57,7 @@ class WorkItemFilter {
   final String? priorityId;
   final String? sizeId;
   final String? assigneeId;
+  final String? qaAssigneeId;
   final String? epicId;
   final String? milestoneId;
   final String? labelId;
@@ -71,6 +74,7 @@ class WorkItemFilter {
     Object? priorityId = _keep,
     Object? sizeId = _keep,
     Object? assigneeId = _keep,
+    Object? qaAssigneeId = _keep,
     Object? epicId = _keep,
     Object? milestoneId = _keep,
     Object? labelId = _keep,
@@ -84,6 +88,9 @@ class WorkItemFilter {
     priorityId: priorityId == _keep ? this.priorityId : priorityId as String?,
     sizeId: sizeId == _keep ? this.sizeId : sizeId as String?,
     assigneeId: assigneeId == _keep ? this.assigneeId : assigneeId as String?,
+    qaAssigneeId: qaAssigneeId == _keep
+        ? this.qaAssigneeId
+        : qaAssigneeId as String?,
     epicId: epicId == _keep ? this.epicId : epicId as String?,
     milestoneId: milestoneId == _keep
         ? this.milestoneId
@@ -103,6 +110,7 @@ class WorkItemFilter {
     if (priorityId != null) 'priority': priorityId,
     if (sizeId != null) 'size': sizeId,
     if (assigneeId != null) 'assignee': assigneeId,
+    if (qaAssigneeId != null) 'qa_assignee': qaAssigneeId,
     if (epicId != null) 'epic': epicId,
     if (milestoneId != null) 'milestone': milestoneId,
     if (labelId != null) 'label': labelId,
@@ -121,6 +129,7 @@ class WorkItemFilter {
       priorityId != null ||
       sizeId != null ||
       assigneeId != null ||
+      qaAssigneeId != null ||
       epicId != null ||
       milestoneId != null ||
       labelId != null ||
@@ -140,6 +149,7 @@ class WorkItemFilter {
     if (priorityId != null && issue.priorityId != priorityId) return false;
     if (sizeId != null && issue.sizeId != sizeId) return false;
     if (!_idMatches(assigneeId, issue.assignedTo)) return false;
+    if (!_idMatches(qaAssigneeId, issue.qaAssigneeId)) return false;
     if (!_idMatches(epicId, issue.epicId)) return false;
     if (!_idMatches(milestoneId, issue.milestoneId)) return false;
     if (category != null && issue.category != category) return false;

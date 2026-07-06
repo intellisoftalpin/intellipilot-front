@@ -1069,6 +1069,7 @@
   "actionClearFilters": "Скінуць фільтры",
   "issueFieldDueDate": "Тэрмін выканання",
   "issueFieldAssignee": "Выканаўца",
+  "issueFieldQaAssignee": "QA",
   "issueFieldCategory": "Катэгорыя",
   "milestoneManageEpics": "Кіраванне эпікамі",
   "milestoneNoEpics": "У гэтай вяхе пакуль няма эпікаў.",

@@ -1070,6 +1070,7 @@
   "actionClearFilters": "Filter löschen",
   "issueFieldDueDate": "Fälligkeitsdatum",
   "issueFieldAssignee": "Zugewiesen an",
+  "issueFieldQaAssignee": "QA",
   "issueFieldCategory": "Kategorie",
   "milestoneManageEpics": "Epics verwalten",
   "milestoneNoEpics": "Noch keine Epics in diesem Meilenstein.",

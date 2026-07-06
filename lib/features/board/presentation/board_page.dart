@@ -447,22 +447,25 @@ class _TasksLoaded extends StatelessWidget {
               ),
             ),
           ),
-        WorkItemFilterBar(
-          filter: state.effectiveFilter,
-          onChanged: cubit.setAdhocFilter,
-          statuses: state.statuses,
-          types: state.types,
-          priorities: state.priorities,
-          sizes: state.sizes,
-          epics: state.epics,
-          milestones: state.milestones,
-          labels: state.labels,
-          components: state.components,
-          showStatus: false,
-          lockedDimensions: state.config.lockedDimensions,
-          // The board hides the issue-type filter (board-only decision) and the
-          // active swimlane dimension.
-          hiddenDimensions: {'type', ?state.group?.filterKey},
+        Align(
+          alignment: Alignment.centerLeft,
+          child: WorkItemFilterBar(
+            filter: state.effectiveFilter,
+            onChanged: cubit.setAdhocFilter,
+            statuses: state.statuses,
+            types: state.types,
+            priorities: state.priorities,
+            sizes: state.sizes,
+            epics: state.epics,
+            milestones: state.milestones,
+            labels: state.labels,
+            components: state.components,
+            showStatus: false,
+            lockedDimensions: state.config.lockedDimensions,
+            // The board hides the issue-type filter (board-only decision) and the
+            // active swimlane dimension.
+            hiddenDimensions: {'type', ?state.group?.filterKey},
+          ),
         ),
         Expanded(
           child: state.group == null
@@ -657,8 +660,13 @@ class _SwimlanesState extends State<_Swimlanes> {
         controller: _vertical,
         slivers: [
           for (final lane in state.lanes) ...[
+            // Non-pinned: multiple pinned headers in one CustomScrollView
+            // accumulate `SliverConstraints.overlap`, which the box-adapter
+            // strips below don't consume — producing a gap that grows with each
+            // successive lane and wasting vertical space with many lanes. Plain
+            // scrolling headers keep every lane compact.
             SliverPersistentHeader(
-              pinned: true,
+              pinned: false,
               delegate: _LaneHeaderDelegate(
                 title: _resolveLane(context, lane.key),
                 total: lane.total,
