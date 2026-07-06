@@ -982,10 +982,12 @@ class _TaskCard extends StatelessWidget {
                 children: [
                   IssueKeyChip(text: issueKeyLabel(keyPrefix, task.reference)),
                   const Spacer(),
-                  if (showAssignee &&
-                      MembersScope.user(context, task.assignedTo) != null)
-                    UserAvatar(
-                      user: MembersScope.user(context, task.assignedTo)!,
+                  if (showAssignee)
+                    ?_roleAvatar(
+                      context,
+                      '🔨',
+                      AppLocalizations.of(context).detailFieldAssignee,
+                      task.assignedTo,
                       size: 22,
                     ),
                 ],
@@ -1050,27 +1052,67 @@ class _TaskCard extends StatelessWidget {
       );
     }
 
-    final reporter = MembersScope.user(context, task.ownerId);
+    final t = AppLocalizations.of(context);
+    // QA + Reviewer (when assigned) and the reporter share one people row.
+    final qa = _roleAvatar(
+      context,
+      '🐞',
+      t.detailFieldQaAssignee,
+      task.qaAssigneeId,
+    );
+    final reviewer = _roleAvatar(
+      context,
+      '👀',
+      t.detailFieldReviewer,
+      task.reviewerId,
+    );
+    final reporter = _roleAvatar(
+      context,
+      '📝',
+      t.detailFieldReporter,
+      task.ownerId,
+    );
+    final people = [qa, reviewer, reporter].whereType<Widget>().toList();
     return [
       if (chips.isNotEmpty) ...[
         const SizedBox(height: 8),
         Wrap(spacing: 6, runSpacing: 6, children: chips),
       ],
-      if (reporter != null) ...[
+      if (people.isNotEmpty) ...[
         const SizedBox(height: 8),
-        Row(
-          children: [
-            const Spacer(),
-            Tooltip(
-              message:
-                  '${AppLocalizations.of(context).detailFieldReporter}: '
-                  '${reporter.displayName}',
-              child: UserAvatar(user: reporter, size: 18),
-            ),
-          ],
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: 10,
+          runSpacing: 6,
+          children: people,
         ),
       ],
     ];
+  }
+
+  /// A compact `emoji + avatar` badge for a person role on the card, with a
+  /// tooltip naming the role and person. Returns null when the id does not
+  /// resolve to a known member (e.g. unassigned).
+  Widget? _roleAvatar(
+    BuildContext context,
+    String emoji,
+    String label,
+    String? userId, {
+    double size = 18,
+  }) {
+    final u = MembersScope.user(context, userId);
+    if (u == null) return null;
+    return Tooltip(
+      message: '$label: ${u.displayName}',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: TextStyle(fontSize: size * 0.6)),
+          const SizedBox(width: 3),
+          UserAvatar(user: u, size: size),
+        ],
+      ),
+    );
   }
 }
 

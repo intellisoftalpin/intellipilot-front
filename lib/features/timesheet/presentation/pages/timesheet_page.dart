@@ -290,79 +290,113 @@ class _LoadedBodyState extends State<_LoadedBody> {
             ? isoFrom(today)
             : null);
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    // Worked time this month = `work` + `meeting`; absences do not count.
+    final workedMinutes = state.entries
+        .where((e) => !e.kind.isAbsence)
+        .fold<int>(0, (s, e) => s + e.minutes);
+
+    final header = Row(
       children: [
-        Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.chevron_left),
-              onPressed: () => cubit.changeMonth(-1),
-            ),
-            Expanded(
-              child: Text(
-                monthLabel,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.chevron_right),
-              onPressed: () => cubit.changeMonth(1),
-            ),
-          ],
+        IconButton(
+          icon: const Icon(Icons.chevron_left),
+          onPressed: () => cubit.changeMonth(-1),
         ),
-        const SizedBox(height: 8),
-        _SummaryCard(summary: state.summary),
-        const SizedBox(height: 8),
-        _BalanceCard(balance: state.balance),
-        const SizedBox(height: 12),
-        _MonthCalendar(
-          year: state.year,
-          month: state.month,
-          byDate: byDate,
-          targetMinutes: state.summary.workMinutesPerDay,
-          missingDays: state.summary.missingDays.toSet(),
-          selected: selected,
-          onSelect: (d) => setState(() => _selected = d),
+        Expanded(
+          child: Text(
+            monthLabel,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
         ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: FilledButton.icon(
-                icon: const Icon(Icons.add),
-                label: Text(t.ttLogTime),
-                onPressed: state.busy
-                    ? null
-                    : () => _openLog(context, cubit, selected),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: FilledButton.tonalIcon(
-                icon: const Icon(Icons.beach_access_outlined),
-                label: Text(t.ttBookAbsence),
-                onPressed: state.busy
-                    ? null
-                    : () => _openAbsence(context, cubit),
-              ),
-            ),
-          ],
+        IconButton(
+          icon: const Icon(Icons.chevron_right),
+          onPressed: () => cubit.changeMonth(1),
         ),
-        const SizedBox(height: 16),
-        if (selected != null && (byDate[selected]?.isNotEmpty ?? false))
-          _DaySection(
-            date: selected,
-            entries: byDate[selected]!,
-            cubit: cubit,
-          )
-        else
-          Padding(
+      ],
+    );
+
+    final actions = Row(
+      children: [
+        Expanded(
+          child: FilledButton.icon(
+            icon: const Icon(Icons.add),
+            label: Text(t.ttLogTime),
+            onPressed: state.busy
+                ? null
+                : () => _openLog(context, cubit, selected),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: FilledButton.tonalIcon(
+            icon: const Icon(Icons.beach_access_outlined),
+            label: Text(t.ttBookAbsence),
+            onPressed: state.busy ? null : () => _openAbsence(context, cubit),
+          ),
+        ),
+      ],
+    );
+
+    final leftChildren = <Widget>[
+      header,
+      const SizedBox(height: 8),
+      _SummaryCard(summary: state.summary, workedMinutes: workedMinutes),
+      const SizedBox(height: 8),
+      _BalanceCard(balance: state.balance),
+      const SizedBox(height: 12),
+      _MonthCalendar(
+        year: state.year,
+        month: state.month,
+        byDate: byDate,
+        targetMinutes: state.summary.workMinutesPerDay,
+        missingDays: state.summary.missingDays.toSet(),
+        selected: selected,
+        onSelect: (d) => setState(() => _selected = d),
+      ),
+      const SizedBox(height: 16),
+      actions,
+    ];
+
+    final dayPanel =
+        (selected != null && (byDate[selected]?.isNotEmpty ?? false))
+        ? _DaySection(date: selected, entries: byDate[selected]!, cubit: cubit)
+        : Padding(
             padding: const EdgeInsets.all(24),
             child: Center(child: Text(t.ttNoEntries)),
-          ),
-      ],
+          );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Wide screens: calendar (+ summary/actions) on the left, the selected
+        // day's entries on the right, each scrolling independently.
+        if (constraints.maxWidth >= 840) {
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: ListView(children: leftChildren),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 2,
+                  child: ListView(children: [dayPanel]),
+                ),
+              ],
+            ),
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            ...leftChildren,
+            const SizedBox(height: 16),
+            dayPanel,
+          ],
+        );
+      },
     );
   }
 
@@ -432,11 +466,13 @@ class _MonthCalendar extends StatelessWidget {
     for (var d = 1; d <= days; d++) {
       final iso = isoDate(year, month, d);
       final entries = byDate[iso] ?? const <TimeEntry>[];
+      // Worked time = `work` + `meeting` (both are real logged hours); only the
+      // true leave kinds count as an absence marker for the day.
       final work = entries
-          .where((e) => e.kind == EntryKind.work)
+          .where((e) => !e.kind.isAbsence)
           .fold<int>(0, (s, e) => s + e.minutes);
       final absence = entries
-          .where((e) => e.kind != EntryKind.work)
+          .where((e) => e.kind.isAbsence)
           .map((e) => e.kind)
           .firstOrNull;
       cells.add(
@@ -581,14 +617,21 @@ class _DayCell extends StatelessWidget {
 }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.summary});
+  const _SummaryCard({required this.summary, required this.workedMinutes});
   final TimesheetSummary summary;
+
+  /// Worked minutes this month (`work` + `meeting`), computed on the client so
+  /// meetings are always included in the displayed total.
+  final int workedMinutes;
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final ok = !summary.hasGaps;
+    // Warn only when a working day has already passed unfilled — today (and
+    // any future day) never triggers the "unfilled" state.
+    final pastGaps = pastMissingDays(summary.missingDays);
+    final ok = pastGaps.isEmpty;
     final color = ok ? theme.colorScheme.primary : theme.colorScheme.error;
     return Card(
       color: color.withValues(alpha: 0.08),
@@ -598,13 +641,15 @@ class _SummaryCard extends StatelessWidget {
           color: color,
         ),
         title: Text(ok ? t.ttComplete : t.ttMissingTitle),
-        subtitle: Text(
-          ok
-              ? t.ttLoggedOf(
-                  fmtMins(summary.loggedMinutes),
-                  fmtMins(summary.requiredMinutes),
-                )
-              : t.ttMissingBody(summary.missingDays.length),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${t.ttMonthTotal}: ${t.ttLoggedOf(fmtMins(workedMinutes), fmtMins(summary.requiredMinutes))}',
+            ),
+            if (!ok) Text(t.ttMissingBody(pastGaps.length)),
+          ],
         ),
       ),
     );
@@ -712,7 +757,16 @@ class _DaySection extends StatelessWidget {
   Future<void> _edit(BuildContext context, TimeEntry e) async {
     await showDialog<void>(
       context: context,
-      builder: (_) => EditEntryDialog(cubit: cubit, entry: e),
+      builder: (_) => EditEntryDialog(
+        entry: e,
+        onSubmit: ({required minutes, required version, note}) =>
+            cubit.editEntry(
+              id: e.id,
+              minutes: minutes,
+              version: version,
+              note: note,
+            ),
+      ),
     );
   }
 

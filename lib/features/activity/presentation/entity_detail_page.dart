@@ -2706,8 +2706,62 @@ class _PeopleTable extends StatelessWidget {
             ),
           ),
         ),
+        // QA + Reviewer are issue-only accountability roles (informational).
+        if (_issue != null) ...[
+          const SizedBox(height: 4),
+          _kvRowWith(
+            context,
+            t.detailFieldQaAssignee,
+            _withAvatar(
+              _issue!.qaAssigneeId,
+              _ClickToEditCell(
+                displayText: _userLabel(_issue!.qaAssigneeId, me, t),
+                candidates: _assigneeCandidates(t, me),
+                currentId: _issue!.qaAssigneeId,
+                noneLabel: '—',
+                canEdit: canEdit,
+                onPicked: (id) async {
+                  final ok = await _patchQaAssignee(id);
+                  if (ok && id != null) {
+                    await _RecentAssignees.push(projectId, id);
+                  }
+                  return ok;
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          _kvRowWith(
+            context,
+            t.detailFieldReviewer,
+            _withAvatar(
+              _issue!.reviewerId,
+              _ClickToEditCell(
+                displayText: _userLabel(_issue!.reviewerId, me, t),
+                candidates: _assigneeCandidates(t, me),
+                currentId: _issue!.reviewerId,
+                noneLabel: '—',
+                canEdit: canEdit,
+                onPicked: (id) async {
+                  final ok = await _patchReviewer(id);
+                  if (ok && id != null) {
+                    await _RecentAssignees.push(projectId, id);
+                  }
+                  return ok;
+                },
+              ),
+            ),
+          ),
+        ],
       ],
     );
+  }
+
+  /// The wrapped issue when this entity is an issue (else null — epics have no
+  /// QA/Reviewer roles).
+  Issue? get _issue {
+    final e = data.entity;
+    return e is _IssueRec ? e.issue : null;
   }
 
   String _userLabel(String? id, String me, AppLocalizations t) {
@@ -2823,6 +2877,31 @@ class _PeopleTable extends StatelessWidget {
         );
         ok = res.isOk;
     }
+    if (ok) onChanged();
+    return ok;
+  }
+
+  /// Issue-only: set/clear the QA assignee.
+  Future<bool> _patchQaAssignee(String? id) =>
+      _patchIssueUser(UpdateIssueRequest(qaAssigneeId: id));
+
+  /// Issue-only: set/clear the reviewer.
+  Future<bool> _patchReviewer(String? id) =>
+      _patchIssueUser(UpdateIssueRequest(reviewerId: id));
+
+  /// Shared body for the issue-only people patches: re-fetch for a fresh ETag,
+  /// PATCH, and notify on success.
+  Future<bool> _patchIssueUser(UpdateIssueRequest body) async {
+    final backlog = getIt<BacklogRepository>();
+    final fresh = (await backlog.getIssue(projectId, entityId)).valueOrNull;
+    if (fresh?.etag == null) return false;
+    final res = await backlog.updateIssue(
+      projectId,
+      entityId,
+      body: body,
+      etag: fresh!.etag!,
+    );
+    final ok = res.isOk;
     if (ok) onChanged();
     return ok;
   }

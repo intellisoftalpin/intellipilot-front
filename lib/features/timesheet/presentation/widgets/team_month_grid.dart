@@ -12,12 +12,17 @@ class TeamMonthGrid extends StatelessWidget {
     required this.members,
     required this.year,
     required this.month,
+    this.onTapDay,
     super.key,
   });
 
   final List<TeamMemberMonth> members;
   final int year;
   final int month;
+
+  /// When set, cells with logged time become tappable — used by managers to
+  /// drill into a member's day and edit/delete their entries.
+  final void Function(TeamMemberMonth member, String isoDate)? onTapDay;
 
   static const double _dayWidth = 30;
   static const double _rowHeight = 32;
@@ -93,11 +98,7 @@ class TeamMonthGrid extends StatelessWidget {
                   for (final m in members)
                     Row(
                       children: [
-                        for (final d in days)
-                          _cell(
-                            context,
-                            m.days[isoDate(year, month, d)] ?? 0,
-                          ),
+                        for (final d in days) _cell(context, m, d),
                       ],
                     ),
                 ],
@@ -150,8 +151,10 @@ class TeamMonthGrid extends StatelessWidget {
     );
   }
 
-  Widget _cell(BuildContext context, int minutes) {
+  Widget _cell(BuildContext context, TeamMemberMonth member, int day) {
     final theme = Theme.of(context);
+    final iso = isoDate(year, month, day);
+    final minutes = member.days[iso] ?? 0;
     if (minutes == 0) {
       return SizedBox(
         width: _dayWidth,
@@ -167,7 +170,7 @@ class TeamMonthGrid extends StatelessWidget {
     final hours = minutes / 60;
     // Light heatmap: deeper as the day fills toward 8h.
     final alpha = (hours / 8).clamp(0.0, 1.0) * 0.5;
-    return Container(
+    final cell = Container(
       width: _dayWidth,
       height: _rowHeight,
       alignment: Alignment.center,
@@ -177,5 +180,7 @@ class TeamMonthGrid extends StatelessWidget {
         style: theme.textTheme.labelSmall,
       ),
     );
+    if (onTapDay == null) return cell;
+    return InkWell(onTap: () => onTapDay!(member, iso), child: cell);
   }
 }

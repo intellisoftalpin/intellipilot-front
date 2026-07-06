@@ -264,6 +264,12 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
   );
 
   @override
+  Future<Result<Unit, AppFailure>> adminDeleteEntry(
+    String projectId,
+    String entryId,
+  ) => _delete('/api/v1/projects/$projectId/time-entries/$entryId');
+
+  @override
   Future<Result<List<PeriodLock>, AppFailure>> listLocks(
     String projectId,
   ) async {

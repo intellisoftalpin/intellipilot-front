@@ -18,6 +18,18 @@ int lastDay(int y, int m) => DateTime(y, m + 1, 0).day;
 
 String isoFrom(DateTime d) => isoDate(d.year, d.month, d.day);
 
+/// Unfilled working days that are strictly in the past (before today). Today —
+/// and any future day — is excluded, so the "unfilled timesheet" warning only
+/// fires once a working day has actually passed unfilled. ISO `yyyy-MM-dd`
+/// strings compare lexicographically, so a plain string compare is correct.
+List<String> pastMissingDays(Iterable<String> missingDays) {
+  final todayIso = isoFrom(DateTime.now());
+  return [
+    for (final d in missingDays)
+      if (d.compareTo(todayIso) < 0) d,
+  ];
+}
+
 IconData kindIcon(EntryKind kind) => switch (kind) {
   EntryKind.work => Icons.work_outline,
   EntryKind.meeting => Icons.groups_outlined,

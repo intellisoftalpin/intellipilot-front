@@ -118,6 +118,14 @@ abstract interface class TimesheetRepository {
     String? note,
   });
 
+  /// Delete another project member's entry (needs `time.manage` in that
+  /// project; bypasses period locks). Backed by
+  /// `/projects/{id}/time-entries/{entryId}`.
+  Future<Result<Unit, AppFailure>> adminDeleteEntry(
+    String projectId,
+    String entryId,
+  );
+
   Future<Result<List<PeriodLock>, AppFailure>> listLocks(String projectId);
 
   Future<Result<Unit, AppFailure>> lockPeriod(

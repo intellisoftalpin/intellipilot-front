@@ -112,6 +112,8 @@ class Issue {
     this.milestoneId,
     this.ownerId,
     this.assignedTo,
+    this.qaAssigneeId,
+    this.reviewerId,
     this.category,
     this.customerIds = const [],
     this.startDate,
@@ -140,6 +142,8 @@ class Issue {
       milestoneId: json['milestone_id'] as String?,
       ownerId: json['owner_id'] as String?,
       assignedTo: json['assigned_to'] as String?,
+      qaAssigneeId: json['qa_assignee_id'] as String?,
+      reviewerId: json['reviewer_id'] as String?,
       category: json['category'] as String?,
       customerIds: (json['customer_ids'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
@@ -181,6 +185,12 @@ class Issue {
   final String? milestoneId;
   final String? ownerId;
   final String? assignedTo;
+
+  /// Who tests this issue (informational; distinct from the assignee).
+  final String? qaAssigneeId;
+
+  /// Who reviews the implementation (informational; a second dev).
+  final String? reviewerId;
 
   /// One of the fixed `IssueCategory` wire values (nullable).
   final String? category;
@@ -372,6 +382,8 @@ class UpdateIssueRequest {
     this.parentId = const _Absent(),
     this.milestoneId = const _Absent(),
     this.assignedTo = const _Absent(),
+    this.qaAssigneeId = const _Absent(),
+    this.reviewerId = const _Absent(),
     this.ownerId = const _Absent(),
     this.category = const _Absent(),
     this.customerIds,
@@ -394,6 +406,8 @@ class UpdateIssueRequest {
   final Object? parentId;
   final Object? milestoneId;
   final Object? assignedTo;
+  final Object? qaAssigneeId;
+  final Object? reviewerId;
   final Object? ownerId;
   final Object? category;
 
@@ -420,6 +434,8 @@ class UpdateIssueRequest {
     if (parentId is! _Absent) 'parent_id': parentId,
     if (milestoneId is! _Absent) 'milestone_id': milestoneId,
     if (assignedTo is! _Absent) 'assigned_to': assignedTo,
+    if (qaAssigneeId is! _Absent) 'qa_assignee_id': qaAssigneeId,
+    if (reviewerId is! _Absent) 'reviewer_id': reviewerId,
     if (ownerId is! _Absent) 'owner_id': ownerId,
     if (category is! _Absent) 'category': category,
     if (customerIds != null) 'customer_ids': customerIds,

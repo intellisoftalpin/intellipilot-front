@@ -184,6 +184,21 @@ class _ProjectTimePageState extends State<ProjectTimePage> {
     await _load();
   }
 
+  /// Manager drill-in: open a member's day, then edit or delete their entries.
+  Future<void> _openMemberDay(TeamMemberMonth member, String isoDate) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _MemberDaySheet(
+        projectId: widget.projectId,
+        member: member,
+        date: isoDate,
+      ),
+    );
+    await _load();
+  }
+
   Future<void> _export(ExportFormat fmt) async {
     final t = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -291,6 +306,7 @@ class _ProjectTimePageState extends State<ProjectTimePage> {
                       members: _members!,
                       year: _year,
                       month: _month,
+                      onTapDay: _canManage ? _openMemberDay : null,
                     ),
                   ),
           ),
@@ -455,5 +471,150 @@ class _LogForMemberDialogState extends State<_LogForMemberDialog> {
       return;
     }
     Navigator.pop(context);
+  }
+}
+
+/// Manager-only bottom sheet: lists one member's entries for a single day and
+/// lets a manager edit (via `correctEntry`) or delete (via `adminDeleteEntry`)
+/// each one. Both endpoints require `time.manage` and bypass period locks.
+class _MemberDaySheet extends StatefulWidget {
+  const _MemberDaySheet({
+    required this.projectId,
+    required this.member,
+    required this.date,
+  });
+  final String projectId;
+  final TeamMemberMonth member;
+  final String date;
+
+  @override
+  State<_MemberDaySheet> createState() => _MemberDaySheetState();
+}
+
+class _MemberDaySheetState extends State<_MemberDaySheet> {
+  TimesheetRepository get _repo => getIt<TimesheetRepository>();
+  List<TimeEntry>? _entries;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_reload());
+  }
+
+  Future<void> _reload() async {
+    final res = await _repo.listProjectEntries(
+      widget.projectId,
+      from: widget.date,
+      to: widget.date,
+      userId: widget.member.userId,
+    );
+    if (!mounted) return;
+    setState(() => _entries = res.valueOrNull ?? const []);
+  }
+
+  Future<void> _edit(TimeEntry e) async {
+    await showDialog<void>(
+      context: context,
+      builder: (_) => EditEntryDialog(
+        entry: e,
+        onSubmit: ({required minutes, required version, note}) async =>
+            (await _repo.correctEntry(
+              widget.projectId,
+              entryId: e.id,
+              minutes: minutes,
+              version: version,
+              note: note,
+            )).failureOrNull,
+      ),
+    );
+    await _reload();
+  }
+
+  Future<void> _delete(TimeEntry e) async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.actionDelete),
+        content: Text(t.ttConfirmDeleteEntry),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(t.actionCancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t.actionDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    setState(() => _busy = true);
+    final res = await _repo.adminDeleteEntry(widget.projectId, e.id);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (res.isErr) {
+      messenger.showSnackBar(SnackBar(content: Text(t.ttActionFailed)));
+      return;
+    }
+    await _reload();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final entries = _entries;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${widget.member.displayName} · ${widget.date}',
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            if (entries == null)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (entries.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Center(child: Text(t.ttNoEntries)),
+              )
+            else
+              for (final e in entries)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(kindIcon(e.kind)),
+                  title: Text(e.label),
+                  subtitle: e.note.isEmpty ? null : Text(e.note),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(fmtMins(e.minutes)),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                        onPressed: _busy ? null : () => _edit(e),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        onPressed: _busy ? null : () => _delete(e),
+                      ),
+                    ],
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
   }
 }

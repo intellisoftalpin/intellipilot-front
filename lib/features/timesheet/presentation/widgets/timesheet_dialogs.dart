@@ -383,10 +383,27 @@ class _LogTimeDialogState extends State<LogTimeDialog> {
 }
 
 /// Edit an existing entry's hours / note.
+/// Submit signature for [EditEntryDialog]. The personal timesheet forwards
+/// `TimesheetCubit.editEntry`; the team view supplies a `correctEntry` closure.
+/// Returns a failure (or null on success).
+typedef EditEntrySubmit =
+    Future<AppFailure?> Function({
+      required int minutes,
+      required int version,
+      String? note,
+    });
+
+/// Edit an existing entry's hours + note. A read-only header shows the linked
+/// task (work) or the meeting type so the editor sees what they are changing.
+/// Reused for both self-editing and manager corrections via [onSubmit].
 class EditEntryDialog extends StatefulWidget {
-  const EditEntryDialog({required this.cubit, required this.entry, super.key});
-  final TimesheetCubit cubit;
+  const EditEntryDialog({
+    required this.entry,
+    required this.onSubmit,
+    super.key,
+  });
   final TimeEntry entry;
+  final EditEntrySubmit onSubmit;
 
   @override
   State<EditEntryDialog> createState() => _EditEntryDialogState();
@@ -417,6 +434,8 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            _EntryContextHeader(entry: widget.entry),
+            const SizedBox(height: 12),
             TextField(
               controller: _hours,
               keyboardType: const TextInputType.numberWithOptions(
@@ -461,8 +480,7 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
       _busy = true;
       _error = null;
     });
-    final fail = await widget.cubit.editEntry(
-      id: widget.entry.id,
+    final fail = await widget.onSubmit(
       minutes: minutes,
       version: widget.entry.version,
       note: _note.text.trim(),
@@ -476,6 +494,72 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
       return;
     }
     Navigator.pop(context);
+  }
+}
+
+/// Read-only context line at the top of [EditEntryDialog]: the linked task
+/// (work), the meeting type (meeting), or the leave kind (absence).
+class _EntryContextHeader extends StatelessWidget {
+  const _EntryContextHeader({required this.entry});
+  final TimeEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final isWork = entry.kind == EntryKind.work;
+    final primary = entry.kind.isAbsence
+        ? kindLabel(t, entry.kind)
+        : entry.label;
+
+    String? secondary;
+    if (isWork) {
+      secondary = entry.projectName;
+    } else if (entry.kind == EntryKind.meeting) {
+      final mt = MeetingType.fromWire(entry.meetingType);
+      secondary = mt != null ? meetingTypeLabel(t, mt) : null;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            kindIcon(entry.kind),
+            size: 18,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  primary,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: isWork && entry.issueRef != null
+                        ? theme.colorScheme.primary
+                        : null,
+                  ),
+                ),
+                if (secondary != null && secondary.isNotEmpty)
+                  Text(
+                    secondary,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

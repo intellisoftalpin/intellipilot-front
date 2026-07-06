@@ -5,6 +5,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/features/timesheet/data/dtos/timesheet_dtos.dart';
 import 'package:intellipilot/features/timesheet/domain/timesheet_repository.dart';
+import 'package:intellipilot/features/timesheet/presentation/widgets/timesheet_format.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// Dashboard banner warning the user about unfilled working days this month.
@@ -44,7 +45,12 @@ class _TimesheetWarningCardState extends State<TimesheetWarningCard> {
   @override
   Widget build(BuildContext context) {
     final s = _summary;
-    if (s == null || !s.hasGaps) return const SizedBox.shrink();
+    // Warn only about working days that have already passed unfilled — never
+    // for today (still in progress) or future days.
+    final pastGaps = s == null
+        ? const <String>[]
+        : pastMissingDays(s.missingDays);
+    if (s == null || pastGaps.isEmpty) return const SizedBox.shrink();
     final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Card(
@@ -59,7 +65,7 @@ class _TimesheetWarningCardState extends State<TimesheetWarningCard> {
           style: TextStyle(color: theme.colorScheme.onErrorContainer),
         ),
         subtitle: Text(
-          t.ttMissingBody(s.missingDays.length),
+          t.ttMissingBody(pastGaps.length),
           style: TextStyle(color: theme.colorScheme.onErrorContainer),
         ),
         trailing: TextButton(
