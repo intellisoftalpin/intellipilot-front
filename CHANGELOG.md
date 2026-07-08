@@ -4,6 +4,17 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.6.8] - 2026-07-09
+
+### Changed
+- **Release badge polish** (frontend-only fix, no backend changes):
+  - The fix-version picker now shows a release-name header row followed by
+    its versions, instead of repeating the release name on every version.
+  - The release badge (issue detail, issues list, board card) now shows the
+    version only, not the release name.
+  - The issue detail page's fix-version badge now renders with the exact
+    same tinted-pill style as the issues list and board card.
+
 ## [0.6.7] - 2026-07-09
 
 ### Added

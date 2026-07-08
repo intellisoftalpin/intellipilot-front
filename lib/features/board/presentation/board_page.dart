@@ -1065,7 +1065,7 @@ class _TaskCard extends StatelessWidget {
           .firstOrNull;
       if (v != null) {
         chips.add(
-          StatusPill(label: v.label, colorHex: v.releaseColor, dense: true),
+          StatusPill(label: v.version, colorHex: v.releaseColor, dense: true),
         );
       }
     }

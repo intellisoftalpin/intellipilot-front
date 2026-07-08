@@ -564,7 +564,7 @@ class _IssueRow extends StatelessWidget {
             if (size != null) SizeBadge(item: size),
             if (releaseVersion != null)
               StatusPill(
-                label: releaseVersion.label,
+                label: releaseVersion.version,
                 colorHex: releaseVersion.releaseColor,
                 dense: true,
               ),

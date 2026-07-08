@@ -1574,7 +1574,7 @@ class _DetailsTable extends StatelessWidget {
     final current = currentId == null
         ? null
         : data.releaseVersionsById[currentId];
-    final displayText = current?.label ?? _fixVersionLabel(issue);
+    final displayText = current?.version ?? _fixVersionLabel(issue);
     if (issue.components.isEmpty) {
       return _kvRowWith(
         context,
@@ -1600,7 +1600,12 @@ class _DetailsTable extends StatelessWidget {
         displayText: displayText,
         candidates: [
           for (final v in data.releaseVersionCandidates)
-            _Candidate(id: v.id, label: v.label, colorHex: v.releaseColor),
+            _Candidate(
+              id: v.id,
+              label: v.version,
+              colorHex: v.releaseColor,
+              group: v.releaseName,
+            ),
         ],
         currentId: currentId,
         noneLabel: '—',
@@ -1777,6 +1782,7 @@ class _Candidate {
     this.colorHex,
     this.icon,
     this.pinned = false,
+    this.group,
   });
   final String id;
   final String label;
@@ -1789,6 +1795,11 @@ class _Candidate {
   /// Pinned candidates render at the very top of the picker, above the
   /// search results, separated by a divider. Use for shortcuts.
   final bool pinned;
+
+  /// Optional group name (e.g. a release) — consecutive candidates sharing
+  /// the same group render under one non-selectable header row instead of
+  /// repeating the group name on every candidate.
+  final String? group;
 }
 
 /// Sentinel value popped from the searchable picker when the user
@@ -2128,15 +2139,27 @@ class _SearchablePickerBodyState extends State<_SearchablePickerBody> {
   List<_PickerRow> _rows() {
     final q = _searchCtrl.text.trim().toLowerCase();
     bool matches(_Candidate c) =>
-        q.isEmpty || c.label.toLowerCase().contains(q);
+        q.isEmpty ||
+        c.label.toLowerCase().contains(q) ||
+        (c.group?.toLowerCase().contains(q) ?? false);
     final pinned = widget.candidates.where((c) => c.pinned && matches(c));
     final regular = widget.candidates.where((c) => !c.pinned && matches(c));
     final out = <_PickerRow>[
       for (final c in pinned) _PickerRow.candidate(c),
       if (pinned.isNotEmpty) const _PickerRow.divider(),
       const _PickerRow.none(),
-      for (final c in regular) _PickerRow.candidate(c),
     ];
+    // Consecutive candidates sharing a group get one header row instead of
+    // repeating the group name on every candidate (e.g. release versions
+    // grouped under their release name).
+    String? lastGroup;
+    for (final c in regular) {
+      if (c.group != null && c.group != lastGroup) {
+        out.add(_PickerRow.header(c.group!));
+      }
+      lastGroup = c.group;
+      out.add(_PickerRow.candidate(c));
+    }
     return out;
   }
 
@@ -2240,6 +2263,19 @@ class _SearchablePickerBodyState extends State<_SearchablePickerBody> {
                         final row = rows[i];
                         if (row.isDivider) {
                           return const Divider(height: 8, thickness: 1);
+                        }
+                        if (row.isHeader) {
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+                            child: Text(
+                              row.headerLabel!,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          );
                         }
                         final selected = i == _highlight;
                         final isCurrent = row.candidate?.id == widget.currentId;
@@ -2378,19 +2414,35 @@ class _NoMatchesBody extends StatelessWidget {
 }
 
 class _PickerRow {
-  const _PickerRow.none() : isNone = true, isDivider = false, candidate = null;
+  const _PickerRow.none()
+    : isNone = true,
+      isDivider = false,
+      isHeader = false,
+      candidate = null,
+      headerLabel = null;
   const _PickerRow.candidate(_Candidate this.candidate)
     : isNone = false,
-      isDivider = false;
+      isDivider = false,
+      isHeader = false,
+      headerLabel = null;
   const _PickerRow.divider()
     : isNone = false,
       isDivider = true,
+      isHeader = false,
+      candidate = null,
+      headerLabel = null;
+  const _PickerRow.header(String this.headerLabel)
+    : isNone = false,
+      isDivider = false,
+      isHeader = true,
       candidate = null;
   final bool isNone;
   final bool isDivider;
+  final bool isHeader;
   final _Candidate? candidate;
+  final String? headerLabel;
 
-  bool get isSelectable => !isDivider;
+  bool get isSelectable => !isDivider && !isHeader;
 }
 
 class _MoveDownIntent extends Intent {
@@ -3737,16 +3789,8 @@ Widget _tintedValue(
   if (colorHex == null || colorHex.isEmpty || text == neutralText) {
     return Text(text, style: style, overflow: TextOverflow.ellipsis);
   }
-  final c = _hexToColor(colorHex);
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-    decoration: BoxDecoration(
-      color: c.withValues(alpha: 0.16),
-      borderRadius: BorderRadius.circular(6),
-      border: Border.all(color: c.withValues(alpha: 0.42)),
-    ),
-    child: Text(text, style: style, overflow: TextOverflow.ellipsis),
-  );
+  // Same tinted-pill look as the board card / issues list release badge.
+  return StatusPill(label: text, colorHex: colorHex, dense: true);
 }
 
 // ---------------------------------------------------------------------------
