@@ -89,9 +89,7 @@ class ReleasesCubit extends Cubit<ReleasesState> {
       return;
     }
     emit(
-      s.copyWith(
-        versionsByRelease: {...s.versionsByRelease, releaseId: list},
-      ),
+      s.copyWith(versionsByRelease: {...s.versionsByRelease, releaseId: list}),
     );
   }
 

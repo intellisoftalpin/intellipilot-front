@@ -29,6 +29,7 @@ const List<String> _cardFieldKeys = [
   'size',
   'labels',
   'due',
+  'release',
 ];
 
 /// Opens the board create/edit dialog. [board] null → create. Performs the
@@ -389,6 +390,7 @@ class _BoardSettingsFormState extends State<_BoardSettingsForm> {
     'size' => t.detailFieldPoints,
     'labels' => t.issueFieldLabels,
     'due' => t.boardCardFieldDue,
+    'release' => 'Release',
     _ => key,
   };
 

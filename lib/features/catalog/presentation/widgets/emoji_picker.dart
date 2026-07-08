@@ -48,11 +48,7 @@ class EmojiPicker extends StatelessWidget {
           onTap: () => onChanged(''),
         ),
         for (final e in suggestions)
-          _Cell(
-            label: e,
-            isSelected: selected == e,
-            onTap: () => onChanged(e),
-          ),
+          _Cell(label: e, isSelected: selected == e, onTap: () => onChanged(e)),
       ],
     );
   }

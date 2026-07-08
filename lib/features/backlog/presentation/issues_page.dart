@@ -513,6 +513,10 @@ class _IssueRow extends StatelessWidget {
         .where((s) => s.id == issue.sizeId)
         .cast<TaxonomyItem?>()
         .firstOrNull;
+    final releaseVersion = state.releaseVersions
+        .where((v) => v.id == issue.releaseVersionId)
+        .cast<ReleaseVersionRef?>()
+        .firstOrNull;
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       shape: selected
@@ -558,6 +562,12 @@ class _IssueRow extends StatelessWidget {
                 color: priority.color,
               ),
             if (size != null) SizeBadge(item: size),
+            if (releaseVersion != null)
+              StatusPill(
+                label: releaseVersion.label,
+                colorHex: releaseVersion.releaseColor,
+                dense: true,
+              ),
           ],
         ),
         trailing: canEdit

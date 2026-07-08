@@ -235,11 +235,7 @@ Future<void> _showKeyDialog(BuildContext context, SshKey? existing) async {
                 final key = await cubit.create(name: name, readOnly: readOnly);
                 if (ctx.mounted) Navigator.of(ctx).pop(key);
               } else {
-                await cubit.update(
-                  existing.id,
-                  name: name,
-                  readOnly: readOnly,
-                );
+                await cubit.update(existing.id, name: name, readOnly: readOnly);
                 if (ctx.mounted) Navigator.of(ctx).pop(null);
               }
             },
@@ -277,10 +273,7 @@ Future<void> _showKeyCreatedDialog(BuildContext context, SshKey key) async {
               style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
             ),
             const SizedBox(height: 8),
-            Text(
-              key.fingerprint,
-              style: Theme.of(ctx).textTheme.bodySmall,
-            ),
+            Text(key.fingerprint, style: Theme.of(ctx).textTheme.bodySmall),
           ],
         ),
       ),

@@ -330,6 +330,7 @@ void seedDemoStore(DemoStore s) {
       projectId: projectId,
       name: 'PSBP',
       description: 'Public sector baseline platform',
+      color: '#4f8cf0',
       createdAt: now,
     ),
   ];

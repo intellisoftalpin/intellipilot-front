@@ -251,6 +251,16 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
     lookups.add(backlog.listIssues(widget.projectId));
     lookups.add(catalog.listCustomers(widget.projectId));
     lookups.add(projects.listMembers(widget.projectId));
+    lookups.add(catalog.listAllReleaseVersions(widget.projectId));
+    // The fix-version picker only offers versions of releases linked to the
+    // issue's own components — empty when the issue has none (or for epics,
+    // which don't carry a fix version at all).
+    final issueComponentIds = entity is _IssueRec
+        ? entity.issue.components
+        : const <String>[];
+    lookups.add(
+      catalog.versionsForComponents(widget.projectId, issueComponentIds),
+    );
     final results = await Future.wait(lookups);
 
     List<T> resolve<T>(int i) =>
@@ -278,6 +288,10 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
         // member — inject it so owner/author rows resolve to its identity.
         kIntellibotUserId: intellibotRef(),
       },
+      releaseVersionsById: {
+        for (final v in resolve<ReleaseVersionRef>(11)) v.id: v,
+      },
+      releaseVersionCandidates: resolve<ReleaseVersionRef>(12),
     );
   }
 }
@@ -299,6 +313,8 @@ class _PageData {
     required this.issuesById,
     required this.customersById,
     required this.membersById,
+    required this.releaseVersionsById,
+    required this.releaseVersionCandidates,
   });
 
   final UserProfile profile;
@@ -314,6 +330,16 @@ class _PageData {
 
   /// Project members keyed by user id — for assignee/reporter avatars + names.
   final Map<String, UserRef> membersById;
+
+  /// Every release version in the project, keyed by id — resolves the
+  /// currently selected fix version's name/color even if it's no longer a
+  /// valid picker candidate (e.g. its component was unlinked since).
+  final Map<String, ReleaseVersionRef> releaseVersionsById;
+
+  /// Versions of releases linked to the issue's own components — the
+  /// fix-version picker's candidate list. Empty (and the picker disabled)
+  /// when the issue has no components.
+  final List<ReleaseVersionRef> releaseVersionCandidates;
 }
 
 sealed class _EntityRecord {
@@ -1270,7 +1296,7 @@ class _DetailsTable extends StatelessWidget {
           ),
           if (issue.resolvedAt != null)
             _kvRow(context, 'Resolved at', issue.resolvedAt!),
-          _kvRow(context, 'Fix version', _fixVersionLabel(issue)),
+          _fixVersionRow(context, issue: issue, canEdit: canEdit),
           _labelsRow(
             context,
             currentIds: issue.labels,
@@ -1530,12 +1556,61 @@ class _DetailsTable extends StatelessWidget {
     );
   }
 
+  /// Fallback label when the structured fix version isn't resolvable (not
+  /// yet loaded, or cleared) — falls back to the free-text fix version.
   String _fixVersionLabel(Issue issue) {
     if (issue.releaseText != null && issue.releaseText!.isNotEmpty) {
       return issue.releaseText!;
     }
-    if (issue.releaseVersionId != null) return issue.releaseVersionId!;
     return '—';
+  }
+
+  Widget _fixVersionRow(
+    BuildContext context, {
+    required Issue issue,
+    required bool canEdit,
+  }) {
+    final currentId = issue.releaseVersionId;
+    final current = currentId == null
+        ? null
+        : data.releaseVersionsById[currentId];
+    final displayText = current?.label ?? _fixVersionLabel(issue);
+    if (issue.components.isEmpty) {
+      return _kvRowWith(
+        context,
+        'Fix version',
+        Tooltip(
+          message: 'Add a component first to select a release version',
+          child: Opacity(
+            opacity: 0.6,
+            child: _tintedValue(
+              displayText,
+              '—',
+              current?.releaseColor,
+              Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ),
+      );
+    }
+    return _kvRowWith(
+      context,
+      'Fix version',
+      _ClickToEditCell(
+        displayText: displayText,
+        candidates: [
+          for (final v in data.releaseVersionCandidates)
+            _Candidate(id: v.id, label: v.label, colorHex: v.releaseColor),
+        ],
+        currentId: currentId,
+        noneLabel: '—',
+        canEdit: canEdit,
+        colorHex: current?.releaseColor,
+        onPicked: (id) => _patchEntity(
+          issuePatch: () => UpdateIssueRequest(releaseVersionId: id),
+        ),
+      ),
+    );
   }
 
   Widget _labelsRow(
@@ -1740,6 +1815,7 @@ class _ClickToEditCell extends StatefulWidget {
     required this.noneLabel,
     required this.canEdit,
     required this.onPicked,
+    this.colorHex,
   });
 
   final String displayText;
@@ -1748,6 +1824,11 @@ class _ClickToEditCell extends StatefulWidget {
   final String noneLabel;
   final bool canEdit;
   final Future<bool> Function(String? newId) onPicked;
+
+  /// When set (and the shown value isn't [noneLabel]), the value renders as
+  /// a tinted badge in this color instead of plain text — e.g. the release
+  /// badge on the issue's fix-version row.
+  final String? colorHex;
 
   @override
   State<_ClickToEditCell> createState() => _ClickToEditCellState();
@@ -1812,10 +1893,11 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
           child: Tooltip(
             message: shownText,
             waitDuration: const Duration(milliseconds: 600),
-            child: Text(
+            child: _tintedValue(
               shownText,
-              style: textStyle,
-              overflow: TextOverflow.ellipsis,
+              widget.noneLabel,
+              widget.colorHex,
+              textStyle,
             ),
           ),
         ),
@@ -1840,10 +1922,11 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
                 child: Tooltip(
                   message: shownText,
                   waitDuration: const Duration(milliseconds: 600),
-                  child: Text(
+                  child: _tintedValue(
                     shownText,
-                    style: textStyle,
-                    overflow: TextOverflow.ellipsis,
+                    widget.noneLabel,
+                    widget.colorHex,
+                    textStyle,
                   ),
                 ),
               ),
@@ -3639,6 +3722,31 @@ Color _hexToColor(String hex) {
   if (h.length != 8) return const Color(0xFF64748B);
   final v = int.tryParse(h, radix: 16);
   return v == null ? const Color(0xFF64748B) : Color(v);
+}
+
+/// Plain text, or — when [colorHex] is set and [text] isn't [neutralText] —
+/// a tinted badge in that color (mirrors [StatusPill]). Used by
+/// [_ClickToEditCell] to render e.g. the issue's fix-version as a release
+/// badge instead of plain text.
+Widget _tintedValue(
+  String text,
+  String neutralText,
+  String? colorHex,
+  TextStyle? style,
+) {
+  if (colorHex == null || colorHex.isEmpty || text == neutralText) {
+    return Text(text, style: style, overflow: TextOverflow.ellipsis);
+  }
+  final c = _hexToColor(colorHex);
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    decoration: BoxDecoration(
+      color: c.withValues(alpha: 0.16),
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: c.withValues(alpha: 0.42)),
+    ),
+    child: Text(text, style: style, overflow: TextOverflow.ellipsis),
+  );
 }
 
 // ---------------------------------------------------------------------------

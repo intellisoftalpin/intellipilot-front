@@ -119,9 +119,7 @@ class _LabelsView extends StatelessWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title: Text(
-            existing == null ? t.actionNewLabel : t.actionEditLabel,
-          ),
+          title: Text(existing == null ? t.actionNewLabel : t.actionEditLabel),
           content: SizedBox(
             width: 360,
             child: Column(
@@ -155,11 +153,7 @@ class _LabelsView extends StatelessWidget {
                 if (existing == null) {
                   await cubit.create(name: name, color: color);
                 } else {
-                  await cubit.update(
-                    existing.id,
-                    name: name,
-                    color: color,
-                  );
+                  await cubit.update(existing.id, name: name, color: color);
                 }
                 if (ctx.mounted) Navigator.of(ctx).pop();
               },

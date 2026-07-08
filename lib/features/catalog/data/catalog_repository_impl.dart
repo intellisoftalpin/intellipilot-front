@@ -73,9 +73,7 @@ class CatalogRepositoryImpl implements CatalogRepository {
     String itemId,
   ) async {
     try {
-      await _api.dio.delete<dynamic>(
-        '${_taxBase(projectId, kind)}/$itemId',
-      );
+      await _api.dio.delete<dynamic>('${_taxBase(projectId, kind)}/$itemId');
       return const Ok<Unit, AppFailure>(Unit.instance);
     } on DioException catch (e) {
       if (e.response?.statusCode == 204) {
@@ -241,9 +239,7 @@ class CatalogRepositoryImpl implements CatalogRepository {
   // ---- ssh keys ----
 
   @override
-  Future<Result<List<SshKey>, AppFailure>> listSshKeys(
-    String projectId,
-  ) async {
+  Future<Result<List<SshKey>, AppFailure>> listSshKeys(String projectId) async {
     final res = await _api.get('$_base/$projectId/ssh-keys');
     return res.when(
       ok: (r) {
@@ -682,9 +678,7 @@ class CatalogRepositoryImpl implements CatalogRepository {
     String projectId,
     String componentId,
     String releaseId,
-  ) => _delete(
-    '$_base/$projectId/components/$componentId/releases/$releaseId',
-  );
+  ) => _delete('$_base/$projectId/components/$componentId/releases/$releaseId');
 
   @override
   Future<Result<List<ReleaseVersionRef>, AppFailure>> versionsForComponents(
@@ -695,6 +689,25 @@ class CatalogRepositoryImpl implements CatalogRepository {
       '$_base/$projectId/release-versions/for-components',
       body: {'component_ids': componentIds},
     );
+    return res.when(
+      ok: (r) {
+        final body = r.data as Map<String, dynamic>;
+        final raw = body['versions'] as List<dynamic>? ?? const [];
+        return Ok(
+          raw
+              .map((e) => ReleaseVersionRef.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
+      },
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<List<ReleaseVersionRef>, AppFailure>> listAllReleaseVersions(
+    String projectId,
+  ) async {
+    final res = await _api.get('$_base/$projectId/release-versions');
     return res.when(
       ok: (r) {
         final body = r.data as Map<String, dynamic>;
@@ -835,12 +848,7 @@ class CatalogRepositoryImpl implements CatalogRepository {
   }) async {
     final res = await _api.post(
       '$_base/$projectId/boards',
-      body: {
-        'name': name,
-        'color': color,
-        'shared': shared,
-        'config': config,
-      },
+      body: {'name': name, 'color': color, 'shared': shared, 'config': config},
     );
     return res.when(
       ok: (r) => Ok(Board.fromJson(r.data as Map<String, dynamic>)),

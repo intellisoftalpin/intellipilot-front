@@ -6,6 +6,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/cubits/releases_cubit.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/repositories_tab.dart'
     show failureText;
 import 'package:intellipilot/features/projects/domain/permission.dart';
@@ -57,10 +58,7 @@ class _ReleasesView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(
-                  'Releases',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('Releases', style: Theme.of(context).textTheme.titleLarge),
                 const Spacer(),
                 if (canEdit)
                   FilledButton.icon(
@@ -118,7 +116,14 @@ class _ReleaseCard extends StatelessWidget {
     return Card(
       child: ExpansionTile(
         leading: const Icon(Icons.rocket_launch_outlined),
-        title: Text(release.name),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            HexColorDot(hex: release.color, size: 12),
+            const SizedBox(width: 8),
+            Text(release.name),
+          ],
+        ),
         subtitle:
             (release.description != null && release.description!.isNotEmpty)
             ? Text(release.description!)
@@ -186,11 +191,8 @@ class _ReleaseCard extends StatelessWidget {
                             IconButton(
                               icon: const Icon(Icons.edit_outlined),
                               tooltip: 'Edit version',
-                              onPressed: () => _showVersionDialog(
-                                context,
-                                release.id,
-                                v,
-                              ),
+                              onPressed: () =>
+                                  _showVersionDialog(context, release.id, v),
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline),
@@ -257,70 +259,87 @@ Future<void> _showReleaseDialog(BuildContext context, Release? existing) async {
   final cubit = context.read<ReleasesCubit>();
   final nameCtrl = TextEditingController(text: existing?.name ?? '');
   final descCtrl = TextEditingController(text: existing?.description ?? '');
+  var color = (existing?.color.isNotEmpty ?? false)
+      ? existing!.color
+      : ColorPalette.swatches.first;
 
   await showDialog<void>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(existing == null ? 'New release' : 'Edit release'),
-      content: SizedBox(
-        width: 440,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Name',
-                hintText: 'e.g. PSBP',
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) => AlertDialog(
+        title: Text(existing == null ? 'New release' : 'Edit release'),
+        content: SizedBox(
+          width: 440,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'e.g. PSBP',
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: descCtrl,
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Description'),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: descCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'Description'),
+              ),
+              const SizedBox(height: 12),
+              const Text('Badge color'),
+              const SizedBox(height: 4),
+              ColorSwatchPicker(
+                selectedHex: color,
+                onChanged: (h) => setState(() => color = h),
+              ),
+            ],
+          ),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () async {
-            final name = nameCtrl.text.trim();
-            if (name.isEmpty) return;
-            final desc = descCtrl.text.trim();
-            final ok = existing == null
-                ? await cubit.create(
-                    CreateReleaseRequest(
-                      name: name,
-                      description: desc.isEmpty ? null : desc,
-                    ),
-                  )
-                : await cubit.update(
-                    existing.id,
-                    UpdateReleaseRequest(name: name, description: desc),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) return;
+              final desc = descCtrl.text.trim();
+              final ok = existing == null
+                  ? await cubit.create(
+                      CreateReleaseRequest(
+                        name: name,
+                        description: desc.isEmpty ? null : desc,
+                        color: color,
+                      ),
+                    )
+                  : await cubit.update(
+                      existing.id,
+                      UpdateReleaseRequest(
+                        name: name,
+                        description: desc,
+                        color: color,
+                      ),
+                    );
+              if (!ctx.mounted) return;
+              if (ok) {
+                Navigator.of(ctx).pop();
+              } else {
+                final s = cubit.state;
+                if (s is ReleasesLoaded && s.lastError != null) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(content: Text(failureText(s.lastError!))),
                   );
-            if (!ctx.mounted) return;
-            if (ok) {
-              Navigator.of(ctx).pop();
-            } else {
-              final s = cubit.state;
-              if (s is ReleasesLoaded && s.lastError != null) {
-                ScaffoldMessenger.of(ctx).showSnackBar(
-                  SnackBar(content: Text(failureText(s.lastError!))),
-                );
+                }
               }
-            }
-          },
-          child: const Text('Save'),
-        ),
-      ],
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -390,9 +409,7 @@ Future<void> _showVersionDialog(
                   initialValue: repoId,
                   decoration: const InputDecoration(labelText: 'Repository'),
                   items: [
-                    const DropdownMenuItem<String?>(
-                      child: Text('— None —'),
-                    ),
+                    const DropdownMenuItem<String?>(child: Text('— None —')),
                     for (final r in repos)
                       DropdownMenuItem<String?>(
                         value: r.id,

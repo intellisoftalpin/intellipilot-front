@@ -183,10 +183,7 @@ class _ComponentsView extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDelete(
-    BuildContext context,
-    Component component,
-  ) async {
+  Future<void> _confirmDelete(BuildContext context, Component component) async {
     final t = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,

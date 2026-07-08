@@ -523,6 +523,7 @@ class Release {
     required this.id,
     required this.projectId,
     required this.name,
+    required this.color,
     required this.createdAt,
     this.description,
   });
@@ -533,6 +534,7 @@ class Release {
       projectId: json['project_id'] as String,
       name: json['name'] as String,
       description: json['description'] as String?,
+      color: (json['color'] as String?) ?? '',
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }
@@ -541,26 +543,35 @@ class Release {
   final String projectId;
   final String name;
   final String? description;
+  final String color;
   final DateTime createdAt;
 }
 
 class CreateReleaseRequest {
-  const CreateReleaseRequest({required this.name, this.description});
+  const CreateReleaseRequest({
+    required this.name,
+    this.description,
+    this.color = '',
+  });
   final String name;
   final String? description;
+  final String color;
   Map<String, dynamic> toJson() => {
     'name': name,
     if (description != null) 'description': description,
+    'color': color,
   };
 }
 
 class UpdateReleaseRequest {
-  const UpdateReleaseRequest({this.name, this.description});
+  const UpdateReleaseRequest({this.name, this.description, this.color});
   final String? name;
   final String? description;
+  final String? color;
   Map<String, dynamic> toJson() => {
     if (name != null) 'name': name,
     if (description != null) 'description': description,
+    if (color != null) 'color': color,
   };
 }
 
@@ -674,6 +685,7 @@ class ReleaseVersionRef {
     required this.id,
     required this.releaseId,
     required this.releaseName,
+    required this.releaseColor,
     required this.version,
     required this.status,
   });
@@ -683,6 +695,7 @@ class ReleaseVersionRef {
       id: json['id'] as String,
       releaseId: json['release_id'] as String,
       releaseName: (json['release_name'] as String?) ?? '',
+      releaseColor: (json['release_color'] as String?) ?? '',
       version: json['version'] as String,
       status: (json['status'] as String?) ?? 'planned',
     );
@@ -691,6 +704,7 @@ class ReleaseVersionRef {
   final String id;
   final String releaseId;
   final String releaseName;
+  final String releaseColor;
   final String version;
   final String status;
 

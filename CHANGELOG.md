@@ -4,6 +4,32 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.6.7] - 2026-07-09
+
+### Added
+- **Release badges on issues** — the selected fix version now renders as a
+  colored badge (using its release's color) in the issues list row and on
+  board cards. The board badge is opt-in: enable "Release" under a board's
+  Settings → Card fields.
+
+## [0.6.6] - 2026-07-09
+
+### Added
+- **Issue fix-version picker** — the issue detail page's "Fix version" row is
+  now editable: click it to pick a release version, scoped to versions of
+  releases linked to the issue's own components. If the issue has no
+  components yet, the picker is disabled with a hint to add one first. The
+  selected version shows its parent release's color as a small dot, and the
+  previous bug where an unresolved version showed a raw UUID is fixed.
+
+## [0.6.5] - 2026-07-09
+
+### Added
+- **Release badge color** — the release edit dialog (project settings →
+  Releases) gained a color picker (same swatch picker used for labels,
+  components, and epics); the releases list shows each release's color as a
+  dot next to its name.
+
 ## [0.4.3] - 2026-06-19
 
 ### Added

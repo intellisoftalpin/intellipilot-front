@@ -18,11 +18,7 @@ final class LabelsLoading extends LabelsState {
 }
 
 final class LabelsLoaded extends LabelsState {
-  const LabelsLoaded({
-    required this.labels,
-    this.busy = false,
-    this.lastError,
-  });
+  const LabelsLoaded({required this.labels, this.busy = false, this.lastError});
   final List<Label> labels;
   final bool busy;
   final AppFailure? lastError;
@@ -84,11 +80,7 @@ class LabelsCubit extends Cubit<LabelsState> {
     await load();
   }
 
-  Future<void> update(
-    String labelId, {
-    String? name,
-    String? color,
-  }) async {
+  Future<void> update(String labelId, {String? name, String? color}) async {
     final s = state;
     if (s is! LabelsLoaded) return;
     emit(s.copyWith(busy: true, lastError: null));

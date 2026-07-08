@@ -157,11 +157,8 @@ class _TaxonomyKindView extends StatelessWidget {
                                     IconButton(
                                       icon: const Icon(Icons.edit_outlined),
                                       tooltip: t.actionEdit,
-                                      onPressed: () => _showEditDialog(
-                                        context,
-                                        kind,
-                                        item,
-                                      ),
+                                      onPressed: () =>
+                                          _showEditDialog(context, kind, item),
                                     ),
                                     IconButton(
                                       icon: const Icon(Icons.delete_outline),
@@ -336,10 +333,7 @@ class _TaxonomyKindView extends StatelessWidget {
     );
   }
 
-  Future<void> _confirmDelete(
-    BuildContext context,
-    TaxonomyItem item,
-  ) async {
+  Future<void> _confirmDelete(BuildContext context, TaxonomyItem item) async {
     final t = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
       context: context,

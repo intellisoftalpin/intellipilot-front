@@ -903,9 +903,7 @@ class DemoCatalogRepository implements CatalogRepository {
   // ---- git: SSH keys, repositories, component links (demo stubs) ----
 
   @override
-  Future<Result<List<SshKey>, AppFailure>> listSshKeys(
-    String projectId,
-  ) async {
+  Future<Result<List<SshKey>, AppFailure>> listSshKeys(String projectId) async {
     await _tick();
     return const Ok(<SshKey>[]);
   }
@@ -1154,6 +1152,7 @@ class DemoCatalogRepository implements CatalogRepository {
       projectId: projectId,
       name: body.name,
       description: body.description,
+      color: body.color,
       createdAt: DateTime.now().toUtc(),
     );
     (_s.releasesByProject[projectId] ??= []).add(created);
@@ -1176,6 +1175,7 @@ class DemoCatalogRepository implements CatalogRepository {
       projectId: cur.projectId,
       name: body.name ?? cur.name,
       description: body.description ?? cur.description,
+      color: body.color ?? cur.color,
       createdAt: cur.createdAt,
     );
     _s.releasesByProject[projectId]![i] = next;
@@ -1342,6 +1342,31 @@ class DemoCatalogRepository implements CatalogRepository {
             id: v.id,
             releaseId: rid,
             releaseName: releasesById[rid]?.name ?? rid,
+            releaseColor: releasesById[rid]?.color ?? '',
+            version: v.version,
+            status: v.status,
+          ),
+        );
+      }
+    }
+    return Ok(out);
+  }
+
+  @override
+  Future<Result<List<ReleaseVersionRef>, AppFailure>> listAllReleaseVersions(
+    String projectId,
+  ) async {
+    await _tick();
+    final releases = _s.releasesByProject[projectId] ?? const <Release>[];
+    final out = <ReleaseVersionRef>[];
+    for (final r in releases) {
+      for (final v in _s.versionsByRelease[r.id] ?? const <ReleaseVersion>[]) {
+        out.add(
+          ReleaseVersionRef(
+            id: v.id,
+            releaseId: r.id,
+            releaseName: r.name,
+            releaseColor: r.color,
             version: v.version,
             status: v.status,
           ),

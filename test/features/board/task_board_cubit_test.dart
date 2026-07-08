@@ -74,6 +74,11 @@ class _FakeCatalog extends Fake implements CatalogRepository {
   ) async => const Ok([]);
 
   @override
+  Future<Result<List<ReleaseVersionRef>, AppFailure>> listAllReleaseVersions(
+    String projectId,
+  ) async => const Ok([]);
+
+  @override
   Future<Result<BoardData, AppFailure>> fetchBoardData(
     String projectId, {
     Map<String, dynamic> filter = const {},

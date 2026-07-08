@@ -206,6 +206,13 @@ abstract interface class CatalogRepository {
     List<String> componentIds,
   );
 
+  /// All release versions in the project, enriched with their parent
+  /// release's name and color — for resolving many issues' fix versions at
+  /// once (issues list, board).
+  Future<Result<List<ReleaseVersionRef>, AppFailure>> listAllReleaseVersions(
+    String projectId,
+  );
+
   // ---- issue relationships ----
   Future<Result<List<IssueLink>, AppFailure>> listIssueLinks(
     String projectId,

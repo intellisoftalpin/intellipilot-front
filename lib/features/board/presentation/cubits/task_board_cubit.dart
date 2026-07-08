@@ -42,6 +42,7 @@ class TaskBoardLoaded extends TaskBoardState {
     this.epics = const [],
     this.labels = const [],
     this.components = const [],
+    this.releaseVersions = const [],
     this.adhocFilter = const WorkItemFilter(),
     this.staleData = false,
   });
@@ -69,6 +70,10 @@ class TaskBoardLoaded extends TaskBoardState {
   final List<Epic> epics;
   final List<Label> labels;
   final List<Component> components;
+
+  /// Every release version in the project, enriched with its parent
+  /// release's name and color — resolves each card's fix-version badge.
+  final List<ReleaseVersionRef> releaseVersions;
 
   /// The user's transient ad-hoc filter (session-only, not persisted). The
   /// board's locked filters always win over these.
@@ -105,6 +110,7 @@ class TaskBoardLoaded extends TaskBoardState {
     List<Epic>? epics,
     List<Label>? labels,
     List<Component>? components,
+    List<ReleaseVersionRef>? releaseVersions,
     WorkItemFilter? adhocFilter,
     bool? staleData,
   }) => TaskBoardLoaded(
@@ -120,6 +126,7 @@ class TaskBoardLoaded extends TaskBoardState {
     epics: epics ?? this.epics,
     labels: labels ?? this.labels,
     components: components ?? this.components,
+    releaseVersions: releaseVersions ?? this.releaseVersions,
     adhocFilter: adhocFilter ?? this.adhocFilter,
     staleData: staleData ?? this.staleData,
   );
@@ -138,6 +145,7 @@ class TaskBoardLoaded extends TaskBoardState {
     epics,
     labels,
     components,
+    releaseVersions,
     adhocFilter,
     staleData,
   ];
@@ -172,6 +180,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
   List<Epic> _epics = const [];
   List<Label> _labels = const [];
   List<Component> _components = const [];
+  List<ReleaseVersionRef> _releaseVersions = const [];
   List<Milestone> _milestonesList = const [];
   WorkItemFilter _adhoc = const WorkItemFilter();
 
@@ -221,6 +230,9 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     _labels = (await _catalog.listLabels(projectId)).valueOrNull ?? const [];
     _components =
         (await _catalog.listComponents(projectId)).valueOrNull ?? const [];
+    _releaseVersions =
+        (await _catalog.listAllReleaseVersions(projectId)).valueOrNull ??
+        const [];
     _milestonesList =
         (await _milestones.list(projectId)).valueOrNull ?? const [];
 
@@ -312,6 +324,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
           epics: _epics,
           labels: _labels,
           components: _components,
+          releaseVersions: _releaseVersions,
           adhocFilter: _adhoc,
         ),
       );

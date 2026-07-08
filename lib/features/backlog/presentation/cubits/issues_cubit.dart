@@ -35,6 +35,7 @@ final class IssuesLoaded extends IssuesState {
     required this.components,
     required this.epics,
     required this.milestones,
+    this.releaseVersions = const [],
     this.filter = const WorkItemFilter(),
     this.total = 0,
     this.pageSize = 50,
@@ -53,6 +54,10 @@ final class IssuesLoaded extends IssuesState {
   final List<Component> components;
   final List<Epic> epics;
   final List<Milestone> milestones;
+
+  /// Every release version in the project, enriched with its parent
+  /// release's name and color — resolves each issue's fix-version badge.
+  final List<ReleaseVersionRef> releaseVersions;
 
   final WorkItemFilter filter;
 
@@ -81,6 +86,7 @@ final class IssuesLoaded extends IssuesState {
     components: components,
     epics: epics,
     milestones: milestones,
+    releaseVersions: releaseVersions,
     filter: filter ?? this.filter,
     total: total ?? this.total,
     pageSize: pageSize ?? this.pageSize,
@@ -176,6 +182,7 @@ class IssuesCubit extends Cubit<IssuesState> {
     final components = await _catalog.listComponents(projectId);
     final epics = await _repo.listEpics(projectId);
     final milestones = await _milestones.list(projectId);
+    final releaseVersions = await _catalog.listAllReleaseVersions(projectId);
 
     final fail =
         page.failureOrNull ??
@@ -202,6 +209,7 @@ class IssuesCubit extends Cubit<IssuesState> {
         components: components.valueOrNull!,
         epics: epics.valueOrNull!,
         milestones: milestones.valueOrNull ?? const [],
+        releaseVersions: releaseVersions.valueOrNull ?? const [],
         filter: _filter,
         total: pg.total,
         pageSize: _pageSize,

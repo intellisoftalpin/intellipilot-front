@@ -84,11 +84,7 @@ class ComponentsCubit extends Cubit<ComponentsState> {
     await load();
   }
 
-  Future<void> update(
-    String componentId, {
-    String? name,
-    String? color,
-  }) async {
+  Future<void> update(String componentId, {String? name, String? color}) async {
     final s = state;
     if (s is! ComponentsLoaded) return;
     emit(s.copyWith(busy: true, lastError: null));

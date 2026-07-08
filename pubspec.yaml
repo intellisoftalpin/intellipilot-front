@@ -1,7 +1,7 @@
 name: intellipilot
 description: "IntelliPilot frontend client (Jira-grade project management)."
 publish_to: 'none'
-version: 0.6.3+49
+version: 0.6.7+52
 
 environment:
   sdk: ^3.12.0

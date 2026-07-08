@@ -1059,6 +1059,16 @@ class _TaskCard extends StatelessWidget {
         _MetaChip(color: '', label: task.dueDate!, icon: Icons.event_outlined),
       );
     }
+    if (_fields.contains('release') && task.releaseVersionId != null) {
+      final v = state.releaseVersions
+          .where((x) => x.id == task.releaseVersionId)
+          .firstOrNull;
+      if (v != null) {
+        chips.add(
+          StatusPill(label: v.label, colorHex: v.releaseColor, dense: true),
+        );
+      }
+    }
 
     final t = AppLocalizations.of(context);
     // QA + Reviewer (when assigned) and the reporter share one people row.
