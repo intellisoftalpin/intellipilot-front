@@ -1094,5 +1094,19 @@
   "dangerCleanEpicsTitle": "Alle Epics löschen",
   "dangerCleanEpicsBody": "Jedes Epic in diesem Projekt dauerhaft löschen. Die zugehörigen Vorgänge bleiben erhalten, werden aber getrennt. Dies kann nicht rückgängig gemacht werden.",
   "dangerCleanedIssuesSnack": "{count} Vorgänge gelöscht.",
-  "dangerCleanedEpicsSnack": "{count} Epics gelöscht."
+  "dangerCleanedEpicsSnack": "{count} Epics gelöscht.",
+
+  "actionEnable": "Aktivieren",
+  "personalTokenSection": "API-Zugriff",
+  "personalTokenTitle": "Persönliches App-Token",
+  "personalTokenSubtitle": "Ein Token, das in deinem Namen handelt — für MCP-Clients, Skripte und Integrationen.",
+  "personalTokenGenerate": "Erstellen",
+  "personalTokenLoadFailed": "Persönliches Token konnte nicht geladen werden.",
+  "personalTokenReset": "Token zurücksetzen",
+  "personalTokenResetConfirm": "Neues Secret erstellen? Das aktuelle Token funktioniert sofort nicht mehr.",
+  "personalTokenDeleteConfirm": "Persönliches Token löschen? Aufrufe damit schlagen sofort fehl.",
+  "personalTokenDisabled": "Deaktiviert",
+  "personalTokenNeverUsed": "nie verwendet",
+  "personalTokenLastUsed": "zuletzt verwendet {date}",
+  "personalTokenCreated": "Erstellt {date}"
 }

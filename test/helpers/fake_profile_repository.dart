@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/io/file_downloader.dart';
 import 'package:intellipilot/core/result/result.dart';
+import 'package:intellipilot/features/profile/data/dtos/personal_token_dtos.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 
@@ -121,6 +122,71 @@ class FakeProfileRepository implements ProfileRepository {
   @override
   Future<Result<Unit, AppFailure>> deleteAvatar() async =>
       const Ok<Unit, AppFailure>(Unit.instance);
+
+  /// In-memory personal token state, so cubit tests can drive the lifecycle.
+  PersonalTokenDto? personalToken;
+
+  PersonalTokenDto get _defaultToken => PersonalTokenDto(
+    id: 'tok1',
+    prefix: 'ippt_Ab12cd',
+    last4: 'wx90',
+    createdAt: DateTime(2026, 5, 27),
+  );
+
+  @override
+  Future<Result<PersonalTokenDto?, AppFailure>> getPersonalToken() async =>
+      Ok<PersonalTokenDto?, AppFailure>(personalToken);
+
+  @override
+  Future<Result<PersonalTokenSecretResult, AppFailure>>
+  createPersonalToken() async {
+    personalToken = _defaultToken;
+    return Ok<PersonalTokenSecretResult, AppFailure>(
+      PersonalTokenSecretResult(
+        token: personalToken!,
+        secret: 'ippt_secret-value-wx90',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<PersonalTokenSecretResult, AppFailure>>
+  resetPersonalToken() async => createPersonalToken();
+
+  @override
+  Future<Result<Unit, AppFailure>> disablePersonalToken() async {
+    final t = personalToken;
+    if (t != null) {
+      personalToken = PersonalTokenDto(
+        id: t.id,
+        prefix: t.prefix,
+        last4: t.last4,
+        createdAt: t.createdAt,
+        disabledAt: DateTime(2026, 5, 28),
+      );
+    }
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> enablePersonalToken() async {
+    final t = personalToken;
+    if (t != null) {
+      personalToken = PersonalTokenDto(
+        id: t.id,
+        prefix: t.prefix,
+        last4: t.last4,
+        createdAt: t.createdAt,
+      );
+    }
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deletePersonalToken() async {
+    personalToken = null;
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
 }
 
 class RecordingDownloader implements FileDownloader {

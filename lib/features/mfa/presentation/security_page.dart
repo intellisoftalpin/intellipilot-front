@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -10,8 +11,10 @@ import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
+import 'package:intellipilot/features/profile/data/dtos/personal_token_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/profile/presentation/cubits/password_change_cubit.dart';
+import 'package:intellipilot/features/profile/presentation/cubits/personal_token_cubit.dart';
 import 'package:intellipilot/features/profile/presentation/cubits/profile_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -43,6 +46,13 @@ class SecurityPage extends StatelessWidget {
             repo: profileRepo,
             session: getIt<SessionBloc>(),
           ),
+        ),
+        BlocProvider<PersonalTokenCubit>(
+          create: (_) {
+            final c = PersonalTokenCubit(profileRepo);
+            unawaited(c.load());
+            return c;
+          },
         ),
       ],
       child: Scaffold(
@@ -104,6 +114,8 @@ class SecurityPage extends StatelessWidget {
                     onTap: () => context.go(Routes.passkeys),
                   ),
                 ),
+                const SizedBox(height: 16),
+                const _PersonalTokenSection(),
               ],
             ),
           ),
@@ -229,6 +241,263 @@ class _PasswordSection extends StatelessWidget {
     if (result == null) return;
     await cubit.submit(currentPassword: result.$1, newPassword: result.$2);
   }
+}
+
+/// Personal app token card: generate / reset / disable / enable / delete, with
+/// the one-time secret shown in a copy dialog after generate/reset.
+class _PersonalTokenSection extends StatelessWidget {
+  const _PersonalTokenSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return BlocConsumer<PersonalTokenCubit, PersonalTokenState>(
+      listenWhen: (prev, next) =>
+          next is PersonalTokenLoaded && next.lastError != null,
+      listener: (context, state) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t.errUnknown)));
+      },
+      builder: (context, state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              t.personalTokenSection,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Card(child: _body(context, t, state)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _body(
+    BuildContext context,
+    AppLocalizations t,
+    PersonalTokenState state,
+  ) {
+    switch (state) {
+      case PersonalTokenLoading():
+        return const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(
+            child: SizedBox.square(
+              dimension: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        );
+      case PersonalTokenFailed():
+        return ListTile(
+          leading: const Icon(Icons.error_outline),
+          title: Text(t.personalTokenLoadFailed),
+          trailing: IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => context.read<PersonalTokenCubit>().load(),
+          ),
+        );
+      case PersonalTokenLoaded(:final token, :final busy):
+        if (token == null) {
+          return ListTile(
+            leading: const Icon(Icons.vpn_key_outlined),
+            title: Text(t.personalTokenTitle),
+            subtitle: Text(t.personalTokenSubtitle),
+            trailing: FilledButton.tonal(
+              onPressed: busy ? null : () => _create(context),
+              child: Text(t.personalTokenGenerate),
+            ),
+          );
+        }
+        return _TokenTile(token: token, busy: busy);
+    }
+  }
+
+  Future<void> _create(BuildContext context) async {
+    final cubit = context.read<PersonalTokenCubit>();
+    final result = await cubit.create();
+    if (result != null && context.mounted) {
+      await _showTokenSecret(context, result.secret);
+    }
+  }
+}
+
+class _TokenTile extends StatelessWidget {
+  const _TokenTile({required this.token, required this.busy});
+  final PersonalTokenDto token;
+  final bool busy;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final dates = MaterialLocalizations.of(context);
+    final lastUsed = token.lastUsedAt == null
+        ? t.personalTokenNeverUsed
+        : t.personalTokenLastUsed(dates.formatShortDate(token.lastUsedAt!));
+    return ListTile(
+      leading: Icon(
+        token.isDisabled ? Icons.key_off_outlined : Icons.vpn_key_outlined,
+      ),
+      title: Row(
+        children: [
+          Text(token.masked, style: const TextStyle(fontFamily: 'monospace')),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: token.isDisabled
+                  ? scheme.errorContainer
+                  : scheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              token.isDisabled ? t.personalTokenDisabled : t.appTokenActive,
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+        ],
+      ),
+      subtitle: Text(
+        '${t.personalTokenCreated(dates.formatShortDate(token.createdAt))}'
+        ' · $lastUsed',
+      ),
+      trailing: busy
+          ? const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : PopupMenuButton<String>(
+              onSelected: (action) => _onAction(context, action),
+              itemBuilder: (ctx) => [
+                PopupMenuItem(
+                  value: 'reset',
+                  child: Text(t.personalTokenReset),
+                ),
+                PopupMenuItem(
+                  value: 'toggle',
+                  child: Text(
+                    token.isDisabled ? t.actionEnable : t.actionDisable,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Text(t.actionDelete),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Future<void> _onAction(BuildContext context, String action) async {
+    final t = AppLocalizations.of(context);
+    final cubit = context.read<PersonalTokenCubit>();
+    switch (action) {
+      case 'reset':
+        final ok = await _confirm(
+          context,
+          title: t.personalTokenReset,
+          body: t.personalTokenResetConfirm,
+          confirmLabel: t.personalTokenReset,
+        );
+        if (!ok) return;
+        final result = await cubit.reset();
+        if (result != null && context.mounted) {
+          await _showTokenSecret(context, result.secret);
+        }
+      case 'toggle':
+        await cubit.setDisabled(disabled: !token.isDisabled);
+      case 'delete':
+        final ok = await _confirm(
+          context,
+          title: t.actionDelete,
+          body: t.personalTokenDeleteConfirm,
+          confirmLabel: t.actionDelete,
+        );
+        if (!ok) return;
+        await cubit.delete();
+    }
+  }
+
+  Future<bool> _confirm(
+    BuildContext context, {
+    required String title,
+    required String body,
+    required String confirmLabel,
+  }) async {
+    final t = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(t.actionCancel),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(confirmLabel),
+          ),
+        ],
+      ),
+    );
+    return confirmed ?? false;
+  }
+}
+
+/// Shows the one-time raw secret with a copy button.
+Future<void> _showTokenSecret(BuildContext context, String secret) {
+  final t = AppLocalizations.of(context);
+  return showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      title: Text(t.appTokenSecretTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(t.appTokenSecretWarning),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Theme.of(ctx).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: SelectableText(
+              secret,
+              style: const TextStyle(fontFamily: 'monospace'),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton.icon(
+          icon: const Icon(Icons.copy, size: 16),
+          label: Text(t.appTokenCopy),
+          onPressed: () async {
+            await Clipboard.setData(ClipboardData(text: secret));
+            if (ctx.mounted) {
+              ScaffoldMessenger.of(
+                ctx,
+              ).showSnackBar(SnackBar(content: Text(t.appTokenCopied)));
+            }
+          },
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(),
+          child: Text(t.actionDone),
+        ),
+      ],
+    ),
+  );
 }
 
 class _ChangePasswordDialog extends StatefulWidget {

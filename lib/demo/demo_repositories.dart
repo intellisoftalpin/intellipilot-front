@@ -35,6 +35,7 @@ import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
+import 'package:intellipilot/features/profile/data/dtos/personal_token_dtos.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
@@ -217,6 +218,75 @@ class DemoProfileRepository implements ProfileRepository {
           {'id': p.id, 'slug': p.slug, 'name': p.name},
       ],
     });
+  }
+
+  // Personal app token — kept in memory for the demo session.
+  PersonalTokenDto? _personalToken;
+
+  @override
+  Future<Result<PersonalTokenDto?, AppFailure>> getPersonalToken() async {
+    await _tick();
+    return Ok<PersonalTokenDto?, AppFailure>(_personalToken);
+  }
+
+  @override
+  Future<Result<PersonalTokenSecretResult, AppFailure>>
+  createPersonalToken() async {
+    await _tick();
+    _personalToken = PersonalTokenDto(
+      id: 'demo-personal-token',
+      prefix: 'ippt_Demo42',
+      last4: 'demo',
+      createdAt: DateTime.now(),
+    );
+    return Ok(
+      PersonalTokenSecretResult(
+        token: _personalToken!,
+        secret: 'ippt_Demo42-not-a-real-secret-demo',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<PersonalTokenSecretResult, AppFailure>>
+  resetPersonalToken() async => createPersonalToken();
+
+  @override
+  Future<Result<Unit, AppFailure>> disablePersonalToken() async {
+    await _tick();
+    final t = _personalToken;
+    if (t != null) {
+      _personalToken = PersonalTokenDto(
+        id: t.id,
+        prefix: t.prefix,
+        last4: t.last4,
+        createdAt: t.createdAt,
+        disabledAt: DateTime.now(),
+      );
+    }
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> enablePersonalToken() async {
+    await _tick();
+    final t = _personalToken;
+    if (t != null) {
+      _personalToken = PersonalTokenDto(
+        id: t.id,
+        prefix: t.prefix,
+        last4: t.last4,
+        createdAt: t.createdAt,
+      );
+    }
+    return const Ok<Unit, AppFailure>(Unit.instance);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deletePersonalToken() async {
+    await _tick();
+    _personalToken = null;
+    return const Ok<Unit, AppFailure>(Unit.instance);
   }
 }
 

@@ -1024,5 +1024,19 @@
   "dangerCleanEpicsTitle": "Удалить все эпики",
   "dangerCleanEpicsBody": "Безвозвратно удалить все эпики в этом проекте. Их задачи сохранятся, но будут отвязаны. Действие необратимо.",
   "dangerCleanedIssuesSnack": "Удалено задач: {count}.",
-  "dangerCleanedEpicsSnack": "Удалено эпиков: {count}."
+  "dangerCleanedEpicsSnack": "Удалено эпиков: {count}.",
+
+  "actionEnable": "Включить",
+  "personalTokenSection": "Доступ к API",
+  "personalTokenTitle": "Персональный токен приложения",
+  "personalTokenSubtitle": "Один токен, действующий от вашего имени — для MCP-клиентов, скриптов и интеграций.",
+  "personalTokenGenerate": "Создать",
+  "personalTokenLoadFailed": "Не удалось загрузить персональный токен.",
+  "personalTokenReset": "Сбросить токен",
+  "personalTokenResetConfirm": "Создать новый секрет? Текущий токен сразу перестанет работать.",
+  "personalTokenDeleteConfirm": "Удалить персональный токен? Запросы с ним сразу перестанут работать.",
+  "personalTokenDisabled": "Отключён",
+  "personalTokenNeverUsed": "не использовался",
+  "personalTokenLastUsed": "последнее использование {date}",
+  "personalTokenCreated": "Создан {date}"
 }

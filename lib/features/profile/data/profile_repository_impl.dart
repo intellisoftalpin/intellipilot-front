@@ -5,6 +5,7 @@ import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/error/failure_mapper.dart';
 import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/result/result.dart';
+import 'package:intellipilot/features/profile/data/dtos/personal_token_dtos.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 
@@ -126,5 +127,72 @@ class ProfileRepositoryImpl implements ProfileRepository {
       ok: (r) => Ok(Map<String, dynamic>.from(r.data as Map)),
       err: Err.new,
     );
+  }
+
+  @override
+  Future<Result<PersonalTokenDto?, AppFailure>> getPersonalToken() async {
+    try {
+      final res = await _api.dio.get<dynamic>('$_me/app-token');
+      return Ok(PersonalTokenDto.fromJson(res.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      // 404 = no token yet, a perfectly normal state.
+      if (e.response?.statusCode == 404) {
+        return const Ok<PersonalTokenDto?, AppFailure>(null);
+      }
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<PersonalTokenSecretResult, AppFailure>>
+  createPersonalToken() async {
+    try {
+      final res = await _api.dio.post<dynamic>('$_me/app-token');
+      return Ok(
+        PersonalTokenSecretResult.fromJson(res.data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<PersonalTokenSecretResult, AppFailure>>
+  resetPersonalToken() async {
+    try {
+      final res = await _api.dio.post<dynamic>('$_me/app-token/reset');
+      return Ok(
+        PersonalTokenSecretResult.fromJson(res.data as Map<String, dynamic>),
+      );
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> disablePersonalToken() =>
+      _tokenAction('disable');
+
+  @override
+  Future<Result<Unit, AppFailure>> enablePersonalToken() =>
+      _tokenAction('enable');
+
+  Future<Result<Unit, AppFailure>> _tokenAction(String action) async {
+    try {
+      await _api.dio.post<dynamic>('$_me/app-token/$action');
+      return const Ok<Unit, AppFailure>(Unit.instance);
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deletePersonalToken() async {
+    try {
+      await _api.dio.delete<dynamic>('$_me/app-token');
+      return const Ok<Unit, AppFailure>(Unit.instance);
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
   }
 }

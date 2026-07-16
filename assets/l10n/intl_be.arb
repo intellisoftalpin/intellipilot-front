@@ -1093,5 +1093,19 @@
   "dangerCleanEpicsTitle": "Выдаліць усе эпікі",
   "dangerCleanEpicsBody": "Беззваротна выдаліць усе эпікі ў гэтым праекце. Іх задачы захаваюцца, але будуць адвязаны. Дзеянне незваротнае.",
   "dangerCleanedIssuesSnack": "Выдалена задач: {count}.",
-  "dangerCleanedEpicsSnack": "Выдалена эпікаў: {count}."
+  "dangerCleanedEpicsSnack": "Выдалена эпікаў: {count}.",
+
+  "actionEnable": "Уключыць",
+  "personalTokenSection": "Доступ да API",
+  "personalTokenTitle": "Персанальны токен праграмы",
+  "personalTokenSubtitle": "Адзін токен, які дзейнічае ад вашага імя — для MCP-кліентаў, скрыптоў і інтэграцый.",
+  "personalTokenGenerate": "Стварыць",
+  "personalTokenLoadFailed": "Не ўдалося загрузіць персанальны токен.",
+  "personalTokenReset": "Скінуць токен",
+  "personalTokenResetConfirm": "Стварыць новы сакрэт? Бягучы токен адразу перастане працаваць.",
+  "personalTokenDeleteConfirm": "Выдаліць персанальны токен? Запыты з ім адразу перастануць працаваць.",
+  "personalTokenDisabled": "Адключаны",
+  "personalTokenNeverUsed": "не выкарыстоўваўся",
+  "personalTokenLastUsed": "апошняе выкарыстанне {date}",
+  "personalTokenCreated": "Створаны {date}"
 }
