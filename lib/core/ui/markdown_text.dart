@@ -17,15 +17,20 @@ class MarkdownText extends StatelessWidget {
   Widget build(BuildContext context) {
     final blocks = _parse(source);
     if (blocks.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final b in blocks)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: _renderBlock(context, b),
-          ),
-      ],
+    // One SelectionArea over all blocks: a single drag (or Ctrl/Cmd+A) selects
+    // the whole text across paragraphs, lists, and code — per-block selectable
+    // widgets would each form their own selection island.
+    return SelectionArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final b in blocks)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: _renderBlock(context, b),
+            ),
+        ],
+      ),
     );
   }
 
@@ -57,7 +62,7 @@ class MarkdownText extends StatelessWidget {
             color: theme.colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: SelectableText(
+          child: Text(
             b.lines.join('\n'),
             style: TextStyle(
               fontFamily: 'monospace',
@@ -124,11 +129,12 @@ class MarkdownText extends StatelessWidget {
     }
   }
 
-  /// A selectable line/paragraph with inline markdown applied over [base].
+  /// A line/paragraph with inline markdown applied over [base]. Selection is
+  /// provided by the enclosing [SelectionArea], not per widget.
   Widget _richLine(BuildContext context, String text, TextStyle? base) {
     final theme = Theme.of(context);
     final effective = base ?? DefaultTextStyle.of(context).style;
-    return SelectableText.rich(
+    return Text.rich(
       TextSpan(style: effective, children: _inline(text, theme, effective)),
     );
   }

@@ -1,12 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/io/url_opener.dart';
+import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/network/api_config.dart';
+import 'package:intellipilot/core/ui/blob_view.dart';
+import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/cubits/attachments_cubit.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
@@ -17,6 +22,52 @@ import 'package:video_player/video_player.dart';
 
 bool _isImage(String contentType) => contentType.startsWith('image/');
 bool _isVideo(String contentType) => contentType.startsWith('video/');
+
+/// What kind of in-app preview an attachment gets.
+enum _AttKind { image, video, pdf, markdown, text, html, other }
+
+/// Extensions that typically contain plain text — previewed monospace.
+const _textExtensions = {
+  'txt', 'log', 'csv', 'tsv', 'json', 'yaml', 'yml', 'xml', 'toml', 'ini',
+  'conf', 'cfg', 'env', 'properties', 'sh', 'bash', 'zsh', 'fish', 'bat',
+  'ps1', 'sql', 'dart', 'rs', 'py', 'js', 'ts', 'java', 'kt', 'swift',
+  'c', 'h', 'cc', 'cpp', 'hpp', 'go', 'rb', 'php', 'diff', 'patch',
+  'gitignore', 'dockerfile', 'lock', //
+};
+
+String _extensionOf(String filename) {
+  final dot = filename.lastIndexOf('.');
+  if (dot < 0 || dot == filename.length - 1) return '';
+  return filename.substring(dot + 1).toLowerCase();
+}
+
+/// Classify by content type first, then by file extension — uploads passed
+/// through generic pipelines often arrive as `application/octet-stream`.
+_AttKind _kindOf(Attachment att) {
+  final ct = att.contentType;
+  if (_isImage(ct)) return _AttKind.image;
+  if (_isVideo(ct)) return _AttKind.video;
+  if (ct == 'application/pdf') return _AttKind.pdf;
+  if (ct == 'text/markdown') return _AttKind.markdown;
+  if (ct == 'text/html') return _AttKind.html;
+  final ext = _extensionOf(att.filename);
+  if (ext == 'pdf') return _AttKind.pdf;
+  if (ext == 'md' || ext == 'markdown') return _AttKind.markdown;
+  if (ext == 'html' || ext == 'htm') return _AttKind.html;
+  if (ct.startsWith('text/') || _textExtensions.contains(ext)) {
+    return _AttKind.text;
+  }
+  return _AttKind.other;
+}
+
+IconData _kindIcon(_AttKind kind) => switch (kind) {
+  _AttKind.image => Icons.image_outlined,
+  _AttKind.video => Icons.movie_outlined,
+  _AttKind.pdf => Icons.picture_as_pdf_outlined,
+  _AttKind.markdown || _AttKind.text => Icons.description_outlined,
+  _AttKind.html => Icons.code_outlined,
+  _AttKind.other => Icons.insert_drive_file_outlined,
+};
 
 /// Resolve a signed attachment URL to an absolute one against the API base.
 String _absoluteUrl(String signedUrl) {
@@ -265,22 +316,18 @@ class _Row extends StatelessWidget {
       final s = c.state;
       return s is ProjectDetailLoaded && s.has(Permission.attachmentDelete);
     });
-    final media = _isImage(att.contentType) || _isVideo(att.contentType);
+    final kind = _kindOf(att);
     return ListTile(
-      leading: Icon(
-        _isImage(att.contentType)
-            ? Icons.image_outlined
-            : _isVideo(att.contentType)
-            ? Icons.movie_outlined
-            : Icons.insert_drive_file_outlined,
-      ),
+      leading: _AttachmentLeading(att: att, kind: kind),
       title: Text(att.filename),
       subtitle: Text(
         '${att.contentType} · ${_humanSize(att.sizeBytes)}',
       ),
-      // Media rows open an in-app preview; everything else keeps the
+      // Previewable rows open an in-app preview; everything else keeps the
       // download-only behaviour.
-      onTap: media ? () => _preview(context) : () => _download(context),
+      onTap: kind == _AttKind.other
+          ? () => _download(context)
+          : () => _preview(context, kind),
       trailing: Wrap(
         spacing: 4,
         children: [
@@ -299,19 +346,50 @@ class _Row extends StatelessWidget {
     );
   }
 
-  Future<void> _preview(BuildContext context) async {
+  Future<void> _preview(BuildContext context, _AttKind kind) async {
     final cubit = context.read<AttachmentsCubit>();
     final signed = await cubit.sign(att.id);
     if (signed == null || !context.mounted) return;
     final url = _absoluteUrl(signed.url);
-    await showDialog<void>(
-      context: context,
-      builder: (_) => _MediaPreviewDialog(
-        url: url,
-        filename: att.filename,
-        isVideo: _isVideo(att.contentType),
-      ),
-    );
+    switch (kind) {
+      case _AttKind.image:
+      case _AttKind.video:
+        await showDialog<void>(
+          context: context,
+          builder: (_) => _MediaPreviewDialog(
+            url: url,
+            filename: att.filename,
+            isVideo: kind == _AttKind.video,
+          ),
+        );
+      case _AttKind.markdown:
+      case _AttKind.text:
+        await showDialog<void>(
+          context: context,
+          builder: (_) => _TextPreviewDialog(
+            url: url,
+            att: att,
+            markdown: kind == _AttKind.markdown,
+          ),
+        );
+      case _AttKind.pdf:
+      case _AttKind.html:
+        if (!inlineBlobPreviewSupported) {
+          // Native targets have no browser frame — degrade to download.
+          await _download(context);
+          return;
+        }
+        await showDialog<void>(
+          context: context,
+          builder: (_) => _BlobPreviewDialog(
+            url: url,
+            att: att,
+            isHtml: kind == _AttKind.html,
+          ),
+        );
+      case _AttKind.other:
+        await _download(context);
+    }
   }
 
   Future<void> _download(BuildContext context) async {
@@ -349,6 +427,327 @@ class _Row extends StatelessWidget {
     if (ok ?? false) {
       await cubit.delete(att.id);
     }
+  }
+}
+
+/// Leading cell for an attachment row: a real thumbnail for images (signed
+/// URL, loaded lazily), a type icon for everything else — with a small play
+/// badge for videos.
+class _AttachmentLeading extends StatefulWidget {
+  const _AttachmentLeading({required this.att, required this.kind});
+  final Attachment att;
+  final _AttKind kind;
+
+  @override
+  State<_AttachmentLeading> createState() => _AttachmentLeadingState();
+}
+
+class _AttachmentLeadingState extends State<_AttachmentLeading> {
+  Future<String?>? _url;
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.kind != _AttKind.image) {
+      if (widget.kind == _AttKind.video) {
+        return SizedBox.square(
+          dimension: 40,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              const Icon(Icons.movie_outlined),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Icon(
+                  Icons.play_circle_fill,
+                  size: 14,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      return SizedBox.square(
+        dimension: 40,
+        child: Icon(_kindIcon(widget.kind)),
+      );
+    }
+    _url ??= context
+        .read<AttachmentsCubit>()
+        .sign(widget.att.id)
+        .then((s) => s == null ? null : _absoluteUrl(s.url));
+    return FutureBuilder<String?>(
+      future: _url,
+      builder: (context, snapshot) {
+        final url = snapshot.data;
+        if (url == null) {
+          return SizedBox.square(
+            dimension: 40,
+            child: Icon(_kindIcon(widget.kind)),
+          );
+        }
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: SizedBox.square(
+            dimension: 40,
+            child: Image.network(
+              url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Icon(_kindIcon(widget.kind)),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Text-preview cap: bigger files degrade to download to keep the UI snappy.
+const _kTextPreviewMaxBytes = 2 * 1024 * 1024;
+
+/// Fetches the attachment bytes and shows them as formatted Markdown or as
+/// scrollable monospace text with a copy action.
+class _TextPreviewDialog extends StatefulWidget {
+  const _TextPreviewDialog({
+    required this.url,
+    required this.att,
+    required this.markdown,
+  });
+
+  final String url;
+  final Attachment att;
+  final bool markdown;
+
+  @override
+  State<_TextPreviewDialog> createState() => _TextPreviewDialogState();
+}
+
+class _TextPreviewDialogState extends State<_TextPreviewDialog> {
+  String? _content;
+  bool _failed = false;
+  bool _tooLarge = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.att.sizeBytes > _kTextPreviewMaxBytes) {
+      _tooLarge = true;
+    } else {
+      unawaited(_load());
+    }
+  }
+
+  Future<void> _load() async {
+    try {
+      final res = await getIt<ApiClient>().dio.get<List<int>>(
+        widget.url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      if (!mounted) return;
+      setState(
+        () => _content = utf8.decode(res.data ?? [], allowMalformed: true),
+      );
+    } on Object {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final content = _content;
+    final Widget body;
+    if (_tooLarge) {
+      body = Center(child: Text(t.attachmentsPreviewTooLarge));
+    } else if (_failed) {
+      body = Center(child: Text(t.attachmentsPreviewFailed));
+    } else if (content == null) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (widget.markdown) {
+      body = SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: MarkdownText(content),
+      );
+    } else {
+      body = SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: SelectionArea(
+          child: Text(
+            content,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 13,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+        ),
+      );
+    }
+    return Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 900, maxHeight: 720),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _PreviewHeader(
+              filename: widget.att.filename,
+              actions: [
+                if (content != null)
+                  IconButton(
+                    icon: const Icon(Icons.copy_outlined, size: 18),
+                    tooltip: t.actionCopy,
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      await Clipboard.setData(ClipboardData(text: content));
+                      messenger.showSnackBar(
+                        SnackBar(content: Text(t.copiedToClipboard)),
+                      );
+                    },
+                  ),
+              ],
+            ),
+            const Divider(height: 1),
+            Flexible(child: SizedBox(width: 900, child: body)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// HTML / PDF preview: fetches the bytes and renders them in an inline
+/// browser frame (sandboxed for HTML). HTML offers a raw-source toggle.
+class _BlobPreviewDialog extends StatefulWidget {
+  const _BlobPreviewDialog({
+    required this.url,
+    required this.att,
+    required this.isHtml,
+  });
+
+  final String url;
+  final Attachment att;
+  final bool isHtml;
+
+  @override
+  State<_BlobPreviewDialog> createState() => _BlobPreviewDialogState();
+}
+
+class _BlobPreviewDialogState extends State<_BlobPreviewDialog> {
+  Uint8List? _bytes;
+  bool _failed = false;
+  bool _showSource = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    try {
+      final res = await getIt<ApiClient>().dio.get<List<int>>(
+        widget.url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      if (!mounted) return;
+      setState(() => _bytes = Uint8List.fromList(res.data ?? []));
+    } on Object {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final bytes = _bytes;
+    final Widget body;
+    if (_failed) {
+      body = Center(child: Text(t.attachmentsPreviewFailed));
+    } else if (bytes == null) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (widget.isHtml && _showSource) {
+      body = SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: SelectionArea(
+          child: Text(
+            utf8.decode(bytes, allowMalformed: true),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+          ),
+        ),
+      );
+    } else {
+      body = buildBlobView(
+        bytes: bytes,
+        mime: widget.isHtml ? 'text/html' : 'application/pdf',
+        sandboxed: widget.isHtml,
+      );
+    }
+    return Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1100, maxHeight: 800),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _PreviewHeader(
+              filename: widget.att.filename,
+              actions: [
+                if (widget.isHtml && bytes != null)
+                  TextButton.icon(
+                    icon: Icon(
+                      _showSource
+                          ? Icons.visibility_outlined
+                          : Icons.code_outlined,
+                      size: 18,
+                    ),
+                    label: Text(
+                      _showSource
+                          ? t.attachmentsViewRendered
+                          : t.attachmentsViewSource,
+                    ),
+                    onPressed: () => setState(() => _showSource = !_showSource),
+                  ),
+              ],
+            ),
+            const Divider(height: 1),
+            Flexible(child: SizedBox(width: 1100, height: 800, child: body)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shared dialog header: filename + custom actions + close.
+class _PreviewHeader extends StatelessWidget {
+  const _PreviewHeader({required this.filename, this.actions = const []});
+  final String filename;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              filename,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          ...actions,
+          IconButton(
+            icon: const Icon(Icons.close),
+            tooltip: t.actionCancel,
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
   }
 }
 

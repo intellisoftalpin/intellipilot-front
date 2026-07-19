@@ -159,12 +159,14 @@ class TimesheetCubit extends Cubit<TimesheetState> {
     required int minutes,
     required int version,
     String? note,
+    String? date,
   }) => _mutate(
     () => _repo.updateEntry(
       id: id,
       minutes: minutes,
       version: version,
       note: note,
+      date: date,
     ),
   );
 

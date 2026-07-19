@@ -139,25 +139,27 @@ class _LoginViewState extends State<_LoginView>
                 Positioned.fill(
                   child: ReactiveForm(
                     formGroup: _form,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final wide = constraints.maxWidth >= _kWideBreakpoint;
-                        return wide
-                            ? _wideLayout(
-                                context,
-                                t,
-                                branding,
-                                title,
-                                reduceMotion,
-                              )
-                            : _narrowLayout(
-                                context,
-                                t,
-                                branding,
-                                title,
-                                reduceMotion,
-                              );
-                      },
+                    child: AutofillGroup(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final wide = constraints.maxWidth >= _kWideBreakpoint;
+                          return wide
+                              ? _wideLayout(
+                                  context,
+                                  t,
+                                  branding,
+                                  title,
+                                  reduceMotion,
+                                )
+                              : _narrowLayout(
+                                  context,
+                                  t,
+                                  branding,
+                                  title,
+                                  reduceMotion,
+                                );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -342,10 +344,14 @@ class _LoginViewState extends State<_LoginView>
         ),
         const SizedBox(height: 16),
       ],
+      // Stable keys: the rows above these fields can appear asynchronously
+      // (branding banner), and keyless fields would then be re-matched to each
+      // other's element/state by position, cross-binding the two controls.
       _entranceItem(
         3,
         reduceMotion,
         _GlowField(
+          key: const ValueKey('login-email-field'),
           child: ReactiveTextField<String>(
             formControlName: 'email',
             autofillHints: const [AutofillHints.username],
@@ -365,6 +371,7 @@ class _LoginViewState extends State<_LoginView>
         4,
         reduceMotion,
         _GlowField(
+          key: const ValueKey('login-password-field'),
           child: ReactiveTextField<String>(
             formControlName: 'password',
             obscureText: true,
@@ -596,7 +603,7 @@ class _FloatingLogoState extends State<_FloatingLogo>
 
 /// Wraps an input field with a soft accent glow while any descendant is focused.
 class _GlowField extends StatefulWidget {
-  const _GlowField({required this.child});
+  const _GlowField({required this.child, super.key});
   final Widget child;
 
   @override

@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/branding/branding_cubit.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
+import 'package:intellipilot/app/l10n/week_start_cubit.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/shell/keyboard_shortcuts.dart';
@@ -38,6 +39,7 @@ class _IntelliPilotAppState extends State<IntelliPilotApp> {
       providers: [
         BlocProvider<ThemeCubit>.value(value: getIt<ThemeCubit>()),
         BlocProvider<LocaleCubit>.value(value: getIt<LocaleCubit>()),
+        BlocProvider<WeekStartCubit>.value(value: getIt<WeekStartCubit>()),
         BlocProvider<BrandingCubit>.value(value: getIt<BrandingCubit>()),
       ],
       child: BlocBuilder<ThemeCubit, ThemeState>(
@@ -69,9 +71,18 @@ class _IntelliPilotAppState extends State<IntelliPilotApp> {
                         AppLocalizations.localizationsDelegates,
                     supportedLocales: AppLocalizations.supportedLocales,
                     routerConfig: _router,
-                    builder: (context, child) => GlobalShortcutsShell(
-                      child: child ?? const SizedBox.shrink(),
-                    ),
+                    builder: (context, child) {
+                      // Applied here (below Localizations, after the intl
+                      // data has loaded) so every date picker app-wide lays
+                      // its calendar out from the preferred week start.
+                      WeekStartCubit.applyToLocale(
+                        Localizations.localeOf(context),
+                        context.watch<WeekStartCubit>().state,
+                      );
+                      return GlobalShortcutsShell(
+                        child: child ?? const SizedBox.shrink(),
+                      );
+                    },
                   );
                 },
               );

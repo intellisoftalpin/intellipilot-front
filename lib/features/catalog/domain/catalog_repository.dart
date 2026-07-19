@@ -262,6 +262,7 @@ abstract interface class CatalogRepository {
     String projectId,
     String boardId, {
     required String name,
+    String? key,
     String color,
     Map<String, dynamic> config,
   });

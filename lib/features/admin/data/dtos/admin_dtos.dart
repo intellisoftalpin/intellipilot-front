@@ -675,6 +675,85 @@ class NotificationSettingsUpdate {
   };
 }
 
+/// One remembered renamed-away project prefix (short-link history).
+class ProjectPrefixHistoryEntry {
+  const ProjectPrefixHistoryEntry({
+    required this.id,
+    required this.projectId,
+    required this.projectName,
+    required this.prefix,
+    required this.replacedAt,
+  });
+
+  factory ProjectPrefixHistoryEntry.fromJson(Map<String, dynamic> j) =>
+      ProjectPrefixHistoryEntry(
+        id: j['id'] as String,
+        projectId: j['project_id'] as String,
+        projectName: j['project_name'] as String? ?? '',
+        prefix: j['prefix'] as String,
+        replacedAt: DateTime.parse(j['replaced_at'] as String),
+      );
+
+  final String id;
+  final String projectId;
+  final String projectName;
+  final String prefix;
+  final DateTime replacedAt;
+}
+
+/// One remembered renamed-away board key (short-link history).
+class BoardKeyHistoryEntry {
+  const BoardKeyHistoryEntry({
+    required this.id,
+    required this.projectId,
+    required this.projectName,
+    required this.boardId,
+    required this.boardName,
+    required this.boardKey,
+    required this.replacedAt,
+  });
+
+  factory BoardKeyHistoryEntry.fromJson(Map<String, dynamic> j) =>
+      BoardKeyHistoryEntry(
+        id: j['id'] as String,
+        projectId: j['project_id'] as String,
+        projectName: j['project_name'] as String? ?? '',
+        boardId: j['board_id'] as String,
+        boardName: j['board_name'] as String? ?? '',
+        boardKey: j['key'] as String,
+        replacedAt: DateTime.parse(j['replaced_at'] as String),
+      );
+
+  final String id;
+  final String projectId;
+  final String projectName;
+  final String boardId;
+  final String boardName;
+  final String boardKey;
+  final DateTime replacedAt;
+}
+
+/// Both halves of the short-link rename history.
+class ShortLinkHistory {
+  const ShortLinkHistory({required this.projects, required this.boards});
+
+  factory ShortLinkHistory.fromJson(Map<String, dynamic> j) => ShortLinkHistory(
+    projects: [
+      for (final e in j['projects'] as List<dynamic>? ?? const [])
+        ProjectPrefixHistoryEntry.fromJson(e as Map<String, dynamic>),
+    ],
+    boards: [
+      for (final e in j['boards'] as List<dynamic>? ?? const [])
+        BoardKeyHistoryEntry.fromJson(e as Map<String, dynamic>),
+    ],
+  );
+
+  final List<ProjectPrefixHistoryEntry> projects;
+  final List<BoardKeyHistoryEntry> boards;
+
+  bool get isEmpty => projects.isEmpty && boards.isEmpty;
+}
+
 /// Result of a "send test" action.
 class NotificationTestResult {
   const NotificationTestResult({required this.ok, required this.message});

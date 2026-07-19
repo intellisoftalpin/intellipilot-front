@@ -17,6 +17,7 @@ import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
+import 'package:intl/intl.dart';
 
 class MilestonesListPage extends StatelessWidget {
   const MilestonesListPage({required this.projectId, super.key});
@@ -71,9 +72,43 @@ class MilestonesListPage extends StatelessWidget {
   }
 }
 
-class _ListView extends StatelessWidget {
+/// Effective schedule of a milestone for display: a missing start defaults
+/// to today, a missing end to start + 7 days. [estimated] marks defaulted
+/// values so views can render them as tentative.
+({DateTime start, DateTime end, bool estimated}) _effectiveRange(Milestone m) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final start = m.startDate ?? today;
+  final end = m.endDate ?? start.add(const Duration(days: 7));
+  return (
+    start: start,
+    end: end.isBefore(start) ? start : end,
+    estimated: m.startDate == null || m.endDate == null,
+  );
+}
+
+/// Open milestones sorted by nearest effective end date first; closed ones
+/// keep their recency order at the bottom.
+List<Milestone> _byEndDate(List<Milestone> all) {
+  final open = all.where((m) => !m.closed).toList()
+    ..sort((a, b) => _effectiveRange(a).end.compareTo(_effectiveRange(b).end));
+  final closed = all.where((m) => m.closed).toList()
+    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  return [...open, ...closed];
+}
+
+class _ListView extends StatefulWidget {
   const _ListView({required this.projectId});
   final String projectId;
+
+  @override
+  State<_ListView> createState() => _ListViewState();
+}
+
+class _ListViewState extends State<_ListView> {
+  bool _gantt = false;
+
+  String get projectId => widget.projectId;
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +119,31 @@ class _ListView extends StatelessWidget {
           projectId: projectId,
           currentLabel: t.milestonesTitle,
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: SegmentedButton<bool>(
+              showSelectedIcon: false,
+              style: const ButtonStyle(
+                visualDensity: VisualDensity.compact,
+              ),
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  icon: const Icon(Icons.view_list_outlined, size: 18),
+                  tooltip: t.milestonesViewList,
+                ),
+                ButtonSegment(
+                  value: true,
+                  icon: const Icon(Icons.view_timeline_outlined, size: 18),
+                  tooltip: t.milestonesViewGantt,
+                ),
+              ],
+              selected: {_gantt},
+              onSelectionChanged: (s) => setState(() => _gantt = s.first),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
         builder: (context, s) {
@@ -152,13 +212,20 @@ class _ListView extends StatelessWidget {
           final canDelete =
               detail is ProjectDetailLoaded &&
               detail.has(Permission.milestoneDelete);
+          if (_gantt) {
+            return _MilestonesGantt(
+              milestones: _byEndDate(state.milestones),
+              projectId: projectId,
+            );
+          }
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  for (final m in state.sorted)
+                  // Nearest deadline first, so what is due next is on top.
+                  for (final m in _byEndDate(state.milestones))
                     _Row(
                       milestone: m,
                       projectId: projectId,
@@ -279,3 +346,237 @@ String _isoDate(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}'
     '-${d.month.toString().padLeft(2, '0')}'
     '-${d.day.toString().padLeft(2, '0')}';
+
+// ---------------------------------------------------------------------------
+// Gantt view
+// ---------------------------------------------------------------------------
+
+const double _kGanttLabelWidth = 200;
+const double _kGanttRowHeight = 44;
+const double _kGanttHeaderHeight = 34;
+const double _kMinPxPerDay = 4;
+
+/// Timeline of milestones as horizontal bars over a shared month axis.
+/// Missing dates use the display defaults (start = today, end = +7 days) and
+/// render semi-transparent to signal an estimate; a vertical line marks
+/// today; clicking a bar/name opens the milestone.
+class _MilestonesGantt extends StatelessWidget {
+  const _MilestonesGantt({required this.milestones, required this.projectId});
+
+  final List<Milestone> milestones;
+  final String projectId;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    if (milestones.isEmpty) return const SizedBox.shrink();
+
+    final ranges = {for (final m in milestones) m.id: _effectiveRange(m)};
+    var min = ranges.values.first.start;
+    var max = ranges.values.first.end;
+    for (final r in ranges.values) {
+      if (r.start.isBefore(min)) min = r.start;
+      if (r.end.isAfter(max)) max = r.end;
+    }
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    if (today.isBefore(min)) min = today;
+    if (today.isAfter(max)) max = today;
+    // Pad the window so bars never touch the edges.
+    min = min.subtract(const Duration(days: 3));
+    max = max.add(const Duration(days: 7));
+    final totalDays = max.difference(min).inDays.clamp(1, 3650);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final available =
+            constraints.maxWidth - _kGanttLabelWidth - 32 /* padding */;
+        final pxPerDay = (available / totalDays).clamp(
+          _kMinPxPerDay,
+          double.infinity,
+        );
+        final chartWidth = totalDays * pxPerDay;
+        double x(DateTime d) => d.difference(min).inDays * pxPerDay;
+
+        // Month tick marks across the window.
+        final months = <DateTime>[];
+        var tick = DateTime(min.year, min.month);
+        while (!tick.isAfter(max)) {
+          if (!tick.isBefore(min)) months.add(tick);
+          tick = DateTime(tick.year, tick.month + 1);
+        }
+        final monthFmt = DateFormat.yMMM(
+          Localizations.localeOf(context).toLanguageTag(),
+        );
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Fixed name column.
+              SizedBox(
+                width: _kGanttLabelWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: _kGanttHeaderHeight),
+                    for (final m in milestones)
+                      SizedBox(
+                        height: _kGanttRowHeight,
+                        child: InkWell(
+                          onTap: () => context.go(
+                            Routes.milestoneDetailFor(projectId, m.id),
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  m.closed
+                                      ? Icons.check_circle
+                                      : Icons.outlined_flag,
+                                  size: 16,
+                                  color: m.closed
+                                      ? theme.colorScheme.outline
+                                      : theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    m.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // Scrollable timeline.
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: chartWidth,
+                    height:
+                        _kGanttHeaderHeight +
+                        milestones.length * _kGanttRowHeight,
+                    child: Stack(
+                      children: [
+                        // Month gridlines + labels.
+                        for (final month in months)
+                          Positioned(
+                            left: x(month),
+                            top: 0,
+                            bottom: 0,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  monthFmt.format(month),
+                                  style: theme.textTheme.labelSmall?.copyWith(
+                                    color: theme.colorScheme.outline,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Container(
+                                    width: 1,
+                                    color: theme.colorScheme.outlineVariant
+                                        .withValues(alpha: 0.5),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        // Today marker.
+                        Positioned(
+                          left: x(today),
+                          top: _kGanttHeaderHeight - 6,
+                          bottom: 0,
+                          child: Tooltip(
+                            message: _isoDate(today),
+                            child: Container(
+                              width: 2,
+                              color: theme.colorScheme.error.withValues(
+                                alpha: 0.7,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Bars.
+                        for (var i = 0; i < milestones.length; i++)
+                          _ganttBar(
+                            context,
+                            milestones[i],
+                            ranges[milestones[i].id]!,
+                            top:
+                                _kGanttHeaderHeight +
+                                i * _kGanttRowHeight +
+                                (_kGanttRowHeight - 20) / 2,
+                            x: x,
+                            pxPerDay: pxPerDay,
+                            estimatedLabel: t.milestonesDatesEstimated,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _ganttBar(
+    BuildContext context,
+    Milestone m,
+    ({DateTime start, DateTime end, bool estimated}) range, {
+    required double top,
+    required double Function(DateTime) x,
+    required double pxPerDay,
+    required String estimatedLabel,
+  }) {
+    final theme = Theme.of(context);
+    final left = x(range.start);
+    final width = ((range.end.difference(range.start).inDays + 1) * pxPerDay)
+        .clamp(6.0, double.infinity);
+    final color = m.closed
+        ? theme.colorScheme.outline
+        : theme.colorScheme.primary;
+    final label =
+        '${_isoDate(range.start)} → ${_isoDate(range.end)}'
+        '${range.estimated ? ' · $estimatedLabel' : ''}';
+    return Positioned(
+      left: left,
+      top: top,
+      child: Tooltip(
+        message: '${m.name}\n$label',
+        child: InkWell(
+          onTap: () => context.go(Routes.milestoneDetailFor(projectId, m.id)),
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            width: width,
+            height: 20,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: range.estimated ? 0.35 : 0.85),
+              borderRadius: BorderRadius.circular(6),
+              border: range.estimated
+                  ? Border.all(color: color, width: 1)
+                  : null,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

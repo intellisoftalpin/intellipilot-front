@@ -193,8 +193,6 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                   activeProjectId: activeProjectId,
                 ),
                 const SizedBox(width: 8),
-                _CreateMenu(compact: compact, activeProjectId: activeProjectId),
-                const SizedBox(width: 8),
                 const _AvatarMenu(),
                 const SizedBox(width: 12),
               ],
@@ -318,66 +316,6 @@ class _SearchButton extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _CreateMenu extends StatelessWidget {
-  const _CreateMenu({this.activeProjectId, this.compact = false});
-  final String? activeProjectId;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    return MenuAnchor(
-      menuChildren: [
-        if (activeProjectId != null) ...[
-          MenuItemButton(
-            leadingIcon: const Icon(Icons.bookmark_outlined),
-            onPressed: () =>
-                context.go(Routes.projectBacklogFor(activeProjectId!)),
-            child: Text(t.topCreateUserStory),
-          ),
-          MenuItemButton(
-            leadingIcon: const Icon(Icons.bug_report_outlined),
-            onPressed: () =>
-                context.go(Routes.projectIssuesFor(activeProjectId!)),
-            child: Text(t.topCreateIssue),
-          ),
-          MenuItemButton(
-            leadingIcon: const Icon(Icons.article_outlined),
-            onPressed: () =>
-                context.go(Routes.projectWikiFor(activeProjectId!)),
-            child: Text(t.topCreateWikiPage),
-          ),
-          const Divider(height: 1),
-        ],
-        MenuItemButton(
-          leadingIcon: const Icon(Icons.folder_outlined),
-          onPressed: () => context.go(Routes.projects),
-          child: Text(t.topCreateProject),
-        ),
-      ],
-      builder: (context, controller, _) => compact
-          ? IconButton.filled(
-              icon: const Icon(Icons.add, size: 18),
-              tooltip: t.topCreateAction,
-              onPressed: () =>
-                  controller.isOpen ? controller.close() : controller.open(),
-            )
-          : FilledButton.icon(
-              icon: const Icon(Icons.add, size: 18),
-              onPressed: () =>
-                  controller.isOpen ? controller.close() : controller.open(),
-              label: Text(t.topCreateAction),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-              ),
-            ),
     );
   }
 }

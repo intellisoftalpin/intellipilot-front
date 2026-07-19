@@ -12,6 +12,10 @@ abstract interface class ProjectsRepository {
   // ---- projects ----
   Future<Result<List<Project>, AppFailure>> listProjects();
   Future<Result<Project, AppFailure>> getProject(String id);
+
+  /// Resolve a short deep-link prefix (`IP`, any letter-case; renamed-away
+  /// prefixes included) to the project. Backs `/projects/ip/...` URLs.
+  Future<Result<Project, AppFailure>> getProjectByPrefix(String prefix);
   Future<Result<Project, AppFailure>> createProject(CreateProjectRequest body);
   Future<Result<Project, AppFailure>> updateProject(
     String id,

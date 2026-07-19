@@ -111,7 +111,9 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
     required int minutes,
     required int version,
     String? note,
-  }) => _patchEntry('/api/v1/me/time-entries/$id', minutes, version, note);
+    String? date,
+  }) =>
+      _patchEntry('/api/v1/me/time-entries/$id', minutes, version, note, date);
 
   @override
   Future<Result<Unit, AppFailure>> deleteEntry(String id) =>
@@ -256,11 +258,13 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
     required int minutes,
     required int version,
     String? note,
+    String? date,
   }) => _patchEntry(
     '/api/v1/projects/$projectId/time-entries/$entryId',
     minutes,
     version,
     note,
+    date,
   );
 
   @override
@@ -456,6 +460,7 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
     int minutes,
     int version,
     String? note,
+    String? date,
   ) async {
     try {
       final r = await _api.dio.patch<dynamic>(
@@ -464,6 +469,7 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
           'minutes': minutes,
           'version': version,
           'note': ?note,
+          'date': ?date,
         },
       );
       return Ok(TimeEntry.fromJson(r.data as Map<String, dynamic>));

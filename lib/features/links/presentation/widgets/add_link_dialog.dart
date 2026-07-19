@@ -60,37 +60,32 @@ class _Candidate {
   final String subject;
 }
 
+/// Link targets are issues only — the backend persists issue↔issue links.
 Future<List<_Candidate>?> _loadCandidates(
   String projectId,
   String keyPrefix,
 ) async {
   final backlog = getIt<BacklogRepository>();
-  final epics = await backlog.listEpics(projectId);
   final issues = await backlog.listIssues(projectId);
-  if (epics.isErr || issues.isErr) return null;
-  final out = <_Candidate>[];
-  for (final e in epics.valueOrNull ?? const <Epic>[]) {
-    out.add(
-      _Candidate(
-        kind: EntityKind.epic,
-        id: e.id,
-        key: epicKeyLabel(keyPrefix, e.reference),
-        subject: e.subject,
-      ),
-    );
-  }
-  for (final i in issues.valueOrNull ?? const <Issue>[]) {
-    out.add(
+  if (issues.isErr) return null;
+  return [
+    for (final i in issues.valueOrNull ?? const <Issue>[])
       _Candidate(
         kind: EntityKind.issue,
         id: i.id,
         key: issueKeyLabel(keyPrefix, i.reference),
         subject: i.subject,
       ),
-    );
-  }
-  return out;
+  ];
 }
+
+/// Link types the backend accepts (`clones`/`causes` are render-only labels
+/// for possible future data and cannot be created).
+const List<LinkType> _creatableTypes = [
+  LinkType.blocks,
+  LinkType.relates,
+  LinkType.duplicates,
+];
 
 class _Dialog extends StatefulWidget {
   const _Dialog({
@@ -130,7 +125,7 @@ class _DialogState extends State<_Dialog> {
                   DropdownButtonFormField<LinkType>(
                     initialValue: _type,
                     decoration: InputDecoration(labelText: t.linkFieldType),
-                    items: LinkType.values
+                    items: _creatableTypes
                         .map(
                           (tp) => DropdownMenuItem(
                             value: tp,

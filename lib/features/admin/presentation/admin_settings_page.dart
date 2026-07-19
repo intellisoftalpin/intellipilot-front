@@ -9,6 +9,7 @@ import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/admin_branding_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_ldap_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_notifications_page.dart';
+import 'package:intellipilot/features/admin/presentation/admin_short_links_page.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_settings_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -74,6 +75,17 @@ class _SettingsView extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const AdminLdapPage(),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.link_outlined),
+                title: Text(l10n.adminShortLinksTitle),
+                subtitle: Text(l10n.adminShortLinksDesc),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AdminShortLinksPage(),
                   ),
                 ),
               ),

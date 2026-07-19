@@ -177,121 +177,145 @@ class _Overview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
     final project = state.project;
+    // Wider canvas + tighter spacing: the overview is a dashboard, so the
+    // more of it that fits one screen the better.
     final maxWidth = responsiveValue<double>(
       context,
       compact: double.infinity,
-      medium: 720,
-      expanded: 960,
+      medium: 840,
+      expanded: 1280,
     );
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: ListView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.folder_outlined,
-                  size: 36,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+            // Compact header card: identity + features + quick navigation in
+            // one block instead of three page sections.
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.folder_outlined,
+                          size: 30,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  project.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 2),
+                                child: Text(
+                                  project.slug,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.outline,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Chip(
+                          visualDensity: VisualDensity.compact,
+                          label: Text(
+                            _visibilityLabel(t, project.visibility),
+                            style: theme.textTheme.labelSmall,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (project.description.isNotEmpty) ...[
+                      const SizedBox(height: 8),
                       Text(
-                        project.name,
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      Text(
-                        project.slug,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        project.description,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
-                  ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        FilledButton.icon(
+                          icon: const Icon(Icons.view_kanban_outlined),
+                          onPressed: () =>
+                              context.go(Routes.projectBoardFor(project.id)),
+                          label: Text(t.actionOpenBoard),
+                        ),
+                        FilledButton.tonalIcon(
+                          icon: const Icon(Icons.bug_report_outlined),
+                          onPressed: () =>
+                              context.go(Routes.projectIssuesFor(project.id)),
+                          label: Text(t.actionOpenIssues),
+                        ),
+                        FilledButton.tonalIcon(
+                          icon: const Icon(Icons.flag_outlined),
+                          onPressed: () => context.go(
+                            Routes.projectMilestonesFor(project.id),
+                          ),
+                          label: Text(t.actionOpenMilestones),
+                        ),
+                        if (project.wikiEnabled)
+                          FilledButton.tonalIcon(
+                            icon: const Icon(Icons.menu_book_outlined),
+                            onPressed: () =>
+                                context.go(Routes.projectWikiFor(project.id)),
+                            label: Text(t.actionOpenWiki),
+                          ),
+                        const SizedBox(width: 8),
+                        _FeatureChip(
+                          label: t.projectFeatureBacklog,
+                          on: project.backlogEnabled,
+                        ),
+                        _FeatureChip(
+                          label: t.projectFeatureKanban,
+                          on: project.kanbanEnabled,
+                        ),
+                        _FeatureChip(
+                          label: t.projectFeatureEpics,
+                          on: project.epicsEnabled,
+                        ),
+                        _FeatureChip(
+                          label: t.projectFeatureWiki,
+                          on: project.wikiEnabled,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                Chip(label: Text(_visibilityLabel(t, project.visibility))),
-              ],
+              ),
             ),
-            const SizedBox(height: 16),
-            _ProjectDashboardBlock(
-              projectId: project.id,
-              currentUserId: currentUserId,
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             const TimesheetWarningCard(),
             const SizedBox(height: 8),
             AvailabilityCard(projectId: project.id),
-            const SizedBox(height: 16),
-            if (project.description.isNotEmpty) ...[
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(project.description),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-            Text(
-              t.projectFeaturesTitle,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                _FeatureChip(
-                  label: t.projectFeatureBacklog,
-                  on: project.backlogEnabled,
-                ),
-                _FeatureChip(
-                  label: t.projectFeatureKanban,
-                  on: project.kanbanEnabled,
-                ),
-                _FeatureChip(
-                  label: t.projectFeatureEpics,
-                  on: project.epicsEnabled,
-                ),
-                _FeatureChip(
-                  label: t.projectFeatureWiki,
-                  on: project.wikiEnabled,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  icon: const Icon(Icons.view_kanban_outlined),
-                  onPressed: () =>
-                      context.go(Routes.projectBoardFor(project.id)),
-                  label: Text(t.actionOpenBoard),
-                ),
-                FilledButton.tonalIcon(
-                  icon: const Icon(Icons.flag_outlined),
-                  onPressed: () =>
-                      context.go(Routes.projectMilestonesFor(project.id)),
-                  label: Text(t.actionOpenMilestones),
-                ),
-                if (project.wikiEnabled)
-                  FilledButton.tonalIcon(
-                    icon: const Icon(Icons.menu_book_outlined),
-                    onPressed: () =>
-                        context.go(Routes.projectWikiFor(project.id)),
-                    label: Text(t.actionOpenWiki),
-                  ),
-                FilledButton.tonalIcon(
-                  icon: const Icon(Icons.bug_report_outlined),
-                  onPressed: () =>
-                      context.go(Routes.projectIssuesFor(project.id)),
-                  label: Text(t.actionOpenIssues),
-                ),
-              ],
+            const SizedBox(height: 12),
+            _ProjectDashboardBlock(
+              projectId: project.id,
+              currentUserId: currentUserId,
             ),
           ],
         ),
@@ -369,6 +393,82 @@ class _DashboardContent extends StatelessWidget {
           count: c.count,
         ),
     ];
+    // Sections paired into two columns on wide screens — half the scroll.
+    final sections = <Widget>[
+      DashboardSection(
+        title: t.dashBoardTitle,
+        icon: Icons.view_kanban_outlined,
+        child: StatusBarChart(
+          buckets: data.byStatus,
+          emptyLabel: t.dashNoWork,
+        ),
+      ),
+      DashboardSection(
+        title: t.dashMyTasksTitle,
+        icon: Icons.assignment_ind_outlined,
+        child: StatusBarChart(
+          buckets: data.myByStatus,
+          emptyLabel: t.dashNoWork,
+        ),
+      ),
+      DashboardSection(
+        title: t.dashEpicsTitle,
+        icon: Icons.flag_outlined,
+        child: data.epics.isEmpty
+            ? Text(
+                t.dashEpicsEmpty,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              )
+            : Column(
+                children: [
+                  for (final e in data.epics)
+                    EpicProgressTile(
+                      epic: e,
+                      onTap: () => _go(
+                        context,
+                        Routes.entityDetailFor(
+                          projectId,
+                          EntityKind.epic,
+                          e.epicId,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+      ),
+      DashboardSection(
+        title: t.dashThroughputTitle,
+        icon: Icons.show_chart_outlined,
+        child: ThroughputChart(weeks: data.throughput),
+      ),
+      DashboardSection(
+        title: t.dashByTypeTitle,
+        icon: Icons.category_outlined,
+        child: BreakdownList(
+          items: data.byType,
+          emptyLabel: t.dashBreakdownEmpty,
+        ),
+      ),
+      DashboardSection(
+        title: t.dashByPriorityTitle,
+        icon: Icons.low_priority_outlined,
+        child: BreakdownList(
+          items: data.byPriority,
+          emptyLabel: t.dashBreakdownEmpty,
+        ),
+      ),
+      DashboardSection(
+        title: t.dashByCategoryTitle,
+        icon: Icons.workspaces_outline,
+        child: BreakdownList(
+          items: categories,
+          emptyLabel: t.dashBreakdownEmpty,
+        ),
+      ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -435,84 +535,41 @@ class _DashboardContent extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        DashboardSection(
-          title: t.dashBoardTitle,
-          icon: Icons.view_kanban_outlined,
-          child: StatusBarChart(
-            buckets: data.byStatus,
-            emptyLabel: t.dashNoWork,
-          ),
-        ),
-        const SizedBox(height: 16),
-        DashboardSection(
-          title: t.dashMyTasksTitle,
-          icon: Icons.assignment_ind_outlined,
-          child: StatusBarChart(
-            buckets: data.myByStatus,
-            emptyLabel: t.dashNoWork,
-          ),
-        ),
-        const SizedBox(height: 16),
-        DashboardSection(
-          title: t.dashEpicsTitle,
-          icon: Icons.flag_outlined,
-          child: data.epics.isEmpty
-              ? Text(
-                  t.dashEpicsEmpty,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                )
-              : Column(
-                  children: [
-                    for (final e in data.epics)
-                      EpicProgressTile(
-                        epic: e,
-                        onTap: () => _go(
-                          context,
-                          Routes.entityDetailFor(
-                            projectId,
-                            EntityKind.epic,
-                            e.epicId,
-                          ),
-                        ),
-                      ),
-                  ],
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 760) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (final s in sections)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: s,
+                    ),
+                ],
+              );
+            }
+            // Two balanced columns, filled top-to-bottom in reading order.
+            final left = <Widget>[];
+            final right = <Widget>[];
+            for (var i = 0; i < sections.length; i++) {
+              (i.isEven ? left : right).add(
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: sections[i],
                 ),
-        ),
-        const SizedBox(height: 16),
-        DashboardSection(
-          title: t.dashThroughputTitle,
-          icon: Icons.show_chart_outlined,
-          child: ThroughputChart(weeks: data.throughput),
-        ),
-        const SizedBox(height: 16),
-        DashboardSection(
-          title: t.dashByTypeTitle,
-          icon: Icons.category_outlined,
-          child: BreakdownList(
-            items: data.byType,
-            emptyLabel: t.dashBreakdownEmpty,
-          ),
-        ),
-        const SizedBox(height: 16),
-        DashboardSection(
-          title: t.dashByPriorityTitle,
-          icon: Icons.low_priority_outlined,
-          child: BreakdownList(
-            items: data.byPriority,
-            emptyLabel: t.dashBreakdownEmpty,
-          ),
-        ),
-        const SizedBox(height: 16),
-        DashboardSection(
-          title: t.dashByCategoryTitle,
-          icon: Icons.workspaces_outline,
-          child: BreakdownList(
-            items: categories,
-            emptyLabel: t.dashBreakdownEmpty,
-          ),
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: Column(children: left)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(children: right)),
+              ],
+            );
+          },
         ),
       ],
     );

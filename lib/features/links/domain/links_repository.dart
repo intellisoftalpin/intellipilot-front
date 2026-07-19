@@ -17,5 +17,11 @@ abstract interface class LinksRepository {
     CreateLinkRequest body,
   );
 
-  Future<Result<Unit, AppFailure>> delete(String projectId, String linkId);
+  /// Delete a link from the perspective of [entityId] (the issue whose panel
+  /// the user is acting in — the backend route is issue-scoped).
+  Future<Result<Unit, AppFailure>> delete(
+    String projectId,
+    String entityId,
+    String linkId,
+  );
 }

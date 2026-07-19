@@ -861,13 +861,14 @@ class CatalogRepositoryImpl implements CatalogRepository {
     String projectId,
     String boardId, {
     required String name,
+    String? key,
     String color = '',
     Map<String, dynamic> config = const {},
   }) async {
     try {
       final response = await _api.dio.put<dynamic>(
         '$_base/$projectId/boards/$boardId',
-        data: {'name': name, 'color': color, 'config': config},
+        data: {'name': name, 'key': ?key, 'color': color, 'config': config},
       );
       return Ok(Board.fromJson(response.data as Map<String, dynamic>));
     } on DioException catch (e) {

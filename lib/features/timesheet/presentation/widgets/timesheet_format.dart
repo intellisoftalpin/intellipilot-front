@@ -11,6 +11,28 @@ String fmtMins(int minutes) {
   return '${h}h ${m}m';
 }
 
+/// Parse a user-typed duration into minutes (1..1440), or null when invalid.
+///
+/// Accepts decimal hours ("3.5", "3,58") and hour/minute notation ("3h 35m",
+/// "2h", "45m", case-insensitive, spaces optional).
+int? parseDurationInput(String raw) {
+  final s = raw.trim().toLowerCase();
+  if (s.isEmpty) return null;
+  final hm = RegExp(
+    r'^(?:(\d{1,3})\s*h)?\s*(?:(\d{1,4})\s*m)?$',
+  ).firstMatch(s);
+  if (hm != null && (hm.group(1) != null || hm.group(2) != null)) {
+    final h = int.tryParse(hm.group(1) ?? '0') ?? 0;
+    final m = int.tryParse(hm.group(2) ?? '0') ?? 0;
+    final total = h * 60 + m;
+    if (total <= 0) return null;
+    return total.clamp(1, 1440);
+  }
+  final hours = double.tryParse(s.replaceAll(',', '.'));
+  if (hours == null || hours <= 0) return null;
+  return (hours * 60).round().clamp(1, 1440);
+}
+
 String isoDate(int y, int m, int d) =>
     '${y.toString().padLeft(4, '0')}-${m.toString().padLeft(2, '0')}-${d.toString().padLeft(2, '0')}';
 

@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/core/widgets/members_scope.dart';
 import 'package:intellipilot/core/work_items/work_item_filter.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
+import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -21,8 +25,14 @@ const List<String> _categories = [
 /// A single, shared filter bar so the Issues list and the Board expose an
 /// identical set of filter controls. The Board passes `showStatus: false`
 /// (its columns already represent statuses); everything else is identical.
-class WorkItemFilterBar extends StatelessWidget {
+///
+/// The person filter is universal: one "Assignee" dropdown matching the user
+/// in any working role (assignee / QA / reviewer — not reporter). Component
+/// and its dependent release filter live in the second row: picking a
+/// component reveals a release dropdown scoped to that component's releases.
+class WorkItemFilterBar extends StatefulWidget {
   const WorkItemFilterBar({
+    required this.projectId,
     required this.filter,
     required this.onChanged,
     required this.statuses,
@@ -39,6 +49,7 @@ class WorkItemFilterBar extends StatelessWidget {
     super.key,
   });
 
+  final String projectId;
   final WorkItemFilter filter;
   final ValueChanged<WorkItemFilter> onChanged;
   final List<TaxonomyItem> statuses;
@@ -59,8 +70,46 @@ class WorkItemFilterBar extends StatelessWidget {
   /// Dimension keys not rendered at all (e.g. the active swimlane dimension).
   final Set<String> hiddenDimensions;
 
-  bool _hidden(String dim) => hiddenDimensions.contains(dim);
-  bool _locked(String dim) => lockedDimensions.contains(dim);
+  @override
+  State<WorkItemFilterBar> createState() => _WorkItemFilterBarState();
+}
+
+class _WorkItemFilterBarState extends State<WorkItemFilterBar> {
+  /// Releases linked to the currently selected component (dependent filter).
+  List<ComponentReleaseLink> _componentReleases = const [];
+  String? _releasesForComponent;
+
+  WorkItemFilter get filter => widget.filter;
+  ValueChanged<WorkItemFilter> get onChanged => widget.onChanged;
+
+  bool _hidden(String dim) => widget.hiddenDimensions.contains(dim);
+  bool _locked(String dim) => widget.lockedDimensions.contains(dim);
+
+  @override
+  void initState() {
+    super.initState();
+    _syncReleases();
+  }
+
+  @override
+  void didUpdateWidget(WorkItemFilterBar old) {
+    super.didUpdateWidget(old);
+    _syncReleases();
+  }
+
+  void _syncReleases() {
+    final cid = filter.componentId;
+    if (cid == null || cid == _releasesForComponent) return;
+    _releasesForComponent = cid;
+    unawaited(
+      getIt<CatalogRepository>()
+          .listComponentReleases(widget.projectId, cid)
+          .then((res) {
+            if (!mounted || _releasesForComponent != cid) return;
+            setState(() => _componentReleases = res.valueOrNull ?? const []);
+          }),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,31 +126,23 @@ class WorkItemFilterBar extends StatelessWidget {
       for (final e in sortedMembers) _Opt(e.key, e.value.displayName),
     ];
 
-    // Row 1: the high-frequency filters. Assignee leads, then status (board
-    // hides it), type, priority, size, label, component, the overdue toggle
-    // and the clear button.
+    // Row 1: the high-frequency filters. The universal assignee leads
+    // (matches assignee OR QA OR reviewer), then status (board hides it),
+    // type, priority, size, label, the overdue toggle and the clear button.
     final row1 = <Widget>[
       if (!_hidden('assignee'))
         _Dropdown(
           hint: t.issueFieldAssignee,
-          value: filter.assigneeId,
+          value: filter.involvedId,
           options: memberOptions,
           enabled: !_locked('assignee'),
-          onChanged: (v) => onChanged(filter.copyWith(assigneeId: v)),
+          onChanged: (v) => onChanged(filter.copyWith(involvedId: v)),
         ),
-      if (!_hidden('qa_assignee'))
-        _Dropdown(
-          hint: t.issueFieldQaAssignee,
-          value: filter.qaAssigneeId,
-          options: memberOptions,
-          enabled: !_locked('qa_assignee'),
-          onChanged: (v) => onChanged(filter.copyWith(qaAssigneeId: v)),
-        ),
-      if (showStatus && !_hidden('status'))
+      if (widget.showStatus && !_hidden('status'))
         _Dropdown(
           hint: t.issueFieldStatus,
           value: filter.statusId,
-          options: _tax(types: statuses),
+          options: _tax(types: widget.statuses),
           enabled: !_locked('status'),
           onChanged: (v) => onChanged(filter.copyWith(statusId: v)),
         ),
@@ -109,7 +150,7 @@ class WorkItemFilterBar extends StatelessWidget {
         _Dropdown(
           hint: t.issueFieldType,
           value: filter.typeId,
-          options: _tax(types: types),
+          options: _tax(types: widget.types),
           enabled: !_locked('type'),
           onChanged: (v) => onChanged(filter.copyWith(typeId: v)),
         ),
@@ -117,7 +158,7 @@ class WorkItemFilterBar extends StatelessWidget {
         _Dropdown(
           hint: t.issueFieldPriority,
           value: filter.priorityId,
-          options: _tax(types: priorities),
+          options: _tax(types: widget.priorities),
           enabled: !_locked('priority'),
           onChanged: (v) => onChanged(filter.copyWith(priorityId: v)),
         ),
@@ -125,7 +166,7 @@ class WorkItemFilterBar extends StatelessWidget {
         _Dropdown(
           hint: t.detailFieldPoints,
           value: filter.sizeId,
-          options: _tax(types: sizes),
+          options: _tax(types: widget.sizes),
           enabled: !_locked('size'),
           onChanged: (v) => onChanged(filter.copyWith(sizeId: v)),
         ),
@@ -133,17 +174,9 @@ class WorkItemFilterBar extends StatelessWidget {
         _Dropdown(
           hint: t.issueFieldLabels,
           value: filter.labelId,
-          options: [for (final l in labels) _Opt(l.id, l.name)],
+          options: [for (final l in widget.labels) _Opt(l.id, l.name)],
           enabled: !_locked('label'),
           onChanged: (v) => onChanged(filter.copyWith(labelId: v)),
-        ),
-      if (!_hidden('component'))
-        _Dropdown(
-          hint: t.issueFieldComponents,
-          value: filter.componentId,
-          options: [for (final c in components) _Opt(c.id, c.name)],
-          enabled: !_locked('component'),
-          onChanged: (v) => onChanged(filter.copyWith(componentId: v)),
         ),
       if (!_hidden('overdue'))
         Padding(
@@ -168,15 +201,40 @@ class WorkItemFilterBar extends StatelessWidget {
         ),
     ];
 
-    // Row 2: the longer-tail planning dimensions.
+    // Row 2: the longer-tail planning dimensions — component with its
+    // dependent release filter, then epic, milestone, category.
     final row2 = <Widget>[
+      if (!_hidden('component')) ...[
+        _Dropdown(
+          hint: t.issueFieldComponents,
+          value: filter.componentId,
+          options: [for (final c in widget.components) _Opt(c.id, c.name)],
+          enabled: !_locked('component'),
+          // Changing the component invalidates the dependent release pick.
+          onChanged: (v) => onChanged(
+            filter.copyWith(componentId: v, releaseId: null),
+          ),
+        ),
+        if (filter.componentId != null)
+          _Dropdown(
+            hint: t.issueFieldRelease,
+            value: filter.releaseId,
+            options: [
+              _Opt('none', t.issueFieldReleaseNone),
+              for (final r in _componentReleases)
+                _Opt(r.releaseId, r.releaseName),
+            ],
+            enabled: !_locked('component'),
+            onChanged: (v) => onChanged(filter.copyWith(releaseId: v)),
+          ),
+      ],
       if (!_hidden('epic'))
         _Dropdown(
           hint: t.detailFieldEpic,
           value: filter.epicId,
           options: [
             _Opt('none', t.backlogNoEpic),
-            for (final e in epics)
+            for (final e in widget.epics)
               _Opt(e.id, 'EPIC-${e.reference} ${e.subject}'),
           ],
           enabled: !_locked('epic'),
@@ -188,7 +246,7 @@ class WorkItemFilterBar extends StatelessWidget {
           value: filter.milestoneId,
           options: [
             _Opt('none', t.backlogNoMilestone),
-            for (final m in milestones) _Opt(m.id, m.name),
+            for (final m in widget.milestones) _Opt(m.id, m.name),
           ],
           enabled: !_locked('milestone'),
           onChanged: (v) => onChanged(filter.copyWith(milestoneId: v)),

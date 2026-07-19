@@ -40,6 +40,15 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   }
 
   @override
+  Future<Result<Project, AppFailure>> getProjectByPrefix(String prefix) async {
+    final res = await _api.get('$_basePath/by-prefix/$prefix');
+    return res.when(
+      ok: (r) => Ok(Project.fromJson(r.data as Map<String, dynamic>)),
+      err: Err.new,
+    );
+  }
+
+  @override
   Future<Result<Project, AppFailure>> createProject(
     CreateProjectRequest body,
   ) async {

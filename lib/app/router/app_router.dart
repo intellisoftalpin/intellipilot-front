@@ -1,9 +1,11 @@
 import 'package:go_router/go_router.dart';
+import 'package:intellipilot/app/router/short_links.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/shell/main_shell.dart';
 import 'package:intellipilot/core/utils/listenable_stream.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
+import 'package:intellipilot/features/activity/presentation/epic_key_page.dart';
 import 'package:intellipilot/features/activity/presentation/issue_key_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_activity_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_app_tokens_page.dart';
@@ -132,6 +134,11 @@ abstract class Routes {
   /// (e.g. `/projects/{id}/issues/PS-398`).
   static String issueByKeyFor(String projectId, String key) =>
       '/projects/$projectId/issues/$key';
+
+  /// Clean, human-readable full-page epic URL keyed by its epic key
+  /// (e.g. `/projects/{id}/epics/PS-E-7`).
+  static String epicByKeyFor(String projectId, String key) =>
+      '/projects/$projectId/epics/$key';
   static String acceptInvitationFor(String token) => '/i/$token';
 }
 
@@ -211,8 +218,10 @@ GoRouter buildRouter({required SessionBloc session}) {
           GoRoute(
             path: '/projects/:id/time',
             name: 'project_time',
-            builder: (context, state) =>
-                ProjectTimePage(projectId: state.pathParameters['id']!),
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => ProjectTimePage(projectId: pid),
+            ),
           ),
           GoRoute(
             path: '/admin/users/:id/time',
@@ -223,26 +232,34 @@ GoRouter buildRouter({required SessionBloc session}) {
           GoRoute(
             path: '/projects/:id',
             name: 'project_detail',
-            builder: (context, state) =>
-                ProjectOverviewPage(projectId: state.pathParameters['id']!),
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => ProjectOverviewPage(projectId: pid),
+            ),
           ),
           GoRoute(
             path: '/projects/:id/settings',
             name: 'project_settings',
-            builder: (context, state) =>
-                ProjectSettingsPage(projectId: state.pathParameters['id']!),
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => ProjectSettingsPage(projectId: pid),
+            ),
           ),
           GoRoute(
             path: '/projects/:id/backlog',
             name: 'project_backlog',
-            builder: (context, state) =>
-                BacklogPage(projectId: state.pathParameters['id']!),
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => BacklogPage(projectId: pid),
+            ),
           ),
           GoRoute(
             path: '/projects/:id/epics',
             name: 'project_epics',
-            builder: (context, state) =>
-                EpicsPage(projectId: state.pathParameters['id']!),
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => EpicsPage(projectId: pid),
+            ),
           ),
           GoRoute(
             path: '/projects/:id/issues',
@@ -250,33 +267,42 @@ GoRouter buildRouter({required SessionBloc session}) {
             builder: (context, state) {
               final q = state.uri.queryParameters;
               final overdue = q['overdue'] == 'true';
-              return IssuesPage(
-                projectId: state.pathParameters['id']!,
-                initialStatusFilter: q['status'],
-                initialTypeFilter: q['type'],
-                initialAssigneeFilter: q['assignee'],
-                initialOverdueOnly: overdue,
+              return ShortLinkGate(
+                state: state,
+                builder: (_, pid, _) => IssuesPage(
+                  projectId: pid,
+                  initialStatusFilter: q['status'],
+                  initialTypeFilter: q['type'],
+                  initialAssigneeFilter: q['assignee'],
+                  initialOverdueOnly: overdue,
+                ),
               );
             },
           ),
           GoRoute(
             path: '/projects/:id/board',
             name: 'project_board',
-            builder: (context, state) =>
-                BoardResolverPage(projectId: state.pathParameters['id']!),
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => BoardResolverPage(projectId: pid),
+            ),
           ),
           GoRoute(
             path: '/projects/:id/boards',
             name: 'project_boards_gallery',
-            builder: (context, state) =>
-                BoardsGalleryPage(projectId: state.pathParameters['id']!),
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => BoardsGalleryPage(projectId: pid),
+            ),
           ),
           GoRoute(
             path: '/projects/:id/boards/:boardId',
             name: 'project_board_detail',
-            builder: (context, state) => BoardPage(
-              projectId: state.pathParameters['id']!,
-              boardId: state.pathParameters['boardId']!,
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              boardRef: state.pathParameters['boardId'],
+              builder: (_, pid, boardId) =>
+                  BoardPage(projectId: pid, boardId: boardId!),
             ),
           ),
           GoRoute(
@@ -292,37 +318,50 @@ GoRouter buildRouter({required SessionBloc session}) {
           GoRoute(
             path: '/projects/:id/milestones',
             name: 'project_milestones',
-            builder: (context, state) =>
-                MilestonesListPage(projectId: state.pathParameters['id']!),
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => MilestonesListPage(projectId: pid),
+            ),
           ),
           GoRoute(
             path: '/projects/:projectId/milestones/:milestoneId',
             name: 'milestone_detail',
-            builder: (context, state) => MilestoneDetailPage(
-              projectId: state.pathParameters['projectId']!,
-              milestoneId: state.pathParameters['milestoneId']!,
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => MilestoneDetailPage(
+                projectId: pid,
+                milestoneId: state.pathParameters['milestoneId']!,
+              ),
             ),
           ),
           GoRoute(
             path: '/projects/:id/wiki',
             name: 'project_wiki',
-            builder: (context, state) =>
-                WikiListPage(projectId: state.pathParameters['id']!),
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => WikiListPage(projectId: pid),
+            ),
           ),
           GoRoute(
             path: '/projects/:projectId/wiki/:pageId',
             name: 'wiki_page',
-            builder: (context, state) => WikiPageView(
-              projectId: state.pathParameters['projectId']!,
-              pageId: state.pathParameters['pageId']!,
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => WikiPageView(
+                projectId: pid,
+                pageId: state.pathParameters['pageId']!,
+              ),
             ),
           ),
           GoRoute(
             path: '/projects/:projectId/wiki/:pageId/revisions',
             name: 'wiki_revisions',
-            builder: (context, state) => WikiRevisionsPage(
-              projectId: state.pathParameters['projectId']!,
-              pageId: state.pathParameters['pageId']!,
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => WikiRevisionsPage(
+                projectId: pid,
+                pageId: state.pathParameters['pageId']!,
+              ),
             ),
           ),
           GoRoute(
@@ -334,10 +373,13 @@ GoRouter buildRouter({required SessionBloc session}) {
                 (k) => k.slug == slug,
                 orElse: () => EntityKind.issue,
               );
-              return EntityDetailPage(
-                projectId: state.pathParameters['projectId']!,
-                kind: kind,
-                entityId: state.pathParameters['entityId']!,
+              return ShortLinkGate(
+                state: state,
+                builder: (_, pid, _) => EntityDetailPage(
+                  projectId: pid,
+                  kind: kind,
+                  entityId: state.pathParameters['entityId']!,
+                ),
               );
             },
           ),
@@ -345,9 +387,26 @@ GoRouter buildRouter({required SessionBloc session}) {
             // Clean, human-readable full-page issue view keyed by issue key.
             path: '/projects/:projectId/issues/:key',
             name: 'issue_by_key',
-            builder: (context, state) => IssueKeyPage(
-              projectId: state.pathParameters['projectId']!,
-              issueKey: state.pathParameters['key']!,
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              lowercaseTail: true,
+              builder: (_, pid, _) => IssueKeyPage(
+                projectId: pid,
+                issueKey: state.pathParameters['key']!,
+              ),
+            ),
+          ),
+          GoRoute(
+            // Clean, human-readable full-page epic view keyed by epic key.
+            path: '/projects/:projectId/epics/:key',
+            name: 'epic_by_key',
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              lowercaseTail: true,
+              builder: (_, pid, _) => EpicKeyPage(
+                projectId: pid,
+                epicKey: state.pathParameters['key']!,
+              ),
             ),
           ),
           GoRoute(

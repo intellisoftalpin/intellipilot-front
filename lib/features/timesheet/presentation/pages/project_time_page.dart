@@ -162,10 +162,17 @@ class _ProjectTimePageState extends State<ProjectTimePage> {
   }
 
   Future<void> _openSelfLog() async {
+    // Pre-fill the viewed month, not blindly "today": when the manager has
+    // navigated to another month, that month's first day is the intent.
+    final now = DateTime.now();
+    final viewedMonth = (_year == now.year && _month == now.month)
+        ? now
+        : DateTime(_year, _month);
     await showDialog<void>(
       context: context,
       builder: (_) => LogTimeDialog(
         onSubmit: _selfSubmit,
+        initialDate: viewedMonth,
         scopedProjectId: widget.projectId,
         scopedProjectName: _projectName,
       ),
@@ -518,13 +525,14 @@ class _MemberDaySheetState extends State<_MemberDaySheet> {
       context: context,
       builder: (_) => EditEntryDialog(
         entry: e,
-        onSubmit: ({required minutes, required version, note}) async =>
+        onSubmit: ({required minutes, required version, note, date}) async =>
             (await _repo.correctEntry(
               widget.projectId,
               entryId: e.id,
               minutes: minutes,
               version: version,
               note: note,
+              date: date,
             )).failureOrNull,
       ),
     );

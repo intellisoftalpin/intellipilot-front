@@ -338,6 +338,17 @@ class DemoProjectsRepository implements ProjectsRepository {
   }
 
   @override
+  Future<Result<Project, AppFailure>> getProjectByPrefix(String prefix) async {
+    await _tick();
+    final needle = prefix.trim().toUpperCase();
+    final p = _s.projects
+        .where((p) => p.issuePrefix.toUpperCase() == needle)
+        .firstOrNull;
+    if (p == null) return const Err(NotFoundFailure());
+    return Ok(p);
+  }
+
+  @override
   Future<Result<Project, AppFailure>> createProject(
     CreateProjectRequest body,
   ) async {
@@ -1593,6 +1604,7 @@ class DemoCatalogRepository implements CatalogRepository {
     String projectId,
     String boardId, {
     required String name,
+    String? key,
     String color = '',
     Map<String, dynamic> config = const {},
   }) async {
@@ -1607,6 +1619,7 @@ class DemoCatalogRepository implements CatalogRepository {
       ownerId: old.ownerId,
       visibility: old.visibility,
       name: name,
+      key: key?.toLowerCase() ?? old.key,
       color: color,
       config: config,
       order: old.order,
@@ -2825,6 +2838,7 @@ class DemoLinksRepository implements LinksRepository {
   @override
   Future<Result<Unit, AppFailure>> delete(
     String projectId,
+    String entityId,
     String linkId,
   ) async {
     await _tick();
@@ -3325,6 +3339,21 @@ class DemoAdminRepository implements AdminRepository {
       lastUsedAt: cur.lastUsedAt,
       createdAt: cur.createdAt,
     );
+    return const Ok(Unit.instance);
+  }
+
+  @override
+  Future<Result<ShortLinkHistory, AppFailure>> shortLinkHistory() async {
+    await _tick();
+    return const Ok(ShortLinkHistory(projects: [], boards: []));
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteShortLinkHistory({
+    List<String> projectIds = const [],
+    List<String> boardIds = const [],
+  }) async {
+    await _tick();
     return const Ok(Unit.instance);
   }
 }

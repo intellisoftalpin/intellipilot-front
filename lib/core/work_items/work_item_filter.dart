@@ -16,10 +16,12 @@ class WorkItemFilter {
     this.sizeId,
     this.assigneeId,
     this.qaAssigneeId,
+    this.involvedId,
     this.epicId,
     this.milestoneId,
     this.labelId,
     this.componentId,
+    this.releaseId,
     this.category,
     this.overdueOnly = false,
   });
@@ -32,10 +34,12 @@ class WorkItemFilter {
     sizeId: j['size'] as String?,
     assigneeId: j['assignee'] as String?,
     qaAssigneeId: j['qa_assignee'] as String?,
+    involvedId: j['involved'] as String?,
     epicId: j['epic'] as String?,
     milestoneId: j['milestone'] as String?,
     labelId: j['label'] as String?,
     componentId: j['component'] as String?,
+    releaseId: j['release'] as String?,
     category: j['category'] as String?,
     overdueOnly: j['overdue'] as bool? ?? false,
   );
@@ -58,10 +62,18 @@ class WorkItemFilter {
   final String? sizeId;
   final String? assigneeId;
   final String? qaAssigneeId;
+
+  /// Universal person filter: matches issues where the user is assignee, QA,
+  /// or reviewer (never just the reporter). `'none'` = no people set at all.
+  final String? involvedId;
   final String? epicId;
   final String? milestoneId;
   final String? labelId;
   final String? componentId;
+
+  /// Release id — matches issues whose fix version belongs to that release.
+  /// Only offered once a component is selected (dependent filter).
+  final String? releaseId;
   final String? category;
   final bool overdueOnly;
 
@@ -75,10 +87,12 @@ class WorkItemFilter {
     Object? sizeId = _keep,
     Object? assigneeId = _keep,
     Object? qaAssigneeId = _keep,
+    Object? involvedId = _keep,
     Object? epicId = _keep,
     Object? milestoneId = _keep,
     Object? labelId = _keep,
     Object? componentId = _keep,
+    Object? releaseId = _keep,
     Object? category = _keep,
     bool? overdueOnly,
   }) => WorkItemFilter(
@@ -91,6 +105,7 @@ class WorkItemFilter {
     qaAssigneeId: qaAssigneeId == _keep
         ? this.qaAssigneeId
         : qaAssigneeId as String?,
+    involvedId: involvedId == _keep ? this.involvedId : involvedId as String?,
     epicId: epicId == _keep ? this.epicId : epicId as String?,
     milestoneId: milestoneId == _keep
         ? this.milestoneId
@@ -99,6 +114,7 @@ class WorkItemFilter {
     componentId: componentId == _keep
         ? this.componentId
         : componentId as String?,
+    releaseId: releaseId == _keep ? this.releaseId : releaseId as String?,
     category: category == _keep ? this.category : category as String?,
     overdueOnly: overdueOnly ?? this.overdueOnly,
   );
@@ -111,10 +127,12 @@ class WorkItemFilter {
     if (sizeId != null) 'size': sizeId,
     if (assigneeId != null) 'assignee': assigneeId,
     if (qaAssigneeId != null) 'qa_assignee': qaAssigneeId,
+    if (involvedId != null) 'involved': involvedId,
     if (epicId != null) 'epic': epicId,
     if (milestoneId != null) 'milestone': milestoneId,
     if (labelId != null) 'label': labelId,
     if (componentId != null) 'component': componentId,
+    if (releaseId != null) 'release': releaseId,
     if (category != null) 'category': category,
     if (overdueOnly) 'overdue': true,
   };
@@ -130,10 +148,12 @@ class WorkItemFilter {
       sizeId != null ||
       assigneeId != null ||
       qaAssigneeId != null ||
+      involvedId != null ||
       epicId != null ||
       milestoneId != null ||
       labelId != null ||
       componentId != null ||
+      releaseId != null ||
       category != null ||
       overdueOnly;
 
@@ -150,6 +170,7 @@ class WorkItemFilter {
     if (sizeId != null && issue.sizeId != sizeId) return false;
     if (!_idMatches(assigneeId, issue.assignedTo)) return false;
     if (!_idMatches(qaAssigneeId, issue.qaAssigneeId)) return false;
+    if (!_involvedMatches(issue)) return false;
     if (!_idMatches(epicId, issue.epicId)) return false;
     if (!_idMatches(milestoneId, issue.milestoneId)) return false;
     if (category != null && issue.category != category) return false;
@@ -179,6 +200,17 @@ class WorkItemFilter {
     if (filterValue == null) return true;
     if (filterValue == 'none') return itemValue == null;
     return itemValue == filterValue;
+  }
+
+  /// Universal person predicate: any of assignee / QA / reviewer matches
+  /// (reporter deliberately excluded); `'none'` requires all three unset.
+  /// Note: [releaseId] has no client-side predicate — the mapping from fix
+  /// version to release lives server-side, where that filter is applied.
+  bool _involvedMatches(Issue issue) {
+    if (involvedId == null) return true;
+    final people = [issue.assignedTo, issue.qaAssigneeId, issue.reviewerId];
+    if (involvedId == 'none') return people.every((p) => p == null);
+    return people.contains(involvedId);
   }
 }
 

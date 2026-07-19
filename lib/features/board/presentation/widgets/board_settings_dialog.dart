@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/widgets/members_scope.dart';
 import 'package:intellipilot/core/work_items/work_item_filter.dart';
@@ -222,6 +223,8 @@ class _BoardSettingsForm extends StatefulWidget {
 
 class _BoardSettingsFormState extends State<_BoardSettingsForm> {
   late final TextEditingController _name;
+  late final TextEditingController _key;
+  String? _keyError;
   late final TextEditingController _closedWithin;
   late String _color;
   late bool _shared;
@@ -243,6 +246,7 @@ class _BoardSettingsFormState extends State<_BoardSettingsForm> {
         ? BoardConfig.defaults(widget.data.statuses)
         : BoardConfig.fromMap(board.config);
     _name = TextEditingController(text: board?.name ?? '');
+    _key = TextEditingController(text: board?.key ?? '');
     _closedWithin = TextEditingController(
       text: cfg.closedWithinDays?.toString() ?? '',
     );
@@ -263,9 +267,14 @@ class _BoardSettingsFormState extends State<_BoardSettingsForm> {
   @override
   void dispose() {
     _name.dispose();
+    _key.dispose();
     _closedWithin.dispose();
     super.dispose();
   }
+
+  /// Mirrors the backend key rule: lowercase alphanumeric with inner dashes,
+  /// max 12 chars.
+  static final _keyRe = RegExp(r'^[a-z0-9]([a-z0-9-]{0,10}[a-z0-9])?$');
 
   BoardConfig _buildConfig() {
     final visible = [
@@ -285,8 +294,20 @@ class _BoardSettingsFormState extends State<_BoardSettingsForm> {
   }
 
   Future<void> _save() async {
+    final t = AppLocalizations.of(context);
     final name = _name.text.trim();
     if (name.isEmpty) return;
+    // The key is the board's URL segment — normalise + validate up front so
+    // the user gets an inline error, not a server round-trip.
+    String? key;
+    if (!_isCreate) {
+      key = _key.text.trim().toLowerCase();
+      if (!_keyRe.hasMatch(key)) {
+        setState(() => _keyError = t.boardFieldKeyInvalid);
+        return;
+      }
+      if (key == widget.board!.key) key = null; // unchanged → don't send
+    }
     setState(() => _saving = true);
     final catalog = getIt<CatalogRepository>();
     final config = _buildConfig().toMap();
@@ -302,17 +323,25 @@ class _BoardSettingsFormState extends State<_BoardSettingsForm> {
             widget.projectId,
             widget.board!.id,
             name: name,
+            key: key,
             color: _color,
             config: config,
           );
     if (!mounted) return;
     final saved = res.valueOrNull;
     if (saved == null) {
-      setState(() => _saving = false);
-      final t = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(t.errUnknown)));
+      setState(() {
+        _saving = false;
+        // A conflict means the key is taken by another board in the project.
+        if (res.failureOrNull is ConflictFailure) {
+          _keyError = t.boardFieldKeyTaken;
+        }
+      });
+      if (res.failureOrNull is! ConflictFailure) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t.errUnknown)));
+      }
       return;
     }
     Navigator.of(context).pop(saved);
@@ -419,6 +448,21 @@ class _BoardSettingsFormState extends State<_BoardSettingsForm> {
                   border: const OutlineInputBorder(),
                 ),
               ),
+              if (!_isCreate) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _key,
+                  decoration: InputDecoration(
+                    labelText: t.boardFieldKey,
+                    helperText: t.boardFieldKeyHint,
+                    border: const OutlineInputBorder(),
+                    errorText: _keyError,
+                  ),
+                  onChanged: (_) {
+                    if (_keyError != null) setState(() => _keyError = null);
+                  },
+                ),
+              ],
               const SizedBox(height: 16),
               Text(t.boardFieldColor, style: theme.textTheme.labelLarge),
               const SizedBox(height: 8),
@@ -477,6 +521,7 @@ class _BoardSettingsFormState extends State<_BoardSettingsForm> {
               MembersScope(
                 membersById: widget.data.members,
                 child: WorkItemFilterBar(
+                  projectId: widget.projectId,
                   filter: _lockedFilter,
                   onChanged: (f) => setState(() => _lockedFilter = f),
                   statuses: widget.data.statuses,

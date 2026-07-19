@@ -109,4 +109,15 @@ abstract interface class AdminRepository {
   );
 
   Future<Result<Unit, AppFailure>> revokeAppToken(String id);
+
+  /// All remembered renamed-away project prefixes and board keys (the
+  /// short-link redirect history).
+  Future<Result<ShortLinkHistory, AppFailure>> shortLinkHistory();
+
+  /// Prune history entries (single or bulk): the matching old short links
+  /// stop resolving; UUID links are unaffected.
+  Future<Result<Unit, AppFailure>> deleteShortLinkHistory({
+    List<String> projectIds,
+    List<String> boardIds,
+  });
 }

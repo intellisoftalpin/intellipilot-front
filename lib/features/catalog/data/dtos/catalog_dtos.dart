@@ -875,6 +875,7 @@ class Board {
     required this.color,
     required this.config,
     required this.order,
+    this.key = '',
     this.ownerId,
   });
 
@@ -884,6 +885,7 @@ class Board {
     ownerId: json['owner_id'] as String?,
     visibility: (json['visibility'] as String?) ?? 'personal',
     name: json['name'] as String,
+    key: (json['key'] as String?) ?? '',
     color: (json['color'] as String?) ?? '',
     config: (json['config'] as Map<String, dynamic>?) ?? const {},
     order: (json['order'] as num?)?.toDouble() ?? 0.0,
@@ -894,6 +896,9 @@ class Board {
   final String? ownerId;
   final String visibility;
   final String name;
+
+  /// Short lowercase slug, unique per project — the board's URL segment.
+  final String key;
   final String color;
   final Map<String, dynamic> config;
   final double order;

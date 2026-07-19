@@ -113,7 +113,9 @@ class LinksPanelContent extends StatelessWidget {
                   ),
                 const SizedBox(height: 12),
               ],
-            if (_canModify(context))
+            // Only issues can carry links (backend model); epics show
+            // existing rows read-only and no add affordance.
+            if (_canModify(context) && sourceKind == EntityKind.issue)
               Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(

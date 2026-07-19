@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/l10n/week_start_cubit.dart';
 import 'package:intellipilot/core/io/file_downloader.dart';
 import 'package:intellipilot/core/widgets/app_scaffold.dart';
 import 'package:intellipilot/core/widgets/error_view.dart';
@@ -282,10 +283,16 @@ class _LoadedBodyState extends State<_LoadedBody> {
     final byDate = state.byDate;
 
     // Default the selected day to today (when in this month) so its entries
-    // show immediately; otherwise none is selected.
+    // show immediately; otherwise none is selected. A selection made in a
+    // previously viewed month is stale here and must not leak into this one
+    // (it would silently pre-fill the log dialog with the wrong date).
     final today = DateTime.now();
+    final monthPrefix =
+        '${state.year.toString().padLeft(4, '0')}-'
+        '${state.month.toString().padLeft(2, '0')}';
+    final inMonth = _selected != null && _selected!.startsWith(monthPrefix);
     final selected =
-        _selected ??
+        (inMonth ? _selected : null) ??
         ((today.year == state.year && today.month == state.month)
             ? isoFrom(today)
             : null);
@@ -448,14 +455,17 @@ class _MonthCalendar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
-    // Weekday headers Mon..Sun (2024-01-01 was a Monday).
+    // Weekday headers laid out from the user's week-start preference
+    // (2024-01-01 was a Monday, so day offsets index the week from there).
+    final start = context.watch<WeekStartCubit>().state.weekday;
     final dow = DateFormat.E(locale);
     final headers = [
-      for (var i = 0; i < 7; i++) dow.format(DateTime(2024, 1, 1 + i)),
+      for (var i = 0; i < 7; i++)
+        dow.format(DateTime(2024, 1, 1 + (start - 1 + i) % 7)),
     ];
 
     final first = DateTime(year, month);
-    final lead = first.weekday - 1; // Mon=1 → 0 leading blanks
+    final lead = (first.weekday - start) % 7;
     final days = lastDay(year, month);
     final todayIso = isoFrom(DateTime.now());
 
@@ -759,12 +769,13 @@ class _DaySection extends StatelessWidget {
       context: context,
       builder: (_) => EditEntryDialog(
         entry: e,
-        onSubmit: ({required minutes, required version, note}) =>
+        onSubmit: ({required minutes, required version, note, date}) =>
             cubit.editEntry(
               id: e.id,
               minutes: minutes,
               version: version,
               note: note,
+              date: date,
             ),
       ),
     );

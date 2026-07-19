@@ -118,7 +118,7 @@ class LinksCubit extends Cubit<LinksState> {
     final s = state;
     if (s is! LinksLoaded) return;
     emit(s.copyWith(busy: true, lastError: null));
-    final res = await _repo.delete(projectId, linkId);
+    final res = await _repo.delete(projectId, entityId, linkId);
     if (res.isErr) {
       emit(s.copyWith(busy: false, lastError: res.failureOrNull));
       return;

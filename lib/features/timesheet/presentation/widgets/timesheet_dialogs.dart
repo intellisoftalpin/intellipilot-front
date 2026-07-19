@@ -26,12 +26,7 @@ typedef LogTimeSubmit =
       String? note,
     });
 
-int? _minutesFromHours(String raw) {
-  final h = double.tryParse(raw.replaceAll(',', '.'));
-  if (h == null || h <= 0) return null;
-  final m = (h * 60).round();
-  return m.clamp(1, 1440);
-}
+int? _minutesFromHours(String raw) => parseDurationInput(raw);
 
 /// Log worked time (against a task or a project) or a meeting. Decoupled from
 /// any cubit: the caller passes [onSubmit] — the personal timesheet forwards
@@ -169,7 +164,10 @@ class _LogTimeDialogState extends State<LogTimeDialog> {
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                decoration: InputDecoration(labelText: t.ttHours),
+                decoration: InputDecoration(
+                  labelText: t.ttHours,
+                  helperText: t.ttHoursHint,
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -382,20 +380,22 @@ class _LogTimeDialogState extends State<LogTimeDialog> {
   }
 }
 
-/// Edit an existing entry's hours / note.
 /// Submit signature for [EditEntryDialog]. The personal timesheet forwards
 /// `TimesheetCubit.editEntry`; the team view supplies a `correctEntry` closure.
-/// Returns a failure (or null on success).
+/// `date` is sent only when the user picked a different day. Returns a failure
+/// (or null on success).
 typedef EditEntrySubmit =
     Future<AppFailure?> Function({
       required int minutes,
       required int version,
       String? note,
+      String? date,
     });
 
-/// Edit an existing entry's hours + note. A read-only header shows the linked
-/// task (work) or the meeting type so the editor sees what they are changing.
-/// Reused for both self-editing and manager corrections via [onSubmit].
+/// Edit an existing entry's date + hours + note. A read-only header shows the
+/// linked task (work) or the meeting type so the editor sees what they are
+/// changing. Reused for both self-editing and manager corrections via
+/// [onSubmit].
 class EditEntryDialog extends StatefulWidget {
   const EditEntryDialog({
     required this.entry,
@@ -414,6 +414,8 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
     text: (widget.entry.minutes / 60).toStringAsFixed(2),
   );
   late final _note = TextEditingController(text: widget.entry.note);
+  late DateTime _date =
+      DateTime.tryParse(widget.entry.entryDate) ?? DateTime.now();
   String? _error;
   bool _busy = false;
 
@@ -436,12 +438,21 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
           children: [
             _EntryContextHeader(entry: widget.entry),
             const SizedBox(height: 12),
+            _DateField(
+              label: t.ttDate,
+              value: _date,
+              onChanged: (d) => setState(() => _date = d),
+            ),
+            const SizedBox(height: 8),
             TextField(
               controller: _hours,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
-              decoration: InputDecoration(labelText: t.ttHours),
+              decoration: InputDecoration(
+                labelText: t.ttHours,
+                helperText: t.ttHoursHint,
+              ),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -480,10 +491,12 @@ class _EditEntryDialogState extends State<EditEntryDialog> {
       _busy = true;
       _error = null;
     });
+    final iso = isoFrom(_date);
     final fail = await widget.onSubmit(
       minutes: minutes,
       version: widget.entry.version,
       note: _note.text.trim(),
+      date: iso == widget.entry.entryDate ? null : iso,
     );
     if (!mounted) return;
     if (fail != null) {

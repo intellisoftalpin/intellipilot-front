@@ -433,6 +433,49 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     }
   }
 
+  /// Create an issue directly in a board column: the column's status is
+  /// preset so the new card lands where the user clicked "+". On a grouped
+  /// board the swimlane value is preset too ('none' lanes preset nothing).
+  Future<bool> createIssueInColumn({
+    required String subject,
+    required String? statusId,
+    String? typeId,
+    String? laneKey,
+  }) async {
+    String? assignedTo;
+    String? epicId;
+    String? priorityId;
+    var components = const <String>[];
+    final g = _config.group;
+    if (g != null && laneKey != null && laneKey != 'none') {
+      switch (g) {
+        case BoardGroupBy.component:
+          components = [laneKey];
+        case BoardGroupBy.assignee:
+          assignedTo = laneKey;
+        case BoardGroupBy.epic:
+          epicId = laneKey;
+        case BoardGroupBy.priority:
+          priorityId = laneKey;
+      }
+    }
+    final res = await _repo.createIssue(
+      projectId,
+      CreateIssueRequest(
+        subject: subject,
+        statusId: statusId,
+        typeId: typeId,
+        assignedTo: assignedTo,
+        epicId: epicId,
+        priorityId: priorityId,
+        components: components,
+      ),
+    );
+    if (res.isErr) return false;
+    await _refetchData();
+    return true;
+  }
+
   /// Move an issue to a different `statusId`, then refetch the board data.
   Future<void> moveTask({
     required String taskId,

@@ -433,6 +433,19 @@ class _DetailView extends StatelessWidget {
   /// ([embeddedWide]) and the full-page route keep the roomy layout.
   bool get _isCompact => onClose != null && !embeddedWide;
 
+  /// The clean full-screen URL for this entity, by its human-readable key.
+  /// Uses the short lowercase project prefix (`/projects/ip/issues/ip-42`)
+  /// when the project has one; the UUID form works too but this is the
+  /// canonical link users see and share.
+  String _fullScreenRoute(String key) {
+    final prefix = data.project.issuePrefix.toLowerCase();
+    final projectRef = prefix.isEmpty ? data.project.id : prefix;
+    final keyRef = key.toLowerCase();
+    return kind == EntityKind.epic
+        ? Routes.epicByKeyFor(projectRef, keyRef)
+        : Routes.issueByKeyFor(projectRef, keyRef);
+  }
+
   @override
   Widget build(BuildContext context) {
     final entity = data.entity;
@@ -467,28 +480,35 @@ class _DetailView extends StatelessWidget {
             Crumb(
               label: key,
               mono: true,
-              onTap: kind == EntityKind.issue
-                  ? () => context.go(
-                      Routes.issueByKeyFor(data.project.id, key),
-                    )
-                  : null,
+              onTap: () => context.go(_fullScreenRoute(key)),
             ),
           ],
         ),
         actions: [
-          if (kind == EntityKind.issue)
+          IconButton(
+            icon: const Icon(Icons.link),
+            tooltip: t.copyLink,
+            onPressed: () {
+              final origin = kIsWeb
+                  ? Uri.base.origin
+                  : getIt<ApiConfig>().baseUrl;
+              final link = '$origin${_fullScreenRoute(key)}';
+              unawaited(Clipboard.setData(ClipboardData(text: link)));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(t.copiedToClipboard)),
+              );
+            },
+          ),
+          // Embedded panels get a direct click-through to the full-screen
+          // view — copy-link alone forces a paste round-trip.
+          if (onClose != null)
             IconButton(
-              icon: const Icon(Icons.link),
-              tooltip: t.copyLink,
+              icon: const Icon(Icons.open_in_full),
+              tooltip: t.openFullScreen,
               onPressed: () {
-                final origin = kIsWeb
-                    ? Uri.base.origin
-                    : getIt<ApiConfig>().baseUrl;
-                final link = '$origin/projects/${data.project.id}/issues/$key';
-                unawaited(Clipboard.setData(ClipboardData(text: link)));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(t.copiedToClipboard)),
-                );
+                final route = _fullScreenRoute(key);
+                onClose?.call();
+                context.go(route);
               },
             ),
           if (onClose != null)
@@ -641,7 +661,34 @@ class _DescriptionEditor extends StatelessWidget {
       canEdit: canEdit,
       multiline: true,
       placeholder: t.descriptionPlaceholder,
-      displayBuilder: (_) => MarkdownText(data.entity.description),
+      displayBuilder: (_) => Stack(
+        children: [
+          Padding(
+            // Reserve the corner so text never runs under the copy button.
+            padding: const EdgeInsets.only(right: 32),
+            child: MarkdownText(data.entity.description),
+          ),
+          if (data.entity.description.trim().isNotEmpty)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                icon: const Icon(Icons.copy_outlined, size: 16),
+                visualDensity: VisualDensity.compact,
+                tooltip: t.actionCopy,
+                onPressed: () async {
+                  final messenger = ScaffoldMessenger.of(context);
+                  await Clipboard.setData(
+                    ClipboardData(text: data.entity.description),
+                  );
+                  messenger.showSnackBar(
+                    SnackBar(content: Text(t.copiedToClipboard)),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
       onSave: (next) async {
         final ok = await _patchEntityKind(
           kind: kind,
@@ -1453,9 +1500,24 @@ class _DetailsTable extends StatelessWidget {
   }) {
     final t = AppLocalizations.of(context);
     final pfx = data.project.issuePrefix;
+    // Any issue may become the parent (multi-level nesting) except this one
+    // and its own descendants — those would close a cycle, which the backend
+    // rejects with a 422.
+    final descendants = <String>{entityId};
+    var grew = true;
+    while (grew) {
+      grew = false;
+      for (final i in data.issuesById.values) {
+        if (i.parentId != null &&
+            descendants.contains(i.parentId) &&
+            descendants.add(i.id)) {
+          grew = true;
+        }
+      }
+    }
     final candidates =
         data.issuesById.values
-            .where((i) => i.id != entityId && i.parentId == null)
+            .where((i) => !descendants.contains(i.id))
             .toList()
           ..sort((a, b) => a.reference.compareTo(b.reference));
     final current = currentId == null ? null : data.issuesById[currentId];

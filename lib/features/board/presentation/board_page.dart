@@ -450,6 +450,7 @@ class _TasksLoaded extends StatelessWidget {
         Align(
           alignment: Alignment.centerLeft,
           child: WorkItemFilterBar(
+            projectId: cubit.projectId,
             filter: state.effectiveFilter,
             onChanged: cubit.setAdhocFilter,
             statuses: state.statuses,
@@ -874,6 +875,11 @@ class _TaskColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final detail = context.watch<ProjectDetailCubit>().state;
+    final canCreate =
+        detail is ProjectDetailLoaded &&
+        detail.has(Permission.issueCreate) &&
+        status != null;
     return DragTarget<String>(
       onAcceptWithDetails: (details) {
         unawaited(
@@ -930,6 +936,7 @@ class _TaskColumn extends StatelessWidget {
                 statusColor: status?.color ?? '',
                 title: status?.name ?? t.boardColumnNoStatus,
                 count: column.total,
+                onCreate: canCreate ? () => _createInColumn(context) : null,
               ),
               const Divider(height: 12),
               if (scrollable)
@@ -943,6 +950,86 @@ class _TaskColumn extends StatelessWidget {
         );
       },
     );
+  }
+
+  /// Subject + type prompt, then create with this column's status (and the
+  /// swimlane value on a grouped board) preset — the card lands right here.
+  Future<void> _createInColumn(BuildContext context) async {
+    final t = AppLocalizations.of(context);
+    final cubit = context.read<TaskBoardCubit>();
+    final messenger = ScaffoldMessenger.of(context);
+    final subjectCtrl = TextEditingController();
+    String? typeId;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => AlertDialog(
+          title: Text(t.actionNewIssue),
+          content: SizedBox(
+            width: 460,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextField(
+                  controller: subjectCtrl,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    labelText: t.backlogFieldSubject,
+                  ),
+                  onSubmitted: (_) => Navigator.of(ctx).pop(true),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String?>(
+                  initialValue: typeId,
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: t.issueFieldType),
+                  items: [
+                    const DropdownMenuItem<String?>(
+                      value: null,
+                      child: Text('—'),
+                    ),
+                    for (final item in state.types)
+                      DropdownMenuItem<String?>(
+                        value: item.id,
+                        child: Text(
+                          item.emoji.isEmpty
+                              ? item.name
+                              : '${item.emoji} ${item.name}',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => typeId = v),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(t.actionCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(t.actionSave),
+            ),
+          ],
+        ),
+      ),
+    );
+    final subject = subjectCtrl.text.trim();
+    subjectCtrl.dispose();
+    if (!(confirmed ?? false) || subject.isEmpty) return;
+    final ok = await cubit.createIssueInColumn(
+      subject: subject,
+      statusId: status?.id,
+      typeId: typeId,
+      laneKey: laneKey,
+    );
+    if (!ok) {
+      messenger.showSnackBar(SnackBar(content: Text(t.ttActionFailed)));
+    }
   }
 }
 
@@ -1171,11 +1258,15 @@ class _ColumnHeader extends StatelessWidget {
     required this.statusColor,
     required this.title,
     required this.count,
+    this.onCreate,
   });
 
   final String statusColor;
   final String title;
   final int count;
+
+  /// When set, renders a "+" that creates an issue directly in this column.
+  final VoidCallback? onCreate;
 
   @override
   Widget build(BuildContext context) {
@@ -1194,6 +1285,13 @@ class _ColumnHeader extends StatelessWidget {
             ),
           ),
         ),
+        if (onCreate != null)
+          IconButton(
+            icon: const Icon(Icons.add, size: 18),
+            visualDensity: VisualDensity.compact,
+            tooltip: AppLocalizations.of(context).actionNewIssue,
+            onPressed: onCreate,
+          ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(

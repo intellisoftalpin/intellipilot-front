@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
+import 'package:intellipilot/app/l10n/week_start_cubit.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
@@ -27,6 +28,8 @@ class SettingsPage extends StatelessWidget {
           _ThemeSection(),
           SizedBox(height: 16),
           _LocaleSection(),
+          SizedBox(height: 16),
+          _WeekStartSection(),
           SizedBox(height: 16),
           _AccountSection(),
           SizedBox(height: 16),
@@ -188,6 +191,54 @@ class _AboutSection extends StatelessWidget {
         trailing: const Icon(Icons.chevron_right),
         onTap: () => showIntelliPilotAboutDialog(context),
       ),
+    );
+  }
+}
+
+class _WeekStartSection extends StatelessWidget {
+  const _WeekStartSection();
+
+  String _label(AppLocalizations l10n, WeekStart w) => switch (w) {
+    WeekStart.monday => l10n.weekStartMonday,
+    WeekStart.saturday => l10n.weekStartSaturday,
+    WeekStart.sunday => l10n.weekStartSunday,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return BlocBuilder<WeekStartCubit, WeekStart>(
+      builder: (context, weekStart) {
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.settingsWeekStart,
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                DropdownButton<WeekStart>(
+                  value: weekStart,
+                  items: [
+                    for (final w in WeekStart.values)
+                      DropdownMenuItem(value: w, child: Text(_label(l10n, w))),
+                  ],
+                  onChanged: (w) {
+                    if (w == null) return;
+                    unawaited(
+                      context.read<WeekStartCubit>().setWeekStart(w),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

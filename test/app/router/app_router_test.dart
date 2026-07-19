@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
+import 'package:intellipilot/app/l10n/week_start_cubit.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
@@ -38,6 +39,7 @@ void main() {
           providers: [
             BlocProvider<ThemeCubit>.value(value: getIt<ThemeCubit>()),
             BlocProvider<LocaleCubit>.value(value: getIt<LocaleCubit>()),
+            BlocProvider<WeekStartCubit>.value(value: getIt<WeekStartCubit>()),
           ],
           child: MaterialApp.router(
             routerConfig: router,
@@ -74,6 +76,7 @@ void main() {
         providers: [
           BlocProvider<ThemeCubit>.value(value: getIt<ThemeCubit>()),
           BlocProvider<LocaleCubit>.value(value: getIt<LocaleCubit>()),
+          BlocProvider<WeekStartCubit>.value(value: getIt<WeekStartCubit>()),
         ],
         child: MaterialApp.router(
           routerConfig: router,

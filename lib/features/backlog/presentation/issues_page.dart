@@ -369,6 +369,7 @@ class _Loaded extends StatelessWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: WorkItemFilterBar(
+                projectId: context.read<IssuesCubit>().projectId,
                 filter: state.filter,
                 onChanged: (f) => context.read<IssuesCubit>().setFilter(f),
                 statuses: state.statuses,

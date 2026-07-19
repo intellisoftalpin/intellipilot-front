@@ -1,6 +1,8 @@
 import 'package:get_it/get_it.dart';
 import 'package:intellipilot/app/branding/branding_cubit.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
+import 'package:intellipilot/app/l10n/week_start_cubit.dart';
+import 'package:intellipilot/app/router/short_links.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
@@ -107,7 +109,13 @@ Future<void> configureDependencies({
     ..registerLazySingleton<LocaleCubit>(
       () =>
           LocaleCubit(getIt<KeyValueStorage>(instanceName: HiveBoxes.settings)),
-    );
+    )
+    ..registerLazySingleton<WeekStartCubit>(
+      () => WeekStartCubit(
+        getIt<KeyValueStorage>(instanceName: HiveBoxes.settings),
+      ),
+    )
+    ..registerLazySingleton<ShortLinkResolver>(ShortLinkResolver.new);
 
   // ApiClient → AuthRepository → SessionBloc → (ApiClient via refresh hook).
   // We break the cycle by capturing the SessionBloc lookups as closures,
@@ -265,6 +273,8 @@ Future<void> configureForTests({
     ..registerSingleton<SessionBloc>(SessionBloc(repository: authRepository))
     ..registerSingleton<ThemeCubit>(ThemeCubit(settingsStorage))
     ..registerSingleton<LocaleCubit>(LocaleCubit(settingsStorage))
+    ..registerSingleton<WeekStartCubit>(WeekStartCubit(settingsStorage))
+    ..registerSingleton<ShortLinkResolver>(ShortLinkResolver())
     ..registerSingleton<BrandingCubit>(
       BrandingCubit(authRepository, getIt<ApiConfig>()),
     );

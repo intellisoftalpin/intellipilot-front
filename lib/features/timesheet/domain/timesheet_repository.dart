@@ -57,6 +57,7 @@ abstract interface class TimesheetRepository {
     required int minutes,
     required int version,
     String? note,
+    String? date,
   });
 
   Future<Result<Unit, AppFailure>> deleteEntry(String id);
@@ -116,6 +117,7 @@ abstract interface class TimesheetRepository {
     required int minutes,
     required int version,
     String? note,
+    String? date,
   });
 
   /// Delete another project member's entry (needs `time.manage` in that

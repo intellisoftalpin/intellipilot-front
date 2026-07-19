@@ -385,4 +385,28 @@ class AdminRepositoryImpl implements AdminRepository {
       err: Err.new,
     );
   }
+
+  @override
+  Future<Result<ShortLinkHistory, AppFailure>> shortLinkHistory() async {
+    final res = await _api.get('$_base/short-link-history');
+    return _mapOk(
+      res,
+      (r) => ShortLinkHistory.fromJson(r.data as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteShortLinkHistory({
+    List<String> projectIds = const [],
+    List<String> boardIds = const [],
+  }) async {
+    final res = await _api.post(
+      '$_base/short-link-history/delete',
+      body: {'project_ids': projectIds, 'board_ids': boardIds},
+    );
+    return res.when(
+      ok: (_) => const Ok(Unit.instance),
+      err: Err.new,
+    );
+  }
 }
