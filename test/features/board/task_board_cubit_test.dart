@@ -94,9 +94,20 @@ class _FakeCatalog extends Fake implements CatalogRepository {
 }
 
 class _FakeBacklog extends Fake implements BacklogRepository {
+  CreateIssueRequest? lastCreate;
+
   @override
   Future<Result<List<Epic>, AppFailure>> listEpics(String projectId) async =>
       const Ok([]);
+
+  @override
+  Future<Result<Issue, AppFailure>> createIssue(
+    String projectId,
+    CreateIssueRequest body,
+  ) async {
+    lastCreate = body;
+    return Ok(_issue('created', statusId: body.statusId));
+  }
 }
 
 class _FakeMilestones extends Fake implements MilestonesRepository {
@@ -105,13 +116,14 @@ class _FakeMilestones extends Fake implements MilestonesRepository {
       const Ok([]);
 }
 
-TaskBoardCubit _cubit(_FakeCatalog catalog) => TaskBoardCubit(
-  repo: _FakeBacklog(),
-  catalog: catalog,
-  milestones: _FakeMilestones(),
-  projectId: 'p1',
-  boardId: 'b1',
-);
+TaskBoardCubit _cubit(_FakeCatalog catalog, {_FakeBacklog? backlog}) =>
+    TaskBoardCubit(
+      repo: backlog ?? _FakeBacklog(),
+      catalog: catalog,
+      milestones: _FakeMilestones(),
+      projectId: 'p1',
+      boardId: 'b1',
+    );
 
 void main() {
   group('TaskBoardCubit', () {
@@ -215,6 +227,68 @@ void main() {
 
         final state = cubit.state as TaskBoardLoaded;
         expect(state.lanes.single.key, 'none');
+      },
+    );
+
+    test(
+      'createIssueInColumn presets status + swimlane and returns the issue',
+      () async {
+        const board = Board(
+          id: 'b1',
+          projectId: 'p1',
+          visibility: 'shared',
+          name: 'Grouped',
+          color: '',
+          order: 0,
+          config: {
+            'columns': {
+              'visible': ['s1'],
+              'order': ['s1'],
+            },
+            'group': 'assignee',
+            'column_limit': 50,
+          },
+        );
+        const data = BoardData(
+          group: 'assignee',
+          lanes: [
+            BoardLaneData(
+              key: 'u1',
+              total: 0,
+              columns: [BoardColumnData(statusId: 's1', total: 0, cards: [])],
+            ),
+          ],
+        );
+        final catalog = _FakeCatalog(board, [_status('s1')], data);
+        final backlog = _FakeBacklog();
+        final cubit = _cubit(catalog, backlog: backlog);
+        await cubit.load();
+
+        final created = await cubit.createIssueInColumn(
+          subject: 'From column',
+          statusId: 's1',
+          typeId: 't9',
+          laneKey: 'u1',
+        );
+
+        // The created issue comes back (the caller opens its detail sheet).
+        expect(created, isNotNull);
+        expect(created!.id, 'created');
+        // Column status + swimlane value preset on the request.
+        final req = backlog.lastCreate;
+        expect(req, isNotNull);
+        expect(req!.subject, 'From column');
+        expect(req.statusId, 's1');
+        expect(req.typeId, 't9');
+        expect(req.assignedTo, 'u1');
+
+        // The 'none' lane presets nothing.
+        await cubit.createIssueInColumn(
+          subject: 'Unassigned lane',
+          statusId: 's1',
+          laneKey: 'none',
+        );
+        expect(backlog.lastCreate!.assignedTo, isNull);
       },
     );
   });

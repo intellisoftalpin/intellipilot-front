@@ -953,83 +953,128 @@ class _TaskColumn extends StatelessWidget {
   }
 
   /// Subject + type prompt, then create with this column's status (and the
-  /// swimlane value on a grouped board) preset — the card lands right here.
+  /// swimlane value on a grouped board) preset. On success the new issue's
+  /// detail sheet opens right away (parity with the Issues page), so the
+  /// user gets immediate feedback even when an active board filter hides
+  /// the fresh card.
   Future<void> _createInColumn(BuildContext context) async {
     final t = AppLocalizations.of(context);
     final cubit = context.read<TaskBoardCubit>();
     final messenger = ScaffoldMessenger.of(context);
-    final subjectCtrl = TextEditingController();
-    String? typeId;
-    final confirmed = await showDialog<bool>(
+    final input = await showDialog<_ColumnCreateInput>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: Text(t.actionNewIssue),
-          content: SizedBox(
-            width: 460,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: subjectCtrl,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    labelText: t.backlogFieldSubject,
-                  ),
-                  onSubmitted: (_) => Navigator.of(ctx).pop(true),
+      builder: (_) => _ColumnCreateDialog(types: state.types),
+    );
+    if (input == null) return;
+    final created = await cubit.createIssueInColumn(
+      subject: input.subject,
+      statusId: status?.id,
+      typeId: input.typeId,
+      laneKey: laneKey,
+    );
+    if (created == null) {
+      messenger.showSnackBar(SnackBar(content: Text(t.ttActionFailed)));
+      return;
+    }
+    if (!context.mounted) return;
+    await showEntityDetailSheet(
+      context,
+      projectId: projectId,
+      kind: EntityKind.issue,
+      entityId: created.id,
+    );
+    // Reflect whatever was edited in the sheet on the board.
+    await cubit.refresh();
+  }
+}
+
+/// Result of the per-column create prompt.
+class _ColumnCreateInput {
+  const _ColumnCreateInput({required this.subject, this.typeId});
+  final String subject;
+  final String? typeId;
+}
+
+/// Minimal per-column issue prompt (subject + type). Owns its text
+/// controller so disposal happens with the dialog route, never while the
+/// closing animation still has the field mounted.
+class _ColumnCreateDialog extends StatefulWidget {
+  const _ColumnCreateDialog({required this.types});
+  final List<TaxonomyItem> types;
+
+  @override
+  State<_ColumnCreateDialog> createState() => _ColumnCreateDialogState();
+}
+
+class _ColumnCreateDialogState extends State<_ColumnCreateDialog> {
+  final _subject = TextEditingController();
+  String? _typeId;
+
+  @override
+  void dispose() {
+    _subject.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final subject = _subject.text.trim();
+    if (subject.isEmpty) return;
+    Navigator.of(context).pop(
+      _ColumnCreateInput(subject: subject, typeId: _typeId),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(t.actionNewIssue),
+      content: SizedBox(
+        width: 460,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _subject,
+              autofocus: true,
+              decoration: InputDecoration(labelText: t.backlogFieldSubject),
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String?>(
+              initialValue: _typeId,
+              isExpanded: true,
+              decoration: InputDecoration(labelText: t.issueFieldType),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('—'),
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String?>(
-                  initialValue: typeId,
-                  isExpanded: true,
-                  decoration: InputDecoration(labelText: t.issueFieldType),
-                  items: [
-                    const DropdownMenuItem<String?>(
-                      value: null,
-                      child: Text('—'),
+                for (final item in widget.types)
+                  DropdownMenuItem<String?>(
+                    value: item.id,
+                    child: Text(
+                      item.emoji.isEmpty
+                          ? item.name
+                          : '${item.emoji} ${item.name}',
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    for (final item in state.types)
-                      DropdownMenuItem<String?>(
-                        value: item.id,
-                        child: Text(
-                          item.emoji.isEmpty
-                              ? item.name
-                              : '${item.emoji} ${item.name}',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => typeId = v),
-                ),
+                  ),
               ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(t.actionCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: Text(t.actionSave),
+              onChanged: (v) => setState(() => _typeId = v),
             ),
           ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(t.actionCancel),
+        ),
+        FilledButton(onPressed: _submit, child: Text(t.actionSave)),
+      ],
     );
-    final subject = subjectCtrl.text.trim();
-    subjectCtrl.dispose();
-    if (!(confirmed ?? false) || subject.isEmpty) return;
-    final ok = await cubit.createIssueInColumn(
-      subject: subject,
-      statusId: status?.id,
-      typeId: typeId,
-      laneKey: laneKey,
-    );
-    if (!ok) {
-      messenger.showSnackBar(SnackBar(content: Text(t.ttActionFailed)));
-    }
   }
 }
 

@@ -436,7 +436,10 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
   /// Create an issue directly in a board column: the column's status is
   /// preset so the new card lands where the user clicked "+". On a grouped
   /// board the swimlane value is preset too ('none' lanes preset nothing).
-  Future<bool> createIssueInColumn({
+  /// Returns the created issue (null on failure) so the caller can open its
+  /// detail sheet — the card alone is not enough feedback, since an active
+  /// board filter may hide the fresh card from the refetched columns.
+  Future<Issue?> createIssueInColumn({
     required String subject,
     required String? statusId,
     String? typeId,
@@ -471,9 +474,10 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
         components: components,
       ),
     );
-    if (res.isErr) return false;
+    final created = res.valueOrNull;
+    if (created == null) return null;
     await _refetchData();
-    return true;
+    return created;
   }
 
   /// Move an issue to a different `statusId`, then refetch the board data.

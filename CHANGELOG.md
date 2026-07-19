@@ -4,6 +4,64 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.6.13] - 2026-07-19
+
+One combined release (0.6.10/0.6.11 were absorbed for backend lockstep;
+the backend companion release is 0.6.11).
+
+### Added
+- **Short deep links** — pages now live at short, memorable URLs:
+  `/projects/ip`, `/projects/ip/boards/sb`, `/projects/ip/issues/ip-42`.
+  Prefixes and keys work in ANY letter-case (`IP`, `Ip`, `ip`…), old UUID
+  links keep working forever, and every page rewrites the address bar to the
+  canonical short URL. Board keys are editable in board settings
+  ("Key (URL)" field, with duplicate detection); a renamed-away prefix/key
+  still resolves via history. Superadmins get Settings → "Short link
+  history" to inspect and prune old entries (one by one or in bulk).
+- **Attachment previews** — inline preview for markdown (rendered), plain
+  text/logs/code (monospace, selectable), HTML (real sandboxed rendering
+  with a Source toggle), and PDF (browser viewer). Image attachments show
+  real thumbnails in the list; videos a play badge.
+- **Kanban**: every column header has a "+" that creates an issue directly
+  in that column (status preset; on grouped boards the swimlane value is
+  preset too) and opens the new issue's side window right away, like the
+  Issues page. One universal Assignee filter matches assignee, QA, or
+  reviewer (reporter excluded). Component + a dependent Release filter live
+  in the second filter row.
+- **Milestones timeline** — a Gantt-style view toggle next to the list:
+  bars per milestone with a today marker; missing dates default to
+  start = today / end = +7 days and render as estimates. The list now sorts
+  by nearest end date first.
+- **Timesheet**: work-log entries are fully editable (date included); time
+  input accepts both decimals (`1.5`) and `1h 30m` notation.
+- **Week start setting** — Settings → "Week starts on" (Monday by default)
+  drives every date picker and the timesheet month calendar.
+- **Epics full screen** — epics gained a full-screen view with a clean URL,
+  plus copy-link; embedded side panels (issues and epics) gained a direct
+  "open full screen" button.
+
+### Changed
+- Issue/epic descriptions and comments are selectable across paragraphs in
+  one sweep; the description gained a copy button.
+- Project Overview reworked: compact header card (identity, description,
+  features, quick navigation) and dashboard sections in two columns on wide
+  screens.
+- The non-functional "+ Create" button was removed from the top bar.
+
+### Fixed
+- Login screen reached via a deep link no longer mirrors typed text between
+  the username and password fields.
+- Linked tasks now actually save (the panel talked to a wrong endpoint and
+  silently dropped every link).
+- The Log Time dialog no longer pre-fills today's date when a different day
+  or month is selected.
+- Any issue can now be chosen as a parent (multi-level hierarchy); only
+  assignments that would create a cycle are refused.
+
+## [0.6.9]
+
+Version bump only (lockstep alignment), no frontend changes.
+
 ## [0.6.8] - 2026-07-09
 
 ### Changed
