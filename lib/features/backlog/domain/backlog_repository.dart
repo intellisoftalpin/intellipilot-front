@@ -59,6 +59,15 @@ abstract interface class BacklogRepository {
     int? limit,
     int offset,
   });
+
+  /// Changes since a sync [since] cursor (RFC 3339, from a prior board-data
+  /// or delta response): fresh issues + deletion tombstones + next cursor.
+  /// Fails (410) when the cursor is too old — callers fall back to a full
+  /// reload on any error.
+  Future<Result<IssuesDelta, AppFailure>> listIssuesDelta(
+    String projectId, {
+    required String since,
+  });
   Future<Result<Issue, AppFailure>> createIssue(
     String projectId,
     CreateIssueRequest body,

@@ -502,3 +502,31 @@ class IssuePage {
   final int? limit;
   final int offset;
 }
+
+/// Changes since a delta-sync cursor: created/updated issues, tombstones for
+/// deletions, and the next cursor (`hasMore` → keep paging from it).
+class IssuesDelta {
+  const IssuesDelta({
+    required this.issues,
+    required this.tombstoneIds,
+    required this.cursor,
+    required this.hasMore,
+  });
+
+  factory IssuesDelta.fromJson(Map<String, dynamic> json) => IssuesDelta(
+    issues: (json['issues'] as List<dynamic>? ?? const [])
+        .map((e) => Issue.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    tombstoneIds: [
+      for (final t in (json['tombstones'] as List<dynamic>? ?? const []))
+        (t as Map<String, dynamic>)['id'] as String,
+    ],
+    cursor: (json['cursor'] as String?) ?? '',
+    hasMore: (json['has_more'] as bool?) ?? false,
+  );
+
+  final List<Issue> issues;
+  final List<String> tombstoneIds;
+  final String cursor;
+  final bool hasMore;
+}

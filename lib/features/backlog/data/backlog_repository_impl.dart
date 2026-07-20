@@ -240,6 +240,21 @@ class BacklogRepositoryImpl implements BacklogRepository {
   }
 
   @override
+  Future<Result<IssuesDelta, AppFailure>> listIssuesDelta(
+    String projectId, {
+    required String since,
+  }) async {
+    final res = await _api.get(
+      '$_base/$projectId/issues/delta',
+      query: {'since': since},
+    );
+    return res.when(
+      ok: (r) => Ok(IssuesDelta.fromJson(r.data as Map<String, dynamic>)),
+      err: Err.new,
+    );
+  }
+
+  @override
   Future<Result<Issue, AppFailure>> createIssue(
     String projectId,
     CreateIssueRequest body,

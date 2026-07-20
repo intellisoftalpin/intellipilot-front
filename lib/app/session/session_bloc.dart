@@ -147,7 +147,7 @@ final class _SessionRefreshFailed extends SessionEvent {
 // ---------------------------------------------------------------------------
 
 class SessionBloc extends Bloc<SessionEvent, SessionState> {
-  SessionBloc({required AuthRepository repository})
+  SessionBloc({required AuthRepository repository, this.onSessionEnded})
     : _repo = repository,
       super(const SessionUnknown()) {
     on<SessionStartupRequested>(_onStartup);
@@ -160,6 +160,10 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   }
 
   final AuthRepository _repo;
+
+  /// Fired whenever the session ends (logout or a failed refresh) — used to
+  /// purge per-user local caches so no data crosses accounts.
+  final void Function()? onSessionEnded;
   Timer? _refreshTimer;
 
   /// Access-token provider for the [AuthInterceptor].
@@ -264,6 +268,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     Emitter<SessionState> emit,
   ) {
     _cancelTimer();
+    onSessionEnded?.call();
     emit(
       const SessionUnauthenticated(reason: SessionEndReason.refreshFailed),
     );
@@ -277,6 +282,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     if (event.callBackend) {
       await _repo.logout();
     }
+    onSessionEnded?.call();
     emit(
       const SessionUnauthenticated(reason: SessionEndReason.loggedOut),
     );

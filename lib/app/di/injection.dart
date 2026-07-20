@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get_it/get_it.dart';
 import 'package:intellipilot/app/branding/branding_cubit.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
@@ -11,6 +13,7 @@ import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/network/api_config.dart';
 import 'package:intellipilot/core/network/cookie_setup.dart';
+import 'package:intellipilot/core/network/sse/project_events_service.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
@@ -23,6 +26,7 @@ import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:intellipilot/features/backlog/data/backlog_repository_impl.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/data/board_repository_impl.dart';
+import 'package:intellipilot/features/board/data/board_snapshot_cache.dart';
 import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/data/catalog_repository_impl.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
@@ -186,8 +190,23 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<PasskeyService>(PasskeyService.new);
   getIt.registerLazySingleton<FileDownloader>(FileDownloader.new);
   getIt.registerLazySingleton<FilePicker>(FilePicker.new);
+  getIt.registerLazySingleton<BoardSnapshotCache>(
+    () => BoardSnapshotCache(
+      getIt<KeyValueStorage>(instanceName: HiveBoxes.boards),
+    ),
+  );
+  getIt.registerLazySingleton<ProjectEventsService>(
+    () => ProjectEventsService(
+      baseUrl: getIt<ApiConfig>().baseUrl,
+      tokenProvider: () => getIt<SessionBloc>().currentAccessToken,
+    ),
+  );
   getIt.registerLazySingleton<SessionBloc>(
-    () => SessionBloc(repository: getIt<AuthRepository>()),
+    () => SessionBloc(
+      repository: getIt<AuthRepository>(),
+      // Cached board data must never survive the session that read it.
+      onSessionEnded: () => unawaited(getIt<BoardSnapshotCache>().clearAll()),
+    ),
   );
 }
 

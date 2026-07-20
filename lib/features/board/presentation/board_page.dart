@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
+import 'package:intellipilot/core/network/sse/project_events_service.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/empty_state.dart';
@@ -16,6 +17,7 @@ import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
+import 'package:intellipilot/features/board/data/board_snapshot_cache.dart';
 import 'package:intellipilot/features/board/domain/board_config.dart';
 import 'package:intellipilot/features/board/presentation/boards_nav_refresh.dart';
 import 'package:intellipilot/features/board/presentation/cubits/task_board_cubit.dart';
@@ -91,6 +93,9 @@ class BoardPage extends StatelessWidget {
                     milestones: getIt<MilestonesRepository>(),
                     projectId: projectId,
                     boardId: boardId,
+                    cache: getIt<BoardSnapshotCache>(),
+                    events: getIt<ProjectEventsService>(),
+                    currentUserId: profile.id,
                   );
                   unawaited(c.load());
                   return c;
@@ -120,6 +125,13 @@ class _BoardViewState extends State<_BoardView> {
   Future<void> _select(String id) async {
     setState(() => _selectedId = id);
     final cubit = context.read<TaskBoardCubit>();
+    final messenger = ScaffoldMessenger.of(context);
+    final t = AppLocalizations.of(context);
+    final detail = context.read<ProjectDetailCubit>().state;
+    final keyPrefix = detail is ProjectDetailLoaded
+        ? detail.project.issuePrefix
+        : '';
+    final versionBefore = cubit.findIssue(id)?.version;
     await showEntityDetailSheet(
       context,
       projectId: widget.projectId,
@@ -128,7 +140,23 @@ class _BoardViewState extends State<_BoardView> {
     );
     if (!mounted) return;
     setState(() => _selectedId = null);
+    // Cheap delta catch-up (not a board reload) picks up any sheet edits.
     await cubit.refresh();
+    final after = cubit.findIssue(id);
+    if (versionBefore != null &&
+        after != null &&
+        after.version > versionBefore) {
+      messenger.showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 4),
+          content: Text(
+            t.boardToastUpdated(
+              '${issueKeyLabel(keyPrefix, after.reference)} · ${after.subject}',
+            ),
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -155,6 +183,12 @@ class _BoardViewState extends State<_BoardView> {
         ),
         actions: [
           const _BoardSearchField(),
+          IconButton(
+            tooltip: t.boardReloadTooltip,
+            icon: const Icon(Icons.refresh),
+            onPressed: () =>
+                unawaited(context.read<TaskBoardCubit>().fullReload()),
+          ),
           _BoardSettingsButton(
             projectId: widget.projectId,
             currentUserId: widget.currentUserId,
@@ -882,12 +916,26 @@ class _TaskColumn extends StatelessWidget {
         status != null;
     return DragTarget<String>(
       onAcceptWithDetails: (details) {
-        unawaited(
-          context.read<TaskBoardCubit>().moveTask(
+        final cubit = context.read<TaskBoardCubit>();
+        final messenger = ScaffoldMessenger.of(context);
+        unawaited(() async {
+          final moved = await cubit.moveTask(
             taskId: details.data,
             targetStatusId: status?.id,
-          ),
-        );
+          );
+          if (moved == null) return;
+          messenger.showSnackBar(
+            SnackBar(
+              duration: const Duration(seconds: 4),
+              content: Text(
+                t.boardToastUpdated(
+                  '${issueKeyLabel(keyPrefix, moved.reference)} · '
+                  '${moved.subject}',
+                ),
+              ),
+            ),
+          );
+        }());
       },
       builder: (context, candidate, rejected) {
         final highlighted = candidate.isNotEmpty;
@@ -899,6 +947,7 @@ class _TaskColumn extends StatelessWidget {
               projectId: projectId,
               keyPrefix: keyPrefix,
               selected: card.id == selectedId,
+              highlighted: state.highlightedIds.contains(card.id),
               onTap: () => onSelect(card.id),
             ),
           if (column.cards.isEmpty) _EmptyColumnNote(label: t.boardEmptyColumn),
@@ -976,6 +1025,17 @@ class _TaskColumn extends StatelessWidget {
       messenger.showSnackBar(SnackBar(content: Text(t.ttActionFailed)));
       return;
     }
+    messenger.showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 4),
+        content: Text(
+          t.boardToastCreated(
+            '${issueKeyLabel(keyPrefix, created.reference)} · '
+            '${created.subject}',
+          ),
+        ),
+      ),
+    );
     if (!context.mounted) return;
     await showEntityDetailSheet(
       context,
@@ -1086,12 +1146,17 @@ class _TaskCard extends StatelessWidget {
     required this.keyPrefix,
     required this.selected,
     required this.onTap,
+    this.highlighted = false,
   });
   final TaskBoardLoaded state;
   final Issue task;
   final String projectId;
   final String keyPrefix;
   final bool selected;
+
+  /// Recently changed by another user — rendered with a selection-like glow
+  /// that fades after a few seconds.
+  final bool highlighted;
   final VoidCallback onTap;
 
   List<String> get _fields => state.config.cardFields ?? const ['assignee'];
@@ -1102,12 +1167,17 @@ class _TaskCard extends StatelessWidget {
     final showAssignee = _fields.contains('assignee');
     final cardWidget = Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
+      color: highlighted
+          ? theme.colorScheme.tertiaryContainer.withValues(alpha: 0.35)
+          : null,
       shape: RoundedRectangleBorder(
         side: BorderSide(
           color: selected
               ? theme.colorScheme.primary
+              : highlighted
+              ? theme.colorScheme.tertiary
               : theme.colorScheme.outlineVariant,
-          width: selected ? 2 : 1,
+          width: selected || highlighted ? 2 : 1,
         ),
         borderRadius: BorderRadius.circular(10),
       ),

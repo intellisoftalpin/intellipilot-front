@@ -953,7 +953,12 @@ class BoardLaneData {
 
 /// The per-column board payload — flat `columns` or, when grouped, `lanes`.
 class BoardData {
-  const BoardData({this.group, this.columns = const [], this.lanes = const []});
+  const BoardData({
+    this.group,
+    this.columns = const [],
+    this.lanes = const [],
+    this.cursor = '',
+  });
 
   factory BoardData.fromJson(Map<String, dynamic> json) => BoardData(
     group: json['group'] as String?,
@@ -963,11 +968,16 @@ class BoardData {
     lanes: (json['lanes'] as List<dynamic>? ?? const [])
         .map((e) => BoardLaneData.fromJson(e as Map<String, dynamic>))
         .toList(),
+    cursor: (json['cursor'] as String?) ?? '',
   );
 
   final String? group;
   final List<BoardColumnData> columns;
   final List<BoardLaneData> lanes;
+
+  /// Delta-sync cursor stamped by the server when this payload was read;
+  /// empty on older backends.
+  final String cursor;
 
   bool get isGrouped => group != null;
 }

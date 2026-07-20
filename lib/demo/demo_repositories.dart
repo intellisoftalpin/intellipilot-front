@@ -1968,6 +1968,27 @@ class DemoBacklogRepository implements BacklogRepository {
   }
 
   @override
+  Future<Result<IssuesDelta, AppFailure>> listIssuesDelta(
+    String projectId, {
+    required String since,
+  }) async {
+    await _tick();
+    final cursor = DateTime.tryParse(since);
+    if (cursor == null) return const Err(ValidationFailure(fieldErrors: []));
+    final changed = _s.issues
+        .where((i) => i.projectId == projectId && i.modifiedAt.isAfter(cursor))
+        .toList();
+    return Ok(
+      IssuesDelta(
+        issues: changed,
+        tombstoneIds: const [],
+        cursor: DateTime.now().toUtc().toIso8601String(),
+        hasMore: false,
+      ),
+    );
+  }
+
+  @override
   Future<Result<Issue, AppFailure>> createIssue(
     String projectId,
     CreateIssueRequest body,
