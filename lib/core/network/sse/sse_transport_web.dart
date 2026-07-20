@@ -40,6 +40,8 @@ Stream<SseFrame> connectSse(Uri url, {String? bearerToken}) {
     source.close();
     if (!controller.isClosed) unawaited(controller.close());
   }).toJS;
-  controller.onCancel = source.close;
+  // A tear-off of an external interop member is disallowed by dart2js/wasm —
+  // wrap the call in a closure.
+  controller.onCancel = () => source.close();
   return controller.stream;
 }

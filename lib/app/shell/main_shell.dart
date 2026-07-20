@@ -7,6 +7,7 @@ import 'package:intellipilot/app/branding/brand_logo.dart';
 import 'package:intellipilot/app/branding/branding_cubit.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/app/router/short_links.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
@@ -725,6 +726,7 @@ class _BoardsRailSectionState extends State<_BoardsRailSection> {
 
   List<Board> _boards = const [];
   late bool _expanded = _storage.get<bool>(_prefsKey) ?? true;
+  String? _resolvedProjectId;
 
   @override
   void initState() {
@@ -736,7 +738,12 @@ class _BoardsRailSectionState extends State<_BoardsRailSection> {
   @override
   void didUpdateWidget(covariant _BoardsRailSection oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.projectId != widget.projectId) unawaited(_fetch());
+    if (oldWidget.projectId != widget.projectId) {
+      // Genuine project switch: the old list no longer applies.
+      _resolvedProjectId = null;
+      setState(() => _boards = const []);
+      unawaited(_fetch());
+    }
   }
 
   @override
@@ -745,10 +752,27 @@ class _BoardsRailSectionState extends State<_BoardsRailSection> {
     super.dispose();
   }
 
+  /// The rail sits outside the routes, so unlike pages (which go through
+  /// [ShortLinkGate]) its [widget.projectId] is the raw URL segment — since
+  /// short links that may be the project *prefix*, which the API rejects.
+  /// Resolve it to the UUID once (session-cached in [ShortLinkResolver]).
+  Future<String?> _projectUuid() async {
+    if (looksLikeUuid(widget.projectId)) return widget.projectId;
+    final cached = _resolvedProjectId;
+    if (cached != null) return cached;
+    final resolved = await getIt<ShortLinkResolver>().project(widget.projectId);
+    return _resolvedProjectId = resolved?.$1;
+  }
+
   Future<void> _fetch() async {
-    final res = await getIt<CatalogRepository>().listBoards(widget.projectId);
+    final pid = await _projectUuid();
+    if (pid == null) return;
+    final res = await getIt<CatalogRepository>().listBoards(pid);
     if (!mounted) return;
-    setState(() => _boards = res.valueOrNull ?? const []);
+    final boards = res.valueOrNull;
+    // Keep the last known list on transient failures (e.g. a 401 during
+    // token refresh) — blanking it made the menu flicker in and out.
+    if (boards != null) setState(() => _boards = boards);
   }
 
   Future<void> _toggle() async {
@@ -757,10 +781,9 @@ class _BoardsRailSectionState extends State<_BoardsRailSection> {
   }
 
   Future<void> _createBoard() async {
-    final created = await showBoardSettingsDialog(
-      context,
-      projectId: widget.projectId,
-    );
+    final pid = await _projectUuid();
+    if (pid == null || !mounted) return;
+    final created = await showBoardSettingsDialog(context, projectId: pid);
     if (created == null || !mounted) return;
     bumpBoardsNav();
     if (mounted) {
@@ -1036,11 +1059,15 @@ class _ProjectNameState extends State<_ProjectName> {
   }
 
   static Future<Project?> _resolve(String id) {
-    return _cache.putIfAbsent(
-      id,
-      () =>
-          getIt<ProjectsRepository>().getProject(id).then((r) => r.valueOrNull),
-    );
+    return _cache.putIfAbsent(id, () {
+      // The shell receives the raw URL segment — a UUID or, with short
+      // links, the project prefix. Pick the matching lookup.
+      final repo = getIt<ProjectsRepository>();
+      final res = looksLikeUuid(id)
+          ? repo.getProject(id)
+          : repo.getProjectByPrefix(id);
+      return res.then((r) => r.valueOrNull);
+    });
   }
 
   @override
