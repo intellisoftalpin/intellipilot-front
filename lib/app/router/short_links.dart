@@ -117,20 +117,40 @@ class _ShortLinkGateState extends State<ShortLinkGate> {
   String? _boardId;
   bool _failed = false;
 
+  /// Guards against an older in-flight resolve overwriting a newer one.
+  int _generation = 0;
+
+  String _projectRefOf(GoRouterState s) =>
+      s.pathParameters['id'] ?? s.pathParameters['projectId'] ?? '';
+
   @override
   void initState() {
     super.initState();
     unawaited(_resolve());
   }
 
+  @override
+  void didUpdateWidget(covariant ShortLinkGate oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Same-route navigations (board → board, project → project) update this
+    // widget in place — go_router keys pages per route, not per parameters —
+    // so initState never re-runs. Without this, the first resolved ids stay
+    // latched and every board picked from the side menu renders the first
+    // one. Re-resolve whenever a raw ref changed; the previously resolved
+    // page stays on screen meanwhile (the resolver's session cache makes the
+    // swap near-instant, no spinner flash).
+    if (_projectRefOf(oldWidget.state) != _projectRefOf(widget.state) ||
+        oldWidget.boardRef != widget.boardRef) {
+      unawaited(_resolve());
+    }
+  }
+
   Future<void> _resolve() async {
+    final generation = ++_generation;
     final resolver = getIt<ShortLinkResolver>();
-    final projectRef =
-        widget.state.pathParameters['id'] ??
-        widget.state.pathParameters['projectId'] ??
-        '';
+    final projectRef = _projectRefOf(widget.state);
     final project = await resolver.project(projectRef);
-    if (!mounted) return;
+    if (!mounted || generation != _generation) return;
     if (project == null) {
       setState(() => _failed = true);
       return;
@@ -142,7 +162,7 @@ class _ShortLinkGateState extends State<ShortLinkGate> {
     final boardRef = widget.boardRef;
     if (boardRef != null) {
       final board = await resolver.board(projectId, boardRef);
-      if (!mounted) return;
+      if (!mounted || generation != _generation) return;
       if (board == null) {
         setState(() => _failed = true);
         return;
@@ -153,6 +173,7 @@ class _ShortLinkGateState extends State<ShortLinkGate> {
     setState(() {
       _projectId = projectId;
       _boardId = boardId;
+      _failed = false;
     });
     _rewriteToCanonical(prefixLower, boardKey);
   }
