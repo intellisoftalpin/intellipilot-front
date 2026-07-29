@@ -1,57 +1,37 @@
 {
   "@@locale": "be",
-
   "appTitle": "IntelliPilot",
-
   "homeWelcomeTitle": "Сардэчна запрашаем у IntelliPilot",
-
   "homeWelcomeBody": "Каркас франтэнду гатовы. Аўтэнтыфікацыя і працэсы праектаў з'явяцца ў наступных фазах.",
-
   "homeHealthCheckSection": "Злучэнне з бэкендам",
-
   "homePingButton": "Спінгаваць бэкенд",
-
   "homePingHint": "Націсніце, каб праверыць звязку API-кліента з наладжаным бэкендам.",
-
   "homePingOk": "Бэкенд даступны (HTTP {code}).",
-
   "settingsTitle": "Налады",
-
   "settingsAppearance": "Знешні выгляд",
-
   "settingsLanguage": "Мова",
   "settingsWeekStart": "Пачатак тыдня",
   "weekStartMonday": "Панядзелак",
   "weekStartSaturday": "Субота",
   "weekStartSunday": "Нядзеля",
-
-  "themeLight":  "Светлая",
-  "themeDark":   "Цёмная",
+  "themeLight": "Светлая",
+  "themeDark": "Цёмная",
   "themeSystem": "Сістэмная",
-
   "themeSeedColor": "Акцэнтны колер",
-
   "themeUseDynamic": "Выкарыстоўваць сістэмныя колеры, калі даступна",
-
   "themeUseDynamicHint": "Адкочваецца да акцэнтнага колеру вышэй на платформах без падтрымкі дынамічных колераў.",
-
   "localeSystem": "Сістэмная па змаўчанні",
-
   "loginSubtitle": "Увайдзіце, каб працягнуць.",
   "loginMfaNotice": "Для гэтага ўліковага запісу ўключана 2FA. Інтэрфейс пацвярджэння з'явіцца ў Фазе 3 — пакуль выкарыстоўвайце ўліковы запіс без 2FA.",
-
   "registerTitle": "Стварыце свой уліковы запіс",
   "registerSuccessSnack": "Уліковы запіс створаны. Увайдзіце, каб працягнуць.",
-
   "forgotPasswordTitle": "Забыты пароль",
   "forgotPasswordBody": "Увядзіце email, прывязаны да вашага ўліковага запісу, і мы дашлём інструкцыі па скіданні пароля.",
   "forgotPasswordSuccessTitle": "Праверце сваю пошту",
   "forgotPasswordSuccessBody": "Калі ўліковы запіс для гэтага email існуе, неўзабаве вы атрымаеце спасылку для скідання.",
-
   "resetPasswordTitle": "Скід пароля",
   "resetPasswordBody": "Устаўце токен з ліста для скідання і выберыце новы пароль.",
   "resetPasswordSuccessSnack": "Пароль зменены. Увайдзіце, каб працягнуць.",
-
   "fieldEmail": "Email",
   "fieldEmailOrUsername": "Email або імя карыстальніка",
   "fieldPassword": "Пароль",
@@ -61,7 +41,6 @@
   "fieldFullName": "Поўнае імя (неабавязкова)",
   "fieldPasswordHint": "Не менш за 8 сімвалаў.",
   "fieldResetToken": "Токен скідання",
-
   "actionSignIn": "Увайсці",
   "actionRegister": "Стварыць уліковы запіс",
   "actionSendResetLink": "Даслаць спасылку для скідання",
@@ -71,10 +50,8 @@
   "actionCopy": "Капіраваць",
   "linkForgotPassword": "Забылі пароль?",
   "linkCreateAccount": "Патрэбен уліковы запіс? Зарэгіструйцеся",
-
   "devTokenBannerTitle": "Токен скідання для распрацоўкі",
   "copiedToClipboard": "Скапіравана ў буфер абмену",
-
   "errFieldRequired": "Гэта поле абавязковае.",
   "errEmailInvalid": "Увядзіце сапраўдны email-адрас.",
   "errTooLong": "Гэта значэнне занадта доўгае.",
@@ -90,10 +67,8 @@
   "errTooManyAttempts": "Занадта шмат спроб. Калі ласка, пачакайце крыху і паспрабуйце зноў.",
   "errUnknown": "Нешта пайшло не так. Калі ласка, паспрабуйце зноў.",
   "errResetTokenInvalid": "Токен скідання несапраўдны або пратэрмінаваны.",
-
   "settingsSecurityTitle": "Бяспека",
   "settingsSecuritySubtitle": "Двухфактарная аўтэнтыфікацыя, коды аднаўлення і пасключы.",
-
   "securityTitle": "Бяспека",
   "securitySection2fa": "Двухфактарная аўтэнтыфікацыя",
   "securitySectionPasskeys": "Пасключы",
@@ -107,7 +82,6 @@
   "securityDisableTotpSnack": "Двухфактарная аўтэнтыфікацыя адключана.",
   "securityPasskeysTitle": "Кіраванне пасключамі",
   "securityPasskeysSubtitle": "Уваходзьце без пароля з дапамогай тэлефона або ключа бяспекі.",
-
   "totpSetupTitle": "Наладка аўтэнтыфікатара",
   "totpStep1": "Крок 1 — Адсканіруйце QR-код сваёй праграмай-аўтэнтыфікатарам.",
   "totpStep2": "Крок 2 — Увядзіце 6-значны код, які паказвае ваша праграма.",
@@ -118,13 +92,11 @@
   "totpStartFailed": "Не атрымалася пачаць наладку TOTP.",
   "totpEnabledTitle": "Двухфактарная аўтэнтыфікацыя ўключана",
   "totpEnabledBody": "Захавайце коды аднаўлення ніжэй у бяспечным месцы. Яны спатрэбяцца вам, калі вы калі-небудзь страціце доступ да праграмы-аўтэнтыфікатара.",
-
   "recoveryCodesTitle": "Коды аднаўлення",
   "recoveryCodesHint": "Кожны код працуе адзін раз. Захоўвайце іх у бяспечным месцы — паказаць іх паўторна нельга.",
   "recoveryCodesPageTitle": "Коды аднаўлення",
   "recoveryRegenerateBody": "Генерацыя новых кодаў робіць несапраўднымі ўсе папярэднія коды. Гэта дзеянне патрабуе, каб была ўключана двухфактарная аўтэнтыфікацыя.",
   "recoveryRegenerateFailed": "Не атрымалася згенераваць коды аднаўлення.",
-
   "mfaVerifyTitle": "Двухфактарнае пацвярджэнне",
   "mfaVerifyBody": "Увядзіце код з вашай праграмы-аўтэнтыфікатара або выкарыстайце код аднаўлення, калі не маеце да яе доступу.",
   "mfaMethodTotp": "Аўтэнтыфікатар",
@@ -132,7 +104,6 @@
   "mfaRecoveryCodeLabel": "Код аднаўлення",
   "mfaInvalidCode": "Гэты код не быў прыняты. Паспрабуйце зноў.",
   "mfaContextLost": "Ваш сеанс уваходу скончыўся. Калі ласка, увайдзіце зноў.",
-
   "passkeysPageTitle": "Пасключы",
   "passkeysIntro": "Пасключы дазваляюць уваходзіць з дапамогай тэлефона, ноўтбука або ключа бяспекі замест пароля.",
   "passkeysEmpty": "Вы яшчэ не дадалі ніводнага пасключа.",
@@ -144,12 +115,10 @@
   "passkeyNeverUsed": "Ніколі не выкарыстоўваўся",
   "passkeyLastUsed": "Апошняе выкарыстанне {when}",
   "passkeyCeremonyFailed": "Цырымонія пасключа не ўдалася. Паспрабуйце зноў або выкарыстайце іншы спосаб уваходу.",
-
   "passkeySignInTitle": "Уваход з дапамогай пасключа",
   "passkeySignInBody": "Увядзіце email, прывязаны да вашага ўліковага запісу, затым пацвердзіце запыт са сваёй прылады.",
   "passkeySignInUnauthorized": "Не атрымалася ўвайсці з гэтым пасключом.",
   "linkSignInWithPasskey": "Уваход з дапамогай пасключа",
-
   "actionVerify": "Праверыць",
   "actionCancelMfa": "Скасаваць і ўвайсці з іншага ўліковага запісу",
   "actionRetry": "Паспрабаваць зноў",
@@ -162,12 +131,10 @@
   "actionContinueWithPasskey": "Працягнуць з пасключом",
   "actionDelete": "Выдаліць",
   "actionDisable": "Адключыць",
-
   "settingsProfileTitle": "Профіль",
   "settingsProfileSubtitle": "Імя, мова і часавы пояс.",
   "settingsAccountTitle": "Уліковы запіс",
   "settingsAccountSubtitle": "Экспартуйце свае даныя або выдаліце ўліковы запіс.",
-
   "profileTitle": "Профіль",
   "profileLoadFailed": "Не атрымалася загрузіць ваш профіль.",
   "profileSaveFailed": "Не атрымалася захаваць вашы змены.",
@@ -176,7 +143,6 @@
   "profileTimezoneLabel": "Часавы пояс",
   "profileTimezoneHint": "Назва IANA, напрыклад Europe/Zurich.",
   "actionSave": "Захаваць змены",
-
   "accountTitle": "Уліковы запіс",
   "accountDangerZoneTitle": "Небяспечная зона",
   "accountDeleteBody": "Выдаленне ўліковага запісу неадкладна анулюе доступ. Даныя захоўваюцца на працягу 30 дзён, у які вы можаце звярнуцца ў падтрымку для іх аднаўлення; пасля льготнага перыяду яны выдаляюцца назаўжды.",
@@ -186,7 +152,6 @@
   "accountDeleteUsernameMismatch": "Гэта не супадае з вашым імем карыстальніка. Выдаленне скасавана.",
   "accountDeletedSnack": "Ваш уліковы запіс запланаваны да выдалення {when}. Вы выйшлі з сістэмы.",
   "actionDeleteAccount": "Выдаліць уліковы запіс",
-
   "gdprExportTitle": "Экспарт вашых даных",
   "gdprExportBodyWeb": "Спампуйце JSON-файл, які змяшчае ваш профіль і журнал актыўнасці.",
   "gdprExportBodyNative": "Скапіруйце JSON-здымак вашага профілю і журнала актыўнасці ў буфер абмену. (Захаванне ў файл з'явіцца ў пазнейшым выпуску.)",
@@ -194,7 +159,6 @@
   "gdprExportDownloadedSnack": "Экспарт спампаваны.",
   "gdprExportClipboardSnack": "Экспарт скапіраваны ў буфер абмену.",
   "gdprExportFailed": "Не атрымалася экспартаваць вашы даныя.",
-
   "projectsTitle": "Праекты",
   "projectsEmpty": "Вы яшчэ не з'яўляецеся ўдзельнікам ніводнага праекта. Стварыце адзін, каб пачаць.",
   "projectsNoMatch": "Няма праектаў, якія адпавядаюць вашаму пошуку.",
@@ -210,7 +174,6 @@
   "projectVisibilityPrivate": "Прыватны",
   "projectVisibilityInternal": "Унутраны (карыстальнікі з уваходам)",
   "projectVisibilityPublicReadonly": "Публічны (толькі для чытання)",
-
   "projectOverviewTitle": "Праект",
   "projectLoadFailed": "Не атрымалася загрузіць гэты праект.",
   "projectFeaturesTitle": "Уключаныя функцыі",
@@ -219,7 +182,6 @@
   "projectFeatureEpics": "Эпікі",
   "projectFeatureWiki": "Вікі",
   "projectPhase5Notice": "Прагляды бэклога, дошкі і вікі з'явяцца ў наступных фазах.",
-
   "projectSettingsTitle": "Налады",
   "tabGeneral": "Агульныя",
   "tabMembers": "Удзельнікі",
@@ -234,7 +196,6 @@
   "projectPrefixInvalid": "Прэфікс павінен мець 2–3 літары.",
   "projectPrefixTaken": "Гэты прэфікс ужо выкарыстоўваецца.",
   "projectSaveFailed": "Не ўдалося захаваць праект.",
-
   "membersTitle": "Удзельнікі",
   "membersInviteBody": "Запрасіце калегу па email; ён атрымае аднаразовую спасылку для далучэння з выбранай роляй.",
   "membersLoadFailed": "Не атрымалася загрузіць удзельнікаў.",
@@ -250,7 +211,6 @@
   "actionSend": "Адправіць",
   "invitationTokenDialogTitle": "Спасылка-запрашэнне",
   "invitationsPendingTitle": "Запрашэнні ў чаканні",
-
   "rolesLoadFailed": "Не атрымалася загрузіць ролі.",
   "rolePermissionsSuffix": "правоў доступу",
   "roleAdminBadge": "Адміністратар (усе правы доступу)",
@@ -264,7 +224,6 @@
   "rolePresetContributor": "Удзельнік",
   "rolePresetMaintainer": "Суправаджальнік",
   "rolePresetAdmin": "Адміністратар",
-
   "permDomainProject": "Праект",
   "permDomainMembers": "Удзельнікі",
   "permDomainRoles": "Ролі",
@@ -281,29 +240,24 @@
   "permDomainRepositories": "Рэпазіторыі",
   "permDomainCustomers": "Кліенты",
   "permDomainReleases": "Рэлізы",
-
   "projectDeleteSectionTitle": "Выдаліць гэты праект",
   "projectDeleteBody": "Гэта назаўжды выдаліць праект і ўсе яго даныя. Льготнага перыяду няма.",
   "projectDeleteTypeName": "Увядзіце назву праекта '{name}' для пацвярджэння:",
   "projectDeleteNameMismatch": "Назва праекта не супала. Выдаленне скасавана.",
   "projectDeletedSnack": "Праект выдалены.",
   "actionDeleteProject": "Выдаліць праект",
-
   "invitationAcceptTitle": "Далучыцца да праекта",
   "invitationAcceptSuccessSnack": "Сардэчна запрашаем у каманду.",
   "invitationAcceptExpired": "Гэта запрашэнне больш несапраўднае. Папрасіце таго, хто яго даслаў, выпусціць новае.",
   "invitationAcceptNotFound": "Не атрымалася знайсці гэта запрашэнне. Спасылка можа быць пашкоджаная.",
-
   "tabTaxonomy": "Таксанамія",
   "tabLabels": "Меткі",
   "tabComponents": "Кампаненты",
-
   "fieldName": "Назва",
   "fieldColor": "Колер",
   "fieldSlug": "Слаг",
   "fieldSlugFrozenHint": "Слаг немагчыма змяніць пасля стварэння.",
   "actionEdit": "Рэдагаваць",
-
   "taxKindUsStatus": "Статус карыстальніцкай гісторыі",
   "taxKindTaskStatus": "Статус задачы",
   "taxKindIssueStatus": "Статус інцыдэнту",
@@ -325,14 +279,12 @@
   "actionEditTaxonomyItem": "Рэдагаваць элемент",
   "taxonomyDeleteTitle": "Выдаліць элемент?",
   "taxonomyDeleteConfirm": "Выдаліць '{name}'? Элементы, якія ўсё яшчэ спасылаюцца на гэта значэнне, захаваюць бягучы выбар, пакуль вы не пераназначыце іх.",
-
   "labelsEmpty": "Пакуль няма меткаў. Стварыце адну, каб пачаць арганізоўваць інцыдэнты.",
   "labelsLoadFailed": "Не атрымалася загрузіць меткі.",
   "actionNewLabel": "Новая метка",
   "actionEditLabel": "Рэдагаваць метку",
   "labelDeleteTitle": "Выдаліць метку?",
   "labelDeleteConfirm": "Выдаліць метку '{name}'? Яна будзе адвязана ад любога інцыдэнту, які зараз яе выкарыстоўвае.",
-
   "componentsEmpty": "Пакуль няма кампанентаў. Стварыце адзін, каб прымацоўваць да інцыдэнтаў.",
   "componentsLoadFailed": "Не атрымалася загрузіць кампаненты.",
   "componentRepoLabel": "Git-рэпазіторый (неабавязкова)",
@@ -341,7 +293,6 @@
   "actionEditComponent": "Рэдагаваць кампанент",
   "componentDeleteTitle": "Выдаліць кампанент?",
   "componentDeleteConfirm": "Выдаліць кампанент '{name}'? Ён будзе адвязаны ад любога інцыдэнту, які зараз яго выкарыстоўвае.",
-
   "backlogTitle": "Бэклог",
   "backlogLoadFailed": "Не атрымалася загрузіць бэклог.",
   "backlogSearchHint": "Пошук па тэме, апісанні або US-123",
@@ -354,20 +305,17 @@
   "backlogChangeStatus": "Змяніць статус",
   "backlogClearStatus": "Ачысціць статус",
   "filterAllStatuses": "Усе статусы",
-
   "backlogFieldSubject": "Тэма",
   "backlogFieldDescription": "Апісанне",
   "backlogFieldEpic": "Эпік",
   "backlogFieldStatus": "Статус",
   "backlogFieldPoints": "Балы",
-
   "actionNewEpic": "Новы эпік",
   "actionEditEpic": "Рэдагаваць эпік",
   "actionNewUserStory": "Новая карыстальніцкая гісторыя",
   "actionEditUserStory": "Рэдагаваць карыстальніцкую гісторыю",
   "actionBulkAdd": "Масавае дадаванне",
   "actionOpenBacklog": "Адкрыць бэклог",
-
   "backlogBulkTitle": "Дадаць карыстальніцкія гісторыі",
   "backlogBulkBody": "Адна тэма на радок. Пустыя радкі ігнаруюцца.",
   "backlogBulkCreate": "Стварыць",
@@ -375,14 +323,12 @@
   "backlogDeleteEpicConfirm": "Выдаліць эпік '{name}'? Карыстальніцкія гісторыі пад ім будуць перанесены ў групу 'Без эпіка'.",
   "backlogDeleteUsTitle": "Выдаліць карыстальніцкую гісторыю?",
   "backlogDeleteUsConfirm": "Выдаліць карыстальніцкую гісторыю '{name}'? Гэта назаўжды.",
-
   "tasksOpenTooltip": "Паказаць задачы",
   "tasksDialogTitle": "Задачы · {name}",
   "tasksEmpty": "Пакуль няма задач. Дадайце адну вышэй.",
   "tasksLoadFailed": "Не атрымалася загрузіць задачы.",
   "tasksAddHint": "Дадаць задачу",
   "actionAdd": "Дадаць",
-
   "issuesTitle": "Інцыдэнты",
   "issuesLoadFailed": "Не атрымалася загрузіць інцыдэнты.",
   "issuesEmpty": "Пакуль няма інцыдэнтаў, якія адпавядаюць вашым фільтрам.",
@@ -403,7 +349,6 @@
   "issueFieldComponents": "Кампаненты",
   "issueDeleteTitle": "Выдаліць інцыдэнт?",
   "issueDeleteConfirm": "Выдаліць інцыдэнт '{name}'? Гэта назаўжды.",
-
   "entityDetailTitle": "Падрабязнасці",
   "entityDetailLoadFailed": "Не атрымалася загрузіць гэты элемент.",
   "entityTabActivity": "Актыўнасць",
@@ -431,7 +376,6 @@
   "attachmentsDeleteConfirm": "Выдаліць '{filename}' назаўжды?",
   "attachmentsCancelUpload": "Скасаваць запампоўку",
   "actionOpenDetail": "Адкрыць падрабязнасці",
-
   "boardTitle": "Дошка",
   "boardLoadFailed": "Не атрымалася загрузіць дошку.",
   "boardNeedsMilestone": "Спачатку стварыце веху — дошка ахоплівае адну веху адначасова.",
@@ -453,7 +397,7 @@
   "boardVisibilityPersonal": "Асабістая",
   "boardFieldName": "Назва",
   "boardFieldKey": "Ключ (URL)",
-  "boardFieldKeyHint": "Сегмент кароткай спасылкі, напр. \/projects\/ip\/boards\/sb — малыя літары, лічбы, злучкі",
+  "boardFieldKeyHint": "Сегмент кароткай спасылкі, напр. /projects/ip/boards/sb — малыя літары, лічбы, злучкі",
   "boardFieldKeyInvalid": "1–12 сімвалаў: малыя літары, лічбы, злучкі ўнутры",
   "boardFieldKeyTaken": "Гэты ключ ужо заняты іншай дошкай",
   "boardFieldColor": "Колер",
@@ -498,7 +442,6 @@
   "boardSavedViewNameHint": "Назавіце гэты выгляд",
   "boardSavedViewsEmpty": "Пакуль няма захаваных выглядаў. Наладзьце фільтр і захавайце яго, каб вярнуцца сюды.",
   "actionOpenBoard": "Адкрыць дошку",
-
   "milestonesTitle": "Вехі",
   "milestonesViewList": "Спіс",
   "milestonesViewGantt": "Дыяграма Ганта",
@@ -533,7 +476,6 @@
   "milestoneCloseTitle": "Закрыць гэтую веху?",
   "milestoneCloseSummary": "{count, plural, one{1 незавершаная гісторыя} few{{count} незавершаныя гісторыі} many{{count} незавершаных гісторый} other{{count} незавершанай гісторыі}}",
   "milestoneCloseMoveToBacklog": "Перанесці незавершаныя гісторыі назад у бэклог",
-
   "wikiTitle": "Вікі",
   "wikiEmpty": "Пакуль няма старонак вікі. Стварыце адну, каб пачаць пісаць.",
   "wikiLoadFailed": "Не атрымалася загрузіць вікі.",
@@ -561,7 +503,6 @@
   "wikiRestoreTitle": "Аднавіць рэвізію?",
   "wikiRestoreConfirm": "Аднавіць старонку да рэвізіі {rev}? Будзе запісана новая рэвізія.",
   "wikiDiffEmpty": "Розніца недаступная.",
-
   "paletteHint": "Пошук праектаў, старонак, увядзіце #123 для рабочага элемента…",
   "paletteEmpty": "Няма супадзенняў.",
   "shortcutHelpTitle": "Спалучэнні клавіш",
@@ -571,12 +512,10 @@
   "shortcutGoSettingsDescription": "Перайсці да налад",
   "shortcutGoBoardDescription": "Перайсці да дошкі гэтага праекта",
   "shortcutGoWikiDescription": "Перайсці да вікі гэтага праекта",
-
   "requestAccessTitle": "У вас няма доступу да гэтага раздзела.",
   "requestAccessBody": "Папрасіце адміністратара праекта прадаставіць вам права доступу '{permission}'.",
   "requestAccessCopyAdmin": "Скапіраваць email адміністратара ({email})",
   "requestAccessCopied": "Email скапіраваны ў буфер абмену.",
-
   "topNavProjects": "Праекты",
   "topNavSettings": "Налады",
   "topNavSearchPlaceholder": "Пошук праектаў, старонак, #123…",
@@ -596,17 +535,14 @@
   "railMilestones": "Вехі",
   "railWiki": "Вікі",
   "railSettings": "Налады",
-
   "taskBoardTitle": "Дошка задач",
   "taskBoardLoadFailed": "Не атрымалася загрузіць дошку задач.",
   "taskBoardNoStatuses": "Пакуль не наладжаны статусы задач. Дадайце хаця б адзін у Каталог → Статусы задач, каб выкарыстоўваць дошку задач.",
   "actionOpenTaskBoard": "Адкрыць дошку задач",
-
   "actionNewTask": "Новая задача",
   "actionEditTask": "Рэдагаваць задачу",
   "taskFieldParent": "Бацькоўская карыстальніцкая гісторыя",
   "taskNoParent": "— Без бацькоўскай —",
-
   "panelDetails": "ПАДРАБЯЗНАСЦІ",
   "panelDescription": "АПІСАННЕ",
   "panelAttachments": "УКЛАДАННІ",
@@ -700,7 +636,6 @@
   "changePasswordSuccessSnack": "Пароль зменены. Увайдзіце зноў, каб працягнуць.",
   "errCurrentPasswordIncorrect": "Бягучы пароль няправільны.",
   "errPasswordsDoNotMatch": "Паролі не супадаюць.",
-
   "adminSettingsTitle": "Налады платформы",
   "adminSettingsFailed": "Памылка: {error}",
   "adminSettingsOpenRegistration": "Адкрытая рэгістрацыя",
@@ -724,7 +659,6 @@
   "adminSettingsNotificationsDesc": "Дастаўка праз email (SMTP / Mailgun), Matrix і Telegram.",
   "adminSettingsLastUpdated": "Апошняе абнаўленне: {when}",
   "adminSettingsUpdateFailed": "Не ўдалося абнавіць.",
-
   "adminBrandingTitle": "Брэндынг",
   "adminBrandingUpdateFailed": "Не ўдалося абнавіць.",
   "adminBrandingSaved": "Брэндынг захаваны.",
@@ -745,7 +679,6 @@
   "adminBrandingMessageHint": "напр., вітальная нататка ці паведамленне пра тэхнічныя работы",
   "adminBrandingMessageHelper": "Паказваецца на старонцы ўваходу. Пакіньце пустым, каб схаваць.",
   "adminBrandingSaveButton": "Захаваць назву і паведамленне",
-
   "adminLdapTitle": "LDAP / Каталог",
   "adminLdapLoadFailed": "Не ўдалося загрузіць: {label}",
   "adminLdapSaved": "Налады LDAP захаваны.",
@@ -797,7 +730,6 @@
   "adminLdapPassword": "Пароль",
   "adminLdapCancel": "Скасаваць",
   "adminLdapTest": "Праверыць",
-
   "adminNotifTitle": "Апавяшчэнні",
   "adminNotifLoadFailed": "Памылка: {error}",
   "adminNotifTabEmail": "Email",
@@ -858,7 +790,6 @@
   "adminNotifEventIssueResolved": "Задача вырашана",
   "adminNotifEventDailyReport": "Штодзённая справаздача аб стане",
   "adminNotifChannelEvents": "Падзеі",
-
   "adminInviteCreateError": "Не ўдалося стварыць запрашэнне",
   "adminInviteEmailedSnack": "Запрашэнне адпраўлена на {email}",
   "adminInviteTitle": "Запрашэнні",
@@ -875,7 +806,6 @@
   "adminInviteCopyLink": "Капіяваць спасылку",
   "adminInviteLinkCopied": "Спасылка скапіявана",
   "adminInviteDone": "Гатова",
-
   "adminUsersTitle": "Карыстальнікі",
   "adminUsersCreateTooltip": "Стварыць карыстальніка",
   "adminUsersSearchHint": "Пошук па email, імені карыстальніка ці поўным імені",
@@ -899,6 +829,265 @@
   "adminUsersPromoteSuperadmin": "Прызначыць суперадміністратарам",
   "adminUsersIssueReset": "Выдаць скід пароля…",
   "adminUsersDeleteMenu": "Выдаліць…",
+  "relTimeNever": "ніколі",
+  "relTimeJustNow": "толькі што",
+  "relTimeMinutes": "{n} хв таму",
+  "@relTimeMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeHours": "{n} г таму",
+  "@relTimeHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeDays": "{n} дз таму",
+  "@relTimeDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeMonths": "{n} мес таму",
+  "@relTimeMonths": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeYears": "{n} г таму",
+  "@relTimeYears": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersStatusActive": "Актыўны",
+  "adminUsersStatusInactive": "Неактыўны",
+  "adminUsersStatusBanned": "Заблакаваны",
+  "adminUsersBannedReasonTooltip": "Заблакаваны: {reason}",
+  "@adminUsersBannedReasonTooltip": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersFilterAll": "Усе",
+  "adminUsersFilterNo2fa": "Без 2FA",
+  "adminUsers2faTotp": "Праграма-аўтэнтыфікатар",
+  "adminUsers2faPasskeys": "{n, plural, =1{1 passkey} other{{n} passkey}}",
+  "@adminUsers2faPasskeys": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsers2faRecoveryCodes": "{n, plural, =1{1 код аднаўлення} other{{n} кодаў аднаўлення}}",
+  "@adminUsers2faRecoveryCodes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsers2faOffTooltip": "Другі фактар не наладжаны — толькі пароль",
+  "adminUsersSessionsTooltip": "{n, plural, =0{Няма актыўных сесій} =1{1 актыўная сесія} other{{n} актыўных сесій}}",
+  "@adminUsersSessionsTooltip": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersSessionsTitle": "Сесіі — {email}",
+  "@adminUsersSessionsTitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersSessionsEmpty": "Няма актыўных сесій.",
+  "adminUsersSessionsFailed": "Не атрымалася загрузіць сесіі.",
+  "adminUsersSessionStarted": "пачата {when}",
+  "@adminUsersSessionStarted": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersDeviceUnknown": "Невядомая прылада",
+  "adminUsersSignOutAll": "Выйсці з усіх сесій",
+  "adminUsersSignOutAllTitle": "Выйсці ўсюды?",
+  "adminUsersSignOutAllBody": "Усе актыўныя сесіі {email} будуць закрыты. Спатрэбіцца паўторны ўваход.",
+  "@adminUsersSignOutAllBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersSignOutAllConfirm": "Выйсці",
+  "adminUsersSignOutAllDone": "{n, plural, =0{Адкрытых сесій не было} =1{Закрыта 1 сесія} other{Закрыта сесій: {n}}}",
+  "@adminUsersSignOutAllDone": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersLocationLocal": "Лакальная сетка",
+  "adminUsersLocationUnknown": "Месцазнаходжанне невядома",
+  "adminUsersLastActiveTooltip": "апошняя актыўнасць {when}",
+  "@adminUsersLastActiveTooltip": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersLastActive": "Апошняя актыўнасць",
+  "adminUsersLastLogin": "Апошні ўваход",
+  "adminUsersOnlineNow": "Актыўны ў апошнія хвіліны",
+  "adminUsersReset2fa": "Скінуць двухфактарную…",
+  "adminUsersReset2faTitle": "Скінуць двухфактарную аўтэнтыфікацыю?",
+  "adminUsersReset2faBody": "Будуць выдалены ўсе другія фактары ў {email}:",
+  "@adminUsersReset2faBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faSignsOut": "Усе актыўныя сесіі будуць закрыты",
+  "adminUsersReset2faWarning": "Карыстальнік будзе ўваходзіць толькі па паролі, пакуль не наладзіць фактар нанова.",
+  "adminUsersReset2faConfirm": "Скінуць",
+  "adminUsersReset2faDone": "Двухфактарная скінута для {email}.",
+  "@adminUsersReset2faDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faNothing": "У {email} не быў наладжаны другі фактар.",
+  "@adminUsersReset2faNothing": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faFailed": "Не атрымалася скінуць двухфактарную.",
+  "adminUsersBan": "Заблакаваць…",
+  "adminUsersUnban": "Разблакаваць",
+  "adminUsersBanTitle": "Заблакаваць уліковы запіс?",
+  "adminUsersBanBody": "{email} будзе адключаны і не атрымае доступу да зняцця блакіроўкі.",
+  "@adminUsersBanBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersBanNote": "Блакіроўка аддзелена ад дэактывацыі, зняць яе можа толькі супэрадмін.",
+  "adminUsersBanLdapNote": "Гэта ўліковы запіс LDAP: дэактывацыя будзе адменена пры наступным уваходзе праз каталог, а блакіроўка захаваецца.",
+  "adminUsersBanReasonLabel": "Прычына (неабавязкова)",
+  "adminUsersBanReasonHelper": "Паказваецца адміністратарам і запісваецца ў журнал аўдыту.",
+  "adminUsersBanConfirm": "Заблакаваць",
+  "adminUsersBanDone": "{email} заблакаваны.",
+  "@adminUsersBanDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersUnbanDone": "Блакіроўка знята для {email}.",
+  "@adminUsersUnbanDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersBanFailed": "Не атрымалася змяніць блакіроўку.",
+  "adminGeoipTitle": "IP-геалакацыя",
+  "adminGeoipSubtitle": "Вызначаць краіну і горад сесій лакальна. Па змаўчанні выключана.",
+  "adminGeoipEnable": "Уключыць геалакацыю",
+  "adminGeoipPrivacyNote": "Запыты не пакідаюць сервер; спампоўваецца толькі файл базы. Вызначанае па IP месцазнаходжанне — персанальныя даныя.",
+  "adminGeoipVariant": "База даных",
+  "adminGeoipVariantCountry": "Толькі краіна (~4 МБ)",
+  "adminGeoipVariantCity": "Краіна і горад (~62 МБ)",
+  "adminGeoipAutoUpdate": "Абнаўляць аўтаматычна кожны месяц",
+  "adminGeoipInstalled": "Устаноўлена: {variant}, зборка {month}",
+  "@adminGeoipInstalled": {
+    "placeholders": {
+      "variant": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipNotInstalled": "База даных яшчэ не ўсталявана.",
+  "adminGeoipUpdateNow": "Абнавіць зараз",
+  "adminGeoipUpdating": "Спампоўванне базы даных…",
+  "adminGeoipUpdated": "База абноўлена да {month}.",
+  "@adminGeoipUpdated": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipAlreadyCurrent": "Ужо актуальна.",
+  "adminGeoipUpdateFailed": "Не атрымалася абнавіць: {error}",
+  "@adminGeoipUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipLastError": "Апошняе абнаўленне не ўдалося: {error}",
+  "@adminGeoipLastError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipPurge": "Ачысціць сабраныя даныя пра месцазнаходжанне",
+  "adminGeoipPurgeDone": "{n, plural, =0{Няма захаваных месцазнаходжанняў} =1{Ачышчана 1 месцазнаходжанне} other{Ачышчана месцазнаходжанняў: {n}}}",
+  "@adminGeoipPurgeDone": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminGeoipAttribution": "Крыніца даных: {attribution}",
+  "@adminGeoipAttribution": {
+    "placeholders": {
+      "attribution": {
+        "type": "String"
+      }
+    }
+  },
   "adminUsersCreateTitle": "Стварыць карыстальніка",
   "adminUsersEmail": "Email",
   "adminUsersUsername": "Імя карыстальніка",
@@ -1024,7 +1213,6 @@
   "pfUpload": "Загрузіць выяву",
   "pfPickEmoji": "Выбраць эмодзі",
   "pfReset": "Скінуць",
-
   "adminAppTokensTitle": "Токены праграм",
   "appTokenNew": "Новы токен",
   "appTokenName": "Назва",
@@ -1046,7 +1234,6 @@
   "appTokenEmpty": "Токенаў праграм пакуль няма.",
   "appTokenLoadFailed": "Не ўдалося загрузіць токены праграм.",
   "appTokenPermsCount": "Правоў: {count}",
-
   "exportTitle": "Экспарт",
   "exportCsv": "Экспарт у CSV",
   "exportXlsx": "Экспарт у Excel",
@@ -1126,7 +1313,6 @@
   "dangerCleanEpicsBody": "Беззваротна выдаліць усе эпікі ў гэтым праекце. Іх задачы захаваюцца, але будуць адвязаны. Дзеянне незваротнае.",
   "dangerCleanedIssuesSnack": "Выдалена задач: {count}.",
   "dangerCleanedEpicsSnack": "Выдалена эпікаў: {count}.",
-
   "actionEnable": "Уключыць",
   "personalTokenSection": "Доступ да API",
   "personalTokenTitle": "Персанальны токен праграмы",

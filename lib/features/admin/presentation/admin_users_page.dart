@@ -9,8 +9,10 @@ import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
+import 'package:intellipilot/features/admin/data/dtos/security_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_users_cubit.dart';
+import 'package:intellipilot/features/admin/presentation/widgets/user_security_widgets.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -78,6 +80,15 @@ class _UsersViewState extends State<_UsersView> {
               onSubmitted: (v) => cubit.load(q: v.trim()),
             ),
           ),
+          BlocBuilder<AdminUsersCubit, AdminUsersState>(
+            builder: (context, state) => _FilterChips(
+              active: state is AdminUsersLoaded ? state.statusFilter : null,
+              onSelect: (v) => v == null
+                  ? cubit.load(clearStatus: true)
+                  : cubit.load(status: v),
+            ),
+          ),
+          const SizedBox(height: 8),
           Expanded(
             child: BlocBuilder<AdminUsersCubit, AdminUsersState>(
               builder: (context, state) => switch (state) {
@@ -99,6 +110,11 @@ class _UsersViewState extends State<_UsersView> {
                     onPatch: (u, patch) => cubit.patch(u.id, patch),
                     onDelete: (u) => _confirmDelete(u, cubit),
                     onResetPassword: (u) => _resetPasswordFlow(u, cubit),
+                    onResetTwoFactor: (u) => _resetTwoFactorFlow(u, cubit),
+                    onBan: (u) => _banFlow(u, cubit),
+                    onUnban: (u) => _unbanFlow(u, cubit),
+                    onShowSessions: (u) => _showSessions(u, cubit),
+                    onRevokeSessions: (u) => _revokeSessionsFlow(u, cubit),
                   ),
               },
             ),
@@ -132,7 +148,126 @@ class _UsersViewState extends State<_UsersView> {
     );
   }
 
-  Future<void> _confirmDelete(UserProfile u, AdminUsersCubit cubit) async {
+  /// Clears every second factor after an explicit, itemised confirmation.
+  Future<void> _resetTwoFactorFlow(
+    AdminUserRow u,
+    AdminUsersCubit cubit,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => _ResetTwoFactorDialog(row: u),
+    );
+    if (!(confirmed ?? false) || !mounted) return;
+
+    final result = await cubit.resetTwoFactor(u.id);
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    if (result == null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.adminUsersReset2faFailed)),
+      );
+      return;
+    }
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          result.clearedNothing
+              ? l10n.adminUsersReset2faNothing(u.email)
+              : l10n.adminUsersReset2faDone(u.email),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _banFlow(AdminUserRow u, AdminUsersCubit cubit) async {
+    final l10n = AppLocalizations.of(context);
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (_) => _BanUserDialog(row: u),
+    );
+    if (reason == null || !mounted) return;
+
+    final ok = await cubit.ban(u.id, reason: reason);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok ? l10n.adminUsersBanDone(u.email) : l10n.adminUsersBanFailed,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _unbanFlow(AdminUserRow u, AdminUsersCubit cubit) async {
+    final l10n = AppLocalizations.of(context);
+    final ok = await cubit.unban(u.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          ok ? l10n.adminUsersUnbanDone(u.email) : l10n.adminUsersBanFailed,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showSessions(AdminUserRow u, AdminUsersCubit cubit) async {
+    final sessions = await cubit.sessionsFor(u.id);
+    if (!mounted) return;
+    if (sessions == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).adminUsersSessionsFailed),
+        ),
+      );
+      return;
+    }
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => UserSessionsSheet(email: u.email, sessions: sessions),
+    );
+  }
+
+  Future<void> _revokeSessionsFlow(
+    AdminUserRow u,
+    AdminUsersCubit cubit,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.adminUsersSignOutAllTitle),
+        content: Text(l10n.adminUsersSignOutAllBody(u.email)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.adminUsersCancel),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.adminUsersSignOutAllConfirm),
+          ),
+        ],
+      ),
+    );
+    if (!(confirm ?? false) || !mounted) return;
+
+    final n = await cubit.revokeSessions(u.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          n == null
+              ? l10n.adminUsersSessionsFailed
+              : l10n.adminUsersSignOutAllDone(n),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmDelete(AdminUserRow u, AdminUsersCubit cubit) async {
     final l10n = AppLocalizations.of(context);
     final confirm = await showDialog<bool>(
       context: context,
@@ -156,7 +291,7 @@ class _UsersViewState extends State<_UsersView> {
     }
   }
 
-  Future<void> _resetPasswordFlow(UserProfile u, AdminUsersCubit cubit) async {
+  Future<void> _resetPasswordFlow(AdminUserRow u, AdminUsersCubit cubit) async {
     final l10n = AppLocalizations.of(context);
     final issued = await cubit.resetPasswordFor(u.id);
     if (!mounted) return;
@@ -186,6 +321,44 @@ class _UsersViewState extends State<_UsersView> {
   }
 }
 
+/// Status filter chips. Null value means "all".
+class _FilterChips extends StatelessWidget {
+  const _FilterChips({required this.active, required this.onSelect});
+
+  final String? active;
+  final ValueChanged<String?> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final options = <(String?, String)>[
+      (null, l10n.adminUsersFilterAll),
+      ('active', l10n.adminUsersStatusActive),
+      ('banned', l10n.adminUsersStatusBanned),
+      ('inactive', l10n.adminUsersStatusInactive),
+      ('no_2fa', l10n.adminUsersFilterNo2fa),
+    ];
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          for (final (value, label) in options)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                label: Text(label),
+                selected: active == value,
+                onSelected: (_) => onSelect(value),
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _UsersList extends StatelessWidget {
   const _UsersList({
     required this.items,
@@ -193,15 +366,25 @@ class _UsersList extends StatelessWidget {
     required this.onPatch,
     required this.onDelete,
     required this.onResetPassword,
+    required this.onResetTwoFactor,
+    required this.onBan,
+    required this.onUnban,
+    required this.onShowSessions,
+    required this.onRevokeSessions,
     this.lastError,
   });
 
-  final List<UserProfile> items;
+  final List<AdminUserRow> items;
   final int total;
   final Object? lastError;
-  final Future<UserProfile?> Function(UserProfile, UpdateUserRequest) onPatch;
-  final void Function(UserProfile) onDelete;
-  final void Function(UserProfile) onResetPassword;
+  final Future<UserProfile?> Function(AdminUserRow, UpdateUserRequest) onPatch;
+  final void Function(AdminUserRow) onDelete;
+  final void Function(AdminUserRow) onResetPassword;
+  final void Function(AdminUserRow) onResetTwoFactor;
+  final void Function(AdminUserRow) onBan;
+  final void Function(AdminUserRow) onUnban;
+  final void Function(AdminUserRow) onShowSessions;
+  final void Function(AdminUserRow) onRevokeSessions;
 
   @override
   Widget build(BuildContext context) {
@@ -228,14 +411,19 @@ class _UsersList extends StatelessWidget {
         ),
         Expanded(
           child: ListView.separated(
-            itemBuilder: (_, i) => _UserTile(
-              user: items[i],
+            itemBuilder: (_, i) => _UserRow(
+              row: items[i],
               onToggleActive: (v) =>
                   onPatch(items[i], UpdateUserRequest(isActive: v)),
               onToggleSuperadmin: (v) =>
                   onPatch(items[i], UpdateUserRequest(isSuperadmin: v)),
               onDelete: () => onDelete(items[i]),
               onResetPassword: () => onResetPassword(items[i]),
+              onResetTwoFactor: () => onResetTwoFactor(items[i]),
+              onBan: () => onBan(items[i]),
+              onUnban: () => onUnban(items[i]),
+              onShowSessions: () => onShowSessions(items[i]),
+              onRevokeSessions: () => onRevokeSessions(items[i]),
             ),
             separatorBuilder: (_, _) => const Divider(height: 0),
             itemCount: items.length,
@@ -246,105 +434,458 @@ class _UsersList extends StatelessWidget {
   }
 }
 
-class _UserTile extends StatelessWidget {
-  const _UserTile({
-    required this.user,
+/// One account, with its security posture readable at a glance.
+///
+/// Laid out responsively: on a wide window the security columns sit on the
+/// same line as the identity; on a narrow one they wrap underneath rather than
+/// overflowing.
+class _UserRow extends StatelessWidget {
+  const _UserRow({
+    required this.row,
     required this.onToggleActive,
     required this.onToggleSuperadmin,
     required this.onDelete,
     required this.onResetPassword,
+    required this.onResetTwoFactor,
+    required this.onBan,
+    required this.onUnban,
+    required this.onShowSessions,
+    required this.onRevokeSessions,
   });
 
-  final UserProfile user;
+  final AdminUserRow row;
   final ValueChanged<bool> onToggleActive;
   final ValueChanged<bool> onToggleSuperadmin;
   final VoidCallback onDelete;
   final VoidCallback onResetPassword;
+  final VoidCallback onResetTwoFactor;
+  final VoidCallback onBan;
+  final VoidCallback onUnban;
+  final VoidCallback onShowSessions;
+  final VoidCallback onRevokeSessions;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return ListTile(
-      leading: UserAvatar(user: user.toRef(), size: 40),
-      title: Row(
-        children: [
-          Expanded(child: Text(user.email)),
-          // Auth source — make LDAP vs local accounts obvious at a glance.
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Chip(
-              avatar: Icon(
-                user.isLdap ? Icons.dns_outlined : Icons.password_outlined,
-                size: 16,
+    final theme = Theme.of(context);
+    final user = row.user;
+
+    final security = <Widget>[
+      TwoFactorBadge(status: row.twoFactor),
+      SessionChip(count: row.activeSessions, onTap: onShowSessions),
+      SessionLocation(session: row.lastSession),
+      TimestampCell(
+        label: l10n.adminUsersLastActive,
+        value: row.lastSeenAt,
+        icon: Icons.bolt_outlined,
+      ),
+      TimestampCell(
+        label: l10n.adminUsersLastLogin,
+        value: row.lastLoginAt,
+        icon: Icons.login,
+      ),
+    ];
+
+    return Opacity(
+      // A banned account is still listed but visibly out of play.
+      opacity: row.isBanned ? 0.75 : 1,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            UserAvatar(user: user.toRef(), size: 40),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      ActivityDot(lastSeenAt: row.lastSeenAt),
+                      Flexible(
+                        child: Text(
+                          user.email,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            decoration: row.isBanned
+                                ? TextDecoration.lineThrough
+                                : null,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      StatusPill(row: row),
+                    ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${user.username} · ${user.fullName}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 14,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      _AuthSourceTag(user: user),
+                      if (user.isSuperadmin)
+                        _MiniTag(
+                          icon: Icons.admin_panel_settings_outlined,
+                          label: l10n.adminUsersChipSuperadmin,
+                        ),
+                      if (user.mustChangePassword)
+                        _MiniTag(
+                          icon: Icons.key_outlined,
+                          label: l10n.adminUsersChipTempPw,
+                        ),
+                      ...security,
+                    ],
+                  ),
+                ],
               ),
-              label: Text(user.isLdap ? 'LDAP' : 'Local'),
-              visualDensity: VisualDensity.compact,
-              backgroundColor: user.isLdap
-                  ? Theme.of(context).colorScheme.tertiaryContainer
-                  : null,
+            ),
+            _RowMenu(
+              row: row,
+              onToggleActive: onToggleActive,
+              onToggleSuperadmin: onToggleSuperadmin,
+              onDelete: onDelete,
+              onResetPassword: onResetPassword,
+              onResetTwoFactor: onResetTwoFactor,
+              onBan: onBan,
+              onUnban: onUnban,
+              onRevokeSessions: onRevokeSessions,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// LDAP vs local — the distinction that decides whether a password reset is
+/// even possible, and why deactivation alone cannot hold an LDAP account out.
+class _AuthSourceTag extends StatelessWidget {
+  const _AuthSourceTag({required this.user});
+
+  final UserProfile user;
+
+  @override
+  Widget build(BuildContext context) {
+    return _MiniTag(
+      icon: user.isLdap ? Icons.dns_outlined : Icons.password_outlined,
+      label: user.isLdap ? 'LDAP' : 'Local',
+      color: user.isLdap ? Theme.of(context).colorScheme.tertiary : null,
+    );
+  }
+}
+
+class _MiniTag extends StatelessWidget {
+  const _MiniTag({required this.icon, required this.label, this.color});
+
+  final IconData icon;
+  final String label;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fg = color ?? theme.colorScheme.onSurfaceVariant;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: fg),
+        const SizedBox(width: 4),
+        Text(label, style: theme.textTheme.bodySmall?.copyWith(color: fg)),
+      ],
+    );
+  }
+}
+
+class _RowMenu extends StatelessWidget {
+  const _RowMenu({
+    required this.row,
+    required this.onToggleActive,
+    required this.onToggleSuperadmin,
+    required this.onDelete,
+    required this.onResetPassword,
+    required this.onResetTwoFactor,
+    required this.onBan,
+    required this.onUnban,
+    required this.onRevokeSessions,
+  });
+
+  final AdminUserRow row;
+  final ValueChanged<bool> onToggleActive;
+  final ValueChanged<bool> onToggleSuperadmin;
+  final VoidCallback onDelete;
+  final VoidCallback onResetPassword;
+  final VoidCallback onResetTwoFactor;
+  final VoidCallback onBan;
+  final VoidCallback onUnban;
+  final VoidCallback onRevokeSessions;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    return PopupMenuButton<String>(
+      onSelected: (key) {
+        switch (key) {
+          case 'reset_2fa':
+            onResetTwoFactor();
+          case 'revoke_sessions':
+            onRevokeSessions();
+          case 'ban':
+            onBan();
+          case 'unban':
+            onUnban();
+          case 'toggle_active':
+            onToggleActive(!row.user.isActive);
+          case 'toggle_superadmin':
+            onToggleSuperadmin(!row.user.isSuperadmin);
+          case 'reset':
+            onResetPassword();
+          case 'time':
+            unawaited(context.push(Routes.adminUserTimeFor(row.id)));
+          case 'delete':
+            onDelete();
+        }
+      },
+      itemBuilder: (_) => [
+        // Recovery first: this is the item an admin reaches for when a user
+        // has locked themselves out, which is the common emergency.
+        PopupMenuItem(
+          value: 'reset_2fa',
+          enabled: row.twoFactor.enabled,
+          child: Row(
+            children: [
+              const Icon(Icons.lock_reset, size: 18),
+              const SizedBox(width: 10),
+              Text(l10n.adminUsersReset2fa),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'revoke_sessions',
+          enabled: row.activeSessions > 0,
+          child: Row(
+            children: [
+              const Icon(Icons.logout, size: 18),
+              const SizedBox(width: 10),
+              Text(l10n.adminUsersSignOutAll),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        if (row.isBanned)
+          PopupMenuItem(
+            value: 'unban',
+            child: Row(
+              children: [
+                const Icon(Icons.lock_open, size: 18),
+                const SizedBox(width: 10),
+                Text(l10n.adminUsersUnban),
+              ],
+            ),
+          )
+        else
+          PopupMenuItem(
+            value: 'ban',
+            child: Row(
+              children: [
+                Icon(Icons.block, size: 18, color: scheme.error),
+                const SizedBox(width: 10),
+                Text(
+                  l10n.adminUsersBan,
+                  style: TextStyle(color: scheme.error),
+                ),
+              ],
             ),
           ),
-          if (user.isSuperadmin)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Chip(label: Text(l10n.adminUsersChipSuperadmin)),
+        PopupMenuItem(
+          value: 'toggle_active',
+          child: Text(
+            row.user.isActive
+                ? l10n.adminUsersDeactivate
+                : l10n.adminUsersReactivate,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'toggle_superadmin',
+          child: Text(
+            row.user.isSuperadmin
+                ? l10n.adminUsersRevokeSuperadmin
+                : l10n.adminUsersPromoteSuperadmin,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'reset',
+          child: Text(l10n.adminUsersIssueReset),
+        ),
+        PopupMenuItem(value: 'time', child: Text(l10n.ttAdminTimeMenu)),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text(l10n.adminUsersDeleteMenu),
+        ),
+      ],
+    );
+  }
+}
+
+/// Confirmation for the 2FA reset, spelling out exactly what is removed.
+///
+/// This is destructive and cannot be undone by the admin — the user has to
+/// re-enrol — so the dialog itemises the factors instead of asking a vague
+/// "are you sure?".
+class _ResetTwoFactorDialog extends StatelessWidget {
+  const _ResetTwoFactorDialog({required this.row});
+
+  final AdminUserRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final tf = row.twoFactor;
+
+    return AlertDialog(
+      icon: const Icon(Icons.lock_reset),
+      title: Text(l10n.adminUsersReset2faTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.adminUsersReset2faBody(row.email)),
+          const SizedBox(height: 12),
+          if (tf.totp)
+            _BulletLine(icon: Icons.smartphone, text: l10n.adminUsers2faTotp),
+          if (tf.passkeys > 0)
+            _BulletLine(
+              icon: Icons.key,
+              text: l10n.adminUsers2faPasskeys(tf.passkeys),
             ),
-          if (!user.isActive)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Chip(label: Text(l10n.adminUsersChipInactive)),
+          if (tf.recoveryCodesLeft > 0)
+            _BulletLine(
+              icon: Icons.confirmation_number_outlined,
+              text: l10n.adminUsers2faRecoveryCodes(tf.recoveryCodesLeft),
             ),
-          if (user.mustChangePassword)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Chip(label: Text(l10n.adminUsersChipTempPw)),
+          _BulletLine(
+            icon: Icons.logout,
+            text: l10n.adminUsersReset2faSignsOut,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.adminUsersReset2faWarning,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.error,
             ),
+          ),
         ],
       ),
-      subtitle: Text('${user.username} · ${user.fullName}'),
-      trailing: PopupMenuButton<String>(
-        onSelected: (key) {
-          switch (key) {
-            case 'toggle_active':
-              onToggleActive(!user.isActive);
-            case 'toggle_superadmin':
-              onToggleSuperadmin(!user.isSuperadmin);
-            case 'reset':
-              onResetPassword();
-            case 'time':
-              unawaited(context.push(Routes.adminUserTimeFor(user.id)));
-            case 'delete':
-              onDelete();
-          }
-        },
-        itemBuilder: (_) => [
-          PopupMenuItem(
-            value: 'toggle_active',
-            child: Text(
-              user.isActive
-                  ? l10n.adminUsersDeactivate
-                  : l10n.adminUsersReactivate,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: Text(l10n.adminUsersCancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          child: Text(l10n.adminUsersReset2faConfirm),
+        ),
+      ],
+    );
+  }
+}
+
+class _BulletLine extends StatelessWidget {
+  const _BulletLine({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Theme.of(context).colorScheme.outline),
+          const SizedBox(width: 8),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Ban confirmation with an optional reason.
+class _BanUserDialog extends StatefulWidget {
+  const _BanUserDialog({required this.row});
+
+  final AdminUserRow row;
+
+  @override
+  State<_BanUserDialog> createState() => _BanUserDialogState();
+}
+
+class _BanUserDialogState extends State<_BanUserDialog> {
+  final _reason = TextEditingController();
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    return AlertDialog(
+      icon: Icon(Icons.block, color: scheme.error),
+      title: Text(l10n.adminUsersBanTitle),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.adminUsersBanBody(widget.row.email)),
+          const SizedBox(height: 8),
+          // Worth stating: this is precisely what deactivation cannot do.
+          Text(
+            widget.row.user.isLdap
+                ? l10n.adminUsersBanLdapNote
+                : l10n.adminUsersBanNote,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: scheme.onSurfaceVariant,
             ),
           ),
-          PopupMenuItem(
-            value: 'toggle_superadmin',
-            child: Text(
-              user.isSuperadmin
-                  ? l10n.adminUsersRevokeSuperadmin
-                  : l10n.adminUsersPromoteSuperadmin,
+          const SizedBox(height: 16),
+          TextField(
+            controller: _reason,
+            maxLength: 500,
+            decoration: InputDecoration(
+              labelText: l10n.adminUsersBanReasonLabel,
+              helperText: l10n.adminUsersBanReasonHelper,
             ),
-          ),
-          PopupMenuItem(
-            value: 'reset',
-            child: Text(l10n.adminUsersIssueReset),
-          ),
-          PopupMenuItem(value: 'time', child: Text(l10n.ttAdminTimeMenu)),
-          PopupMenuItem(
-            value: 'delete',
-            child: Text(l10n.adminUsersDeleteMenu),
           ),
         ],
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.adminUsersCancel),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: scheme.error),
+          onPressed: () => Navigator.of(context).pop(_reason.text.trim()),
+          child: Text(l10n.adminUsersBanConfirm),
+        ),
+      ],
     );
   }
 }

@@ -7,6 +7,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/admin_branding_page.dart';
+import 'package:intellipilot/features/admin/presentation/admin_geoip_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_ldap_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_notifications_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_short_links_page.dart';
@@ -86,6 +87,17 @@ class _SettingsView extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const AdminShortLinksPage(),
+                  ),
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.public),
+                title: Text(l10n.adminGeoipTitle),
+                subtitle: Text(l10n.adminGeoipSubtitle),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AdminGeoipPage(),
                   ),
                 ),
               ),

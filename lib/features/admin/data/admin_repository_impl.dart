@@ -7,6 +7,7 @@ import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/data/dtos/app_token_dtos.dart';
+import 'package:intellipilot/features/admin/data/dtos/security_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 
@@ -38,16 +39,136 @@ class AdminRepositoryImpl implements AdminRepository {
   @override
   Future<Result<AdminUserList, AppFailure>> listUsers({
     String? q,
+    String? status,
     int limit = 50,
     int offset = 0,
   }) async {
     final params = <String, dynamic>{'limit': limit, 'offset': offset};
     if (q != null && q.isNotEmpty) params['q'] = q;
+    if (status != null && status.isNotEmpty) params['status'] = status;
     final res = await _api.get('$_base/users', query: params);
     return _mapOk(
       res,
       (r) => AdminUserList.fromJson(r.data as Map<String, dynamic>),
     );
+  }
+
+  // ---- Account security (V018) ----
+
+  @override
+  Future<Result<TwoFactorResetResult, AppFailure>> resetTwoFactor(
+    String id,
+  ) async {
+    final res = await _api.post('$_base/users/$id/reset-2fa');
+    return _mapOk(
+      res,
+      (r) => TwoFactorResetResult.fromJson(r.data as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  Future<Result<UserProfile, AppFailure>> banUser(
+    String id, {
+    String? reason,
+  }) async {
+    final res = await _api.post(
+      '$_base/users/$id/ban',
+      body: <String, dynamic>{
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      },
+    );
+    return _mapOk(
+      res,
+      (r) => UserProfile.fromJson(r.data as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  Future<Result<UserProfile, AppFailure>> unbanUser(String id) async {
+    final res = await _api.post('$_base/users/$id/unban');
+    return _mapOk(
+      res,
+      (r) => UserProfile.fromJson(r.data as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  Future<Result<List<SessionInfo>, AppFailure>> listUserSessions(
+    String id,
+  ) async {
+    final res = await _api.get('$_base/users/$id/sessions');
+    return _mapOk(res, (r) {
+      final body = r.data as Map<String, dynamic>;
+      return (body['items'] as List<dynamic>? ?? const [])
+          .map((e) => SessionInfo.fromJson(e as Map<String, dynamic>))
+          .toList(growable: false);
+    });
+  }
+
+  @override
+  Future<Result<int, AppFailure>> revokeUserSessions(String id) async {
+    try {
+      final r = await _api.dio.delete<dynamic>('$_base/users/$id/sessions');
+      final body = r.data as Map<String, dynamic>?;
+      return Ok((body?['sessions_revoked'] as num?)?.toInt() ?? 0);
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
+    }
+  }
+
+  // ---- Geolocation (V018) ----
+
+  @override
+  Future<Result<GeoipStatus, AppFailure>> getGeoipStatus() async {
+    final res = await _api.get('$_base/geoip');
+    return _mapOk(
+      res,
+      (r) => GeoipStatus.fromJson(r.data as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  Future<Result<GeoipStatus, AppFailure>> updateGeoipSettings({
+    bool? enabled,
+    String? variant,
+    bool? autoUpdate,
+  }) async {
+    try {
+      final r = await _api.dio.patch<dynamic>(
+        '$_base/geoip',
+        // Null fields are omitted so the server leaves them unchanged.
+        data: <String, dynamic>{
+          if (enabled != null) 'enabled': enabled,
+          if (variant != null) 'variant': variant,
+          if (autoUpdate != null) 'auto_update': autoUpdate,
+        },
+      );
+      return Ok(GeoipStatus.fromJson(r.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
+    }
+  }
+
+  @override
+  Future<Result<GeoipUpdateResult, AppFailure>> updateGeoipDatabase() async {
+    final res = await _api.post('$_base/geoip/update');
+    return _mapOk(
+      res,
+      (r) => GeoipUpdateResult.fromJson(r.data as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  Future<Result<int, AppFailure>> purgeGeoipData() async {
+    final res = await _api.post('$_base/geoip/purge');
+    return _mapOk(res, (r) {
+      final body = r.data as Map<String, dynamic>?;
+      return (body?['sessions_cleared'] as num?)?.toInt() ?? 0;
+    });
   }
 
   @override

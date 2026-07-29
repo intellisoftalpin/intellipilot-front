@@ -1,52 +1,47 @@
 {
   "@@locale": "en",
-
   "appTitle": "IntelliPilot",
   "@appTitle": {
     "description": "The application name shown in the title bar and home screen."
   },
-
   "homeWelcomeTitle": "Welcome to IntelliPilot",
   "@homeWelcomeTitle": {
     "description": "Headline shown on the placeholder home screen before authentication is wired up."
   },
-
   "homeWelcomeBody": "Frontend scaffolding is in place. Authentication and project workflows arrive in upcoming phases.",
   "@homeWelcomeBody": {
     "description": "Subtitle shown on the placeholder home screen."
   },
-
   "homeHealthCheckSection": "Backend connection",
   "@homeHealthCheckSection": {
     "description": "Section header on the home page that introduces the health-check demo button."
   },
-
   "homePingButton": "Ping backend",
   "@homePingButton": {
     "description": "Label for the button that calls GET /health/live."
   },
-
   "homePingHint": "Tap to verify the API client wiring against the configured backend.",
   "@homePingHint": {
     "description": "Hint shown next to the ping button before any call has been made."
   },
-
   "homePingOk": "Backend reachable (HTTP {code}).",
   "@homePingOk": {
     "description": "Success message shown after a successful health-check round-trip.",
     "placeholders": {
-      "code": { "type": "int", "example": "200" }
+      "code": {
+        "type": "int",
+        "example": "200"
+      }
     }
   },
-
   "settingsTitle": "Settings",
-  "@settingsTitle": { "description": "Title of the settings page." },
-
+  "@settingsTitle": {
+    "description": "Title of the settings page."
+  },
   "settingsAppearance": "Appearance",
   "@settingsAppearance": {
     "description": "Section title for theme controls."
   },
-
   "settingsLanguage": "Language",
   "settingsWeekStart": "Week starts on",
   "weekStartMonday": "Monday",
@@ -55,1375 +50,2632 @@
   "@settingsLanguage": {
     "description": "Section title for locale controls."
   },
-
-  "themeLight":  "Light",
-  "@themeLight":  { "description": "Theme mode label." },
-  "themeDark":   "Dark",
-  "@themeDark":   { "description": "Theme mode label." },
+  "themeLight": "Light",
+  "@themeLight": {
+    "description": "Theme mode label."
+  },
+  "themeDark": "Dark",
+  "@themeDark": {
+    "description": "Theme mode label."
+  },
   "themeSystem": "System",
-  "@themeSystem": { "description": "Theme mode label — follow OS preference." },
-
+  "@themeSystem": {
+    "description": "Theme mode label — follow OS preference."
+  },
   "themeSeedColor": "Accent color",
   "@themeSeedColor": {
     "description": "Label above the seed-color swatches."
   },
-
   "themeUseDynamic": "Use system colors when available",
   "@themeUseDynamic": {
     "description": "Toggle that asks the OS for a dynamic Material You color scheme (Android 12+)."
   },
-
   "themeUseDynamicHint": "Falls back to the accent color above on platforms without dynamic color support.",
-  "@themeUseDynamicHint": { "description": "Sub-text for the dynamic-color toggle." },
-
+  "@themeUseDynamicHint": {
+    "description": "Sub-text for the dynamic-color toggle."
+  },
   "localeSystem": "System default",
   "@localeSystem": {
     "description": "Locale option that defers to the OS locale."
   },
-
   "loginSubtitle": "Sign in to continue.",
-  "@loginSubtitle": { "description": "Subtitle on the login page." },
+  "@loginSubtitle": {
+    "description": "Subtitle on the login page."
+  },
   "loginMfaNotice": "This account has 2FA enabled. The verification UI ships in Phase 3 — use a non-2FA account for now.",
-  "@loginMfaNotice": { "description": "Surface when the backend returns an MFA challenge (Phase 2 cannot complete it yet)." },
-
+  "@loginMfaNotice": {
+    "description": "Surface when the backend returns an MFA challenge (Phase 2 cannot complete it yet)."
+  },
   "registerTitle": "Create your account",
-  "@registerTitle": { "description": "Register page title." },
+  "@registerTitle": {
+    "description": "Register page title."
+  },
   "registerSuccessSnack": "Account created. Sign in to continue.",
-  "@registerSuccessSnack": { "description": "Snack shown after a successful registration." },
-
+  "@registerSuccessSnack": {
+    "description": "Snack shown after a successful registration."
+  },
   "forgotPasswordTitle": "Forgot password",
-  "@forgotPasswordTitle": { "description": "Forgot password page title." },
+  "@forgotPasswordTitle": {
+    "description": "Forgot password page title."
+  },
   "forgotPasswordBody": "Enter the email associated with your account and we'll send instructions to reset your password.",
-  "@forgotPasswordBody": { "description": "Body copy on the forgot-password form." },
+  "@forgotPasswordBody": {
+    "description": "Body copy on the forgot-password form."
+  },
   "forgotPasswordSuccessTitle": "Check your email",
-  "@forgotPasswordSuccessTitle": { "description": "Headline after submitting the forgot-password form." },
+  "@forgotPasswordSuccessTitle": {
+    "description": "Headline after submitting the forgot-password form."
+  },
   "forgotPasswordSuccessBody": "If an account exists for that email, you'll receive a reset link shortly.",
-  "@forgotPasswordSuccessBody": { "description": "Body copy after submitting the forgot-password form (anti-enumeration phrasing)." },
-
+  "@forgotPasswordSuccessBody": {
+    "description": "Body copy after submitting the forgot-password form (anti-enumeration phrasing)."
+  },
   "resetPasswordTitle": "Reset password",
-  "@resetPasswordTitle": { "description": "Reset password page title." },
+  "@resetPasswordTitle": {
+    "description": "Reset password page title."
+  },
   "resetPasswordBody": "Paste the token from your reset email and choose a new password.",
-  "@resetPasswordBody": { "description": "Body copy on the reset-password form." },
+  "@resetPasswordBody": {
+    "description": "Body copy on the reset-password form."
+  },
   "resetPasswordSuccessSnack": "Password changed. Sign in to continue.",
-  "@resetPasswordSuccessSnack": { "description": "Snack shown after a successful password reset." },
-
+  "@resetPasswordSuccessSnack": {
+    "description": "Snack shown after a successful password reset."
+  },
   "fieldEmail": "Email",
   "fieldEmailOrUsername": "Email or username",
-  "@fieldEmailOrUsername": { "description": "Login field label accepting either an email or a username." },
-  "@fieldEmail": { "description": "Field label." },
+  "@fieldEmailOrUsername": {
+    "description": "Login field label accepting either an email or a username."
+  },
+  "@fieldEmail": {
+    "description": "Field label."
+  },
   "fieldPassword": "Password",
-  "@fieldPassword": { "description": "Field label." },
+  "@fieldPassword": {
+    "description": "Field label."
+  },
   "fieldNewPassword": "New password",
-  "@fieldNewPassword": { "description": "Field label." },
+  "@fieldNewPassword": {
+    "description": "Field label."
+  },
   "fieldUsername": "Username",
-  "@fieldUsername": { "description": "Field label." },
+  "@fieldUsername": {
+    "description": "Field label."
+  },
   "fieldUsernameHint": "Letters, digits, dot, dash and underscore. 3–64 characters.",
-  "@fieldUsernameHint": { "description": "Helper text for the username field." },
+  "@fieldUsernameHint": {
+    "description": "Helper text for the username field."
+  },
   "fieldFullName": "Full name (optional)",
-  "@fieldFullName": { "description": "Field label." },
+  "@fieldFullName": {
+    "description": "Field label."
+  },
   "fieldPasswordHint": "At least 8 characters.",
-  "@fieldPasswordHint": { "description": "Helper text for password fields." },
+  "@fieldPasswordHint": {
+    "description": "Helper text for password fields."
+  },
   "fieldResetToken": "Reset token",
-  "@fieldResetToken": { "description": "Field label on the reset-password page." },
-
+  "@fieldResetToken": {
+    "description": "Field label on the reset-password page."
+  },
   "actionSignIn": "Sign in",
-  "@actionSignIn": { "description": "Primary CTA on login." },
+  "@actionSignIn": {
+    "description": "Primary CTA on login."
+  },
   "actionRegister": "Create account",
-  "@actionRegister": { "description": "Primary CTA on registration." },
+  "@actionRegister": {
+    "description": "Primary CTA on registration."
+  },
   "actionSendResetLink": "Send reset link",
-  "@actionSendResetLink": { "description": "Primary CTA on forgot-password." },
+  "@actionSendResetLink": {
+    "description": "Primary CTA on forgot-password."
+  },
   "actionResetPassword": "Reset password",
-  "@actionResetPassword": { "description": "Primary CTA on reset-password." },
+  "@actionResetPassword": {
+    "description": "Primary CTA on reset-password."
+  },
   "actionContinueToReset": "Continue with token",
-  "@actionContinueToReset": { "description": "Action after the dev token banner appears." },
+  "@actionContinueToReset": {
+    "description": "Action after the dev token banner appears."
+  },
   "actionBackToLogin": "Back to sign in",
-  "@actionBackToLogin": { "description": "Secondary action on auth pages." },
+  "@actionBackToLogin": {
+    "description": "Secondary action on auth pages."
+  },
   "actionCopy": "Copy",
-  "@actionCopy": { "description": "Generic copy action." },
+  "@actionCopy": {
+    "description": "Generic copy action."
+  },
   "linkForgotPassword": "Forgot your password?",
-  "@linkForgotPassword": { "description": "Inline link on login form." },
+  "@linkForgotPassword": {
+    "description": "Inline link on login form."
+  },
   "linkCreateAccount": "Need an account? Sign up",
-  "@linkCreateAccount": { "description": "Inline link on login form." },
-
+  "@linkCreateAccount": {
+    "description": "Inline link on login form."
+  },
   "devTokenBannerTitle": "Development reset token",
-  "@devTokenBannerTitle": { "description": "Title for the dev-only token banner that surfaces the reset_token returned by the backend in dev mode." },
+  "@devTokenBannerTitle": {
+    "description": "Title for the dev-only token banner that surfaces the reset_token returned by the backend in dev mode."
+  },
   "copiedToClipboard": "Copied to clipboard",
-  "@copiedToClipboard": { "description": "Snack confirming a clipboard copy." },
-
+  "@copiedToClipboard": {
+    "description": "Snack confirming a clipboard copy."
+  },
   "errFieldRequired": "This field is required.",
-  "@errFieldRequired": { "description": "Generic required-field validation error." },
+  "@errFieldRequired": {
+    "description": "Generic required-field validation error."
+  },
   "errEmailInvalid": "Enter a valid email address.",
-  "@errEmailInvalid": { "description": "Email format validation error." },
+  "@errEmailInvalid": {
+    "description": "Email format validation error."
+  },
   "errTooLong": "This value is too long.",
-  "@errTooLong": { "description": "Generic length-cap validation error." },
+  "@errTooLong": {
+    "description": "Generic length-cap validation error."
+  },
   "errUsernameTooShort": "Username must be at least 3 characters.",
-  "@errUsernameTooShort": { "description": "Username length validation error." },
+  "@errUsernameTooShort": {
+    "description": "Username length validation error."
+  },
   "errUsernamePattern": "Use letters, digits, dot, dash or underscore only.",
-  "@errUsernamePattern": { "description": "Username pattern validation error." },
+  "@errUsernamePattern": {
+    "description": "Username pattern validation error."
+  },
   "errPasswordMinLength": "Password must be at least 8 characters.",
-  "@errPasswordMinLength": { "description": "Password length validation error." },
+  "@errPasswordMinLength": {
+    "description": "Password length validation error."
+  },
   "errInvalidCredentials": "Email or password is incorrect.",
-  "@errInvalidCredentials": { "description": "401 from login." },
+  "@errInvalidCredentials": {
+    "description": "401 from login."
+  },
   "errEmailOrUsernameTaken": "That email or username is already in use.",
-  "@errEmailOrUsernameTaken": { "description": "409 from register." },
+  "@errEmailOrUsernameTaken": {
+    "description": "409 from register."
+  },
   "errWeakPassword": "Please choose a stronger password.",
-  "@errWeakPassword": { "description": "422 weak_password from register/reset." },
+  "@errWeakPassword": {
+    "description": "422 weak_password from register/reset."
+  },
   "errValidation": "Please review the form and try again.",
-  "@errValidation": { "description": "Generic validation error fallback." },
+  "@errValidation": {
+    "description": "Generic validation error fallback."
+  },
   "errNetwork": "Network unavailable. Check your connection and try again.",
-  "@errNetwork": { "description": "DioException with no response." },
+  "@errNetwork": {
+    "description": "DioException with no response."
+  },
   "errServer": "The server is having trouble. Please retry shortly.",
-  "@errServer": { "description": "5xx response." },
+  "@errServer": {
+    "description": "5xx response."
+  },
   "errTooManyAttempts": "Too many attempts. Please wait a moment and try again.",
-  "@errTooManyAttempts": { "description": "429 response." },
+  "@errTooManyAttempts": {
+    "description": "429 response."
+  },
   "errUnknown": "Something went wrong. Please try again.",
-  "@errUnknown": { "description": "Catch-all error message." },
+  "@errUnknown": {
+    "description": "Catch-all error message."
+  },
   "errResetTokenInvalid": "The reset token is invalid or expired.",
-  "@errResetTokenInvalid": { "description": "400 from reset/confirm." },
-
+  "@errResetTokenInvalid": {
+    "description": "400 from reset/confirm."
+  },
   "settingsSecurityTitle": "Security",
-  "@settingsSecurityTitle": { "description": "Settings tile that opens the security page." },
+  "@settingsSecurityTitle": {
+    "description": "Settings tile that opens the security page."
+  },
   "settingsSecuritySubtitle": "Two-factor authentication, recovery codes, and passkeys.",
-  "@settingsSecuritySubtitle": { "description": "Subtitle on the security settings tile." },
-
+  "@settingsSecuritySubtitle": {
+    "description": "Subtitle on the security settings tile."
+  },
   "securityTitle": "Security",
-  "@securityTitle": { "description": "Security page title." },
+  "@securityTitle": {
+    "description": "Security page title."
+  },
   "securitySection2fa": "Two-factor authentication",
-  "@securitySection2fa": { "description": "Section header." },
+  "@securitySection2fa": {
+    "description": "Section header."
+  },
   "securitySectionPasskeys": "Passkeys",
-  "@securitySectionPasskeys": { "description": "Section header." },
+  "@securitySectionPasskeys": {
+    "description": "Section header."
+  },
   "securityTotpTitle": "Set up authenticator app",
-  "@securityTotpTitle": { "description": "Tile that opens the TOTP enrolment flow." },
+  "@securityTotpTitle": {
+    "description": "Tile that opens the TOTP enrolment flow."
+  },
   "securityTotpSubtitle": "Use an app like 1Password, Authy or Google Authenticator.",
-  "@securityTotpSubtitle": { "description": "Subtitle on the TOTP tile." },
+  "@securityTotpSubtitle": {
+    "description": "Subtitle on the TOTP tile."
+  },
   "securityRecoveryTitle": "Recovery codes",
-  "@securityRecoveryTitle": { "description": "Tile that opens the recovery codes page." },
+  "@securityRecoveryTitle": {
+    "description": "Tile that opens the recovery codes page."
+  },
   "securityRecoverySubtitle": "Generate new one-time codes for account recovery.",
-  "@securityRecoverySubtitle": { "description": "Subtitle on the recovery codes tile." },
+  "@securityRecoverySubtitle": {
+    "description": "Subtitle on the recovery codes tile."
+  },
   "securityDisableTotpTitle": "Disable two-factor authentication",
-  "@securityDisableTotpTitle": { "description": "Tile that disables TOTP." },
+  "@securityDisableTotpTitle": {
+    "description": "Tile that disables TOTP."
+  },
   "securityDisableTotpSubtitle": "Removes the authenticator app from this account.",
-  "@securityDisableTotpSubtitle": { "description": "Subtitle on the disable TOTP tile." },
+  "@securityDisableTotpSubtitle": {
+    "description": "Subtitle on the disable TOTP tile."
+  },
   "securityDisableTotpConfirm": "This will disable two-factor authentication and remove your authenticator app. You can re-enrol later.",
-  "@securityDisableTotpConfirm": { "description": "Confirmation modal for disabling TOTP." },
+  "@securityDisableTotpConfirm": {
+    "description": "Confirmation modal for disabling TOTP."
+  },
   "securityDisableTotpSnack": "Two-factor authentication disabled.",
-  "@securityDisableTotpSnack": { "description": "Snack confirming TOTP disabled." },
+  "@securityDisableTotpSnack": {
+    "description": "Snack confirming TOTP disabled."
+  },
   "securityPasskeysTitle": "Manage passkeys",
-  "@securityPasskeysTitle": { "description": "Tile that opens the passkeys list page." },
+  "@securityPasskeysTitle": {
+    "description": "Tile that opens the passkeys list page."
+  },
   "securityPasskeysSubtitle": "Sign in without a password using a phone or security key.",
-  "@securityPasskeysSubtitle": { "description": "Subtitle on the passkeys tile." },
-
+  "@securityPasskeysSubtitle": {
+    "description": "Subtitle on the passkeys tile."
+  },
   "totpSetupTitle": "Set up authenticator",
-  "@totpSetupTitle": { "description": "TOTP setup page title." },
+  "@totpSetupTitle": {
+    "description": "TOTP setup page title."
+  },
   "totpStep1": "Step 1 — Scan the QR code with your authenticator app.",
-  "@totpStep1": { "description": "Instruction shown above the QR code." },
+  "@totpStep1": {
+    "description": "Instruction shown above the QR code."
+  },
   "totpStep2": "Step 2 — Enter the 6-digit code your app displays.",
-  "@totpStep2": { "description": "Instruction shown above the code input." },
+  "@totpStep2": {
+    "description": "Instruction shown above the code input."
+  },
   "totpManualEntry": "Can't scan? Enter this secret manually:",
-  "@totpManualEntry": { "description": "Label above the base32 fallback." },
+  "@totpManualEntry": {
+    "description": "Label above the base32 fallback."
+  },
   "totpCodeLabel": "6-digit code",
-  "@totpCodeLabel": { "description": "Label on the TOTP code input field." },
+  "@totpCodeLabel": {
+    "description": "Label on the TOTP code input field."
+  },
   "totpConfirmCta": "Verify and enable",
-  "@totpConfirmCta": { "description": "Primary CTA on the TOTP setup form." },
+  "@totpConfirmCta": {
+    "description": "Primary CTA on the TOTP setup form."
+  },
   "totpInvalidCode": "That code didn't match. Try again.",
-  "@totpInvalidCode": { "description": "Error shown when the TOTP code is wrong during setup." },
+  "@totpInvalidCode": {
+    "description": "Error shown when the TOTP code is wrong during setup."
+  },
   "totpStartFailed": "Couldn't start TOTP setup.",
-  "@totpStartFailed": { "description": "Error when /totp/start fails." },
+  "@totpStartFailed": {
+    "description": "Error when /totp/start fails."
+  },
   "totpEnabledTitle": "Two-factor authentication enabled",
-  "@totpEnabledTitle": { "description": "Heading on the post-enrolment success panel." },
+  "@totpEnabledTitle": {
+    "description": "Heading on the post-enrolment success panel."
+  },
   "totpEnabledBody": "Save the recovery codes below in a safe place. You'll need them if you ever lose your authenticator app.",
-  "@totpEnabledBody": { "description": "Body copy on the post-enrolment success panel." },
-
+  "@totpEnabledBody": {
+    "description": "Body copy on the post-enrolment success panel."
+  },
   "recoveryCodesTitle": "Recovery codes",
-  "@recoveryCodesTitle": { "description": "Title on the recovery-codes card." },
+  "@recoveryCodesTitle": {
+    "description": "Title on the recovery-codes card."
+  },
   "recoveryCodesHint": "Each code works once. Store them somewhere safe — they cannot be shown again.",
-  "@recoveryCodesHint": { "description": "Hint explaining the one-time nature of recovery codes." },
+  "@recoveryCodesHint": {
+    "description": "Hint explaining the one-time nature of recovery codes."
+  },
   "recoveryCodesPageTitle": "Recovery codes",
-  "@recoveryCodesPageTitle": { "description": "Title of the recovery-codes page." },
+  "@recoveryCodesPageTitle": {
+    "description": "Title of the recovery-codes page."
+  },
   "recoveryRegenerateBody": "Generating new codes invalidates any previous codes. This action requires that two-factor authentication is enabled.",
-  "@recoveryRegenerateBody": { "description": "Body copy on the regenerate-codes screen." },
+  "@recoveryRegenerateBody": {
+    "description": "Body copy on the regenerate-codes screen."
+  },
   "recoveryRegenerateFailed": "Couldn't generate recovery codes.",
-  "@recoveryRegenerateFailed": { "description": "Error when regenerate fails." },
-
+  "@recoveryRegenerateFailed": {
+    "description": "Error when regenerate fails."
+  },
   "mfaVerifyTitle": "Two-factor verification",
-  "@mfaVerifyTitle": { "description": "MFA verify page title." },
+  "@mfaVerifyTitle": {
+    "description": "MFA verify page title."
+  },
   "mfaVerifyBody": "Enter the code from your authenticator app, or use a recovery code if you can't access it.",
-  "@mfaVerifyBody": { "description": "Body copy on the MFA verify page." },
+  "@mfaVerifyBody": {
+    "description": "Body copy on the MFA verify page."
+  },
   "mfaMethodTotp": "Authenticator",
-  "@mfaMethodTotp": { "description": "MFA method tab — TOTP." },
+  "@mfaMethodTotp": {
+    "description": "MFA method tab — TOTP."
+  },
   "mfaMethodRecovery": "Recovery code",
-  "@mfaMethodRecovery": { "description": "MFA method tab — recovery." },
+  "@mfaMethodRecovery": {
+    "description": "MFA method tab — recovery."
+  },
   "mfaRecoveryCodeLabel": "Recovery code",
-  "@mfaRecoveryCodeLabel": { "description": "Label on the recovery-code input field." },
+  "@mfaRecoveryCodeLabel": {
+    "description": "Label on the recovery-code input field."
+  },
   "mfaInvalidCode": "That code wasn't accepted. Try again.",
-  "@mfaInvalidCode": { "description": "401 from /auth/2fa/verify." },
+  "@mfaInvalidCode": {
+    "description": "401 from /auth/2fa/verify."
+  },
   "mfaContextLost": "Your sign-in session expired. Please sign in again.",
-  "@mfaContextLost": { "description": "Shown when the user lands on /auth/mfa with no SessionMfaRequired state." },
-
+  "@mfaContextLost": {
+    "description": "Shown when the user lands on /auth/mfa with no SessionMfaRequired state."
+  },
   "passkeysPageTitle": "Passkeys",
-  "@passkeysPageTitle": { "description": "Passkeys management page title." },
+  "@passkeysPageTitle": {
+    "description": "Passkeys management page title."
+  },
   "passkeysIntro": "Passkeys let you sign in with a phone, laptop, or security key instead of a password.",
-  "@passkeysIntro": { "description": "Intro copy on the passkeys page." },
+  "@passkeysIntro": {
+    "description": "Intro copy on the passkeys page."
+  },
   "passkeysEmpty": "You haven't added a passkey yet.",
-  "@passkeysEmpty": { "description": "Empty-state copy on the passkeys list." },
+  "@passkeysEmpty": {
+    "description": "Empty-state copy on the passkeys list."
+  },
   "passkeysLoadFailed": "Couldn't load your passkeys.",
-  "@passkeysLoadFailed": { "description": "Error when GET /me/passkeys fails." },
+  "@passkeysLoadFailed": {
+    "description": "Error when GET /me/passkeys fails."
+  },
   "passkeysUnsupportedPlatform": "Passkeys aren't available on this device yet. Use a supported browser (Chrome, Safari, Firefox or Edge) to add or use passkeys.",
-  "@passkeysUnsupportedPlatform": { "description": "Hint shown when WebAuthn isn't supported on the current platform." },
+  "@passkeysUnsupportedPlatform": {
+    "description": "Hint shown when WebAuthn isn't supported on the current platform."
+  },
   "passkeysAddDialogTitle": "Add a passkey",
-  "@passkeysAddDialogTitle": { "description": "Dialog title for adding a passkey." },
+  "@passkeysAddDialogTitle": {
+    "description": "Dialog title for adding a passkey."
+  },
   "passkeysNicknameLabel": "Nickname (e.g. 'MacBook')",
-  "@passkeysNicknameLabel": { "description": "Label on the passkey nickname input." },
+  "@passkeysNicknameLabel": {
+    "description": "Label on the passkey nickname input."
+  },
   "passkeyNoNickname": "Unnamed passkey",
-  "@passkeyNoNickname": { "description": "Fallback display when a passkey has no nickname." },
+  "@passkeyNoNickname": {
+    "description": "Fallback display when a passkey has no nickname."
+  },
   "passkeyNeverUsed": "Never used",
-  "@passkeyNeverUsed": { "description": "Subtitle when last_used_at is null." },
+  "@passkeyNeverUsed": {
+    "description": "Subtitle when last_used_at is null."
+  },
   "passkeyLastUsed": "Last used {when}",
   "@passkeyLastUsed": {
     "description": "Subtitle showing the last_used_at timestamp.",
     "placeholders": {
-      "when": { "type": "String", "example": "2026-05-27 09:32" }
+      "when": {
+        "type": "String",
+        "example": "2026-05-27 09:32"
+      }
     }
   },
   "passkeyCeremonyFailed": "Passkey ceremony failed. Try again or use another sign-in method.",
-  "@passkeyCeremonyFailed": { "description": "Generic error when the browser-side ceremony fails." },
-
+  "@passkeyCeremonyFailed": {
+    "description": "Generic error when the browser-side ceremony fails."
+  },
   "passkeySignInTitle": "Sign in with a passkey",
-  "@passkeySignInTitle": { "description": "Passkey sign-in page title." },
+  "@passkeySignInTitle": {
+    "description": "Passkey sign-in page title."
+  },
   "passkeySignInBody": "Enter the email associated with your account, then approve the prompt from your device.",
-  "@passkeySignInBody": { "description": "Body copy on the passkey sign-in page." },
+  "@passkeySignInBody": {
+    "description": "Body copy on the passkey sign-in page."
+  },
   "passkeySignInUnauthorized": "We couldn't sign you in with that passkey.",
-  "@passkeySignInUnauthorized": { "description": "401 from passkey authenticate/finish." },
+  "@passkeySignInUnauthorized": {
+    "description": "401 from passkey authenticate/finish."
+  },
   "linkSignInWithPasskey": "Sign in with a passkey",
-  "@linkSignInWithPasskey": { "description": "Link on the login page to the passkey sign-in flow." },
-
+  "@linkSignInWithPasskey": {
+    "description": "Link on the login page to the passkey sign-in flow."
+  },
   "actionVerify": "Verify",
-  "@actionVerify": { "description": "Primary CTA for verifying an MFA code." },
+  "@actionVerify": {
+    "description": "Primary CTA for verifying an MFA code."
+  },
   "actionCancelMfa": "Cancel and sign in with a different account",
-  "@actionCancelMfa": { "description": "Cancel CTA on the MFA verify page." },
+  "@actionCancelMfa": {
+    "description": "Cancel CTA on the MFA verify page."
+  },
   "actionRetry": "Try again",
-  "@actionRetry": { "description": "Generic retry action." },
+  "@actionRetry": {
+    "description": "Generic retry action."
+  },
   "actionDone": "Done",
-  "@actionDone": { "description": "Generic completion action." },
+  "@actionDone": {
+    "description": "Generic completion action."
+  },
   "actionCopyAll": "Copy all",
-  "@actionCopyAll": { "description": "Copy-all action on the recovery codes card." },
+  "@actionCopyAll": {
+    "description": "Copy-all action on the recovery codes card."
+  },
   "actionRegenerateCodes": "Generate new codes",
-  "@actionRegenerateCodes": { "description": "CTA to regenerate recovery codes." },
+  "@actionRegenerateCodes": {
+    "description": "CTA to regenerate recovery codes."
+  },
   "actionAddPasskey": "Add a passkey",
-  "@actionAddPasskey": { "description": "CTA to add a new passkey." },
+  "@actionAddPasskey": {
+    "description": "CTA to add a new passkey."
+  },
   "actionCancel": "Cancel",
-  "@actionCancel": { "description": "Generic cancel." },
+  "@actionCancel": {
+    "description": "Generic cancel."
+  },
   "actionContinue": "Continue",
-  "@actionContinue": { "description": "Generic continue." },
+  "@actionContinue": {
+    "description": "Generic continue."
+  },
   "actionContinueWithPasskey": "Continue with a passkey",
-  "@actionContinueWithPasskey": { "description": "CTA on the passkey sign-in form." },
+  "@actionContinueWithPasskey": {
+    "description": "CTA on the passkey sign-in form."
+  },
   "actionDelete": "Delete",
-  "@actionDelete": { "description": "Generic delete action." },
+  "@actionDelete": {
+    "description": "Generic delete action."
+  },
   "actionDisable": "Disable",
-
   "settingsProfileTitle": "Profile",
-  "@settingsProfileTitle": { "description": "Settings tile leading to the profile page." },
+  "@settingsProfileTitle": {
+    "description": "Settings tile leading to the profile page."
+  },
   "settingsProfileSubtitle": "Name, language and timezone.",
-  "@settingsProfileSubtitle": { "description": "Subtitle on the profile settings tile." },
+  "@settingsProfileSubtitle": {
+    "description": "Subtitle on the profile settings tile."
+  },
   "settingsAccountTitle": "Account",
-  "@settingsAccountTitle": { "description": "Settings tile for GDPR export + delete account." },
+  "@settingsAccountTitle": {
+    "description": "Settings tile for GDPR export + delete account."
+  },
   "settingsAccountSubtitle": "Export your data or delete your account.",
-  "@settingsAccountSubtitle": { "description": "Subtitle on the account settings tile." },
-
+  "@settingsAccountSubtitle": {
+    "description": "Subtitle on the account settings tile."
+  },
   "profileTitle": "Profile",
-  "@profileTitle": { "description": "Profile page title." },
+  "@profileTitle": {
+    "description": "Profile page title."
+  },
   "profileLoadFailed": "Couldn't load your profile.",
-  "@profileLoadFailed": { "description": "Profile GET failed." },
+  "@profileLoadFailed": {
+    "description": "Profile GET failed."
+  },
   "profileSaveFailed": "Couldn't save your changes.",
-  "@profileSaveFailed": { "description": "Profile PATCH failed." },
+  "@profileSaveFailed": {
+    "description": "Profile PATCH failed."
+  },
   "profileSavedSnack": "Profile updated.",
-  "@profileSavedSnack": { "description": "Success snack after profile save." },
+  "@profileSavedSnack": {
+    "description": "Success snack after profile save."
+  },
   "profileLanguageLabel": "Language",
-  "@profileLanguageLabel": { "description": "Form field label for profile.lang." },
+  "@profileLanguageLabel": {
+    "description": "Form field label for profile.lang."
+  },
   "profileTimezoneLabel": "Timezone",
-  "@profileTimezoneLabel": { "description": "Form field label for profile.timezone." },
+  "@profileTimezoneLabel": {
+    "description": "Form field label for profile.timezone."
+  },
   "profileTimezoneHint": "IANA name, e.g. Europe/Zurich.",
-  "@profileTimezoneHint": { "description": "Helper text under the timezone input." },
+  "@profileTimezoneHint": {
+    "description": "Helper text under the timezone input."
+  },
   "actionSave": "Save changes",
-  "@actionSave": { "description": "Primary CTA on the profile form." },
-
+  "@actionSave": {
+    "description": "Primary CTA on the profile form."
+  },
   "accountTitle": "Account",
-  "@accountTitle": { "description": "Account page title." },
+  "@accountTitle": {
+    "description": "Account page title."
+  },
   "accountDangerZoneTitle": "Danger zone",
-  "@accountDangerZoneTitle": { "description": "Section header for destructive actions." },
+  "@accountDangerZoneTitle": {
+    "description": "Section header for destructive actions."
+  },
   "accountDeleteBody": "Deleting your account immediately revokes access. The data is retained for 30 days during which you can contact support to restore it; after the grace period it is permanently erased.",
-  "@accountDeleteBody": { "description": "Body copy explaining the soft-delete grace period." },
+  "@accountDeleteBody": {
+    "description": "Body copy explaining the soft-delete grace period."
+  },
   "accountDeleteDialogTitle": "Delete your account?",
-  "@accountDeleteDialogTitle": { "description": "Modal title for the delete confirmation." },
+  "@accountDeleteDialogTitle": {
+    "description": "Modal title for the delete confirmation."
+  },
   "accountDeleteDialogBody": "This will sign you out and schedule your data for permanent deletion in 30 days. To confirm, type your username below.",
-  "@accountDeleteDialogBody": { "description": "Body copy in the delete confirmation modal." },
+  "@accountDeleteDialogBody": {
+    "description": "Body copy in the delete confirmation modal."
+  },
   "accountDeleteDialogTypeUsername": "Type your username '{username}' to confirm:",
   "@accountDeleteDialogTypeUsername": {
     "description": "Field label in the delete confirmation modal.",
-    "placeholders": { "username": { "type": "String", "example": "amaldavanau" } }
+    "placeholders": {
+      "username": {
+        "type": "String",
+        "example": "amaldavanau"
+      }
+    }
   },
   "accountDeleteUsernameMismatch": "That doesn't match your username. Deletion cancelled.",
-  "@accountDeleteUsernameMismatch": { "description": "Error when the typed confirmation doesn't match." },
+  "@accountDeleteUsernameMismatch": {
+    "description": "Error when the typed confirmation doesn't match."
+  },
   "accountDeletedSnack": "Your account is scheduled for deletion on {when}. You've been signed out.",
   "@accountDeletedSnack": {
     "description": "Snack shown after a successful account deletion request.",
-    "placeholders": { "when": { "type": "String", "example": "2026-06-26 09:00" } }
+    "placeholders": {
+      "when": {
+        "type": "String",
+        "example": "2026-06-26 09:00"
+      }
+    }
   },
   "actionDeleteAccount": "Delete account",
-  "@actionDeleteAccount": { "description": "Destructive CTA in the danger zone." },
-
+  "@actionDeleteAccount": {
+    "description": "Destructive CTA in the danger zone."
+  },
   "gdprExportTitle": "Export your data",
-  "@gdprExportTitle": { "description": "GDPR export section title." },
+  "@gdprExportTitle": {
+    "description": "GDPR export section title."
+  },
   "gdprExportBodyWeb": "Download a JSON file containing your profile and activity log.",
-  "@gdprExportBodyWeb": { "description": "Web copy for the GDPR export action." },
+  "@gdprExportBodyWeb": {
+    "description": "Web copy for the GDPR export action."
+  },
   "gdprExportBodyNative": "Copy a JSON snapshot of your profile and activity log to the clipboard. (File save will land in a later release.)",
-  "@gdprExportBodyNative": { "description": "Native copy for the GDPR export action." },
+  "@gdprExportBodyNative": {
+    "description": "Native copy for the GDPR export action."
+  },
   "gdprExportCta": "Export",
-  "@gdprExportCta": { "description": "GDPR export button label." },
+  "@gdprExportCta": {
+    "description": "GDPR export button label."
+  },
   "gdprExportDownloadedSnack": "Export downloaded.",
-  "@gdprExportDownloadedSnack": { "description": "Success snack on web." },
+  "@gdprExportDownloadedSnack": {
+    "description": "Success snack on web."
+  },
   "gdprExportClipboardSnack": "Export copied to clipboard.",
-  "@gdprExportClipboardSnack": { "description": "Success snack on native." },
+  "@gdprExportClipboardSnack": {
+    "description": "Success snack on native."
+  },
   "gdprExportFailed": "Couldn't export your data.",
-
   "projectsTitle": "Projects",
-  "@projectsTitle": { "description": "Projects list page title." },
+  "@projectsTitle": {
+    "description": "Projects list page title."
+  },
   "projectsEmpty": "You're not a member of any project yet. Create one to get started.",
-  "@projectsEmpty": { "description": "Empty-state copy on the projects list." },
+  "@projectsEmpty": {
+    "description": "Empty-state copy on the projects list."
+  },
   "projectsNoMatch": "No projects match your search.",
-  "@projectsNoMatch": { "description": "Search empty state." },
+  "@projectsNoMatch": {
+    "description": "Search empty state."
+  },
   "projectsSearchHint": "Search projects",
-  "@projectsSearchHint": { "description": "Placeholder in the projects search input." },
+  "@projectsSearchHint": {
+    "description": "Placeholder in the projects search input."
+  },
   "projectsLoadFailed": "Couldn't load your projects.",
-  "@projectsLoadFailed": { "description": "GET /projects failed." },
+  "@projectsLoadFailed": {
+    "description": "GET /projects failed."
+  },
   "projectCreateFailed": "Couldn't create the project.",
-  "@projectCreateFailed": { "description": "POST /projects failed." },
+  "@projectCreateFailed": {
+    "description": "POST /projects failed."
+  },
   "actionGoToProjects": "Go to projects",
-  "@actionGoToProjects": { "description": "CTA on home and on failed-invitation page." },
+  "@actionGoToProjects": {
+    "description": "CTA on home and on failed-invitation page."
+  },
   "actionNewProject": "New project",
-  "@actionNewProject": { "description": "Primary CTA to create a project." },
+  "@actionNewProject": {
+    "description": "Primary CTA to create a project."
+  },
   "actionCreate": "Create",
-  "@actionCreate": { "description": "Generic create button." },
+  "@actionCreate": {
+    "description": "Generic create button."
+  },
   "projectFieldName": "Name",
-  "@projectFieldName": { "description": "Field label." },
+  "@projectFieldName": {
+    "description": "Field label."
+  },
   "projectFieldDescription": "Description",
-  "@projectFieldDescription": { "description": "Field label." },
+  "@projectFieldDescription": {
+    "description": "Field label."
+  },
   "projectFieldVisibility": "Visibility",
-  "@projectFieldVisibility": { "description": "Field label." },
+  "@projectFieldVisibility": {
+    "description": "Field label."
+  },
   "projectVisibilityPrivate": "Private",
-  "@projectVisibilityPrivate": { "description": "Visibility option." },
+  "@projectVisibilityPrivate": {
+    "description": "Visibility option."
+  },
   "projectVisibilityInternal": "Internal (signed-in users)",
-  "@projectVisibilityInternal": { "description": "Visibility option." },
+  "@projectVisibilityInternal": {
+    "description": "Visibility option."
+  },
   "projectVisibilityPublicReadonly": "Public (read-only)",
-  "@projectVisibilityPublicReadonly": { "description": "Visibility option." },
-
+  "@projectVisibilityPublicReadonly": {
+    "description": "Visibility option."
+  },
   "projectOverviewTitle": "Project",
-  "@projectOverviewTitle": { "description": "Fallback title on the overview page." },
+  "@projectOverviewTitle": {
+    "description": "Fallback title on the overview page."
+  },
   "projectLoadFailed": "Couldn't load this project.",
-  "@projectLoadFailed": { "description": "GET /projects/:id failed." },
+  "@projectLoadFailed": {
+    "description": "GET /projects/:id failed."
+  },
   "projectFeaturesTitle": "Enabled features",
-  "@projectFeaturesTitle": { "description": "Section header on the overview page." },
+  "@projectFeaturesTitle": {
+    "description": "Section header on the overview page."
+  },
   "projectFeatureBacklog": "Backlog",
-  "@projectFeatureBacklog": { "description": "Feature toggle label." },
+  "@projectFeatureBacklog": {
+    "description": "Feature toggle label."
+  },
   "projectFeatureKanban": "Kanban",
-  "@projectFeatureKanban": { "description": "Feature toggle label." },
+  "@projectFeatureKanban": {
+    "description": "Feature toggle label."
+  },
   "projectFeatureEpics": "Epics",
-  "@projectFeatureEpics": { "description": "Feature toggle label." },
+  "@projectFeatureEpics": {
+    "description": "Feature toggle label."
+  },
   "projectFeatureWiki": "Wiki",
-  "@projectFeatureWiki": { "description": "Feature toggle label." },
+  "@projectFeatureWiki": {
+    "description": "Feature toggle label."
+  },
   "projectPhase5Notice": "Backlog, board, and wiki views arrive in upcoming phases.",
-  "@projectPhase5Notice": { "description": "Footer note on the overview page during phase 5." },
-
+  "@projectPhase5Notice": {
+    "description": "Footer note on the overview page during phase 5."
+  },
   "projectSettingsTitle": "Settings",
-  "@projectSettingsTitle": { "description": "Project settings page title." },
+  "@projectSettingsTitle": {
+    "description": "Project settings page title."
+  },
   "tabGeneral": "General",
-  "@tabGeneral": { "description": "Tab label on project settings." },
+  "@tabGeneral": {
+    "description": "Tab label on project settings."
+  },
   "tabMembers": "Members",
-  "@tabMembers": { "description": "Tab label on project settings." },
+  "@tabMembers": {
+    "description": "Tab label on project settings."
+  },
   "tabRoles": "Roles",
-  "@tabRoles": { "description": "Tab label on project settings." },
+  "@tabRoles": {
+    "description": "Tab label on project settings."
+  },
   "tabDangerZone": "Danger zone",
-  "@tabDangerZone": { "description": "Tab label on project settings." },
+  "@tabDangerZone": {
+    "description": "Tab label on project settings."
+  },
   "projectSavedSnack": "Project updated.",
-  "@projectSavedSnack": { "description": "Snack after PATCH /projects/:id succeeds." },
+  "@projectSavedSnack": {
+    "description": "Snack after PATCH /projects/:id succeeds."
+  },
   "projectFieldPrefix": "Issue key prefix",
-  "@projectFieldPrefix": { "description": "Field label." },
+  "@projectFieldPrefix": {
+    "description": "Field label."
+  },
   "projectFieldPrefixHelp": "2–3 uppercase letters. Issues show as PREFIX-1, epics as PREFIX-E-1.",
-  "@projectFieldPrefixHelp": { "description": "Helper text for the prefix field." },
+  "@projectFieldPrefixHelp": {
+    "description": "Helper text for the prefix field."
+  },
   "projectFieldPrefixOptional": "Optional — derived from the name if left blank.",
-  "@projectFieldPrefixOptional": { "description": "Helper text in the create dialog." },
+  "@projectFieldPrefixOptional": {
+    "description": "Helper text in the create dialog."
+  },
   "projectFieldColor": "Color",
-  "@projectFieldColor": { "description": "Field label." },
+  "@projectFieldColor": {
+    "description": "Field label."
+  },
   "projectFieldIcon": "Icon",
-  "@projectFieldIcon": { "description": "Field label." },
+  "@projectFieldIcon": {
+    "description": "Field label."
+  },
   "projectPrefixInvalid": "The prefix must be 2–3 letters.",
-  "@projectPrefixInvalid": { "description": "Validation snackbar." },
+  "@projectPrefixInvalid": {
+    "description": "Validation snackbar."
+  },
   "projectPrefixTaken": "That issue prefix is already in use.",
-  "@projectPrefixTaken": { "description": "Conflict snackbar (409)." },
+  "@projectPrefixTaken": {
+    "description": "Conflict snackbar (409)."
+  },
   "projectSaveFailed": "Couldn’t save the project.",
-  "@projectSaveFailed": { "description": "Generic save-failure snackbar." },
-
+  "@projectSaveFailed": {
+    "description": "Generic save-failure snackbar."
+  },
   "membersTitle": "Members",
-  "@membersTitle": { "description": "Section header in members tab." },
+  "@membersTitle": {
+    "description": "Section header in members tab."
+  },
   "membersInviteBody": "Invite a teammate by email; they'll receive a one-time link to join with a chosen role.",
-  "@membersInviteBody": { "description": "Body copy of the invite card." },
+  "@membersInviteBody": {
+    "description": "Body copy of the invite card."
+  },
   "membersLoadFailed": "Couldn't load members.",
-  "@membersLoadFailed": { "description": "GET /members failed." },
+  "@membersLoadFailed": {
+    "description": "GET /members failed."
+  },
   "memberChangeRoleTooltip": "Change role",
-  "@memberChangeRoleTooltip": { "description": "Tooltip on the role edit icon." },
+  "@memberChangeRoleTooltip": {
+    "description": "Tooltip on the role edit icon."
+  },
   "memberRemoveTooltip": "Remove member",
-  "@memberRemoveTooltip": { "description": "Tooltip on the remove icon." },
+  "@memberRemoveTooltip": {
+    "description": "Tooltip on the remove icon."
+  },
   "memberChangeRoleTitle": "Change role",
-  "@memberChangeRoleTitle": { "description": "Modal title for changing a member's role." },
+  "@memberChangeRoleTitle": {
+    "description": "Modal title for changing a member's role."
+  },
   "memberRemoveTitle": "Remove member?",
-  "@memberRemoveTitle": { "description": "Modal title for removing a member." },
+  "@memberRemoveTitle": {
+    "description": "Modal title for removing a member."
+  },
   "memberRemoveConfirm": "They'll lose access to this project immediately. They can be re-invited later.",
-  "@memberRemoveConfirm": { "description": "Modal body for remove confirmation." },
+  "@memberRemoveConfirm": {
+    "description": "Modal body for remove confirmation."
+  },
   "memberRoleLabel": "Role",
-  "@memberRoleLabel": { "description": "Role select label in invite dialog." },
+  "@memberRoleLabel": {
+    "description": "Role select label in invite dialog."
+  },
   "actionRemove": "Remove",
-  "@actionRemove": { "description": "Destructive confirmation action." },
+  "@actionRemove": {
+    "description": "Destructive confirmation action."
+  },
   "actionApply": "Apply",
-  "@actionApply": { "description": "Generic apply action." },
+  "@actionApply": {
+    "description": "Generic apply action."
+  },
   "actionInviteMember": "Invite",
-  "@actionInviteMember": { "description": "CTA on the invite card." },
+  "@actionInviteMember": {
+    "description": "CTA on the invite card."
+  },
   "actionSend": "Send",
-  "@actionSend": { "description": "Submit in the invite dialog." },
+  "@actionSend": {
+    "description": "Submit in the invite dialog."
+  },
   "invitationTokenDialogTitle": "Invitation link",
-  "@invitationTokenDialogTitle": { "description": "Modal shown after a successful invite when no mailer is configured." },
+  "@invitationTokenDialogTitle": {
+    "description": "Modal shown after a successful invite when no mailer is configured."
+  },
   "invitationsPendingTitle": "Pending invitations",
-  "@invitationsPendingTitle": { "description": "Section header." },
-
+  "@invitationsPendingTitle": {
+    "description": "Section header."
+  },
   "rolesLoadFailed": "Couldn't load roles.",
-  "@rolesLoadFailed": { "description": "GET /roles failed." },
+  "@rolesLoadFailed": {
+    "description": "GET /roles failed."
+  },
   "rolePermissionsSuffix": "permissions",
-  "@rolePermissionsSuffix": { "description": "Trailing word in role subtitle (e.g., '12 permissions')." },
+  "@rolePermissionsSuffix": {
+    "description": "Trailing word in role subtitle (e.g., '12 permissions')."
+  },
   "roleAdminBadge": "Administrator (all permissions)",
-  "@roleAdminBadge": { "description": "Subtitle on admin roles." },
+  "@roleAdminBadge": {
+    "description": "Subtitle on admin roles."
+  },
   "actionNewRole": "New role",
-  "@actionNewRole": { "description": "CTA on the roles tab." },
+  "@actionNewRole": {
+    "description": "CTA on the roles tab."
+  },
   "roleFieldName": "Display name",
-  "@roleFieldName": { "description": "Field label." },
+  "@roleFieldName": {
+    "description": "Field label."
+  },
   "roleFieldSlug": "Slug",
-  "@roleFieldSlug": { "description": "Field label." },
+  "@roleFieldSlug": {
+    "description": "Field label."
+  },
   "roleFieldSlugHint": "Lowercase letters, digits and underscores only.",
-  "@roleFieldSlugHint": { "description": "Helper text for role slug." },
+  "@roleFieldSlugHint": {
+    "description": "Helper text for role slug."
+  },
   "roleDeleteTitle": "Delete role?",
-  "@roleDeleteTitle": { "description": "Modal title for role deletion." },
+  "@roleDeleteTitle": {
+    "description": "Modal title for role deletion."
+  },
   "roleDeleteConfirm": "Delete the role '{name}'? The backend rejects this if the role still has members.",
   "@roleDeleteConfirm": {
     "description": "Modal body for role deletion.",
-    "placeholders": { "name": { "type": "String", "example": "Stakeholder" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Stakeholder"
+      }
+    }
   },
   "rolePresetReader": "Reader",
-  "@rolePresetReader": { "description": "Preset bulk-toggle." },
+  "@rolePresetReader": {
+    "description": "Preset bulk-toggle."
+  },
   "rolePresetContributor": "Contributor",
-  "@rolePresetContributor": { "description": "Preset bulk-toggle." },
+  "@rolePresetContributor": {
+    "description": "Preset bulk-toggle."
+  },
   "rolePresetMaintainer": "Maintainer",
-  "@rolePresetMaintainer": { "description": "Preset bulk-toggle." },
+  "@rolePresetMaintainer": {
+    "description": "Preset bulk-toggle."
+  },
   "rolePresetAdmin": "Administrator",
-  "@rolePresetAdmin": { "description": "Preset bulk-toggle." },
-
+  "@rolePresetAdmin": {
+    "description": "Preset bulk-toggle."
+  },
   "permDomainProject": "Project",
-  "@permDomainProject": { "description": "Permission catalog domain header." },
+  "@permDomainProject": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainMembers": "Members",
-  "@permDomainMembers": { "description": "Permission catalog domain header." },
+  "@permDomainMembers": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainRoles": "Roles",
-  "@permDomainRoles": { "description": "Permission catalog domain header." },
+  "@permDomainRoles": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainEpics": "Epics",
-  "@permDomainEpics": { "description": "Permission catalog domain header." },
+  "@permDomainEpics": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainUserStories": "User stories",
-  "@permDomainUserStories": { "description": "Permission catalog domain header." },
+  "@permDomainUserStories": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainTasks": "Tasks",
-  "@permDomainTasks": { "description": "Permission catalog domain header." },
+  "@permDomainTasks": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainIssues": "Issues",
-  "@permDomainIssues": { "description": "Permission catalog domain header." },
+  "@permDomainIssues": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainMilestones": "Milestones",
-  "@permDomainMilestones": { "description": "Permission catalog domain header." },
+  "@permDomainMilestones": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainWiki": "Wiki",
-  "@permDomainWiki": { "description": "Permission catalog domain header." },
+  "@permDomainWiki": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainCommentsAttachments": "Comments & attachments",
-  "@permDomainCommentsAttachments": { "description": "Permission catalog domain header." },
+  "@permDomainCommentsAttachments": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainTaxonomy": "Taxonomy",
-  "@permDomainTaxonomy": { "description": "Permission catalog domain header." },
+  "@permDomainTaxonomy": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainLabels": "Labels",
-  "@permDomainLabels": { "description": "Permission catalog domain header." },
+  "@permDomainLabels": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainComponents": "Components",
-  "@permDomainComponents": { "description": "Permission catalog domain header." },
+  "@permDomainComponents": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainRepositories": "Repositories",
-  "@permDomainRepositories": { "description": "Permission catalog domain header." },
+  "@permDomainRepositories": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainCustomers": "Customers",
-  "@permDomainCustomers": { "description": "Permission catalog domain header." },
+  "@permDomainCustomers": {
+    "description": "Permission catalog domain header."
+  },
   "permDomainReleases": "Releases",
-  "@permDomainReleases": { "description": "Permission catalog domain header." },
-
+  "@permDomainReleases": {
+    "description": "Permission catalog domain header."
+  },
   "projectDeleteSectionTitle": "Delete this project",
-  "@projectDeleteSectionTitle": { "description": "Header inside danger zone." },
+  "@projectDeleteSectionTitle": {
+    "description": "Header inside danger zone."
+  },
   "projectDeleteBody": "This permanently deletes the project and all its data. There is no grace period.",
-  "@projectDeleteBody": { "description": "Body copy inside danger zone." },
+  "@projectDeleteBody": {
+    "description": "Body copy inside danger zone."
+  },
   "projectDeleteTypeName": "Type the project name '{name}' to confirm:",
   "@projectDeleteTypeName": {
     "description": "Confirmation input prompt.",
-    "placeholders": { "name": { "type": "String", "example": "Apollo" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Apollo"
+      }
+    }
   },
   "projectDeleteNameMismatch": "Project name didn't match. Deletion cancelled.",
-  "@projectDeleteNameMismatch": { "description": "Error shown when the typed name doesn't match." },
+  "@projectDeleteNameMismatch": {
+    "description": "Error shown when the typed name doesn't match."
+  },
   "projectDeletedSnack": "Project deleted.",
-  "@projectDeletedSnack": { "description": "Snack after a successful delete." },
+  "@projectDeletedSnack": {
+    "description": "Snack after a successful delete."
+  },
   "actionDeleteProject": "Delete project",
-  "@actionDeleteProject": { "description": "Destructive CTA in the danger zone." },
-
+  "@actionDeleteProject": {
+    "description": "Destructive CTA in the danger zone."
+  },
   "invitationAcceptTitle": "Join project",
-  "@invitationAcceptTitle": { "description": "Page title for /i/:token." },
+  "@invitationAcceptTitle": {
+    "description": "Page title for /i/:token."
+  },
   "invitationAcceptSuccessSnack": "Welcome aboard.",
-  "@invitationAcceptSuccessSnack": { "description": "Snack after a successful accept." },
+  "@invitationAcceptSuccessSnack": {
+    "description": "Snack after a successful accept."
+  },
   "invitationAcceptExpired": "This invitation is no longer valid. Ask whoever sent it to issue a new one.",
-  "@invitationAcceptExpired": { "description": "410 from /invitations/accept." },
+  "@invitationAcceptExpired": {
+    "description": "410 from /invitations/accept."
+  },
   "invitationAcceptNotFound": "We couldn't find that invitation. The link may be malformed.",
-  "@invitationAcceptNotFound": { "description": "404 from /invitations/accept." },
-
+  "@invitationAcceptNotFound": {
+    "description": "404 from /invitations/accept."
+  },
   "tabTaxonomy": "Taxonomy",
-  "@tabTaxonomy": { "description": "Tab label in project settings." },
+  "@tabTaxonomy": {
+    "description": "Tab label in project settings."
+  },
   "tabLabels": "Labels",
-  "@tabLabels": { "description": "Tab label in project settings." },
+  "@tabLabels": {
+    "description": "Tab label in project settings."
+  },
   "tabComponents": "Components",
-  "@tabComponents": { "description": "Tab label in project settings." },
-
+  "@tabComponents": {
+    "description": "Tab label in project settings."
+  },
   "fieldName": "Name",
-  "@fieldName": { "description": "Generic name field label." },
+  "@fieldName": {
+    "description": "Generic name field label."
+  },
   "fieldColor": "Color",
-  "@fieldColor": { "description": "Color picker label." },
+  "@fieldColor": {
+    "description": "Color picker label."
+  },
   "fieldSlug": "Slug",
-  "@fieldSlug": { "description": "Generic slug field label." },
+  "@fieldSlug": {
+    "description": "Generic slug field label."
+  },
   "fieldSlugFrozenHint": "The slug cannot be changed after creation.",
-  "@fieldSlugFrozenHint": { "description": "Helper text on read-only slug field." },
+  "@fieldSlugFrozenHint": {
+    "description": "Helper text on read-only slug field."
+  },
   "actionEdit": "Edit",
-  "@actionEdit": { "description": "Generic edit action." },
-
+  "@actionEdit": {
+    "description": "Generic edit action."
+  },
   "taxKindUsStatus": "User-story status",
-  "@taxKindUsStatus": { "description": "Taxonomy kind label." },
+  "@taxKindUsStatus": {
+    "description": "Taxonomy kind label."
+  },
   "taxKindTaskStatus": "Task status",
-  "@taxKindTaskStatus": { "description": "Taxonomy kind label." },
+  "@taxKindTaskStatus": {
+    "description": "Taxonomy kind label."
+  },
   "taxKindIssueStatus": "Issue status",
-  "@taxKindIssueStatus": { "description": "Taxonomy kind label." },
+  "@taxKindIssueStatus": {
+    "description": "Taxonomy kind label."
+  },
   "taxKindIssueType": "Issue type",
-  "@taxKindIssueType": { "description": "Taxonomy kind label." },
+  "@taxKindIssueType": {
+    "description": "Taxonomy kind label."
+  },
   "taxKindPriority": "Priority",
-  "@taxKindPriority": { "description": "Taxonomy kind label." },
+  "@taxKindPriority": {
+    "description": "Taxonomy kind label."
+  },
   "taxKindSeverity": "Severity",
-  "@taxKindSeverity": { "description": "Taxonomy kind label." },
+  "@taxKindSeverity": {
+    "description": "Taxonomy kind label."
+  },
   "taxKindPoint": "Points",
-  "@taxKindPoint": { "description": "Taxonomy kind label." },
+  "@taxKindPoint": {
+    "description": "Taxonomy kind label."
+  },
   "taxonomyEmpty": "No items yet — add one to populate this catalog.",
-  "@taxonomyEmpty": { "description": "Empty state on the taxonomy list." },
+  "@taxonomyEmpty": {
+    "description": "Empty state on the taxonomy list."
+  },
   "taxonomyLoadFailed": "Couldn't load this catalog.",
-  "@taxonomyLoadFailed": { "description": "GET /taxonomy/:kind failed." },
+  "@taxonomyLoadFailed": {
+    "description": "GET /taxonomy/:kind failed."
+  },
   "taxonomyIsClosed": "Counts as closed",
-  "@taxonomyIsClosed": { "description": "Switch tile for status's is_closed flag." },
+  "@taxonomyIsClosed": {
+    "description": "Switch tile for status's is_closed flag."
+  },
   "taxonomyIsClosedHint": "Items in this status are treated as 'done' on the board and in burndowns.",
-  "@taxonomyIsClosedHint": { "description": "Sub-text on is_closed switch." },
+  "@taxonomyIsClosedHint": {
+    "description": "Sub-text on is_closed switch."
+  },
   "taxonomyClosedBadge": "closed",
-  "@taxonomyClosedBadge": { "description": "Inline badge on closed-status rows." },
+  "@taxonomyClosedBadge": {
+    "description": "Inline badge on closed-status rows."
+  },
   "taxonomyIsNew": "New (default) status",
-  "@taxonomyIsNew": { "description": "Label on the is_new switch." },
+  "@taxonomyIsNew": {
+    "description": "Label on the is_new switch."
+  },
   "taxonomyIsNewHint": "New issues without a status land in this column. Only one status per project can be the new one.",
-  "@taxonomyIsNewHint": { "description": "Sub-text on is_new switch." },
+  "@taxonomyIsNewHint": {
+    "description": "Sub-text on is_new switch."
+  },
   "taxonomyNewBadge": "new",
-  "@taxonomyNewBadge": { "description": "Inline badge on the new-status row." },
+  "@taxonomyNewBadge": {
+    "description": "Inline badge on the new-status row."
+  },
   "taxonomyValueLabel": "Value",
-  "@taxonomyValueLabel": { "description": "Numeric value label for point kinds." },
+  "@taxonomyValueLabel": {
+    "description": "Numeric value label for point kinds."
+  },
   "taxonomyValueHint": "Story-point value (numeric). Leave empty for non-numeric labels like '?'.",
-  "@taxonomyValueHint": { "description": "Helper text on points value field." },
+  "@taxonomyValueHint": {
+    "description": "Helper text on points value field."
+  },
   "actionNewTaxonomyItem": "Add item",
-  "@actionNewTaxonomyItem": { "description": "CTA on the taxonomy tab." },
+  "@actionNewTaxonomyItem": {
+    "description": "CTA on the taxonomy tab."
+  },
   "actionEditTaxonomyItem": "Edit item",
-  "@actionEditTaxonomyItem": { "description": "Dialog title when editing." },
+  "@actionEditTaxonomyItem": {
+    "description": "Dialog title when editing."
+  },
   "taxonomyDeleteTitle": "Delete item?",
-  "@taxonomyDeleteTitle": { "description": "Modal title." },
+  "@taxonomyDeleteTitle": {
+    "description": "Modal title."
+  },
   "taxonomyDeleteConfirm": "Delete '{name}'? Items still referencing this value will keep their current selection until you reassign them.",
   "@taxonomyDeleteConfirm": {
     "description": "Modal body.",
-    "placeholders": { "name": { "type": "String", "example": "In progress" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "In progress"
+      }
+    }
   },
-
   "labelsEmpty": "No labels yet. Create one to start organising issues.",
-  "@labelsEmpty": { "description": "Empty state on the labels tab." },
+  "@labelsEmpty": {
+    "description": "Empty state on the labels tab."
+  },
   "labelsLoadFailed": "Couldn't load labels.",
-  "@labelsLoadFailed": { "description": "GET /labels failed." },
+  "@labelsLoadFailed": {
+    "description": "GET /labels failed."
+  },
   "actionNewLabel": "New label",
-  "@actionNewLabel": { "description": "CTA on labels tab." },
+  "@actionNewLabel": {
+    "description": "CTA on labels tab."
+  },
   "actionEditLabel": "Edit label",
-  "@actionEditLabel": { "description": "Dialog title when editing." },
+  "@actionEditLabel": {
+    "description": "Dialog title when editing."
+  },
   "labelDeleteTitle": "Delete label?",
-  "@labelDeleteTitle": { "description": "Modal title." },
+  "@labelDeleteTitle": {
+    "description": "Modal title."
+  },
   "labelDeleteConfirm": "Delete the label '{name}'? It will be unlinked from any issue currently using it.",
   "@labelDeleteConfirm": {
     "description": "Modal body.",
-    "placeholders": { "name": { "type": "String", "example": "bug" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "bug"
+      }
+    }
   },
-
   "componentsEmpty": "No components yet. Create one to attach to issues.",
-  "@componentsEmpty": { "description": "Empty state on the components tab." },
+  "@componentsEmpty": {
+    "description": "Empty state on the components tab."
+  },
   "componentsLoadFailed": "Couldn't load components.",
-  "@componentsLoadFailed": { "description": "GET /components failed." },
+  "@componentsLoadFailed": {
+    "description": "GET /components failed."
+  },
   "componentRepoLabel": "Git repository (optional)",
-  "@componentRepoLabel": { "description": "Optional git URL field." },
+  "@componentRepoLabel": {
+    "description": "Optional git URL field."
+  },
   "componentRepoHint": "Used by future deep-links to commits / PRs.",
-  "@componentRepoHint": { "description": "Helper text for git URL." },
+  "@componentRepoHint": {
+    "description": "Helper text for git URL."
+  },
   "actionNewComponent": "New component",
-  "@actionNewComponent": { "description": "CTA on components tab." },
+  "@actionNewComponent": {
+    "description": "CTA on components tab."
+  },
   "actionEditComponent": "Edit component",
-  "@actionEditComponent": { "description": "Dialog title when editing." },
+  "@actionEditComponent": {
+    "description": "Dialog title when editing."
+  },
   "componentDeleteTitle": "Delete component?",
-  "@componentDeleteTitle": { "description": "Modal title." },
+  "@componentDeleteTitle": {
+    "description": "Modal title."
+  },
   "componentDeleteConfirm": "Delete the component '{name}'? It will be unlinked from any issue currently using it.",
   "@componentDeleteConfirm": {
     "description": "Modal body.",
-    "placeholders": { "name": { "type": "String", "example": "api" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "api"
+      }
+    }
   },
-
   "backlogTitle": "Backlog",
-  "@backlogTitle": { "description": "Backlog page title." },
+  "@backlogTitle": {
+    "description": "Backlog page title."
+  },
   "backlogLoadFailed": "Couldn't load the backlog.",
-  "@backlogLoadFailed": { "description": "GET /epics + /userstories failed." },
+  "@backlogLoadFailed": {
+    "description": "GET /epics + /userstories failed."
+  },
   "backlogSearchHint": "Search by subject, description or US-123",
-  "@backlogSearchHint": { "description": "Backlog search field placeholder." },
+  "@backlogSearchHint": {
+    "description": "Backlog search field placeholder."
+  },
   "backlogStaleNotice": "Someone else changed this data. The latest version was reloaded.",
-  "@backlogStaleNotice": { "description": "412/409 banner shown on the backlog after a concurrent edit." },
+  "@backlogStaleNotice": {
+    "description": "412/409 banner shown on the backlog after a concurrent edit."
+  },
   "backlogStoryCountSuffix": "stories",
-  "@backlogStoryCountSuffix": { "description": "Trailing word in epic subtitle." },
+  "@backlogStoryCountSuffix": {
+    "description": "Trailing word in epic subtitle."
+  },
   "backlogNoEpicGroup": "No epic",
-  "@backlogNoEpicGroup": { "description": "Bucket header for user stories without an epic." },
+  "@backlogNoEpicGroup": {
+    "description": "Bucket header for user stories without an epic."
+  },
   "backlogNoEpic": "No epic",
-  "@backlogNoEpic": { "description": "Dropdown option for clearing the epic link." },
+  "@backlogNoEpic": {
+    "description": "Dropdown option for clearing the epic link."
+  },
   "backlogNoStatus": "No status",
-  "@backlogNoStatus": { "description": "Dropdown option for clearing the status." },
+  "@backlogNoStatus": {
+    "description": "Dropdown option for clearing the status."
+  },
   "backlogNoPoints": "No estimate",
-  "@backlogNoPoints": { "description": "Dropdown option for clearing the points." },
+  "@backlogNoPoints": {
+    "description": "Dropdown option for clearing the points."
+  },
   "backlogChangeStatus": "Change status",
-  "@backlogChangeStatus": { "description": "Tooltip on the per-story status popup." },
+  "@backlogChangeStatus": {
+    "description": "Tooltip on the per-story status popup."
+  },
   "backlogClearStatus": "Clear status",
-  "@backlogClearStatus": { "description": "First item in the status popup." },
+  "@backlogClearStatus": {
+    "description": "First item in the status popup."
+  },
   "filterAllStatuses": "All statuses",
-  "@filterAllStatuses": { "description": "Filter chip that resets the status filter." },
-
+  "@filterAllStatuses": {
+    "description": "Filter chip that resets the status filter."
+  },
   "backlogFieldSubject": "Subject",
-  "@backlogFieldSubject": { "description": "Field label." },
+  "@backlogFieldSubject": {
+    "description": "Field label."
+  },
   "backlogFieldDescription": "Description",
-  "@backlogFieldDescription": { "description": "Field label." },
+  "@backlogFieldDescription": {
+    "description": "Field label."
+  },
   "backlogFieldEpic": "Epic",
-  "@backlogFieldEpic": { "description": "Field label." },
+  "@backlogFieldEpic": {
+    "description": "Field label."
+  },
   "backlogFieldStatus": "Status",
-  "@backlogFieldStatus": { "description": "Field label." },
+  "@backlogFieldStatus": {
+    "description": "Field label."
+  },
   "backlogFieldPoints": "Points",
-  "@backlogFieldPoints": { "description": "Field label." },
-
+  "@backlogFieldPoints": {
+    "description": "Field label."
+  },
   "actionNewEpic": "New epic",
-  "@actionNewEpic": { "description": "CTA." },
+  "@actionNewEpic": {
+    "description": "CTA."
+  },
   "actionEditEpic": "Edit epic",
-  "@actionEditEpic": { "description": "Dialog title." },
+  "@actionEditEpic": {
+    "description": "Dialog title."
+  },
   "actionNewUserStory": "New user story",
-  "@actionNewUserStory": { "description": "CTA." },
+  "@actionNewUserStory": {
+    "description": "CTA."
+  },
   "actionEditUserStory": "Edit user story",
-  "@actionEditUserStory": { "description": "Dialog title." },
+  "@actionEditUserStory": {
+    "description": "Dialog title."
+  },
   "actionBulkAdd": "Bulk add",
-  "@actionBulkAdd": { "description": "Opens the paste-many-titles dialog." },
+  "@actionBulkAdd": {
+    "description": "Opens the paste-many-titles dialog."
+  },
   "actionOpenBacklog": "Open backlog",
-  "@actionOpenBacklog": { "description": "CTA on the project overview page." },
-
+  "@actionOpenBacklog": {
+    "description": "CTA on the project overview page."
+  },
   "backlogBulkTitle": "Add user stories",
-  "@backlogBulkTitle": { "description": "Bulk paste dialog title." },
+  "@backlogBulkTitle": {
+    "description": "Bulk paste dialog title."
+  },
   "backlogBulkBody": "One subject per line. Empty lines are ignored.",
-  "@backlogBulkBody": { "description": "Bulk paste dialog body." },
+  "@backlogBulkBody": {
+    "description": "Bulk paste dialog body."
+  },
   "backlogBulkCreate": "Create",
-  "@backlogBulkCreate": { "description": "Bulk paste dialog confirm button." },
+  "@backlogBulkCreate": {
+    "description": "Bulk paste dialog confirm button."
+  },
   "backlogDeleteEpicTitle": "Delete epic?",
-  "@backlogDeleteEpicTitle": { "description": "Modal title." },
+  "@backlogDeleteEpicTitle": {
+    "description": "Modal title."
+  },
   "backlogDeleteEpicConfirm": "Delete the epic '{name}'? User stories under it will be moved to the 'No epic' group.",
   "@backlogDeleteEpicConfirm": {
     "description": "Modal body.",
-    "placeholders": { "name": { "type": "String", "example": "Authentication" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Authentication"
+      }
+    }
   },
   "backlogDeleteUsTitle": "Delete user story?",
-  "@backlogDeleteUsTitle": { "description": "Modal title." },
+  "@backlogDeleteUsTitle": {
+    "description": "Modal title."
+  },
   "backlogDeleteUsConfirm": "Delete the user story '{name}'? This is permanent.",
   "@backlogDeleteUsConfirm": {
     "description": "Modal body.",
-    "placeholders": { "name": { "type": "String", "example": "Sign in with email" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Sign in with email"
+      }
+    }
   },
-
   "tasksOpenTooltip": "Show tasks",
-  "@tasksOpenTooltip": { "description": "Tooltip on the checklist icon next to each user story." },
+  "@tasksOpenTooltip": {
+    "description": "Tooltip on the checklist icon next to each user story."
+  },
   "tasksDialogTitle": "Tasks · {name}",
   "@tasksDialogTitle": {
     "description": "Title of the tasks dialog.",
-    "placeholders": { "name": { "type": "String", "example": "Sign in with email" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Sign in with email"
+      }
+    }
   },
   "tasksEmpty": "No tasks yet. Add one above.",
-  "@tasksEmpty": { "description": "Empty state inside the tasks dialog." },
+  "@tasksEmpty": {
+    "description": "Empty state inside the tasks dialog."
+  },
   "tasksLoadFailed": "Couldn't load tasks.",
-  "@tasksLoadFailed": { "description": "Tasks dialog load error." },
+  "@tasksLoadFailed": {
+    "description": "Tasks dialog load error."
+  },
   "tasksAddHint": "Add a task",
-  "@tasksAddHint": { "description": "Placeholder in the quick-add field." },
+  "@tasksAddHint": {
+    "description": "Placeholder in the quick-add field."
+  },
   "actionAdd": "Add",
-  "@actionAdd": { "description": "Generic add button label." },
-
+  "@actionAdd": {
+    "description": "Generic add button label."
+  },
   "issuesTitle": "Issues",
-  "@issuesTitle": { "description": "Issues page title." },
+  "@issuesTitle": {
+    "description": "Issues page title."
+  },
   "issuesLoadFailed": "Couldn't load issues.",
-  "@issuesLoadFailed": { "description": "Issues GET failed." },
+  "@issuesLoadFailed": {
+    "description": "Issues GET failed."
+  },
   "issuesEmpty": "No issues match your filters yet.",
-  "@issuesEmpty": { "description": "Empty state on the issues page." },
+  "@issuesEmpty": {
+    "description": "Empty state on the issues page."
+  },
   "issuesSearchHint": "Search by subject, description or ISSUE-123",
-  "@issuesSearchHint": { "description": "Issues page search placeholder." },
+  "@issuesSearchHint": {
+    "description": "Issues page search placeholder."
+  },
   "issuesFilterStatus": "Status",
-  "@issuesFilterStatus": { "description": "Filter chip label." },
+  "@issuesFilterStatus": {
+    "description": "Filter chip label."
+  },
   "issuesFilterType": "Type",
-  "@issuesFilterType": { "description": "Filter chip label." },
+  "@issuesFilterType": {
+    "description": "Filter chip label."
+  },
   "issuesFilterPriority": "Priority",
-  "@issuesFilterPriority": { "description": "Filter chip label." },
+  "@issuesFilterPriority": {
+    "description": "Filter chip label."
+  },
   "issuesFilterSeverity": "Severity",
-  "@issuesFilterSeverity": { "description": "Filter chip label." },
+  "@issuesFilterSeverity": {
+    "description": "Filter chip label."
+  },
   "issuesFilterClear": "All",
-  "@issuesFilterClear": { "description": "First option in filter dropdowns — clears the filter." },
+  "@issuesFilterClear": {
+    "description": "First option in filter dropdowns — clears the filter."
+  },
   "actionNewIssue": "New issue",
-  "@actionNewIssue": { "description": "CTA." },
+  "@actionNewIssue": {
+    "description": "CTA."
+  },
   "actionEditIssue": "Edit issue",
-  "@actionEditIssue": { "description": "Dialog title." },
+  "@actionEditIssue": {
+    "description": "Dialog title."
+  },
   "actionOpenIssues": "Open issues",
-  "@actionOpenIssues": { "description": "Project overview CTA." },
+  "@actionOpenIssues": {
+    "description": "Project overview CTA."
+  },
   "issueFieldStatus": "Status",
-  "@issueFieldStatus": { "description": "Field label." },
+  "@issueFieldStatus": {
+    "description": "Field label."
+  },
   "issueFieldType": "Type",
-  "@issueFieldType": { "description": "Field label." },
+  "@issueFieldType": {
+    "description": "Field label."
+  },
   "issueFieldPriority": "Priority",
-  "@issueFieldPriority": { "description": "Field label." },
+  "@issueFieldPriority": {
+    "description": "Field label."
+  },
   "issueFieldSeverity": "Severity",
-  "@issueFieldSeverity": { "description": "Field label." },
+  "@issueFieldSeverity": {
+    "description": "Field label."
+  },
   "issueFieldLabels": "Labels",
-  "@issueFieldLabels": { "description": "Field label." },
+  "@issueFieldLabels": {
+    "description": "Field label."
+  },
   "issueFieldComponents": "Components",
-  "@issueFieldComponents": { "description": "Field label." },
+  "@issueFieldComponents": {
+    "description": "Field label."
+  },
   "issueDeleteTitle": "Delete issue?",
-  "@issueDeleteTitle": { "description": "Modal title." },
+  "@issueDeleteTitle": {
+    "description": "Modal title."
+  },
   "issueDeleteConfirm": "Delete the issue '{name}'? This is permanent.",
   "@issueDeleteConfirm": {
     "description": "Modal body.",
-    "placeholders": { "name": { "type": "String", "example": "Login broken" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Login broken"
+      }
+    }
   },
-
   "entityDetailTitle": "Details",
-  "@entityDetailTitle": { "description": "Generic app-bar title for the entity detail page." },
+  "@entityDetailTitle": {
+    "description": "Generic app-bar title for the entity detail page."
+  },
   "entityDetailLoadFailed": "Couldn't load this item.",
-  "@entityDetailLoadFailed": { "description": "Failure banner on the entity detail page." },
+  "@entityDetailLoadFailed": {
+    "description": "Failure banner on the entity detail page."
+  },
   "entityTabActivity": "Activity",
-  "@entityTabActivity": { "description": "Tab label for the activity stream." },
+  "@entityTabActivity": {
+    "description": "Tab label for the activity stream."
+  },
   "entityTabAttachments": "Attachments",
-  "@entityTabAttachments": { "description": "Tab label for the attachments list." },
+  "@entityTabAttachments": {
+    "description": "Tab label for the attachments list."
+  },
   "activityFilterAll": "All",
-  "@activityFilterAll": { "description": "Filter toggle option — both comments and history." },
+  "@activityFilterAll": {
+    "description": "Filter toggle option — both comments and history."
+  },
   "activityFilterComments": "Comments",
-  "@activityFilterComments": { "description": "Filter toggle option — comments only." },
+  "@activityFilterComments": {
+    "description": "Filter toggle option — comments only."
+  },
   "activityFilterHistory": "History",
-  "@activityFilterHistory": { "description": "Filter toggle option — history events only." },
+  "@activityFilterHistory": {
+    "description": "Filter toggle option — history events only."
+  },
   "activityEmpty": "No activity yet.",
-  "@activityEmpty": { "description": "Placeholder when there are no comments or history rows." },
+  "@activityEmpty": {
+    "description": "Placeholder when there are no comments or history rows."
+  },
   "activityLoadFailed": "Couldn't load activity.",
-  "@activityLoadFailed": { "description": "Error state on the activity stream." },
+  "@activityLoadFailed": {
+    "description": "Error state on the activity stream."
+  },
   "commentComposerHint": "Write a comment…",
-  "@commentComposerHint": { "description": "Input placeholder for the comment composer." },
+  "@commentComposerHint": {
+    "description": "Input placeholder for the comment composer."
+  },
   "commentPostAction": "Post",
-  "@commentPostAction": { "description": "Submit button on the comment composer." },
+  "@commentPostAction": {
+    "description": "Submit button on the comment composer."
+  },
   "commentDraftRestored": "Draft restored.",
-  "@commentDraftRestored": { "description": "Snackbar after restoring an autosaved draft." },
+  "@commentDraftRestored": {
+    "description": "Snackbar after restoring an autosaved draft."
+  },
   "commentEditedSuffix": "(edited)",
-  "@commentEditedSuffix": { "description": "Appended after the timestamp when a comment has been edited." },
+  "@commentEditedSuffix": {
+    "description": "Appended after the timestamp when a comment has been edited."
+  },
   "commentEditTitle": "Edit comment",
-  "@commentEditTitle": { "description": "Dialog title." },
+  "@commentEditTitle": {
+    "description": "Dialog title."
+  },
   "commentDeleteTitle": "Delete comment?",
-  "@commentDeleteTitle": { "description": "Confirm dialog title." },
+  "@commentDeleteTitle": {
+    "description": "Confirm dialog title."
+  },
   "commentDeleteConfirm": "Delete this comment permanently?",
-  "@commentDeleteConfirm": { "description": "Confirm dialog body." },
+  "@commentDeleteConfirm": {
+    "description": "Confirm dialog body."
+  },
   "historyEntryHeader": "{count, plural, one{1 field changed} other{{count} fields changed}}",
   "@historyEntryHeader": {
     "description": "Header for a history entry showing how many fields changed.",
-    "placeholders": { "count": { "type": "int", "example": "2" } }
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
   },
   "attachmentsEmpty": "No attachments yet.",
-  "@attachmentsEmpty": { "description": "Placeholder when the attachments list is empty." },
+  "@attachmentsEmpty": {
+    "description": "Placeholder when the attachments list is empty."
+  },
   "attachmentsUpload": "Upload file",
-  "@attachmentsUpload": { "description": "Primary CTA for uploading a new attachment." },
+  "@attachmentsUpload": {
+    "description": "Primary CTA for uploading a new attachment."
+  },
   "attachmentsUploadUnsupported": "File upload is only available on the web build.",
-  "@attachmentsUploadUnsupported": { "description": "Snackbar when the platform has no file picker." },
+  "@attachmentsUploadUnsupported": {
+    "description": "Snackbar when the platform has no file picker."
+  },
   "attachmentsUploadFailed": "Upload failed.",
-  "@attachmentsUploadFailed": { "description": "Snackbar when an upload fails." },
+  "@attachmentsUploadFailed": {
+    "description": "Snackbar when an upload fails."
+  },
   "attachmentsTooLarge": "That file is over the {limit} MiB limit.",
   "@attachmentsTooLarge": {
     "description": "Client-side rejection for oversized uploads.",
-    "placeholders": { "limit": { "type": "int", "example": "25" } }
+    "placeholders": {
+      "limit": {
+        "type": "int",
+        "example": "25"
+      }
+    }
   },
   "attachmentsDownload": "Download",
-  "@attachmentsDownload": { "description": "Per-row action." },
+  "@attachmentsDownload": {
+    "description": "Per-row action."
+  },
   "attachmentsDeleteTitle": "Delete attachment?",
-  "@attachmentsDeleteTitle": { "description": "Confirm dialog title." },
+  "@attachmentsDeleteTitle": {
+    "description": "Confirm dialog title."
+  },
   "attachmentsDeleteConfirm": "Delete '{filename}' permanently?",
   "@attachmentsDeleteConfirm": {
     "description": "Confirm dialog body.",
-    "placeholders": { "filename": { "type": "String", "example": "logo.png" } }
+    "placeholders": {
+      "filename": {
+        "type": "String",
+        "example": "logo.png"
+      }
+    }
   },
   "attachmentsCancelUpload": "Cancel upload",
-  "@attachmentsCancelUpload": { "description": "Tooltip on the in-flight upload row." },
+  "@attachmentsCancelUpload": {
+    "description": "Tooltip on the in-flight upload row."
+  },
   "actionOpenDetail": "Open details",
-  "@actionOpenDetail": { "description": "Tooltip on the row affordance that opens the entity detail page." },
-
+  "@actionOpenDetail": {
+    "description": "Tooltip on the row affordance that opens the entity detail page."
+  },
   "boardTitle": "Board",
-  "@boardTitle": { "description": "App-bar title on the Kanban board page." },
+  "@boardTitle": {
+    "description": "App-bar title on the Kanban board page."
+  },
   "boardLoadFailed": "Couldn't load the board.",
-  "@boardLoadFailed": { "description": "Error state on the board page." },
+  "@boardLoadFailed": {
+    "description": "Error state on the board page."
+  },
   "boardNeedsMilestone": "Create a milestone first — the board scopes to one milestone at a time.",
-  "@boardNeedsMilestone": { "description": "Empty state when the project has no milestones yet." },
+  "@boardNeedsMilestone": {
+    "description": "Empty state when the project has no milestones yet."
+  },
   "boardColumnNoStatus": "No status",
-  "@boardColumnNoStatus": { "description": "Trailing column header for cards with no status." },
+  "@boardColumnNoStatus": {
+    "description": "Trailing column header for cards with no status."
+  },
   "boardSprintAll": "All milestones",
-  "@boardSprintAll": { "description": "Default option in the board's optional milestone filter — no milestone scoping." },
+  "@boardSprintAll": {
+    "description": "Default option in the board's optional milestone filter — no milestone scoping."
+  },
   "boardEmptyColumn": "Empty",
-  "@boardEmptyColumn": { "description": "Placeholder inside a column with no cards." },
+  "@boardEmptyColumn": {
+    "description": "Placeholder inside a column with no cards."
+  },
   "actionConfigure": "Configure",
-  "@actionConfigure": { "description": "Generic button label that opens a configuration dialog." },
+  "@actionConfigure": {
+    "description": "Generic button label that opens a configuration dialog."
+  },
   "railBoards": "Boards",
-  "@railBoards": { "description": "Left-rail parent entry listing the project's boards." },
+  "@railBoards": {
+    "description": "Left-rail parent entry listing the project's boards."
+  },
   "boardNewAction": "New board",
-  "@boardNewAction": { "description": "Action to create a new board." },
+  "@boardNewAction": {
+    "description": "Action to create a new board."
+  },
   "boardCreateTitle": "Create board",
-  "@boardCreateTitle": { "description": "Title of the board create dialog." },
+  "@boardCreateTitle": {
+    "description": "Title of the board create dialog."
+  },
   "boardEditTitle": "Edit board",
-  "@boardEditTitle": { "description": "Title of the board edit dialog / menu item." },
+  "@boardEditTitle": {
+    "description": "Title of the board edit dialog / menu item."
+  },
   "boardActionsTooltip": "Board actions",
-  "@boardActionsTooltip": { "description": "Tooltip for the board overflow menu (edit/delete)." },
+  "@boardActionsTooltip": {
+    "description": "Tooltip for the board overflow menu (edit/delete)."
+  },
   "boardDeleteTitle": "Delete board",
-  "@boardDeleteTitle": { "description": "Title of the delete-board confirmation dialog." },
+  "@boardDeleteTitle": {
+    "description": "Title of the delete-board confirmation dialog."
+  },
   "boardDeleteConfirm": "Delete the board \"{name}\"? This can't be undone.",
-  "@boardDeleteConfirm": { "description": "Delete-board confirmation body.", "placeholders": { "name": { "type": "String" } } },
+  "@boardDeleteConfirm": {
+    "description": "Delete-board confirmation body.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "boardSettingsTooltip": "Board settings",
-  "@boardSettingsTooltip": { "description": "Tooltip for the board settings icon button." },
+  "@boardSettingsTooltip": {
+    "description": "Tooltip for the board settings icon button."
+  },
   "boardDangerZone": "Danger zone",
-  "@boardDangerZone": { "description": "Section header for destructive board actions in the settings dialog." },
+  "@boardDangerZone": {
+    "description": "Section header for destructive board actions in the settings dialog."
+  },
   "boardDangerZoneHint": "Permanently delete this board. This can't be undone.",
-  "@boardDangerZoneHint": { "description": "Helper text under the danger-zone section." },
+  "@boardDangerZoneHint": {
+    "description": "Helper text under the danger-zone section."
+  },
   "boardVisibilityShared": "Shared",
-  "@boardVisibilityShared": { "description": "Chip label — a shared board." },
+  "@boardVisibilityShared": {
+    "description": "Chip label — a shared board."
+  },
   "boardVisibilityPersonal": "Personal",
-  "@boardVisibilityPersonal": { "description": "Chip label — a personal board." },
+  "@boardVisibilityPersonal": {
+    "description": "Chip label — a personal board."
+  },
   "boardFieldName": "Name",
   "boardFieldKey": "Key (URL)",
-  "boardFieldKeyHint": "Short link segment, e.g. \/projects\/ip\/boards\/sb — lowercase letters, digits, dashes",
+  "boardFieldKeyHint": "Short link segment, e.g. /projects/ip/boards/sb — lowercase letters, digits, dashes",
   "boardFieldKeyInvalid": "1–12 chars: lowercase letters, digits, inner dashes",
   "boardFieldKeyTaken": "This key is already used by another board",
-  "@boardFieldName": { "description": "Board settings — name field label." },
+  "@boardFieldName": {
+    "description": "Board settings — name field label."
+  },
   "boardFieldColor": "Color",
-  "@boardFieldColor": { "description": "Board settings — color field label." },
+  "@boardFieldColor": {
+    "description": "Board settings — color field label."
+  },
   "boardFieldShared": "Shared board",
-  "@boardFieldShared": { "description": "Board settings — shared visibility checkbox." },
+  "@boardFieldShared": {
+    "description": "Board settings — shared visibility checkbox."
+  },
   "boardFieldSharedHint": "Visible to everyone in the project. This can't be changed later.",
-  "@boardFieldSharedHint": { "description": "Board settings — shared checkbox helper text." },
+  "@boardFieldSharedHint": {
+    "description": "Board settings — shared checkbox helper text."
+  },
   "boardColumnsLabel": "Columns",
-  "@boardColumnsLabel": { "description": "Board settings — columns section label." },
+  "@boardColumnsLabel": {
+    "description": "Board settings — columns section label."
+  },
   "boardColumnsVisible": "{count, plural, =1{1 column visible} other{{count} columns visible}}",
-  "@boardColumnsVisible": { "description": "Board settings — count of visible columns.", "placeholders": { "count": { "type": "int" } } },
+  "@boardColumnsVisible": {
+    "description": "Board settings — count of visible columns.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "boardFieldSwimlane": "Swimlanes",
-  "@boardFieldSwimlane": { "description": "Board settings — swimlane grouping section label." },
+  "@boardFieldSwimlane": {
+    "description": "Board settings — swimlane grouping section label."
+  },
   "boardGroupNone": "None",
-  "@boardGroupNone": { "description": "Swimlane grouping choice — no grouping." },
+  "@boardGroupNone": {
+    "description": "Swimlane grouping choice — no grouping."
+  },
   "boardFieldLockedFilters": "Locked filters",
-  "@boardFieldLockedFilters": { "description": "Board settings — locked filters section label." },
+  "@boardFieldLockedFilters": {
+    "description": "Board settings — locked filters section label."
+  },
   "boardFieldLockedFiltersHint": "Always applied to this board and can't be changed by viewers.",
-  "@boardFieldLockedFiltersHint": { "description": "Board settings — locked filters helper text." },
+  "@boardFieldLockedFiltersHint": {
+    "description": "Board settings — locked filters helper text."
+  },
   "boardFieldCardFields": "Card fields",
-  "@boardFieldCardFields": { "description": "Board settings — card fields section label." },
+  "@boardFieldCardFields": {
+    "description": "Board settings — card fields section label."
+  },
   "boardCardFieldDue": "Due date",
-  "@boardCardFieldDue": { "description": "Card field option — due date." },
+  "@boardCardFieldDue": {
+    "description": "Card field option — due date."
+  },
   "boardFieldClosedWithin": "Closed within (days)",
-  "@boardFieldClosedWithin": { "description": "Board settings — closed-within-days field label." },
+  "@boardFieldClosedWithin": {
+    "description": "Board settings — closed-within-days field label."
+  },
   "boardFieldClosedWithinHint": "Hide closed cards older than this many days.",
-  "@boardFieldClosedWithinHint": { "description": "Board settings — closed-within-days helper text." },
+  "@boardFieldClosedWithinHint": {
+    "description": "Board settings — closed-within-days helper text."
+  },
   "boardLaneNoComponent": "No component",
-  "@boardLaneNoComponent": { "description": "Swimlane label for cards with no component." },
+  "@boardLaneNoComponent": {
+    "description": "Swimlane label for cards with no component."
+  },
   "boardLaneNoPriority": "No priority",
-  "@boardLaneNoPriority": { "description": "Swimlane label for cards with no priority." },
+  "@boardLaneNoPriority": {
+    "description": "Swimlane label for cards with no priority."
+  },
   "boardLoadMore": "Load more ({count})",
-  "@boardLoadMore": { "description": "Column action to fetch more cards.", "placeholders": { "count": { "type": "int" } } },
+  "@boardLoadMore": {
+    "description": "Column action to fetch more cards.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "boardReloadTooltip": "Reload board",
-  "@boardReloadTooltip": { "description": "App-bar action: full board reload bypassing the local cache." },
+  "@boardReloadTooltip": {
+    "description": "App-bar action: full board reload bypassing the local cache."
+  },
   "boardToastCreated": "Created {issue}",
-  "@boardToastCreated": { "description": "Toast after creating an issue; {issue} is 'KEY-1 · subject'.", "placeholders": { "issue": { "type": "String" } } },
+  "@boardToastCreated": {
+    "description": "Toast after creating an issue; {issue} is 'KEY-1 · subject'.",
+    "placeholders": {
+      "issue": {
+        "type": "String"
+      }
+    }
+  },
   "boardToastUpdated": "Updated {issue}",
-  "@boardToastUpdated": { "description": "Toast after updating/moving an issue; {issue} is 'KEY-1 · subject'.", "placeholders": { "issue": { "type": "String" } } },
+  "@boardToastUpdated": {
+    "description": "Toast after updating/moving an issue; {issue} is 'KEY-1 · subject'.",
+    "placeholders": {
+      "issue": {
+        "type": "String"
+      }
+    }
+  },
   "boardsEmptyTitle": "No boards yet",
-  "@boardsEmptyTitle": { "description": "Empty state title when a project has no boards." },
+  "@boardsEmptyTitle": {
+    "description": "Empty state title when a project has no boards."
+  },
   "boardsEmptyBody": "Create your first board to start organizing work.",
-  "@boardsEmptyBody": { "description": "Empty state body when a project has no boards." },
+  "@boardsEmptyBody": {
+    "description": "Empty state body when a project has no boards."
+  },
   "boardFiltersTooltip": "Filters",
-  "@boardFiltersTooltip": { "description": "AppBar action tooltip — opens the filter drawer." },
+  "@boardFiltersTooltip": {
+    "description": "AppBar action tooltip — opens the filter drawer."
+  },
   "boardSavedViewsTooltip": "Saved views",
-  "@boardSavedViewsTooltip": { "description": "AppBar action tooltip — opens the saved-views menu." },
+  "@boardSavedViewsTooltip": {
+    "description": "AppBar action tooltip — opens the saved-views menu."
+  },
   "boardFiltersTitle": "Filters",
-  "@boardFiltersTitle": { "description": "Drawer header." },
+  "@boardFiltersTitle": {
+    "description": "Drawer header."
+  },
   "boardFilterAssignee": "Assignee",
-  "@boardFilterAssignee": { "description": "Filter field label." },
+  "@boardFilterAssignee": {
+    "description": "Filter field label."
+  },
   "boardFilterEpic": "Epic",
-  "@boardFilterEpic": { "description": "Board filter dropdown hint." },
+  "@boardFilterEpic": {
+    "description": "Board filter dropdown hint."
+  },
   "boardFilterLabel": "Label",
-  "@boardFilterLabel": { "description": "Board filter dropdown hint." },
+  "@boardFilterLabel": {
+    "description": "Board filter dropdown hint."
+  },
   "boardFilterComponent": "Component",
-  "@boardFilterComponent": { "description": "Board filter dropdown hint." },
+  "@boardFilterComponent": {
+    "description": "Board filter dropdown hint."
+  },
   "boardFilterCategory": "Category",
-  "@boardFilterCategory": { "description": "Board filter dropdown hint." },
+  "@boardFilterCategory": {
+    "description": "Board filter dropdown hint."
+  },
   "boardFilterAll": "All",
-  "@boardFilterAll": { "description": "Board filter dropdown — clears the filter." },
+  "@boardFilterAll": {
+    "description": "Board filter dropdown — clears the filter."
+  },
   "railEpics": "Epics",
-  "@railEpics": { "description": "Project nav rail label for the epics page." },
+  "@railEpics": {
+    "description": "Project nav rail label for the epics page."
+  },
   "epicsLoadFailed": "Couldn't load epics.",
-  "@epicsLoadFailed": { "description": "Epics page load error." },
+  "@epicsLoadFailed": {
+    "description": "Epics page load error."
+  },
   "epicsEmpty": "No epics yet.",
-  "@epicsEmpty": { "description": "Epics page empty state." },
+  "@epicsEmpty": {
+    "description": "Epics page empty state."
+  },
   "backlogFilterStatus": "Status",
-  "@backlogFilterStatus": { "description": "Backlog status filter hint." },
+  "@backlogFilterStatus": {
+    "description": "Backlog status filter hint."
+  },
   "backlogFilterEpic": "Epic",
-  "@backlogFilterEpic": { "description": "Backlog epic filter hint." },
+  "@backlogFilterEpic": {
+    "description": "Backlog epic filter hint."
+  },
   "backlogEmpty": "No stories match these filters.",
-  "@backlogEmpty": { "description": "Backlog empty state." },
+  "@backlogEmpty": {
+    "description": "Backlog empty state."
+  },
   "filterAll": "All",
-  "@filterAll": { "description": "Dropdown filter option that clears the filter." },
+  "@filterAll": {
+    "description": "Dropdown filter option that clears the filter."
+  },
   "boardFiltersReset": "Reset filters",
-  "@boardFiltersReset": { "description": "Button label inside the filter drawer." },
+  "@boardFiltersReset": {
+    "description": "Button label inside the filter drawer."
+  },
   "boardSavedViewsTitle": "Saved views",
-  "@boardSavedViewsTitle": { "description": "Saved-views dialog title." },
+  "@boardSavedViewsTitle": {
+    "description": "Saved-views dialog title."
+  },
   "boardSavedViewNameHint": "Name this view",
-  "@boardSavedViewNameHint": { "description": "Text field hint." },
+  "@boardSavedViewNameHint": {
+    "description": "Text field hint."
+  },
   "boardSavedViewsEmpty": "No saved views yet. Configure a filter and save it to come back here.",
-  "@boardSavedViewsEmpty": { "description": "Empty-state copy inside the saved-views dialog." },
+  "@boardSavedViewsEmpty": {
+    "description": "Empty-state copy inside the saved-views dialog."
+  },
   "actionOpenBoard": "Open board",
-  "@actionOpenBoard": { "description": "Project overview CTA." },
-
+  "@actionOpenBoard": {
+    "description": "Project overview CTA."
+  },
   "milestonesTitle": "Milestones",
   "milestonesViewList": "List view",
   "milestonesViewGantt": "Timeline view",
   "milestonesDatesEstimated": "dates estimated",
-  "@milestonesTitle": { "description": "App-bar title on the milestones list page." },
+  "@milestonesTitle": {
+    "description": "App-bar title on the milestones list page."
+  },
   "milestonesEmpty": "No milestones yet. Create one to plan work into milestones.",
-  "@milestonesEmpty": { "description": "Empty-state copy on the milestones list page." },
+  "@milestonesEmpty": {
+    "description": "Empty-state copy on the milestones list page."
+  },
   "milestonesLoadFailed": "Couldn't load milestones.",
-  "@milestonesLoadFailed": { "description": "Error state on the milestones list page." },
+  "@milestonesLoadFailed": {
+    "description": "Error state on the milestones list page."
+  },
   "actionNewMilestone": "New milestone",
-  "@actionNewMilestone": { "description": "FAB label." },
+  "@actionNewMilestone": {
+    "description": "FAB label."
+  },
   "actionOpenMilestones": "Open milestones",
-  "@actionOpenMilestones": { "description": "Project overview CTA." },
+  "@actionOpenMilestones": {
+    "description": "Project overview CTA."
+  },
   "milestoneCreateTitle": "Create milestone",
-  "@milestoneCreateTitle": { "description": "Dialog title." },
+  "@milestoneCreateTitle": {
+    "description": "Dialog title."
+  },
   "milestoneEditTitle": "Edit milestone",
-  "@milestoneEditTitle": { "description": "Dialog title." },
+  "@milestoneEditTitle": {
+    "description": "Dialog title."
+  },
   "milestoneFieldName": "Name",
-  "@milestoneFieldName": { "description": "Field label." },
+  "@milestoneFieldName": {
+    "description": "Field label."
+  },
   "milestoneFieldStart": "Start date",
-  "@milestoneFieldStart": { "description": "Field label." },
+  "@milestoneFieldStart": {
+    "description": "Field label."
+  },
   "milestoneFieldEnd": "End date",
-  "@milestoneFieldEnd": { "description": "Field label." },
+  "@milestoneFieldEnd": {
+    "description": "Field label."
+  },
   "milestoneDateNotSet": "—",
-  "@milestoneDateNotSet": { "description": "Placeholder shown when no date is set." },
+  "@milestoneDateNotSet": {
+    "description": "Placeholder shown when no date is set."
+  },
   "milestoneStatusOpen": "Open",
-  "@milestoneStatusOpen": { "description": "Status chip for an open milestone." },
+  "@milestoneStatusOpen": {
+    "description": "Status chip for an open milestone."
+  },
   "milestoneStatusClosed": "Closed",
-  "@milestoneStatusClosed": { "description": "Status chip for a closed milestone." },
+  "@milestoneStatusClosed": {
+    "description": "Status chip for a closed milestone."
+  },
   "milestoneDeleteTitle": "Delete milestone?",
-  "@milestoneDeleteTitle": { "description": "Confirm dialog title." },
+  "@milestoneDeleteTitle": {
+    "description": "Confirm dialog title."
+  },
   "milestoneDeleteConfirm": "Delete the milestone '{name}'? This is permanent.",
   "@milestoneDeleteConfirm": {
     "description": "Confirm dialog body.",
-    "placeholders": { "name": { "type": "String", "example": "Sprint 1" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Sprint 1"
+      }
+    }
   },
   "milestoneDetailTitle": "Milestone",
-  "@milestoneDetailTitle": { "description": "Generic app-bar title before the milestone has loaded." },
+  "@milestoneDetailTitle": {
+    "description": "Generic app-bar title before the milestone has loaded."
+  },
   "milestoneLoadFailed": "Couldn't load the milestone.",
-  "@milestoneLoadFailed": { "description": "Error state on the milestone detail page." },
+  "@milestoneLoadFailed": {
+    "description": "Error state on the milestone detail page."
+  },
   "milestoneTabStats": "Stats",
-  "@milestoneTabStats": { "description": "Tab label." },
+  "@milestoneTabStats": {
+    "description": "Tab label."
+  },
   "milestoneTabScope": "Scope",
-  "@milestoneTabScope": { "description": "Tab label." },
+  "@milestoneTabScope": {
+    "description": "Tab label."
+  },
   "milestoneTabBoard": "Board",
-  "@milestoneTabBoard": { "description": "Tab label." },
+  "@milestoneTabBoard": {
+    "description": "Tab label."
+  },
   "milestoneStatPoints": "Story points",
-  "@milestoneStatPoints": { "description": "Stat-card label." },
+  "@milestoneStatPoints": {
+    "description": "Stat-card label."
+  },
   "milestoneStatTasks": "Tasks",
-  "@milestoneStatTasks": { "description": "Stat-card label." },
+  "@milestoneStatTasks": {
+    "description": "Stat-card label."
+  },
   "milestoneScopeBacklog": "Backlog",
-  "@milestoneScopeBacklog": { "description": "Column header for unassigned stories on the scope tab." },
+  "@milestoneScopeBacklog": {
+    "description": "Column header for unassigned stories on the scope tab."
+  },
   "milestoneScopeIn": "In this milestone",
-  "@milestoneScopeIn": { "description": "Column header for stories assigned to this milestone." },
+  "@milestoneScopeIn": {
+    "description": "Column header for stories assigned to this milestone."
+  },
   "milestoneScopeEmpty": "Nothing here yet.",
-  "@milestoneScopeEmpty": { "description": "Empty-state inside a scope column." },
+  "@milestoneScopeEmpty": {
+    "description": "Empty-state inside a scope column."
+  },
   "milestoneScopeAdd": "Add to milestone",
-  "@milestoneScopeAdd": { "description": "Per-row tooltip on the backlog column." },
+  "@milestoneScopeAdd": {
+    "description": "Per-row tooltip on the backlog column."
+  },
   "milestoneScopeRemove": "Remove from milestone",
-  "@milestoneScopeRemove": { "description": "Per-row tooltip on the milestone scope column." },
+  "@milestoneScopeRemove": {
+    "description": "Per-row tooltip on the milestone scope column."
+  },
   "milestoneCloseAction": "Close milestone",
-  "@milestoneCloseAction": { "description": "Primary action button on the milestone detail page." },
+  "@milestoneCloseAction": {
+    "description": "Primary action button on the milestone detail page."
+  },
   "milestoneCloseTitle": "Close this milestone?",
-  "@milestoneCloseTitle": { "description": "Dialog title." },
+  "@milestoneCloseTitle": {
+    "description": "Dialog title."
+  },
   "milestoneCloseSummary": "{count, plural, one{1 unfinished story} other{{count} unfinished stories}}",
   "@milestoneCloseSummary": {
     "description": "Body line summarising what's left in the milestone.",
-    "placeholders": { "count": { "type": "int", "example": "3" } }
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
   },
   "milestoneCloseMoveToBacklog": "Move unfinished stories back to the backlog",
-  "@milestoneCloseMoveToBacklog": { "description": "Checkbox label inside the close-milestone dialog." },
-
+  "@milestoneCloseMoveToBacklog": {
+    "description": "Checkbox label inside the close-milestone dialog."
+  },
   "wikiTitle": "Wiki",
-  "@wikiTitle": { "description": "App-bar title on the wiki list page." },
+  "@wikiTitle": {
+    "description": "App-bar title on the wiki list page."
+  },
   "wikiEmpty": "No wiki pages yet. Create one to start writing.",
-  "@wikiEmpty": { "description": "Empty-state copy on the wiki list page." },
+  "@wikiEmpty": {
+    "description": "Empty-state copy on the wiki list page."
+  },
   "wikiLoadFailed": "Couldn't load the wiki.",
-  "@wikiLoadFailed": { "description": "Error state on the wiki list page." },
+  "@wikiLoadFailed": {
+    "description": "Error state on the wiki list page."
+  },
   "wikiSearchHint": "Search pages…",
-  "@wikiSearchHint": { "description": "Search input placeholder." },
+  "@wikiSearchHint": {
+    "description": "Search input placeholder."
+  },
   "actionNewWikiPage": "New page",
-  "@actionNewWikiPage": { "description": "FAB label on the wiki list page." },
+  "@actionNewWikiPage": {
+    "description": "FAB label on the wiki list page."
+  },
   "actionOpenWiki": "Open wiki",
-  "@actionOpenWiki": { "description": "Project overview CTA." },
+  "@actionOpenWiki": {
+    "description": "Project overview CTA."
+  },
   "wikiCreateTitle": "Create wiki page",
-  "@wikiCreateTitle": { "description": "Dialog title." },
+  "@wikiCreateTitle": {
+    "description": "Dialog title."
+  },
   "wikiFieldTitle": "Title",
-  "@wikiFieldTitle": { "description": "Field label." },
+  "@wikiFieldTitle": {
+    "description": "Field label."
+  },
   "wikiFieldBody": "Body (Markdown)",
-  "@wikiFieldBody": { "description": "Editor field label." },
+  "@wikiFieldBody": {
+    "description": "Editor field label."
+  },
   "wikiEmptyBody": "empty",
-  "@wikiEmptyBody": { "description": "Placeholder shown when a wiki page body is empty." },
-  "actionCreate": "Create",
-  "@actionCreate": { "description": "Generic create button." },
+  "@wikiEmptyBody": {
+    "description": "Placeholder shown when a wiki page body is empty."
+  },
   "wikiPageTitle": "Page",
-  "@wikiPageTitle": { "description": "Generic app-bar title before the page has loaded." },
+  "@wikiPageTitle": {
+    "description": "Generic app-bar title before the page has loaded."
+  },
   "wikiPageLoadFailed": "Couldn't load this page.",
-  "@wikiPageLoadFailed": { "description": "Error state on the wiki page view." },
+  "@wikiPageLoadFailed": {
+    "description": "Error state on the wiki page view."
+  },
   "wikiRevisionsTooltip": "Revisions",
-  "@wikiRevisionsTooltip": { "description": "AppBar action tooltip." },
+  "@wikiRevisionsTooltip": {
+    "description": "AppBar action tooltip."
+  },
   "wikiDeleteTitle": "Delete wiki page?",
-  "@wikiDeleteTitle": { "description": "Confirm dialog title." },
+  "@wikiDeleteTitle": {
+    "description": "Confirm dialog title."
+  },
   "wikiDeleteConfirm": "Delete the page '{title}' permanently?",
   "@wikiDeleteConfirm": {
     "description": "Confirm dialog body.",
-    "placeholders": { "title": { "type": "String", "example": "Onboarding" } }
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Onboarding"
+      }
+    }
   },
   "wikiConflictNotice": "Someone updated this page while you were editing.",
-  "@wikiConflictNotice": { "description": "Conflict banner copy." },
+  "@wikiConflictNotice": {
+    "description": "Conflict banner copy."
+  },
   "wikiConflictOverwrite": "Overwrite",
-  "@wikiConflictOverwrite": { "description": "Conflict banner button." },
+  "@wikiConflictOverwrite": {
+    "description": "Conflict banner button."
+  },
   "wikiConflictDiscard": "Discard mine",
-  "@wikiConflictDiscard": { "description": "Conflict banner button." },
+  "@wikiConflictDiscard": {
+    "description": "Conflict banner button."
+  },
   "wikiRevisionsTitle": "Revisions",
-  "@wikiRevisionsTitle": { "description": "App-bar title on the revisions page." },
+  "@wikiRevisionsTitle": {
+    "description": "App-bar title on the revisions page."
+  },
   "wikiRevisionsLoadFailed": "Couldn't load revisions.",
-  "@wikiRevisionsLoadFailed": { "description": "Error state on the revisions page." },
+  "@wikiRevisionsLoadFailed": {
+    "description": "Error state on the revisions page."
+  },
   "wikiRevisionsPickHint": "Pick a revision on the left to inspect.",
-  "@wikiRevisionsPickHint": { "description": "Empty state on the revisions detail pane." },
+  "@wikiRevisionsPickHint": {
+    "description": "Empty state on the revisions detail pane."
+  },
   "wikiRevisionTabSnapshot": "Snapshot",
-  "@wikiRevisionTabSnapshot": { "description": "Tab label on the revision detail pane." },
+  "@wikiRevisionTabSnapshot": {
+    "description": "Tab label on the revision detail pane."
+  },
   "wikiRevisionTabDiff": "Diff",
-  "@wikiRevisionTabDiff": { "description": "Tab label on the revision detail pane." },
+  "@wikiRevisionTabDiff": {
+    "description": "Tab label on the revision detail pane."
+  },
   "wikiRevisionRestore": "Restore this revision",
-  "@wikiRevisionRestore": { "description": "Primary action on the revisions page." },
+  "@wikiRevisionRestore": {
+    "description": "Primary action on the revisions page."
+  },
   "wikiRestoreTitle": "Restore revision?",
-  "@wikiRestoreTitle": { "description": "Confirm dialog title." },
+  "@wikiRestoreTitle": {
+    "description": "Confirm dialog title."
+  },
   "wikiRestoreConfirm": "Restore the page to revision {rev}? A new revision will be recorded.",
   "@wikiRestoreConfirm": {
     "description": "Confirm dialog body.",
-    "placeholders": { "rev": { "type": "int", "example": "3" } }
+    "placeholders": {
+      "rev": {
+        "type": "int",
+        "example": "3"
+      }
+    }
   },
   "wikiDiffEmpty": "No diff available.",
-  "@wikiDiffEmpty": { "description": "Empty state inside the diff tab." },
-
+  "@wikiDiffEmpty": {
+    "description": "Empty state inside the diff tab."
+  },
   "paletteHint": "Search projects, pages, type #123 for a work item…",
-  "@paletteHint": { "description": "Cmd-K palette input hint." },
+  "@paletteHint": {
+    "description": "Cmd-K palette input hint."
+  },
   "paletteEmpty": "No matches.",
-  "@paletteEmpty": { "description": "Empty state inside the Cmd-K palette." },
+  "@paletteEmpty": {
+    "description": "Empty state inside the Cmd-K palette."
+  },
   "shortcutHelpTitle": "Keyboard shortcuts",
-  "@shortcutHelpTitle": { "description": "Help dialog title." },
+  "@shortcutHelpTitle": {
+    "description": "Help dialog title."
+  },
   "shortcutPaletteDescription": "Open the command palette",
-  "@shortcutPaletteDescription": { "description": "Shortcut description." },
+  "@shortcutPaletteDescription": {
+    "description": "Shortcut description."
+  },
   "shortcutHelpDescription": "Show this help",
-  "@shortcutHelpDescription": { "description": "Shortcut description." },
+  "@shortcutHelpDescription": {
+    "description": "Shortcut description."
+  },
   "shortcutGoProjectsDescription": "Go to projects",
-  "@shortcutGoProjectsDescription": { "description": "Shortcut description." },
+  "@shortcutGoProjectsDescription": {
+    "description": "Shortcut description."
+  },
   "shortcutGoSettingsDescription": "Go to settings",
-  "@shortcutGoSettingsDescription": { "description": "Shortcut description." },
+  "@shortcutGoSettingsDescription": {
+    "description": "Shortcut description."
+  },
   "shortcutGoBoardDescription": "Go to this project's board",
-  "@shortcutGoBoardDescription": { "description": "Shortcut description." },
+  "@shortcutGoBoardDescription": {
+    "description": "Shortcut description."
+  },
   "shortcutGoWikiDescription": "Go to this project's wiki",
-  "@shortcutGoWikiDescription": { "description": "Shortcut description." },
-
+  "@shortcutGoWikiDescription": {
+    "description": "Shortcut description."
+  },
   "requestAccessTitle": "You don't have access to this section.",
-  "@requestAccessTitle": { "description": "Title shown when a permission gate blocks the page." },
+  "@requestAccessTitle": {
+    "description": "Title shown when a permission gate blocks the page."
+  },
   "requestAccessBody": "Ask a project admin to grant you the '{permission}' permission.",
   "@requestAccessBody": {
     "description": "Body of the request-access card.",
-    "placeholders": { "permission": { "type": "String", "example": "epic.modify" } }
+    "placeholders": {
+      "permission": {
+        "type": "String",
+        "example": "epic.modify"
+      }
+    }
   },
   "requestAccessCopyAdmin": "Copy admin email ({email})",
   "@requestAccessCopyAdmin": {
     "description": "Button label that puts the admin email on the clipboard.",
-    "placeholders": { "email": { "type": "String", "example": "owner@example.com" } }
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "owner@example.com"
+      }
+    }
   },
   "requestAccessCopied": "Email copied to clipboard.",
-  "@requestAccessCopied": { "description": "Snackbar after clipboard copy succeeds." },
-
+  "@requestAccessCopied": {
+    "description": "Snackbar after clipboard copy succeeds."
+  },
   "topNavProjects": "Projects",
-  "@topNavProjects": { "description": "Top app-bar nav link." },
+  "@topNavProjects": {
+    "description": "Top app-bar nav link."
+  },
   "topNavSettings": "Settings",
-  "@topNavSettings": { "description": "Top app-bar nav link." },
+  "@topNavSettings": {
+    "description": "Top app-bar nav link."
+  },
   "topNavSearchPlaceholder": "Search projects, pages, #123…",
-  "@topNavSearchPlaceholder": { "description": "Search-trigger placeholder copy on the top bar." },
+  "@topNavSearchPlaceholder": {
+    "description": "Search-trigger placeholder copy on the top bar."
+  },
   "topCreateAction": "Create",
-  "@topCreateAction": { "description": "Top-bar Create-button label." },
+  "@topCreateAction": {
+    "description": "Top-bar Create-button label."
+  },
   "topCreateUserStory": "New user story",
-  "@topCreateUserStory": { "description": "Top-bar create menu entry." },
+  "@topCreateUserStory": {
+    "description": "Top-bar create menu entry."
+  },
   "topCreateIssue": "New issue",
-  "@topCreateIssue": { "description": "Top-bar create menu entry." },
+  "@topCreateIssue": {
+    "description": "Top-bar create menu entry."
+  },
   "topCreateWikiPage": "New wiki page",
-  "@topCreateWikiPage": { "description": "Top-bar create menu entry." },
+  "@topCreateWikiPage": {
+    "description": "Top-bar create menu entry."
+  },
   "topCreateProject": "New project",
-  "@topCreateProject": { "description": "Top-bar create menu entry." },
+  "@topCreateProject": {
+    "description": "Top-bar create menu entry."
+  },
   "topMenuProfile": "Profile",
-  "@topMenuProfile": { "description": "Top-bar avatar menu entry." },
+  "@topMenuProfile": {
+    "description": "Top-bar avatar menu entry."
+  },
   "topMenuSecurity": "Security",
-  "@topMenuSecurity": { "description": "Top-bar avatar menu entry." },
+  "@topMenuSecurity": {
+    "description": "Top-bar avatar menu entry."
+  },
   "topMenuSettings": "Settings",
-  "@topMenuSettings": { "description": "Top-bar avatar menu entry." },
+  "@topMenuSettings": {
+    "description": "Top-bar avatar menu entry."
+  },
   "topMenuSignOut": "Sign out",
-  "@topMenuSignOut": { "description": "Top-bar avatar menu entry." },
+  "@topMenuSignOut": {
+    "description": "Top-bar avatar menu entry."
+  },
   "railOverview": "Overview",
-  "@railOverview": { "description": "Project-scoped left rail label." },
+  "@railOverview": {
+    "description": "Project-scoped left rail label."
+  },
   "railBacklog": "Backlog",
-  "@railBacklog": { "description": "Project-scoped left rail label." },
+  "@railBacklog": {
+    "description": "Project-scoped left rail label."
+  },
   "railBoard": "Board",
-  "@railBoard": { "description": "Project-scoped left rail label." },
+  "@railBoard": {
+    "description": "Project-scoped left rail label."
+  },
   "railIssues": "Issues",
-  "@railIssues": { "description": "Project-scoped left rail label." },
+  "@railIssues": {
+    "description": "Project-scoped left rail label."
+  },
   "railMilestones": "Milestones",
-  "@railMilestones": { "description": "Project-scoped left rail label." },
+  "@railMilestones": {
+    "description": "Project-scoped left rail label."
+  },
   "railWiki": "Wiki",
-  "@railWiki": { "description": "Project-scoped left rail label." },
+  "@railWiki": {
+    "description": "Project-scoped left rail label."
+  },
   "railSettings": "Settings",
-  "@railSettings": { "description": "Project-scoped left rail label." },
-
+  "@railSettings": {
+    "description": "Project-scoped left rail label."
+  },
   "taskBoardTitle": "Task board",
-  "@taskBoardTitle": { "description": "App-bar title on the task board page." },
+  "@taskBoardTitle": {
+    "description": "App-bar title on the task board page."
+  },
   "taskBoardLoadFailed": "Couldn't load the task board.",
-  "@taskBoardLoadFailed": { "description": "Error state on the task board page." },
+  "@taskBoardLoadFailed": {
+    "description": "Error state on the task board page."
+  },
   "taskBoardNoStatuses": "No task statuses configured yet. Add at least one in Catalog → Task statuses to use the task board.",
-  "@taskBoardNoStatuses": { "description": "Empty-state copy when the task_status taxonomy is empty." },
+  "@taskBoardNoStatuses": {
+    "description": "Empty-state copy when the task_status taxonomy is empty."
+  },
   "actionOpenTaskBoard": "Open task board",
-  "@actionOpenTaskBoard": { "description": "Project overview CTA." },
-
+  "@actionOpenTaskBoard": {
+    "description": "Project overview CTA."
+  },
   "actionNewTask": "New task",
-  "@actionNewTask": { "description": "Dialog title for creating a task." },
+  "@actionNewTask": {
+    "description": "Dialog title for creating a task."
+  },
   "actionEditTask": "Edit task",
-  "@actionEditTask": { "description": "Dialog title for editing a task." },
+  "@actionEditTask": {
+    "description": "Dialog title for editing a task."
+  },
   "taskFieldParent": "Parent user story",
-  "@taskFieldParent": { "description": "Field label inside the task edit dialog." },
+  "@taskFieldParent": {
+    "description": "Field label inside the task edit dialog."
+  },
   "taskNoParent": "— No parent —",
-  "@taskNoParent": { "description": "Dropdown placeholder for a task with no parent user story." },
-
+  "@taskNoParent": {
+    "description": "Dropdown placeholder for a task with no parent user story."
+  },
   "panelDetails": "DETAILS",
-  "@panelDetails": { "description": "Panel header on the entity detail page." },
+  "@panelDetails": {
+    "description": "Panel header on the entity detail page."
+  },
   "panelDescription": "DESCRIPTION",
-  "@panelDescription": { "description": "Panel header on the entity detail page." },
+  "@panelDescription": {
+    "description": "Panel header on the entity detail page."
+  },
   "panelAttachments": "ATTACHMENTS",
-  "@panelAttachments": { "description": "Panel header on the entity detail page." },
+  "@panelAttachments": {
+    "description": "Panel header on the entity detail page."
+  },
   "panelActivity": "ACTIVITY",
-  "@panelActivity": { "description": "Panel header on the entity detail page." },
+  "@panelActivity": {
+    "description": "Panel header on the entity detail page."
+  },
   "panelPeople": "PEOPLE",
-  "@panelPeople": { "description": "Panel header on the entity detail page." },
+  "@panelPeople": {
+    "description": "Panel header on the entity detail page."
+  },
   "panelDates": "DATES",
-  "@panelDates": { "description": "Panel header on the entity detail page." },
+  "@panelDates": {
+    "description": "Panel header on the entity detail page."
+  },
   "panelMetadata": "METADATA",
-  "@panelMetadata": { "description": "Read-only section header on the edit page (type/reference/timestamps)." },
+  "@panelMetadata": {
+    "description": "Read-only section header on the edit page (type/reference/timestamps)."
+  },
   "backlogNoMilestone": "No milestone",
-  "@backlogNoMilestone": { "description": "Dropdown option for clearing the milestone link on the edit page." },
+  "@backlogNoMilestone": {
+    "description": "Dropdown option for clearing the milestone link on the edit page."
+  },
   "editFieldUserPlaceholder": "User id (uuid)",
-  "@editFieldUserPlaceholder": { "description": "Hint inside the assignee/reporter text inputs on the edit page." },
+  "@editFieldUserPlaceholder": {
+    "description": "Hint inside the assignee/reporter text inputs on the edit page."
+  },
   "editFieldKey": "Reference",
-  "@editFieldKey": { "description": "Read-only metadata label showing the full entity key like T-101." },
+  "@editFieldKey": {
+    "description": "Read-only metadata label showing the full entity key like T-101."
+  },
   "descriptionPlaceholder": "Click Edit to add a description.",
-  "@descriptionPlaceholder": { "description": "Placeholder shown when an entity has no description." },
+  "@descriptionPlaceholder": {
+    "description": "Placeholder shown when an entity has no description."
+  },
   "detailFieldType": "Type",
-  "@detailFieldType": { "description": "Details row label." },
+  "@detailFieldType": {
+    "description": "Details row label."
+  },
   "detailFieldStatus": "Status",
-  "@detailFieldStatus": { "description": "Details row label." },
+  "@detailFieldStatus": {
+    "description": "Details row label."
+  },
   "detailFieldIssueType": "Issue type",
-  "@detailFieldIssueType": { "description": "Details row label." },
+  "@detailFieldIssueType": {
+    "description": "Details row label."
+  },
   "detailFieldPriority": "Priority",
-  "@detailFieldPriority": { "description": "Details row label." },
+  "@detailFieldPriority": {
+    "description": "Details row label."
+  },
   "detailFieldSeverity": "Severity",
-  "@detailFieldSeverity": { "description": "Details row label." },
+  "@detailFieldSeverity": {
+    "description": "Details row label."
+  },
   "detailFieldLabels": "Labels",
-  "@detailFieldLabels": { "description": "Details row label." },
+  "@detailFieldLabels": {
+    "description": "Details row label."
+  },
   "detailFieldComponents": "Components",
-  "@detailFieldComponents": { "description": "Details row label." },
+  "@detailFieldComponents": {
+    "description": "Details row label."
+  },
   "detailFieldEpic": "Epic",
-  "@detailFieldEpic": { "description": "Details row label." },
+  "@detailFieldEpic": {
+    "description": "Details row label."
+  },
   "detailFieldMilestone": "Milestone",
-  "@detailFieldMilestone": { "description": "Details row label." },
+  "@detailFieldMilestone": {
+    "description": "Details row label."
+  },
   "detailFieldPoints": "Points",
-  "@detailFieldPoints": { "description": "Details row label." },
+  "@detailFieldPoints": {
+    "description": "Details row label."
+  },
   "detailFieldParent": "Parent user story",
-  "@detailFieldParent": { "description": "Details row label." },
+  "@detailFieldParent": {
+    "description": "Details row label."
+  },
   "detailFieldAssignee": "Assignee",
-  "@detailFieldAssignee": { "description": "People row label." },
+  "@detailFieldAssignee": {
+    "description": "People row label."
+  },
   "detailFieldReporter": "Reporter",
-  "@detailFieldReporter": { "description": "People row label." },
+  "@detailFieldReporter": {
+    "description": "People row label."
+  },
   "detailFieldQaAssignee": "QA",
-  "@detailFieldQaAssignee": { "description": "People row label — who tests the issue." },
+  "@detailFieldQaAssignee": {
+    "description": "People row label — who tests the issue."
+  },
   "detailFieldReviewer": "Reviewer",
-  "@detailFieldReviewer": { "description": "People row label — who reviews the implementation." },
+  "@detailFieldReviewer": {
+    "description": "People row label — who reviews the implementation."
+  },
   "detailFieldCreated": "Created",
-  "@detailFieldCreated": { "description": "Dates row label." },
+  "@detailFieldCreated": {
+    "description": "Dates row label."
+  },
   "detailFieldUpdated": "Updated",
-  "@detailFieldUpdated": { "description": "Dates row label." },
+  "@detailFieldUpdated": {
+    "description": "Dates row label."
+  },
   "detailValueYou": "You",
-  "@detailValueYou": { "description": "Prefix used when an entity field points at the current user." },
+  "@detailValueYou": {
+    "description": "Prefix used when an entity field points at the current user."
+  },
   "kindLabelEpic": "Epic",
-  "@kindLabelEpic": { "description": "Kind label for the details panel." },
+  "@kindLabelEpic": {
+    "description": "Kind label for the details panel."
+  },
   "kindLabelUserStory": "User story",
-  "@kindLabelUserStory": { "description": "Kind label for the details panel." },
+  "@kindLabelUserStory": {
+    "description": "Kind label for the details panel."
+  },
   "kindLabelTask": "Task",
-  "@kindLabelTask": { "description": "Kind label for the details panel." },
+  "@kindLabelTask": {
+    "description": "Kind label for the details panel."
+  },
   "kindLabelIssue": "Issue",
-  "@kindLabelIssue": { "description": "Kind label for the details panel." },
+  "@kindLabelIssue": {
+    "description": "Kind label for the details panel."
+  },
   "entityActionComment": "Comment",
-  "@entityActionComment": { "description": "Action bar button label." },
+  "@entityActionComment": {
+    "description": "Action bar button label."
+  },
   "entityActionScrollHint": "Scroll down to the activity stream to comment.",
-  "@entityActionScrollHint": { "description": "Snackbar shown when the Comment action is tapped." },
+  "@entityActionScrollHint": {
+    "description": "Snackbar shown when the Comment action is tapped."
+  },
   "entityChangeStatusTooltip": "Change status",
-  "@entityChangeStatusTooltip": { "description": "Tooltip on the status pill in the action bar." },
+  "@entityChangeStatusTooltip": {
+    "description": "Tooltip on the status pill in the action bar."
+  },
   "settingsAboutTitle": "About",
-  "@settingsAboutTitle": { "description": "Settings: About section header." },
+  "@settingsAboutTitle": {
+    "description": "Settings: About section header."
+  },
   "settingsAboutSubtitle": "Version, build, and flavor",
-  "@settingsAboutSubtitle": { "description": "Settings: About row subtitle." },
+  "@settingsAboutSubtitle": {
+    "description": "Settings: About row subtitle."
+  },
   "aboutDialogTitle": "About IntelliPilot",
-  "@aboutDialogTitle": { "description": "Title of the About dialog." },
+  "@aboutDialogTitle": {
+    "description": "Title of the About dialog."
+  },
   "aboutFieldVersion": "Version",
-  "@aboutFieldVersion": { "description": "About dialog: version label." },
+  "@aboutFieldVersion": {
+    "description": "About dialog: version label."
+  },
   "aboutFieldServerVersion": "Server version",
-  "@aboutFieldServerVersion": { "description": "About dialog: backend service version label." },
+  "@aboutFieldServerVersion": {
+    "description": "About dialog: backend service version label."
+  },
   "aboutFieldBuild": "Build",
-  "@aboutFieldBuild": { "description": "About dialog: build number label." },
+  "@aboutFieldBuild": {
+    "description": "About dialog: build number label."
+  },
   "aboutFieldFlavor": "Flavor",
-  "@aboutFieldFlavor": { "description": "About dialog: flavor label." },
+  "@aboutFieldFlavor": {
+    "description": "About dialog: flavor label."
+  },
   "aboutFieldChannel": "Channel",
-  "@aboutFieldChannel": { "description": "About dialog: channel label." },
+  "@aboutFieldChannel": {
+    "description": "About dialog: channel label."
+  },
   "aboutChannelDev": "Development",
-  "@aboutChannelDev": { "description": "Dev flavor channel name." },
+  "@aboutChannelDev": {
+    "description": "Dev flavor channel name."
+  },
   "aboutChannelStaging": "Staging",
-  "@aboutChannelStaging": { "description": "Staging flavor channel name." },
+  "@aboutChannelStaging": {
+    "description": "Staging flavor channel name."
+  },
   "aboutChannelProd": "Production",
-  "@aboutChannelProd": { "description": "Prod flavor channel name." },
+  "@aboutChannelProd": {
+    "description": "Prod flavor channel name."
+  },
   "aboutCopiedToClipboard": "Copied to clipboard",
-  "@aboutCopiedToClipboard": { "description": "Snackbar after Copy build info." },
+  "@aboutCopiedToClipboard": {
+    "description": "Snackbar after Copy build info."
+  },
   "actionCopyBuildInfo": "Copy build info",
-  "@actionCopyBuildInfo": { "description": "Button on the About dialog." },
+  "@actionCopyBuildInfo": {
+    "description": "Button on the About dialog."
+  },
   "updateAvailableTitle": "A new version is available",
-  "@updateAvailableTitle": { "description": "Banner shown when the web service worker has prepared a new build." },
+  "@updateAvailableTitle": {
+    "description": "Banner shown when the web service worker has prepared a new build."
+  },
   "actionReloadNow": "Reload now",
-  "@actionReloadNow": { "description": "Button to reload after a new build is detected." },
+  "@actionReloadNow": {
+    "description": "Button to reload after a new build is detected."
+  },
   "panelLinks": "LINKS",
-  "@panelLinks": { "description": "Links panel header on the entity detail page." },
+  "@panelLinks": {
+    "description": "Links panel header on the entity detail page."
+  },
   "linksEmpty": "No links yet.",
-  "@linksEmpty": { "description": "Empty-state body when an entity has no links." },
+  "@linksEmpty": {
+    "description": "Empty-state body when an entity has no links."
+  },
   "actionAddLink": "Add link",
-  "@actionAddLink": { "description": "Button to open the add-link dialog." },
+  "@actionAddLink": {
+    "description": "Button to open the add-link dialog."
+  },
   "linkTypeBlocks": "blocks",
-  "@linkTypeBlocks": { "description": "Outgoing link label: source blocks target." },
+  "@linkTypeBlocks": {
+    "description": "Outgoing link label: source blocks target."
+  },
   "linkTypeBlockedBy": "is blocked by",
-  "@linkTypeBlockedBy": { "description": "Inverse link label." },
+  "@linkTypeBlockedBy": {
+    "description": "Inverse link label."
+  },
   "linkTypeRelates": "relates to",
-  "@linkTypeRelates": { "description": "Symmetric link label." },
+  "@linkTypeRelates": {
+    "description": "Symmetric link label."
+  },
   "linkTypeDuplicates": "duplicates",
-  "@linkTypeDuplicates": { "description": "Outgoing link label." },
+  "@linkTypeDuplicates": {
+    "description": "Outgoing link label."
+  },
   "linkTypeDuplicatedBy": "is duplicated by",
-  "@linkTypeDuplicatedBy": { "description": "Inverse link label." },
+  "@linkTypeDuplicatedBy": {
+    "description": "Inverse link label."
+  },
   "linkTypeClones": "clones",
-  "@linkTypeClones": { "description": "Outgoing link label." },
+  "@linkTypeClones": {
+    "description": "Outgoing link label."
+  },
   "linkTypeClonedBy": "is cloned by",
-  "@linkTypeClonedBy": { "description": "Inverse link label." },
+  "@linkTypeClonedBy": {
+    "description": "Inverse link label."
+  },
   "linkTypeCauses": "causes",
-  "@linkTypeCauses": { "description": "Outgoing link label." },
+  "@linkTypeCauses": {
+    "description": "Outgoing link label."
+  },
   "linkTypeCausedBy": "is caused by",
-  "@linkTypeCausedBy": { "description": "Inverse link label." },
+  "@linkTypeCausedBy": {
+    "description": "Inverse link label."
+  },
   "addLinkDialogTitle": "Link this {kind} to…",
   "@addLinkDialogTitle": {
     "description": "Title of the Add Link dialog.",
-    "placeholders": { "kind": { "type": "String" } }
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
   },
   "linkFieldType": "Link type",
-  "@linkFieldType": { "description": "Add Link dialog: type field label." },
+  "@linkFieldType": {
+    "description": "Add Link dialog: type field label."
+  },
   "linkFieldTarget": "Target",
-  "@linkFieldTarget": { "description": "Add Link dialog: target field label." },
+  "@linkFieldTarget": {
+    "description": "Add Link dialog: target field label."
+  },
   "linkSearchHint": "Search by key or subject",
-  "@linkSearchHint": { "description": "Add Link dialog: target search hint." },
+  "@linkSearchHint": {
+    "description": "Add Link dialog: target search hint."
+  },
   "linkPickerLoadFailed": "Couldn't load candidate items.",
-  "@linkPickerLoadFailed": { "description": "Add Link dialog: load failure." },
+  "@linkPickerLoadFailed": {
+    "description": "Add Link dialog: load failure."
+  },
   "linkDeleteConfirm": "Remove this link?",
-  "@linkDeleteConfirm": { "description": "Delete-link confirmation body." },
+  "@linkDeleteConfirm": {
+    "description": "Delete-link confirmation body."
+  },
   "linkSelfTargetError": "An item cannot link to itself.",
-  "@linkSelfTargetError": { "description": "Validation error for self-link." },
+  "@linkSelfTargetError": {
+    "description": "Validation error for self-link."
+  },
   "linkDuplicateError": "That link already exists.",
-  "@linkDuplicateError": { "description": "Validation error for duplicate link." },
+  "@linkDuplicateError": {
+    "description": "Validation error for duplicate link."
+  },
   "railCollapse": "Collapse menu",
-  "@railCollapse": { "description": "Tooltip on the rail toggle when the rail is expanded." },
+  "@railCollapse": {
+    "description": "Tooltip on the rail toggle when the rail is expanded."
+  },
   "railExpand": "Expand menu",
-  "@railExpand": { "description": "Tooltip on the rail toggle when the rail is collapsed." },
+  "@railExpand": {
+    "description": "Tooltip on the rail toggle when the rail is collapsed."
+  },
   "statusValueNone": "None",
-  "@statusValueNone": { "description": "Placeholder used in inline editors when no value is selected." },
+  "@statusValueNone": {
+    "description": "Placeholder used in inline editors when no value is selected."
+  },
   "pickerSearchHint": "Search…",
-  "@pickerSearchHint": { "description": "Hint shown in the search field of an inline taxonomy picker." },
+  "@pickerSearchHint": {
+    "description": "Hint shown in the search field of an inline taxonomy picker."
+  },
   "pickerNoMatch": "No matches",
-  "@pickerNoMatch": { "description": "Shown when the search query has no candidates." },
+  "@pickerNoMatch": {
+    "description": "Shown when the search query has no candidates."
+  },
   "fieldReadOnlyToast": "You don't have permission to change this.",
-  "@fieldReadOnlyToast": { "description": "Snackbar shown when a permission-locked field is tapped." },
+  "@fieldReadOnlyToast": {
+    "description": "Snackbar shown when a permission-locked field is tapped."
+  },
   "assigneeAssignToMe": "Assign to me",
-  "@assigneeAssignToMe": { "description": "Pinned shortcut at the top of the assignee picker." },
+  "@assigneeAssignToMe": {
+    "description": "Pinned shortcut at the top of the assignee picker."
+  },
   "reporterSetMe": "Set me as reporter",
-  "@reporterSetMe": { "description": "Pinned shortcut at the top of the reporter picker." },
+  "@reporterSetMe": {
+    "description": "Pinned shortcut at the top of the reporter picker."
+  },
   "boardViewStories": "Stories",
-  "@boardViewStories": { "description": "Toggle label on the board page showing user-story columns." },
+  "@boardViewStories": {
+    "description": "Toggle label on the board page showing user-story columns."
+  },
   "boardViewTasks": "Tasks",
-  "@boardViewTasks": { "description": "Toggle label on the board page showing task columns." },
+  "@boardViewTasks": {
+    "description": "Toggle label on the board page showing task columns."
+  },
   "securitySectionPassword": "Password",
-  "@securitySectionPassword": { "description": "Section header on the Security page for the password card." },
+  "@securitySectionPassword": {
+    "description": "Section header on the Security page for the password card."
+  },
   "registrationClosedNotice": "Self-service registration is disabled. Ask an administrator for an invitation.",
-  "@registrationClosedNotice": { "description": "Shown when a user reaches the register page while open registration is off and they have no invitation token." },
+  "@registrationClosedNotice": {
+    "description": "Shown when a user reaches the register page while open registration is off and they have no invitation token."
+  },
   "passwordResetUnavailableTitle": "Password reset unavailable",
-  "@passwordResetUnavailableTitle": { "description": "Heading on the forgot-password page when no mailer is configured." },
+  "@passwordResetUnavailableTitle": {
+    "description": "Heading on the forgot-password page when no mailer is configured."
+  },
   "passwordResetUnavailableBody": "Email is not configured on this server, so password reset links can't be sent. Contact an administrator to reset your password.",
-  "@passwordResetUnavailableBody": { "description": "Body on the forgot-password page when no mailer is configured." },
+  "@passwordResetUnavailableBody": {
+    "description": "Body on the forgot-password page when no mailer is configured."
+  },
   "changePasswordTitle": "Change password",
-  "@changePasswordTitle": { "description": "Section and dialog title for self-service password change." },
+  "@changePasswordTitle": {
+    "description": "Section and dialog title for self-service password change."
+  },
   "changePasswordBody": "Update the password you use to sign in.",
-  "@changePasswordBody": { "description": "Body copy for the change-password section." },
+  "@changePasswordBody": {
+    "description": "Body copy for the change-password section."
+  },
   "fieldCurrentPassword": "Current password",
-  "@fieldCurrentPassword": { "description": "Field label." },
+  "@fieldCurrentPassword": {
+    "description": "Field label."
+  },
   "fieldConfirmPassword": "Confirm new password",
-  "@fieldConfirmPassword": { "description": "Field label." },
+  "@fieldConfirmPassword": {
+    "description": "Field label."
+  },
   "actionChangePassword": "Change password",
-  "@actionChangePassword": { "description": "Submit button for the change-password dialog." },
+  "@actionChangePassword": {
+    "description": "Submit button for the change-password dialog."
+  },
   "changePasswordSuccessSnack": "Password changed. Sign in again to continue.",
-  "@changePasswordSuccessSnack": { "description": "Snackbar after a successful password change; all sessions are revoked." },
+  "@changePasswordSuccessSnack": {
+    "description": "Snackbar after a successful password change; all sessions are revoked."
+  },
   "errCurrentPasswordIncorrect": "Current password is incorrect.",
-  "@errCurrentPasswordIncorrect": { "description": "Inline error when the current password does not match." },
+  "@errCurrentPasswordIncorrect": {
+    "description": "Inline error when the current password does not match."
+  },
   "errPasswordsDoNotMatch": "Passwords do not match.",
-  "@errPasswordsDoNotMatch": { "description": "Inline error when the new password and its confirmation differ." },
-
+  "@errPasswordsDoNotMatch": {
+    "description": "Inline error when the new password and its confirmation differ."
+  },
   "adminSettingsTitle": "Platform settings",
   "adminSettingsFailed": "Failed: {error}",
-  "@adminSettingsFailed": { "placeholders": { "error": { "type": "String" } } },
+  "@adminSettingsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "adminSettingsOpenRegistration": "Open registration",
   "adminSettingsOpenRegistrationDesc": "When off, the public /register endpoint requires a valid platform invitation token. Default: off.",
   "adminSettingsBranding": "Branding",
@@ -1437,20 +2689,52 @@
   "adminShortLinksProjects": "Project prefixes",
   "adminShortLinksBoards": "Board keys",
   "adminShortLinksProjectRow": "was used by {projectName}",
-  "@adminShortLinksProjectRow": {"placeholders": {"projectName": {"type": "String"}}},
+  "@adminShortLinksProjectRow": {
+    "placeholders": {
+      "projectName": {
+        "type": "String"
+      }
+    }
+  },
   "adminShortLinksBoardRow": "board {boardName} in {projectName}",
-  "@adminShortLinksBoardRow": {"placeholders": {"boardName": {"type": "String"}, "projectName": {"type": "String"}}},
+  "@adminShortLinksBoardRow": {
+    "placeholders": {
+      "boardName": {
+        "type": "String"
+      },
+      "projectName": {
+        "type": "String"
+      }
+    }
+  },
   "adminShortLinksDeleteTitle": "Delete history entries",
   "adminShortLinksDeleteConfirm": "Delete {count} history entries? The matching old short links will stop working.",
-  "@adminShortLinksDeleteConfirm": {"placeholders": {"count": {"type": "int"}}},
+  "@adminShortLinksDeleteConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "adminShortLinksDeleteSelected": "Delete selected ({count})",
-  "@adminShortLinksDeleteSelected": {"placeholders": {"count": {"type": "int"}}},
+  "@adminShortLinksDeleteSelected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "adminSettingsNotifications": "Notifications",
   "adminSettingsNotificationsDesc": "Email (SMTP / Mailgun), Matrix and Telegram delivery.",
   "adminSettingsLastUpdated": "Last updated: {when}",
-  "@adminSettingsLastUpdated": { "placeholders": { "when": { "type": "String" } } },
+  "@adminSettingsLastUpdated": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "adminSettingsUpdateFailed": "Last update failed.",
-
   "adminBrandingTitle": "Branding",
   "adminBrandingUpdateFailed": "Update failed.",
   "adminBrandingSaved": "Branding saved.",
@@ -1459,7 +2743,13 @@
   "adminBrandingIconUpdated": "Icon updated.",
   "adminBrandingIconReset": "Icon reset to default.",
   "adminBrandingLoadFailed": "Failed: {error}",
-  "@adminBrandingLoadFailed": { "placeholders": { "error": { "type": "String" } } },
+  "@adminBrandingLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "adminBrandingIntro": "White-label these surfaces — the login screen, the top bar and the browser tab. Empty fields fall back to the bundled defaults.",
   "adminBrandingAppIcon": "App icon",
   "adminBrandingUploadIcon": "Upload icon",
@@ -1472,23 +2762,52 @@
   "adminBrandingMessageHint": "e.g. a welcome note or maintenance notice",
   "adminBrandingMessageHelper": "Shown on the login screen. Leave empty to hide.",
   "adminBrandingSaveButton": "Save name & message",
-
   "adminLdapTitle": "LDAP / Directory",
   "adminLdapLoadFailed": "Failed to load: {label}",
-  "@adminLdapLoadFailed": { "placeholders": { "label": { "type": "String" } } },
+  "@adminLdapLoadFailed": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
   "adminLdapSaved": "LDAP settings saved.",
   "adminLdapSaveFailed": "Save failed.",
   "adminLdapBindSucceeded": "Bind succeeded",
   "adminLdapBindFailed": "Bind failed",
   "adminLdapRequestFailed": "The request failed.",
   "adminLdapEmailLine": "Email: {email}",
-  "@adminLdapEmailLine": { "placeholders": { "email": { "type": "String" } } },
+  "@adminLdapEmailLine": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "adminLdapUsernameLine": "Username: {username}",
-  "@adminLdapUsernameLine": { "placeholders": { "username": { "type": "String" } } },
+  "@adminLdapUsernameLine": {
+    "placeholders": {
+      "username": {
+        "type": "String"
+      }
+    }
+  },
   "adminLdapNameLine": "Name: {name}",
-  "@adminLdapNameLine": { "placeholders": { "name": { "type": "String" } } },
+  "@adminLdapNameLine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "adminLdapSuperadminLine": "Superadmin: {value}",
-  "@adminLdapSuperadminLine": { "placeholders": { "value": { "type": "String" } } },
+  "@adminLdapSuperadminLine": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
   "adminLdapClose": "Close",
   "adminLdapEnable": "Enable LDAP authentication",
   "adminLdapEnableHelp": "When enabled, all users EXCEPT local superadmins must sign in through the directory. Keep at least one local superadmin so you can always reach this page.",
@@ -1529,20 +2848,43 @@
   "adminLdapPassword": "Password",
   "adminLdapCancel": "Cancel",
   "adminLdapTest": "Test",
-
   "adminNotifTitle": "Notifications",
   "adminNotifLoadFailed": "Failed: {error}",
-  "@adminNotifLoadFailed": { "placeholders": { "error": { "type": "String" } } },
+  "@adminNotifLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "adminNotifTabEmail": "Email",
   "adminNotifTabMatrix": "Matrix",
   "adminNotifTabTelegram": "Telegram",
   "adminNotifTabEvents": "Events",
   "adminNotifSaveButton": "Save {channel}",
-  "@adminNotifSaveButton": { "placeholders": { "channel": { "type": "String" } } },
+  "@adminNotifSaveButton": {
+    "placeholders": {
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
   "adminNotifSavedSnack": "{channel} saved.",
-  "@adminNotifSavedSnack": { "placeholders": { "channel": { "type": "String" } } },
+  "@adminNotifSavedSnack": {
+    "placeholders": {
+      "channel": {
+        "type": "String"
+      }
+    }
+  },
   "adminNotifSaveFailed": "Save failed: {error}",
-  "@adminNotifSaveFailed": { "placeholders": { "error": { "type": "String" } } },
+  "@adminNotifSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "adminNotifTestSent": "Test sent",
   "adminNotifTestFailed": "Test failed",
   "adminNotifRequestFailed": "The request failed.",
@@ -1594,47 +2936,105 @@
   "adminNotifEventIssueResolved": "Issue resolved",
   "adminNotifEventDailyReport": "Daily status report",
   "adminNotifChannelEvents": "Events",
-
   "adminInviteCreateError": "Could not create invitation",
   "adminInviteEmailedSnack": "Invitation emailed to {email}",
-  "@adminInviteEmailedSnack": { "placeholders": { "email": { "type": "String" } } },
+  "@adminInviteEmailedSnack": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "adminInviteTitle": "Invitations",
   "adminInviteEmailHint": "Email to invite",
   "adminInviteRoleUser": "User",
   "adminInviteRoleSuperadmin": "Superadmin",
   "adminInviteButton": "Invite",
   "adminInviteLoadFailed": "Failed: {error}",
-  "@adminInviteLoadFailed": { "placeholders": { "error": { "type": "String" } } },
+  "@adminInviteLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "adminInviteEmpty": "No pending invitations",
   "adminInviteRoleExpires": "role: {role} · expires {when}",
-  "@adminInviteRoleExpires": { "placeholders": { "role": { "type": "String" }, "when": { "type": "String" } } },
+  "@adminInviteRoleExpires": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "adminInviteRevoke": "Revoke",
   "adminInviteCreatedTitle": "Invitation created",
   "adminInviteLinkInstructions": "Send this link to {email}. They must register using exactly that email address for the token to be accepted.",
-  "@adminInviteLinkInstructions": { "placeholders": { "email": { "type": "String" } } },
+  "@adminInviteLinkInstructions": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "adminInviteCopyLink": "Copy link",
   "adminInviteLinkCopied": "Link copied",
   "adminInviteDone": "Done",
-
   "adminUsersTitle": "Users",
   "adminUsersCreateTooltip": "Create user",
   "adminUsersSearchHint": "Search by email, username, or full name",
   "adminUsersLoadFailed": "Failed: {error}",
-  "@adminUsersLoadFailed": { "placeholders": { "error": { "type": "String" } } },
+  "@adminUsersLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "adminUsersDeleteTitle": "Delete user?",
   "adminUsersDeleteBody": "This will soft-delete {email}. They will be removed after a 30-day grace period.",
-  "@adminUsersDeleteBody": { "placeholders": { "email": { "type": "String" } } },
+  "@adminUsersDeleteBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "adminUsersCancel": "Cancel",
   "adminUsersDelete": "Delete",
   "adminUsersResetError": "Could not issue reset token",
   "adminUsersResetTokenTitle": "Password reset token",
   "adminUsersResetTokenSubtitle": "Send this to {email}. Valid until {expires}.",
-  "@adminUsersResetTokenSubtitle": { "placeholders": { "email": { "type": "String" }, "expires": { "type": "String" } } },
+  "@adminUsersResetTokenSubtitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      },
+      "expires": {
+        "type": "String"
+      }
+    }
+  },
   "adminUsersResetEmailSent": "Reset email sent to {email}",
-  "@adminUsersResetEmailSent": { "placeholders": { "email": { "type": "String" } } },
+  "@adminUsersResetEmailSent": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "adminUsersLastActionFailed": "Last action failed — see backend logs for details.",
   "adminUsersCount": "{count, plural, one{1 user} other{{count} users}}",
-  "@adminUsersCount": { "placeholders": { "count": { "type": "int" } } },
+  "@adminUsersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "adminUsersChipSuperadmin": "superadmin",
   "adminUsersChipInactive": "inactive",
   "adminUsersChipTempPw": "temp pw",
@@ -1644,6 +3044,265 @@
   "adminUsersPromoteSuperadmin": "Promote to superadmin",
   "adminUsersIssueReset": "Issue password reset…",
   "adminUsersDeleteMenu": "Delete…",
+  "relTimeNever": "never",
+  "relTimeJustNow": "just now",
+  "relTimeMinutes": "{n}m ago",
+  "@relTimeMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeHours": "{n}h ago",
+  "@relTimeHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeDays": "{n}d ago",
+  "@relTimeDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeMonths": "{n}mo ago",
+  "@relTimeMonths": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeYears": "{n}y ago",
+  "@relTimeYears": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersStatusActive": "Active",
+  "adminUsersStatusInactive": "Inactive",
+  "adminUsersStatusBanned": "Banned",
+  "adminUsersBannedReasonTooltip": "Banned: {reason}",
+  "@adminUsersBannedReasonTooltip": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersFilterAll": "All",
+  "adminUsersFilterNo2fa": "No 2FA",
+  "adminUsers2faTotp": "Authenticator app",
+  "adminUsers2faPasskeys": "{n, plural, =1{1 passkey} other{{n} passkeys}}",
+  "@adminUsers2faPasskeys": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsers2faRecoveryCodes": "{n, plural, =1{1 recovery code} other{{n} recovery codes}}",
+  "@adminUsers2faRecoveryCodes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsers2faOffTooltip": "No second factor — this account is password-only",
+  "adminUsersSessionsTooltip": "{n, plural, =0{No active sessions} =1{1 active session} other{{n} active sessions}}",
+  "@adminUsersSessionsTooltip": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersSessionsTitle": "Sessions — {email}",
+  "@adminUsersSessionsTitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersSessionsEmpty": "No active sessions.",
+  "adminUsersSessionsFailed": "Could not load sessions.",
+  "adminUsersSessionStarted": "started {when}",
+  "@adminUsersSessionStarted": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersDeviceUnknown": "Unknown device",
+  "adminUsersSignOutAll": "Sign out of all sessions",
+  "adminUsersSignOutAllTitle": "Sign out everywhere?",
+  "adminUsersSignOutAllBody": "This closes every active session for {email}. They will need to sign in again.",
+  "@adminUsersSignOutAllBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersSignOutAllConfirm": "Sign out",
+  "adminUsersSignOutAllDone": "{n, plural, =0{No sessions were open} =1{Closed 1 session} other{Closed {n} sessions}}",
+  "@adminUsersSignOutAllDone": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersLocationLocal": "Local network",
+  "adminUsersLocationUnknown": "Unknown location",
+  "adminUsersLastActiveTooltip": "last active {when}",
+  "@adminUsersLastActiveTooltip": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersLastActive": "Last active",
+  "adminUsersLastLogin": "Last login",
+  "adminUsersOnlineNow": "Active in the last few minutes",
+  "adminUsersReset2fa": "Reset two-factor…",
+  "adminUsersReset2faTitle": "Reset two-factor authentication?",
+  "adminUsersReset2faBody": "This removes every second factor from {email}:",
+  "@adminUsersReset2faBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faSignsOut": "All active sessions are closed",
+  "adminUsersReset2faWarning": "The user will sign in with their password alone until they enrol again.",
+  "adminUsersReset2faConfirm": "Reset two-factor",
+  "adminUsersReset2faDone": "Two-factor cleared for {email}.",
+  "@adminUsersReset2faDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faNothing": "{email} had no second factor configured.",
+  "@adminUsersReset2faNothing": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faFailed": "Could not reset two-factor.",
+  "adminUsersBan": "Ban user…",
+  "adminUsersUnban": "Lift ban",
+  "adminUsersBanTitle": "Ban this account?",
+  "adminUsersBanBody": "{email} will be signed out and refused access until the ban is lifted.",
+  "@adminUsersBanBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersBanNote": "A ban is separate from deactivation and only a superadmin can lift it.",
+  "adminUsersBanLdapNote": "This is an LDAP account: deactivating it would be undone at the next directory login, but a ban holds.",
+  "adminUsersBanReasonLabel": "Reason (optional)",
+  "adminUsersBanReasonHelper": "Shown to administrators and recorded in the audit log.",
+  "adminUsersBanConfirm": "Ban",
+  "adminUsersBanDone": "{email} has been banned.",
+  "@adminUsersBanDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersUnbanDone": "Ban lifted for {email}.",
+  "@adminUsersUnbanDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersBanFailed": "Could not change the ban.",
+  "adminGeoipTitle": "IP geolocation",
+  "adminGeoipSubtitle": "Resolve session countries and cities locally. Off by default.",
+  "adminGeoipEnable": "Enable geolocation",
+  "adminGeoipPrivacyNote": "Lookups never leave this server; only the database file is downloaded. IP-derived location is personal data.",
+  "adminGeoipVariant": "Database",
+  "adminGeoipVariantCountry": "Country only (~4 MB)",
+  "adminGeoipVariantCity": "Country and city (~62 MB)",
+  "adminGeoipAutoUpdate": "Update automatically each month",
+  "adminGeoipInstalled": "Installed: {variant}, build {month}",
+  "@adminGeoipInstalled": {
+    "placeholders": {
+      "variant": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipNotInstalled": "No database installed yet.",
+  "adminGeoipUpdateNow": "Update now",
+  "adminGeoipUpdating": "Downloading database…",
+  "adminGeoipUpdated": "Database updated to {month}.",
+  "@adminGeoipUpdated": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipAlreadyCurrent": "Already up to date.",
+  "adminGeoipUpdateFailed": "Update failed: {error}",
+  "@adminGeoipUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipLastError": "Last refresh failed: {error}",
+  "@adminGeoipLastError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipPurge": "Clear collected location data",
+  "adminGeoipPurgeDone": "{n, plural, =0{No stored locations to clear} =1{Cleared 1 stored location} other{Cleared {n} stored locations}}",
+  "@adminGeoipPurgeDone": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminGeoipAttribution": "Data source: {attribution}",
+  "@adminGeoipAttribution": {
+    "placeholders": {
+      "attribution": {
+        "type": "String"
+      }
+    }
+  },
   "adminUsersCreateTitle": "Create user",
   "adminUsersEmail": "Email",
   "adminUsersUsername": "Username",
@@ -1658,11 +3317,29 @@
   "adminUsersErrGeneric": "Could not create user. Please try again.",
   "adminUsersTempPwTitle": "Temporary password",
   "adminUsersTempPwBody": "Hand the following one-time credentials to {email}. The user will be forced to change the password on first login.",
-  "@adminUsersTempPwBody": { "placeholders": { "email": { "type": "String" } } },
+  "@adminUsersTempPwBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "adminUsersTempEmailLine": "Email: {email}",
-  "@adminUsersTempEmailLine": { "placeholders": { "email": { "type": "String" } } },
+  "@adminUsersTempEmailLine": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
   "adminUsersTempPasswordLine": "Password: {password}",
-  "@adminUsersTempPasswordLine": { "placeholders": { "password": { "type": "String" } } },
+  "@adminUsersTempPasswordLine": {
+    "placeholders": {
+      "password": {
+        "type": "String"
+      }
+    }
+  },
   "adminUsersCopyPassword": "Copy password",
   "adminUsersPasswordCopied": "Password copied",
   "adminUsersDone": "Done",
@@ -1685,9 +3362,24 @@
   "ttComplete": "Timesheet complete for this month",
   "ttMissingTitle": "Unfilled timesheet",
   "ttMissingBody": "{count} working day(s) not filled this month",
-  "@ttMissingBody": {"placeholders": {"count": {"type": "int"}}},
+  "@ttMissingBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "ttLoggedOf": "{logged} of {required} logged",
-  "@ttLoggedOf": {"placeholders": {"logged": {"type": "String"}, "required": {"type": "String"}}},
+  "@ttLoggedOf": {
+    "placeholders": {
+      "logged": {
+        "type": "String"
+      },
+      "required": {
+        "type": "String"
+      }
+    }
+  },
   "ttOpenTimesheet": "Open",
   "ttVacationBalance": "Vacation balance",
   "ttRemaining": "Remaining",
@@ -1774,264 +3466,546 @@
   "pfUpload": "Upload image",
   "pfPickEmoji": "Pick emoji",
   "pfReset": "Reset",
-
   "adminAppTokensTitle": "App tokens",
-  "@adminAppTokensTitle": { "description": "Admin app-tokens page title." },
+  "@adminAppTokensTitle": {
+    "description": "Admin app-tokens page title."
+  },
   "appTokenNew": "New token",
-  "@appTokenNew": { "description": "Create-token button." },
+  "@appTokenNew": {
+    "description": "Create-token button."
+  },
   "appTokenName": "Name",
-  "@appTokenName": { "description": "Token name field label." },
+  "@appTokenName": {
+    "description": "Token name field label."
+  },
   "appTokenProjects": "Projects",
-  "@appTokenProjects": { "description": "Token project-scope section label." },
+  "@appTokenProjects": {
+    "description": "Token project-scope section label."
+  },
   "appTokenPermissions": "Permissions",
-  "@appTokenPermissions": { "description": "Token permissions section label." },
+  "@appTokenPermissions": {
+    "description": "Token permissions section label."
+  },
   "appTokenCreate": "Create token",
-  "@appTokenCreate": { "description": "Confirm button in the create dialog." },
+  "@appTokenCreate": {
+    "description": "Confirm button in the create dialog."
+  },
   "appTokenSave": "Save",
-  "@appTokenSave": { "description": "Confirm button in the edit dialog." },
+  "@appTokenSave": {
+    "description": "Confirm button in the edit dialog."
+  },
   "appTokenEdit": "Edit token",
-  "@appTokenEdit": { "description": "Edit menu item / dialog title." },
+  "@appTokenEdit": {
+    "description": "Edit menu item / dialog title."
+  },
   "appTokenRevoke": "Revoke",
-  "@appTokenRevoke": { "description": "Revoke menu item / button." },
+  "@appTokenRevoke": {
+    "description": "Revoke menu item / button."
+  },
   "appTokenRevokeConfirm": "Revoke token '{name}'? Calls using it will immediately fail.",
   "@appTokenRevokeConfirm": {
     "description": "Revoke confirmation body.",
-    "placeholders": { "name": { "type": "String", "example": "CI bot" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "CI bot"
+      }
+    }
   },
   "appTokenSecretTitle": "Token created",
-  "@appTokenSecretTitle": { "description": "Secret dialog title." },
+  "@appTokenSecretTitle": {
+    "description": "Secret dialog title."
+  },
   "appTokenSecretWarning": "Copy this token now — it won't be shown again.",
-  "@appTokenSecretWarning": { "description": "One-time secret warning." },
+  "@appTokenSecretWarning": {
+    "description": "One-time secret warning."
+  },
   "appTokenCopy": "Copy",
-  "@appTokenCopy": { "description": "Copy secret button." },
+  "@appTokenCopy": {
+    "description": "Copy secret button."
+  },
   "appTokenCopied": "Copied to clipboard",
-  "@appTokenCopied": { "description": "Snackbar after copying the secret." },
+  "@appTokenCopied": {
+    "description": "Snackbar after copying the secret."
+  },
   "appTokenActive": "Active",
-  "@appTokenActive": { "description": "Token status badge." },
+  "@appTokenActive": {
+    "description": "Token status badge."
+  },
   "appTokenRevoked": "Revoked",
-  "@appTokenRevoked": { "description": "Token status badge." },
+  "@appTokenRevoked": {
+    "description": "Token status badge."
+  },
   "appTokenExpired": "Expired",
-  "@appTokenExpired": { "description": "Token status badge." },
+  "@appTokenExpired": {
+    "description": "Token status badge."
+  },
   "appTokenClear": "Clear",
-  "@appTokenClear": { "description": "Clears all selected permissions." },
+  "@appTokenClear": {
+    "description": "Clears all selected permissions."
+  },
   "appTokenEmpty": "No app tokens yet.",
-  "@appTokenEmpty": { "description": "Empty state on the app-tokens page." },
+  "@appTokenEmpty": {
+    "description": "Empty state on the app-tokens page."
+  },
   "appTokenLoadFailed": "Couldn't load app tokens.",
-  "@appTokenLoadFailed": { "description": "Load error on the app-tokens page." },
+  "@appTokenLoadFailed": {
+    "description": "Load error on the app-tokens page."
+  },
   "appTokenPermsCount": "{count} permissions",
   "@appTokenPermsCount": {
     "description": "Permission count on a token row.",
-    "placeholders": { "count": { "type": "int", "example": "5" } }
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
   },
-
   "exportTitle": "Export",
-  "@exportTitle": { "description": "Export menu tooltip on the issues page." },
+  "@exportTitle": {
+    "description": "Export menu tooltip on the issues page."
+  },
   "exportCsv": "Export as CSV",
-  "@exportCsv": { "description": "Export format menu item." },
+  "@exportCsv": {
+    "description": "Export format menu item."
+  },
   "exportXlsx": "Export as Excel",
-  "@exportXlsx": { "description": "Export format menu item." },
+  "@exportXlsx": {
+    "description": "Export format menu item."
+  },
   "exportFailed": "Export failed",
-  "@exportFailed": { "description": "Snackbar when the export request fails." },
+  "@exportFailed": {
+    "description": "Snackbar when the export request fails."
+  },
   "exportUnsupported": "Download isn't supported on this platform",
-  "@exportUnsupported": { "description": "Snackbar when the platform can't save a file." },
+  "@exportUnsupported": {
+    "description": "Snackbar when the platform can't save a file."
+  },
   "importTitle": "Import",
-  "@importTitle": { "description": "Import button tooltip / dialog title." },
+  "@importTitle": {
+    "description": "Import button tooltip / dialog title."
+  },
   "importPickHint": "Choose a JIRA or IntelliPilot CSV export to import into this project.",
-  "@importPickHint": { "description": "Help text on the import file-picker step." },
+  "@importPickHint": {
+    "description": "Help text on the import file-picker step."
+  },
   "importChooseFile": "Choose file",
-  "@importChooseFile": { "description": "Button that opens the file picker." },
+  "@importChooseFile": {
+    "description": "Button that opens the file picker."
+  },
   "importParseFailed": "Couldn't read that file. Expected a JIRA or IntelliPilot CSV export.",
-  "@importParseFailed": { "description": "Error when the uploaded file can't be parsed." },
+  "@importParseFailed": {
+    "description": "Error when the uploaded file can't be parsed."
+  },
   "importFailed": "Import failed",
-  "@importFailed": { "description": "Error when the import commit fails." },
+  "@importFailed": {
+    "description": "Error when the import commit fails."
+  },
   "importIssueCount": "{count} issues will be imported.",
   "@importIssueCount": {
     "description": "Header on the import mapping step.",
-    "placeholders": { "count": { "type": "int", "example": "12" } }
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
   },
   "importTypes": "Types",
-  "@importTypes": { "description": "Mapping section header." },
+  "@importTypes": {
+    "description": "Mapping section header."
+  },
   "importStatuses": "Statuses",
-  "@importStatuses": { "description": "Mapping section header." },
+  "@importStatuses": {
+    "description": "Mapping section header."
+  },
   "importPriorities": "Priorities",
-  "@importPriorities": { "description": "Mapping section header." },
+  "@importPriorities": {
+    "description": "Mapping section header."
+  },
   "importComponents": "Components",
-  "@importComponents": { "description": "Mapping section header." },
+  "@importComponents": {
+    "description": "Mapping section header."
+  },
   "importSkip": "Skip",
-  "@importSkip": { "description": "Dropdown option to leave a value unmapped." },
+  "@importSkip": {
+    "description": "Dropdown option to leave a value unmapped."
+  },
   "importUnmatchedUsers": "Unmatched users",
-  "@importUnmatchedUsers": { "description": "Header for users with no project match." },
+  "@importUnmatchedUsers": {
+    "description": "Header for users with no project match."
+  },
   "importUnmatchedUsersHint": "Comments from these users keep their name as a prefix.",
-  "@importUnmatchedUsersHint": { "description": "Explains how unmatched comment authors are handled." },
+  "@importUnmatchedUsersHint": {
+    "description": "Explains how unmatched comment authors are handled."
+  },
   "importAction": "Import",
-  "@importAction": { "description": "Commit button on the import dialog." },
+  "@importAction": {
+    "description": "Commit button on the import dialog."
+  },
   "importDoneIssues": "{count} issues created",
   "@importDoneIssues": {
     "description": "Import summary line.",
-    "placeholders": { "count": { "type": "int", "example": "12" } }
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
   },
   "importDoneEpics": "{count} epics created",
   "@importDoneEpics": {
     "description": "Import summary line.",
-    "placeholders": { "count": { "type": "int", "example": "2" } }
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
   },
   "importDoneComments": "{count} comments created",
   "@importDoneComments": {
     "description": "Import summary line.",
-    "placeholders": { "count": { "type": "int", "example": "5" } }
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "5"
+      }
+    }
   },
   "importDoneTaxonomy": "{count} taxonomy items created",
   "@importDoneTaxonomy": {
     "description": "Import summary line.",
-    "placeholders": { "count": { "type": "int", "example": "3" } }
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
   },
-
   "dashGreeting": "Welcome back, {name}",
   "@dashGreeting": {
     "description": "Greeting headline on the global dashboard.",
-    "placeholders": { "name": { "type": "String", "example": "Boris" } }
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Boris"
+      }
+    }
   },
   "dashKpiAssigned": "Assigned to me",
-  "@dashKpiAssigned": { "description": "KPI tile: issues assigned to the user." },
+  "@dashKpiAssigned": {
+    "description": "KPI tile: issues assigned to the user."
+  },
   "dashKpiOverdue": "Overdue",
-  "@dashKpiOverdue": { "description": "KPI tile: overdue issues." },
+  "@dashKpiOverdue": {
+    "description": "KPI tile: overdue issues."
+  },
   "dashKpiDueSoon": "Due this week",
-  "@dashKpiDueSoon": { "description": "KPI tile: issues due within seven days." },
+  "@dashKpiDueSoon": {
+    "description": "KPI tile: issues due within seven days."
+  },
   "dashKpiVacation": "Vacation days left",
-  "@dashKpiVacation": { "description": "KPI tile: remaining vacation days this year." },
+  "@dashKpiVacation": {
+    "description": "KPI tile: remaining vacation days this year."
+  },
   "dashAttentionTitle": "Needs your attention",
-  "@dashAttentionTitle": { "description": "Section title for overdue/soon items." },
+  "@dashAttentionTitle": {
+    "description": "Section title for overdue/soon items."
+  },
   "dashAttentionEmpty": "You’re all caught up.",
-  "@dashAttentionEmpty": { "description": "Empty state for the attention list." },
+  "@dashAttentionEmpty": {
+    "description": "Empty state for the attention list."
+  },
   "dashMyWorkTitle": "My work by status",
-  "@dashMyWorkTitle": { "description": "Section title for the user's work chart." },
+  "@dashMyWorkTitle": {
+    "description": "Section title for the user's work chart."
+  },
   "dashMyProjectsTitle": "My projects",
-  "@dashMyProjectsTitle": { "description": "Section title for the project cards." },
+  "@dashMyProjectsTitle": {
+    "description": "Section title for the project cards."
+  },
   "dashMyProjectsEmpty": "You’re not a member of any project yet.",
-  "@dashMyProjectsEmpty": { "description": "Empty state for the project cards." },
+  "@dashMyProjectsEmpty": {
+    "description": "Empty state for the project cards."
+  },
   "dashNoWork": "No issues",
-  "@dashNoWork": { "description": "Empty state for a status breakdown chart." },
+  "@dashNoWork": {
+    "description": "Empty state for a status breakdown chart."
+  },
   "dashOpenCount": "{count} open",
   "@dashOpenCount": {
     "description": "Open-issue count on a project card.",
-    "placeholders": { "count": { "type": "int", "example": "4" } }
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "4"
+      }
+    }
   },
   "dashDue": "Due {date}",
   "@dashDue": {
     "description": "Due-date label on an attention item.",
-    "placeholders": { "date": { "type": "String", "example": "2026-06-30" } }
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "2026-06-30"
+      }
+    }
   },
   "dashKpiOpen": "Open",
-  "@dashKpiOpen": { "description": "KPI tile: open issues in the project." },
+  "@dashKpiOpen": {
+    "description": "KPI tile: open issues in the project."
+  },
   "dashKpiUnassigned": "Unassigned",
-  "@dashKpiUnassigned": { "description": "KPI tile: unassigned open issues." },
+  "@dashKpiUnassigned": {
+    "description": "KPI tile: unassigned open issues."
+  },
   "dashKpiBugs": "Open bugs",
-  "@dashKpiBugs": { "description": "KPI tile: open bug issues." },
+  "@dashKpiBugs": {
+    "description": "KPI tile: open bug issues."
+  },
   "dashKpiMyOverdue": "My overdue",
-  "@dashKpiMyOverdue": { "description": "KPI tile: the user's overdue issues here." },
+  "@dashKpiMyOverdue": {
+    "description": "KPI tile: the user's overdue issues here."
+  },
   "dashBoardTitle": "Board snapshot",
-  "@dashBoardTitle": { "description": "Section title for the project status chart." },
+  "@dashBoardTitle": {
+    "description": "Section title for the project status chart."
+  },
   "dashMyTasksTitle": "My tasks here",
-  "@dashMyTasksTitle": { "description": "Section title for the personal status chart." },
+  "@dashMyTasksTitle": {
+    "description": "Section title for the personal status chart."
+  },
   "dashEpicsTitle": "Epic readiness",
-  "@dashEpicsTitle": { "description": "Section title for epic completion bars." },
+  "@dashEpicsTitle": {
+    "description": "Section title for epic completion bars."
+  },
   "dashEpicsEmpty": "No epics yet",
-  "@dashEpicsEmpty": { "description": "Empty state for the epic readiness list." },
+  "@dashEpicsEmpty": {
+    "description": "Empty state for the epic readiness list."
+  },
   "dashThroughputTitle": "Closed per week",
-  "@dashThroughputTitle": { "description": "Section title for the throughput chart." },
+  "@dashThroughputTitle": {
+    "description": "Section title for the throughput chart."
+  },
   "dashByTypeTitle": "By type",
-  "@dashByTypeTitle": { "description": "Section title for the issue-type breakdown." },
+  "@dashByTypeTitle": {
+    "description": "Section title for the issue-type breakdown."
+  },
   "dashByPriorityTitle": "By priority",
-  "@dashByPriorityTitle": { "description": "Section title for the priority breakdown." },
+  "@dashByPriorityTitle": {
+    "description": "Section title for the priority breakdown."
+  },
   "dashBreakdownEmpty": "No data",
-  "@dashBreakdownEmpty": { "description": "Empty state for a breakdown list." },
+  "@dashBreakdownEmpty": {
+    "description": "Empty state for a breakdown list."
+  },
   "dashByCategoryTitle": "By category",
-  "@dashByCategoryTitle": { "description": "Section title for the issue-category breakdown." },
+  "@dashByCategoryTitle": {
+    "description": "Section title for the issue-category breakdown."
+  },
   "navDashboard": "Dashboard",
-  "@navDashboard": { "description": "Main-menu entry / brand target for the global dashboard." },
+  "@navDashboard": {
+    "description": "Main-menu entry / brand target for the global dashboard."
+  },
   "fieldEmoji": "Emoji",
-  "@fieldEmoji": { "description": "Label for the emoji picker on a taxonomy item (issue type / priority)." },
+  "@fieldEmoji": {
+    "description": "Label for the emoji picker on a taxonomy item (issue type / priority)."
+  },
   "actionClearFilters": "Clear filters",
-  "@actionClearFilters": { "description": "Button to clear all active issue list filters." },
+  "@actionClearFilters": {
+    "description": "Button to clear all active issue list filters."
+  },
   "issueFieldDueDate": "Due date",
-  "@issueFieldDueDate": { "description": "Label for the issue due-date field." },
+  "@issueFieldDueDate": {
+    "description": "Label for the issue due-date field."
+  },
   "issueFieldAssignee": "Assignee",
-  "@issueFieldAssignee": { "description": "Label for the issue assignee field." },
+  "@issueFieldAssignee": {
+    "description": "Label for the issue assignee field."
+  },
   "issueFieldQaAssignee": "QA",
-  "@issueFieldQaAssignee": { "description": "Label for the QA-assignee filter." },
+  "@issueFieldQaAssignee": {
+    "description": "Label for the QA-assignee filter."
+  },
   "issueFieldCategory": "Category",
-  "@issueFieldCategory": { "description": "Label for the issue category field." },
+  "@issueFieldCategory": {
+    "description": "Label for the issue category field."
+  },
   "milestoneManageEpics": "Manage epics",
-  "@milestoneManageEpics": { "description": "Button to choose which epics compose a milestone." },
+  "@milestoneManageEpics": {
+    "description": "Button to choose which epics compose a milestone."
+  },
   "milestoneNoEpics": "No epics in this milestone yet.",
-  "@milestoneNoEpics": { "description": "Empty state for a milestone's epic list." },
+  "@milestoneNoEpics": {
+    "description": "Empty state for a milestone's epic list."
+  },
   "epicsColAll": "All",
-  "@epicsColAll": { "description": "Epics board column for backlog / not-started epics." },
+  "@epicsColAll": {
+    "description": "Epics board column for backlog / not-started epics."
+  },
   "epicsColInProgress": "In Progress",
-  "@epicsColInProgress": { "description": "Epics board column for the mapped in-progress statuses." },
+  "@epicsColInProgress": {
+    "description": "Epics board column for the mapped in-progress statuses."
+  },
   "epicsColDone": "Done",
-  "@epicsColDone": { "description": "Epics board column for closed statuses." },
+  "@epicsColDone": {
+    "description": "Epics board column for closed statuses."
+  },
   "epicsFilterAllMilestones": "All milestones",
-  "@epicsFilterAllMilestones": { "description": "Default option in the epics milestone filter." },
+  "@epicsFilterAllMilestones": {
+    "description": "Default option in the epics milestone filter."
+  },
   "epicsFilterMilestoneLabel": "Milestone",
-  "@epicsFilterMilestoneLabel": { "description": "Label for the epics board milestone filter." },
+  "@epicsFilterMilestoneLabel": {
+    "description": "Label for the epics board milestone filter."
+  },
   "epicsCountTooltip": "{count} epics",
-  "@epicsCountTooltip": { "description": "Tooltip on the epic count badge in the breadcrumb.", "placeholders": { "count": { "type": "int", "example": "12" } } },
+  "@epicsCountTooltip": {
+    "description": "Tooltip on the epic count badge in the breadcrumb.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
   "panelEpic": "Epic",
-  "@panelEpic": { "description": "Detail-sidebar panel title for epic-specific properties (cover, colour, dates)." },
+  "@panelEpic": {
+    "description": "Detail-sidebar panel title for epic-specific properties (cover, colour, dates)."
+  },
   "panelIncludedIssues": "Included issues",
-  "@panelIncludedIssues": { "description": "Detail-sidebar panel title listing issues grouped under the epic." },
+  "@panelIncludedIssues": {
+    "description": "Detail-sidebar panel title listing issues grouped under the epic."
+  },
   "detailFieldCover": "Cover image",
-  "@detailFieldCover": { "description": "Field label for the epic cover image." },
+  "@detailFieldCover": {
+    "description": "Field label for the epic cover image."
+  },
   "epicNoIssues": "No issues in this epic yet.",
-  "@epicNoIssues": { "description": "Empty state for the epic's included-issues panel." },
+  "@epicNoIssues": {
+    "description": "Empty state for the epic's included-issues panel."
+  },
   "epicDangerZoneBody": "Deleting this epic is permanent. Linked issues are kept but detached from it.",
-  "@epicDangerZoneBody": { "description": "Explanatory copy in the epic danger zone." },
+  "@epicDangerZoneBody": {
+    "description": "Explanatory copy in the epic danger zone."
+  },
   "epicDeleteAction": "Delete epic",
-  "@epicDeleteAction": { "description": "Destructive button label in the epic danger zone." },
+  "@epicDeleteAction": {
+    "description": "Destructive button label in the epic danger zone."
+  },
   "epicBoardSettingsTooltip": "Board settings",
-  "@epicBoardSettingsTooltip": { "description": "Tooltip for the gear button that opens the epics board column mapping." },
+  "@epicBoardSettingsTooltip": {
+    "description": "Tooltip for the gear button that opens the epics board column mapping."
+  },
   "epicBoardSettingsTitle": "Board columns",
-  "@epicBoardSettingsTitle": { "description": "Title of the epics board settings dialog." },
+  "@epicBoardSettingsTitle": {
+    "description": "Title of the epics board settings dialog."
+  },
   "epicBoardSettingsHint": "Pick which statuses appear in the In Progress column. Closed statuses always go to Done; the rest stay in All.",
-  "@epicBoardSettingsHint": { "description": "Explanatory copy in the epics board settings dialog." },
+  "@epicBoardSettingsHint": {
+    "description": "Explanatory copy in the epics board settings dialog."
+  },
   "dangerCleanIssuesTitle": "Clean all issues",
-  "@dangerCleanIssuesTitle": { "description": "Danger-zone section title / button to purge all issues." },
+  "@dangerCleanIssuesTitle": {
+    "description": "Danger-zone section title / button to purge all issues."
+  },
   "dangerCleanIssuesBody": "Permanently delete every issue in this project. This cannot be undone.",
-  "@dangerCleanIssuesBody": { "description": "Danger-zone explanatory copy for purging issues." },
+  "@dangerCleanIssuesBody": {
+    "description": "Danger-zone explanatory copy for purging issues."
+  },
   "dangerCleanEpicsTitle": "Clean all epics",
-  "@dangerCleanEpicsTitle": { "description": "Danger-zone section title / button to purge all epics." },
+  "@dangerCleanEpicsTitle": {
+    "description": "Danger-zone section title / button to purge all epics."
+  },
   "dangerCleanEpicsBody": "Permanently delete every epic in this project. Their issues are kept but detached. This cannot be undone.",
-  "@dangerCleanEpicsBody": { "description": "Danger-zone explanatory copy for purging epics." },
+  "@dangerCleanEpicsBody": {
+    "description": "Danger-zone explanatory copy for purging epics."
+  },
   "dangerCleanedIssuesSnack": "{count} issues deleted.",
-  "@dangerCleanedIssuesSnack": { "description": "Snackbar after purging issues.", "placeholders": { "count": { "type": "int", "example": "42" } } },
+  "@dangerCleanedIssuesSnack": {
+    "description": "Snackbar after purging issues.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "42"
+      }
+    }
+  },
   "dangerCleanedEpicsSnack": "{count} epics deleted.",
-  "@dangerCleanedEpicsSnack": { "description": "Snackbar after purging epics.", "placeholders": { "count": { "type": "int", "example": "7" } } },
-
+  "@dangerCleanedEpicsSnack": {
+    "description": "Snackbar after purging epics.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "7"
+      }
+    }
+  },
   "actionEnable": "Enable",
-  "@actionEnable": { "description": "Generic enable action." },
+  "@actionEnable": {
+    "description": "Generic enable action."
+  },
   "personalTokenSection": "API access",
-  "@personalTokenSection": { "description": "Security-page section title for the personal app token." },
+  "@personalTokenSection": {
+    "description": "Security-page section title for the personal app token."
+  },
   "personalTokenTitle": "Personal app token",
-  "@personalTokenTitle": { "description": "Personal token card title (no token yet)." },
+  "@personalTokenTitle": {
+    "description": "Personal token card title (no token yet)."
+  },
   "personalTokenSubtitle": "One token that acts as you — for MCP clients, scripts and integrations.",
-  "@personalTokenSubtitle": { "description": "Personal token card subtitle (no token yet)." },
+  "@personalTokenSubtitle": {
+    "description": "Personal token card subtitle (no token yet)."
+  },
   "personalTokenGenerate": "Generate",
-  "@personalTokenGenerate": { "description": "Button that mints the personal token." },
+  "@personalTokenGenerate": {
+    "description": "Button that mints the personal token."
+  },
   "personalTokenLoadFailed": "Couldn't load your personal token.",
-  "@personalTokenLoadFailed": { "description": "Load error on the personal token card." },
+  "@personalTokenLoadFailed": {
+    "description": "Load error on the personal token card."
+  },
   "personalTokenReset": "Reset token",
-  "@personalTokenReset": { "description": "Menu item / dialog title to rotate the personal token secret." },
+  "@personalTokenReset": {
+    "description": "Menu item / dialog title to rotate the personal token secret."
+  },
   "personalTokenResetConfirm": "Generate a new secret? The current token stops working immediately.",
-  "@personalTokenResetConfirm": { "description": "Confirmation body before resetting the personal token." },
+  "@personalTokenResetConfirm": {
+    "description": "Confirmation body before resetting the personal token."
+  },
   "personalTokenDeleteConfirm": "Delete your personal token? Calls using it will immediately fail.",
-  "@personalTokenDeleteConfirm": { "description": "Confirmation body before deleting the personal token." },
+  "@personalTokenDeleteConfirm": {
+    "description": "Confirmation body before deleting the personal token."
+  },
   "personalTokenDisabled": "Disabled",
-  "@personalTokenDisabled": { "description": "Personal token status badge." },
+  "@personalTokenDisabled": {
+    "description": "Personal token status badge."
+  },
   "personalTokenNeverUsed": "never used",
-  "@personalTokenNeverUsed": { "description": "Shown when the personal token has no last-used timestamp." },
+  "@personalTokenNeverUsed": {
+    "description": "Shown when the personal token has no last-used timestamp."
+  },
   "personalTokenLastUsed": "last used {date}",
-  "@personalTokenLastUsed": { "description": "Last-used line on the personal token card.", "placeholders": { "date": { "type": "String", "example": "Jan 5, 2026" } } },
+  "@personalTokenLastUsed": {
+    "description": "Last-used line on the personal token card.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "Jan 5, 2026"
+      }
+    }
+  },
   "personalTokenCreated": "Created {date}",
-  "@personalTokenCreated": { "description": "Created line on the personal token card.", "placeholders": { "date": { "type": "String", "example": "Jan 5, 2026" } } }
+  "@personalTokenCreated": {
+    "description": "Created line on the personal token card.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "Jan 5, 2026"
+      }
+    }
+  }
 }

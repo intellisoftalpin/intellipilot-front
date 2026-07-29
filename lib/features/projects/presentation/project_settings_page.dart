@@ -1260,7 +1260,8 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
     if (!mounted) return;
     res.when(
       ok: (list) => setState(() {
-        _results = list.items;
+        // The admin list carries security fields this picker has no use for.
+        _results = [for (final row in list.items) row.user];
         _searching = false;
         _searchUnavailable = false;
       }),

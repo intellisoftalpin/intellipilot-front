@@ -4,6 +4,39 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.6.17] - 2026-07-29
+
+Account security in the admin area. Backend companion release is also 0.6.17 —
+the two version lines are realigned (0.6.14–0.6.16 were frontend-only).
+
+### Added
+- The admin user list now shows each account's security posture at a glance:
+  a status pill (Active / Inactive / Banned, with the ban reason on hover), a
+  two-factor shield that breaks down TOTP, passkeys and remaining recovery
+  codes, a live-session count, the country and city of the most recent session,
+  and relative "last active" / "last login" with exact timestamps on hover.
+  A green dot marks accounts active in the last few minutes.
+- Row actions: **Reset two-factor** (a confirmation that itemises exactly what
+  will be removed, since the user must re-enrol afterwards), **Sign out of all
+  sessions**, and **Ban / Lift ban** with an optional reason. The ban dialog
+  points out that for an LDAP account, deactivation would be undone at the next
+  directory login but a ban holds.
+- Tapping the session count opens a sheet listing each session with its
+  location, browser/OS, address and last activity.
+- Filter chips: All / Active / Banned / Inactive / No 2FA.
+- An **IP geolocation** page under admin settings: enable/disable (off by
+  default), choose the country or city database, toggle the monthly refresh,
+  update now, clear collected location data, and the attribution the database
+  licence requires.
+
+### Notes
+- Countries render as a flag plus their ISO code rather than a translated
+  name — the flag is derived from the code, which avoids shipping and
+  translating a 250-entry country-name table in four languages. Cities are
+  shown as the database publishes them.
+- A private or loopback address renders as "Local network"; the server
+  deliberately stores no location for those.
+
 ## [0.6.13] - 2026-07-19
 
 One combined release (0.6.10/0.6.11 were absorbed for backend lockstep;

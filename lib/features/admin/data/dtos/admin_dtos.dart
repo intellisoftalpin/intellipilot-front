@@ -1,3 +1,4 @@
+import 'package:intellipilot/features/admin/data/dtos/security_dtos.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 
 /// Mirrors `crate::admin::dto::UserListResponse`.
@@ -11,7 +12,7 @@ class AdminUserList {
 
   factory AdminUserList.fromJson(Map<String, dynamic> json) {
     final items = (json['items'] as List<dynamic>? ?? const [])
-        .map((e) => UserProfile.fromJson(e as Map<String, dynamic>))
+        .map((e) => AdminUserRow.fromJson(e as Map<String, dynamic>))
         .toList(growable: false);
     return AdminUserList(
       items: items,
@@ -21,7 +22,7 @@ class AdminUserList {
     );
   }
 
-  final List<UserProfile> items;
+  final List<AdminUserRow> items;
   final int total;
   final int limit;
   final int offset;

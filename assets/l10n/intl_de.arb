@@ -1,57 +1,37 @@
 {
   "@@locale": "de",
-
   "appTitle": "IntelliPilot",
-
   "homeWelcomeTitle": "Willkommen bei IntelliPilot",
-
   "homeWelcomeBody": "Das Frontend-Grundgerüst steht. Authentifizierung und Projekt-Workflows folgen in den kommenden Phasen.",
-
   "homeHealthCheckSection": "Backend-Verbindung",
-
   "homePingButton": "Backend anpingen",
-
   "homePingHint": "Tippen, um die Anbindung des API-Clients an das konfigurierte Backend zu prüfen.",
-
   "homePingOk": "Backend erreichbar (HTTP {code}).",
-
   "settingsTitle": "Einstellungen",
-
   "settingsAppearance": "Darstellung",
-
   "settingsLanguage": "Sprache",
   "settingsWeekStart": "Wochenbeginn",
   "weekStartMonday": "Montag",
   "weekStartSaturday": "Samstag",
   "weekStartSunday": "Sonntag",
-
   "themeLight": "Hell",
   "themeDark": "Dunkel",
   "themeSystem": "System",
-
   "themeSeedColor": "Akzentfarbe",
-
   "themeUseDynamic": "Systemfarben verwenden, wenn verfügbar",
-
   "themeUseDynamicHint": "Greift auf Plattformen ohne dynamische Farben auf die obige Akzentfarbe zurück.",
-
   "localeSystem": "Systemstandard",
-
   "loginSubtitle": "Anmelden, um fortzufahren.",
   "loginMfaNotice": "Für dieses Konto ist 2FA aktiviert. Die Bestätigungsoberfläche kommt in Phase 3 — verwende vorerst ein Konto ohne 2FA.",
-
   "registerTitle": "Konto erstellen",
   "registerSuccessSnack": "Konto erstellt. Melde dich an, um fortzufahren.",
-
   "forgotPasswordTitle": "Passwort vergessen",
   "forgotPasswordBody": "Gib die mit deinem Konto verknüpfte E-Mail-Adresse ein, und wir senden dir eine Anleitung zum Zurücksetzen deines Passworts.",
   "forgotPasswordSuccessTitle": "Prüfe deine E-Mails",
   "forgotPasswordSuccessBody": "Falls ein Konto zu dieser E-Mail-Adresse existiert, erhältst du in Kürze einen Link zum Zurücksetzen.",
-
   "resetPasswordTitle": "Passwort zurücksetzen",
   "resetPasswordBody": "Füge den Token aus deiner Zurücksetzen-E-Mail ein und wähle ein neues Passwort.",
   "resetPasswordSuccessSnack": "Passwort geändert. Melde dich an, um fortzufahren.",
-
   "fieldEmail": "E-Mail",
   "fieldEmailOrUsername": "E-Mail oder Benutzername",
   "fieldPassword": "Passwort",
@@ -61,7 +41,6 @@
   "fieldFullName": "Vollständiger Name (optional)",
   "fieldPasswordHint": "Mindestens 8 Zeichen.",
   "fieldResetToken": "Zurücksetzen-Token",
-
   "actionSignIn": "Anmelden",
   "actionRegister": "Konto erstellen",
   "actionSendResetLink": "Zurücksetzen-Link senden",
@@ -71,10 +50,8 @@
   "actionCopy": "Kopieren",
   "linkForgotPassword": "Passwort vergessen?",
   "linkCreateAccount": "Noch kein Konto? Registrieren",
-
   "devTokenBannerTitle": "Entwicklungs-Zurücksetzen-Token",
   "copiedToClipboard": "In die Zwischenablage kopiert",
-
   "errFieldRequired": "Dieses Feld ist erforderlich.",
   "errEmailInvalid": "Gib eine gültige E-Mail-Adresse ein.",
   "errTooLong": "Dieser Wert ist zu lang.",
@@ -90,10 +67,8 @@
   "errTooManyAttempts": "Zu viele Versuche. Bitte warte einen Moment und versuche es erneut.",
   "errUnknown": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
   "errResetTokenInvalid": "Der Zurücksetzen-Token ist ungültig oder abgelaufen.",
-
   "settingsSecurityTitle": "Sicherheit",
   "settingsSecuritySubtitle": "Zwei-Faktor-Authentifizierung, Wiederherstellungscodes und Passkeys.",
-
   "securityTitle": "Sicherheit",
   "securitySection2fa": "Zwei-Faktor-Authentifizierung",
   "securitySectionPasskeys": "Passkeys",
@@ -107,7 +82,6 @@
   "securityDisableTotpSnack": "Zwei-Faktor-Authentifizierung deaktiviert.",
   "securityPasskeysTitle": "Passkeys verwalten",
   "securityPasskeysSubtitle": "Melde dich ohne Passwort mit einem Telefon oder Sicherheitsschlüssel an.",
-
   "totpSetupTitle": "Authenticator einrichten",
   "totpStep1": "Schritt 1 — Scanne den QR-Code mit deiner Authenticator-App.",
   "totpStep2": "Schritt 2 — Gib den 6-stelligen Code ein, den deine App anzeigt.",
@@ -118,13 +92,11 @@
   "totpStartFailed": "Die TOTP-Einrichtung konnte nicht gestartet werden.",
   "totpEnabledTitle": "Zwei-Faktor-Authentifizierung aktiviert",
   "totpEnabledBody": "Bewahre die untenstehenden Wiederherstellungscodes an einem sicheren Ort auf. Du benötigst sie, falls du jemals deine Authenticator-App verlierst.",
-
   "recoveryCodesTitle": "Wiederherstellungscodes",
   "recoveryCodesHint": "Jeder Code funktioniert nur einmal. Bewahre sie sicher auf — sie können nicht erneut angezeigt werden.",
   "recoveryCodesPageTitle": "Wiederherstellungscodes",
   "recoveryRegenerateBody": "Das Generieren neuer Codes macht alle vorherigen Codes ungültig. Für diese Aktion muss die Zwei-Faktor-Authentifizierung aktiviert sein.",
   "recoveryRegenerateFailed": "Wiederherstellungscodes konnten nicht generiert werden.",
-
   "mfaVerifyTitle": "Zwei-Faktor-Bestätigung",
   "mfaVerifyBody": "Gib den Code aus deiner Authenticator-App ein oder verwende einen Wiederherstellungscode, falls du keinen Zugriff darauf hast.",
   "mfaMethodTotp": "Authenticator",
@@ -132,7 +104,6 @@
   "mfaRecoveryCodeLabel": "Wiederherstellungscode",
   "mfaInvalidCode": "Dieser Code wurde nicht akzeptiert. Versuche es erneut.",
   "mfaContextLost": "Deine Anmeldesitzung ist abgelaufen. Bitte melde dich erneut an.",
-
   "passkeysPageTitle": "Passkeys",
   "passkeysIntro": "Mit Passkeys kannst du dich mit einem Telefon, Laptop oder Sicherheitsschlüssel anstelle eines Passworts anmelden.",
   "passkeysEmpty": "Du hast noch keinen Passkey hinzugefügt.",
@@ -144,12 +115,10 @@
   "passkeyNeverUsed": "Nie verwendet",
   "passkeyLastUsed": "Zuletzt verwendet {when}",
   "passkeyCeremonyFailed": "Passkey-Vorgang fehlgeschlagen. Versuche es erneut oder verwende eine andere Anmeldemethode.",
-
   "passkeySignInTitle": "Mit einem Passkey anmelden",
   "passkeySignInBody": "Gib die mit deinem Konto verknüpfte E-Mail-Adresse ein und bestätige dann die Aufforderung auf deinem Gerät.",
   "passkeySignInUnauthorized": "Wir konnten dich mit diesem Passkey nicht anmelden.",
   "linkSignInWithPasskey": "Mit einem Passkey anmelden",
-
   "actionVerify": "Überprüfen",
   "actionCancelMfa": "Abbrechen und mit einem anderen Konto anmelden",
   "actionRetry": "Erneut versuchen",
@@ -162,12 +131,10 @@
   "actionContinueWithPasskey": "Mit einem Passkey fortfahren",
   "actionDelete": "Löschen",
   "actionDisable": "Deaktivieren",
-
   "settingsProfileTitle": "Profil",
   "settingsProfileSubtitle": "Name, Sprache und Zeitzone.",
   "settingsAccountTitle": "Konto",
   "settingsAccountSubtitle": "Exportiere deine Daten oder lösche dein Konto.",
-
   "profileTitle": "Profil",
   "profileLoadFailed": "Dein Profil konnte nicht geladen werden.",
   "profileSaveFailed": "Deine Änderungen konnten nicht gespeichert werden.",
@@ -176,7 +143,6 @@
   "profileTimezoneLabel": "Zeitzone",
   "profileTimezoneHint": "IANA-Name, z. B. Europe/Zurich.",
   "actionSave": "Änderungen speichern",
-
   "accountTitle": "Konto",
   "accountDangerZoneTitle": "Gefahrenzone",
   "accountDeleteBody": "Beim Löschen deines Kontos wird der Zugriff sofort widerrufen. Die Daten werden 30 Tage lang aufbewahrt, während dieser Zeit kannst du den Support kontaktieren, um sie wiederherzustellen; nach Ablauf der Frist werden sie endgültig gelöscht.",
@@ -186,7 +152,6 @@
   "accountDeleteUsernameMismatch": "Das stimmt nicht mit deinem Benutzernamen überein. Löschung abgebrochen.",
   "accountDeletedSnack": "Dein Konto ist zur Löschung am {when} vorgemerkt. Du wurdest abgemeldet.",
   "actionDeleteAccount": "Konto löschen",
-
   "gdprExportTitle": "Deine Daten exportieren",
   "gdprExportBodyWeb": "Lade eine JSON-Datei mit deinem Profil und deinem Aktivitätsprotokoll herunter.",
   "gdprExportBodyNative": "Kopiere eine JSON-Momentaufnahme deines Profils und deines Aktivitätsprotokolls in die Zwischenablage. (Das Speichern als Datei folgt in einer späteren Version.)",
@@ -194,7 +159,6 @@
   "gdprExportDownloadedSnack": "Export heruntergeladen.",
   "gdprExportClipboardSnack": "Export in die Zwischenablage kopiert.",
   "gdprExportFailed": "Deine Daten konnten nicht exportiert werden.",
-
   "projectsTitle": "Projekte",
   "projectsEmpty": "Du bist noch in keinem Projekt Mitglied. Erstelle eins, um loszulegen.",
   "projectsNoMatch": "Keine Projekte entsprechen deiner Suche.",
@@ -210,7 +174,6 @@
   "projectVisibilityPrivate": "Privat",
   "projectVisibilityInternal": "Intern (angemeldete Benutzer)",
   "projectVisibilityPublicReadonly": "Öffentlich (schreibgeschützt)",
-
   "projectOverviewTitle": "Projekt",
   "projectLoadFailed": "Dieses Projekt konnte nicht geladen werden.",
   "projectFeaturesTitle": "Aktivierte Funktionen",
@@ -219,7 +182,6 @@
   "projectFeatureEpics": "Epics",
   "projectFeatureWiki": "Wiki",
   "projectPhase5Notice": "Backlog-, Board- und Wiki-Ansichten folgen in den kommenden Phasen.",
-
   "projectSettingsTitle": "Einstellungen",
   "tabGeneral": "Allgemein",
   "tabMembers": "Mitglieder",
@@ -234,7 +196,6 @@
   "projectPrefixInvalid": "Das Präfix muss 2–3 Buchstaben haben.",
   "projectPrefixTaken": "Dieses Präfix wird bereits verwendet.",
   "projectSaveFailed": "Projekt konnte nicht gespeichert werden.",
-
   "membersTitle": "Mitglieder",
   "membersInviteBody": "Lade eine Person per E-Mail ein; sie erhält einen Einmal-Link, um mit einer gewählten Rolle beizutreten.",
   "membersLoadFailed": "Mitglieder konnten nicht geladen werden.",
@@ -250,7 +211,6 @@
   "actionSend": "Senden",
   "invitationTokenDialogTitle": "Einladungslink",
   "invitationsPendingTitle": "Ausstehende Einladungen",
-
   "rolesLoadFailed": "Rollen konnten nicht geladen werden.",
   "rolePermissionsSuffix": "Berechtigungen",
   "roleAdminBadge": "Administrator (alle Berechtigungen)",
@@ -264,7 +224,6 @@
   "rolePresetContributor": "Mitwirkender",
   "rolePresetMaintainer": "Maintainer",
   "rolePresetAdmin": "Administrator",
-
   "permDomainProject": "Projekt",
   "permDomainMembers": "Mitglieder",
   "permDomainRoles": "Rollen",
@@ -281,29 +240,24 @@
   "permDomainRepositories": "Repositories",
   "permDomainCustomers": "Kunden",
   "permDomainReleases": "Releases",
-
   "projectDeleteSectionTitle": "Dieses Projekt löschen",
   "projectDeleteBody": "Dadurch werden das Projekt und alle zugehörigen Daten endgültig gelöscht. Es gibt keine Schonfrist.",
   "projectDeleteTypeName": "Gib zur Bestätigung den Projektnamen '{name}' ein:",
   "projectDeleteNameMismatch": "Der Projektname stimmt nicht überein. Löschung abgebrochen.",
   "projectDeletedSnack": "Projekt gelöscht.",
   "actionDeleteProject": "Projekt löschen",
-
   "invitationAcceptTitle": "Projekt beitreten",
   "invitationAcceptSuccessSnack": "Willkommen an Bord.",
   "invitationAcceptExpired": "Diese Einladung ist nicht mehr gültig. Bitte die Person, die sie gesendet hat, eine neue auszustellen.",
   "invitationAcceptNotFound": "Wir konnten diese Einladung nicht finden. Der Link ist möglicherweise fehlerhaft.",
-
   "tabTaxonomy": "Taxonomie",
   "tabLabels": "Labels",
   "tabComponents": "Komponenten",
-
   "fieldName": "Name",
   "fieldColor": "Farbe",
   "fieldSlug": "Slug",
   "fieldSlugFrozenHint": "Der Slug kann nach der Erstellung nicht mehr geändert werden.",
   "actionEdit": "Bearbeiten",
-
   "taxKindUsStatus": "User-Story-Status",
   "taxKindTaskStatus": "Aufgabenstatus",
   "taxKindIssueStatus": "Issue-Status",
@@ -325,14 +279,12 @@
   "actionEditTaxonomyItem": "Eintrag bearbeiten",
   "taxonomyDeleteTitle": "Eintrag löschen?",
   "taxonomyDeleteConfirm": "'{name}' löschen? Einträge, die noch auf diesen Wert verweisen, behalten ihre aktuelle Auswahl, bis du sie neu zuweist.",
-
   "labelsEmpty": "Noch keine Labels. Erstelle eins, um mit dem Organisieren von Issues zu beginnen.",
   "labelsLoadFailed": "Labels konnten nicht geladen werden.",
   "actionNewLabel": "Neues Label",
   "actionEditLabel": "Label bearbeiten",
   "labelDeleteTitle": "Label löschen?",
   "labelDeleteConfirm": "Das Label '{name}' löschen? Es wird von allen Issues entfernt, die es derzeit verwenden.",
-
   "componentsEmpty": "Noch keine Komponenten. Erstelle eine, um sie an Issues anzuhängen.",
   "componentsLoadFailed": "Komponenten konnten nicht geladen werden.",
   "componentRepoLabel": "Git-Repository (optional)",
@@ -341,7 +293,6 @@
   "actionEditComponent": "Komponente bearbeiten",
   "componentDeleteTitle": "Komponente löschen?",
   "componentDeleteConfirm": "Die Komponente '{name}' löschen? Sie wird von allen Issues entfernt, die sie derzeit verwenden.",
-
   "backlogTitle": "Backlog",
   "backlogLoadFailed": "Der Backlog konnte nicht geladen werden.",
   "backlogSearchHint": "Nach Betreff, Beschreibung oder US-123 suchen",
@@ -354,20 +305,17 @@
   "backlogChangeStatus": "Status ändern",
   "backlogClearStatus": "Status entfernen",
   "filterAllStatuses": "Alle Status",
-
   "backlogFieldSubject": "Betreff",
   "backlogFieldDescription": "Beschreibung",
   "backlogFieldEpic": "Epic",
   "backlogFieldStatus": "Status",
   "backlogFieldPoints": "Punkte",
-
   "actionNewEpic": "Neues Epic",
   "actionEditEpic": "Epic bearbeiten",
   "actionNewUserStory": "Neue User Story",
   "actionEditUserStory": "User Story bearbeiten",
   "actionBulkAdd": "Sammeleintrag",
   "actionOpenBacklog": "Backlog öffnen",
-
   "backlogBulkTitle": "User Storys hinzufügen",
   "backlogBulkBody": "Ein Betreff pro Zeile. Leere Zeilen werden ignoriert.",
   "backlogBulkCreate": "Erstellen",
@@ -375,14 +323,12 @@
   "backlogDeleteEpicConfirm": "Das Epic '{name}' löschen? Die zugehörigen User Storys werden in die Gruppe 'Kein Epic' verschoben.",
   "backlogDeleteUsTitle": "User Story löschen?",
   "backlogDeleteUsConfirm": "Die User Story '{name}' löschen? Dies ist endgültig.",
-
   "tasksOpenTooltip": "Aufgaben anzeigen",
   "tasksDialogTitle": "Aufgaben · {name}",
   "tasksEmpty": "Noch keine Aufgaben. Füge oben eine hinzu.",
   "tasksLoadFailed": "Aufgaben konnten nicht geladen werden.",
   "tasksAddHint": "Aufgabe hinzufügen",
   "actionAdd": "Hinzufügen",
-
   "issuesTitle": "Issues",
   "issuesLoadFailed": "Issues konnten nicht geladen werden.",
   "issuesEmpty": "Keine Issues entsprechen deinen Filtern.",
@@ -403,7 +349,6 @@
   "issueFieldComponents": "Komponenten",
   "issueDeleteTitle": "Issue löschen?",
   "issueDeleteConfirm": "Das Issue '{name}' löschen? Dies ist endgültig.",
-
   "entityDetailTitle": "Details",
   "entityDetailLoadFailed": "Dieser Eintrag konnte nicht geladen werden.",
   "entityTabActivity": "Aktivität",
@@ -431,7 +376,6 @@
   "attachmentsDeleteConfirm": "'{filename}' endgültig löschen?",
   "attachmentsCancelUpload": "Upload abbrechen",
   "actionOpenDetail": "Details öffnen",
-
   "boardTitle": "Board",
   "boardLoadFailed": "Das Board konnte nicht geladen werden.",
   "boardNeedsMilestone": "Erstelle zuerst einen Meilenstein — das Board bezieht sich jeweils auf einen Meilenstein.",
@@ -453,7 +397,7 @@
   "boardVisibilityPersonal": "Persönlich",
   "boardFieldName": "Name",
   "boardFieldKey": "Kürzel (URL)",
-  "boardFieldKeyHint": "Kurzlink-Segment, z. B. \/projects\/ip\/boards\/sb — Kleinbuchstaben, Ziffern, Bindestriche",
+  "boardFieldKeyHint": "Kurzlink-Segment, z. B. /projects/ip/boards/sb — Kleinbuchstaben, Ziffern, Bindestriche",
   "boardFieldKeyInvalid": "1–12 Zeichen: Kleinbuchstaben, Ziffern, innere Bindestriche",
   "boardFieldKeyTaken": "Dieses Kürzel nutzt bereits ein anderes Board",
   "boardFieldColor": "Farbe",
@@ -498,7 +442,6 @@
   "boardSavedViewNameHint": "Diese Ansicht benennen",
   "boardSavedViewsEmpty": "Noch keine gespeicherten Ansichten. Konfiguriere einen Filter und speichere ihn, um hierher zurückzukehren.",
   "actionOpenBoard": "Board öffnen",
-
   "milestonesTitle": "Meilensteine",
   "milestonesViewList": "Listenansicht",
   "milestonesViewGantt": "Zeitleiste",
@@ -533,7 +476,6 @@
   "milestoneCloseTitle": "Diesen Meilenstein abschließen?",
   "milestoneCloseSummary": "{count, plural, one{1 unfertige Story} other{{count} unfertige Storys}}",
   "milestoneCloseMoveToBacklog": "Unfertige Storys zurück in den Backlog verschieben",
-
   "wikiTitle": "Wiki",
   "wikiEmpty": "Noch keine Wiki-Seiten. Erstelle eine, um mit dem Schreiben zu beginnen.",
   "wikiLoadFailed": "Das Wiki konnte nicht geladen werden.",
@@ -544,7 +486,6 @@
   "wikiFieldTitle": "Titel",
   "wikiFieldBody": "Inhalt (Markdown)",
   "wikiEmptyBody": "leer",
-  "actionCreate": "Erstellen",
   "wikiPageTitle": "Seite",
   "wikiPageLoadFailed": "Diese Seite konnte nicht geladen werden.",
   "wikiRevisionsTooltip": "Revisionen",
@@ -562,7 +503,6 @@
   "wikiRestoreTitle": "Revision wiederherstellen?",
   "wikiRestoreConfirm": "Die Seite auf Revision {rev} zurücksetzen? Eine neue Revision wird aufgezeichnet.",
   "wikiDiffEmpty": "Kein Diff verfügbar.",
-
   "paletteHint": "Projekte, Seiten durchsuchen, #123 für einen Arbeitsvorgang eingeben…",
   "paletteEmpty": "Keine Treffer.",
   "shortcutHelpTitle": "Tastenkürzel",
@@ -572,12 +512,10 @@
   "shortcutGoSettingsDescription": "Zu den Einstellungen",
   "shortcutGoBoardDescription": "Zum Board dieses Projekts",
   "shortcutGoWikiDescription": "Zum Wiki dieses Projekts",
-
   "requestAccessTitle": "Du hast keinen Zugriff auf diesen Bereich.",
   "requestAccessBody": "Bitte einen Projektadministrator, dir die Berechtigung '{permission}' zu erteilen.",
   "requestAccessCopyAdmin": "Admin-E-Mail kopieren ({email})",
   "requestAccessCopied": "E-Mail in die Zwischenablage kopiert.",
-
   "topNavProjects": "Projekte",
   "topNavSettings": "Einstellungen",
   "topNavSearchPlaceholder": "Projekte, Seiten, #123 suchen…",
@@ -597,17 +535,14 @@
   "railMilestones": "Meilensteine",
   "railWiki": "Wiki",
   "railSettings": "Einstellungen",
-
   "taskBoardTitle": "Aufgabenboard",
   "taskBoardLoadFailed": "Das Aufgabenboard konnte nicht geladen werden.",
   "taskBoardNoStatuses": "Noch keine Aufgabenstatus konfiguriert. Füge unter Katalog → Aufgabenstatus mindestens einen hinzu, um das Aufgabenboard zu verwenden.",
   "actionOpenTaskBoard": "Aufgabenboard öffnen",
-
   "actionNewTask": "Neue Aufgabe",
   "actionEditTask": "Aufgabe bearbeiten",
   "taskFieldParent": "Übergeordnete User Story",
   "taskNoParent": "— Keine übergeordnete —",
-
   "panelDetails": "DETAILS",
   "panelDescription": "BESCHREIBUNG",
   "panelAttachments": "ANHÄNGE",
@@ -701,7 +636,6 @@
   "changePasswordSuccessSnack": "Passwort geändert. Melde dich erneut an, um fortzufahren.",
   "errCurrentPasswordIncorrect": "Das aktuelle Passwort ist falsch.",
   "errPasswordsDoNotMatch": "Die Passwörter stimmen nicht überein.",
-
   "adminSettingsTitle": "Plattformeinstellungen",
   "adminSettingsFailed": "Fehlgeschlagen: {error}",
   "adminSettingsOpenRegistration": "Offene Registrierung",
@@ -725,7 +659,6 @@
   "adminSettingsNotificationsDesc": "Zustellung über E-Mail (SMTP / Mailgun), Matrix und Telegram.",
   "adminSettingsLastUpdated": "Zuletzt aktualisiert: {when}",
   "adminSettingsUpdateFailed": "Letzte Aktualisierung fehlgeschlagen.",
-
   "adminBrandingTitle": "Branding",
   "adminBrandingUpdateFailed": "Aktualisierung fehlgeschlagen.",
   "adminBrandingSaved": "Branding gespeichert.",
@@ -746,7 +679,6 @@
   "adminBrandingMessageHint": "z. B. ein Willkommenshinweis oder eine Wartungsmeldung",
   "adminBrandingMessageHelper": "Wird auf dem Anmeldebildschirm angezeigt. Zum Ausblenden leer lassen.",
   "adminBrandingSaveButton": "Name & Nachricht speichern",
-
   "adminLdapTitle": "LDAP / Verzeichnis",
   "adminLdapLoadFailed": "Laden fehlgeschlagen: {label}",
   "adminLdapSaved": "LDAP-Einstellungen gespeichert.",
@@ -798,7 +730,6 @@
   "adminLdapPassword": "Passwort",
   "adminLdapCancel": "Abbrechen",
   "adminLdapTest": "Testen",
-
   "adminNotifTitle": "Benachrichtigungen",
   "adminNotifLoadFailed": "Fehlgeschlagen: {error}",
   "adminNotifTabEmail": "E-Mail",
@@ -859,7 +790,6 @@
   "adminNotifEventIssueResolved": "Issue gelöst",
   "adminNotifEventDailyReport": "Täglicher Statusbericht",
   "adminNotifChannelEvents": "Ereignisse",
-
   "adminInviteCreateError": "Einladung konnte nicht erstellt werden",
   "adminInviteEmailedSnack": "Einladung an {email} per E-Mail gesendet",
   "adminInviteTitle": "Einladungen",
@@ -876,7 +806,6 @@
   "adminInviteCopyLink": "Link kopieren",
   "adminInviteLinkCopied": "Link kopiert",
   "adminInviteDone": "Fertig",
-
   "adminUsersTitle": "Benutzer",
   "adminUsersCreateTooltip": "Benutzer erstellen",
   "adminUsersSearchHint": "Nach E-Mail, Benutzername oder vollständigem Namen suchen",
@@ -900,6 +829,265 @@
   "adminUsersPromoteSuperadmin": "Zum Superadmin befördern",
   "adminUsersIssueReset": "Passwort-Reset ausstellen…",
   "adminUsersDeleteMenu": "Löschen…",
+  "relTimeNever": "nie",
+  "relTimeJustNow": "gerade eben",
+  "relTimeMinutes": "vor {n} Min.",
+  "@relTimeMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeHours": "vor {n} Std.",
+  "@relTimeHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeDays": "vor {n} T.",
+  "@relTimeDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeMonths": "vor {n} Mon.",
+  "@relTimeMonths": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeYears": "vor {n} J.",
+  "@relTimeYears": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersStatusActive": "Aktiv",
+  "adminUsersStatusInactive": "Inaktiv",
+  "adminUsersStatusBanned": "Gesperrt",
+  "adminUsersBannedReasonTooltip": "Gesperrt: {reason}",
+  "@adminUsersBannedReasonTooltip": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersFilterAll": "Alle",
+  "adminUsersFilterNo2fa": "Ohne 2FA",
+  "adminUsers2faTotp": "Authenticator-App",
+  "adminUsers2faPasskeys": "{n, plural, =1{1 Passkey} other{{n} Passkeys}}",
+  "@adminUsers2faPasskeys": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsers2faRecoveryCodes": "{n, plural, =1{1 Wiederherstellungscode} other{{n} Wiederherstellungscodes}}",
+  "@adminUsers2faRecoveryCodes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsers2faOffTooltip": "Kein zweiter Faktor — nur Passwortschutz",
+  "adminUsersSessionsTooltip": "{n, plural, =0{Keine aktiven Sitzungen} =1{1 aktive Sitzung} other{{n} aktive Sitzungen}}",
+  "@adminUsersSessionsTooltip": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersSessionsTitle": "Sitzungen — {email}",
+  "@adminUsersSessionsTitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersSessionsEmpty": "Keine aktiven Sitzungen.",
+  "adminUsersSessionsFailed": "Sitzungen konnten nicht geladen werden.",
+  "adminUsersSessionStarted": "gestartet {when}",
+  "@adminUsersSessionStarted": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersDeviceUnknown": "Unbekanntes Gerät",
+  "adminUsersSignOutAll": "Von allen Sitzungen abmelden",
+  "adminUsersSignOutAllTitle": "Überall abmelden?",
+  "adminUsersSignOutAllBody": "Damit werden alle aktiven Sitzungen von {email} beendet. Eine erneute Anmeldung ist nötig.",
+  "@adminUsersSignOutAllBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersSignOutAllConfirm": "Abmelden",
+  "adminUsersSignOutAllDone": "{n, plural, =0{Keine offenen Sitzungen} =1{1 Sitzung beendet} other{{n} Sitzungen beendet}}",
+  "@adminUsersSignOutAllDone": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersLocationLocal": "Lokales Netzwerk",
+  "adminUsersLocationUnknown": "Unbekannter Ort",
+  "adminUsersLastActiveTooltip": "zuletzt aktiv {when}",
+  "@adminUsersLastActiveTooltip": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersLastActive": "Zuletzt aktiv",
+  "adminUsersLastLogin": "Letzte Anmeldung",
+  "adminUsersOnlineNow": "In den letzten Minuten aktiv",
+  "adminUsersReset2fa": "Zwei-Faktor zurücksetzen…",
+  "adminUsersReset2faTitle": "Zwei-Faktor-Authentifizierung zurücksetzen?",
+  "adminUsersReset2faBody": "Damit werden alle zweiten Faktoren von {email} entfernt:",
+  "@adminUsersReset2faBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faSignsOut": "Alle aktiven Sitzungen werden beendet",
+  "adminUsersReset2faWarning": "Der Benutzer meldet sich nur mit Passwort an, bis er sich neu registriert.",
+  "adminUsersReset2faConfirm": "Zurücksetzen",
+  "adminUsersReset2faDone": "Zwei-Faktor für {email} entfernt.",
+  "@adminUsersReset2faDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faNothing": "{email} hatte keinen zweiten Faktor.",
+  "@adminUsersReset2faNothing": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faFailed": "Zwei-Faktor konnte nicht zurückgesetzt werden.",
+  "adminUsersBan": "Benutzer sperren…",
+  "adminUsersUnban": "Sperre aufheben",
+  "adminUsersBanTitle": "Dieses Konto sperren?",
+  "adminUsersBanBody": "{email} wird abgemeldet und erhält keinen Zugang, bis die Sperre aufgehoben wird.",
+  "@adminUsersBanBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersBanNote": "Eine Sperre ist unabhängig von der Deaktivierung und kann nur von einem Superadmin aufgehoben werden.",
+  "adminUsersBanLdapNote": "Dies ist ein LDAP-Konto: Eine Deaktivierung würde bei der nächsten Verzeichnisanmeldung rückgängig gemacht, eine Sperre bleibt bestehen.",
+  "adminUsersBanReasonLabel": "Grund (optional)",
+  "adminUsersBanReasonHelper": "Wird Administratoren angezeigt und im Audit-Log erfasst.",
+  "adminUsersBanConfirm": "Sperren",
+  "adminUsersBanDone": "{email} wurde gesperrt.",
+  "@adminUsersBanDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersUnbanDone": "Sperre für {email} aufgehoben.",
+  "@adminUsersUnbanDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersBanFailed": "Sperre konnte nicht geändert werden.",
+  "adminGeoipTitle": "IP-Geolokalisierung",
+  "adminGeoipSubtitle": "Länder und Städte von Sitzungen lokal auflösen. Standardmäßig aus.",
+  "adminGeoipEnable": "Geolokalisierung aktivieren",
+  "adminGeoipPrivacyNote": "Abfragen verlassen diesen Server nie; nur die Datenbankdatei wird heruntergeladen. Aus IP abgeleitete Standorte sind personenbezogene Daten.",
+  "adminGeoipVariant": "Datenbank",
+  "adminGeoipVariantCountry": "Nur Land (~4 MB)",
+  "adminGeoipVariantCity": "Land und Stadt (~62 MB)",
+  "adminGeoipAutoUpdate": "Monatlich automatisch aktualisieren",
+  "adminGeoipInstalled": "Installiert: {variant}, Stand {month}",
+  "@adminGeoipInstalled": {
+    "placeholders": {
+      "variant": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipNotInstalled": "Noch keine Datenbank installiert.",
+  "adminGeoipUpdateNow": "Jetzt aktualisieren",
+  "adminGeoipUpdating": "Datenbank wird heruntergeladen…",
+  "adminGeoipUpdated": "Datenbank auf {month} aktualisiert.",
+  "@adminGeoipUpdated": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipAlreadyCurrent": "Bereits aktuell.",
+  "adminGeoipUpdateFailed": "Aktualisierung fehlgeschlagen: {error}",
+  "@adminGeoipUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipLastError": "Letzte Aktualisierung fehlgeschlagen: {error}",
+  "@adminGeoipLastError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipPurge": "Gesammelte Standortdaten löschen",
+  "adminGeoipPurgeDone": "{n, plural, =0{Keine gespeicherten Standorte} =1{1 gespeicherter Standort gelöscht} other{{n} gespeicherte Standorte gelöscht}}",
+  "@adminGeoipPurgeDone": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminGeoipAttribution": "Datenquelle: {attribution}",
+  "@adminGeoipAttribution": {
+    "placeholders": {
+      "attribution": {
+        "type": "String"
+      }
+    }
+  },
   "adminUsersCreateTitle": "Benutzer erstellen",
   "adminUsersEmail": "E-Mail",
   "adminUsersUsername": "Benutzername",
@@ -1025,7 +1213,6 @@
   "pfUpload": "Bild hochladen",
   "pfPickEmoji": "Emoji wählen",
   "pfReset": "Zurücksetzen",
-
   "adminAppTokensTitle": "App-Tokens",
   "appTokenNew": "Neues Token",
   "appTokenName": "Name",
@@ -1047,7 +1234,6 @@
   "appTokenEmpty": "Noch keine App-Tokens.",
   "appTokenLoadFailed": "App-Tokens konnten nicht geladen werden.",
   "appTokenPermsCount": "{count} Berechtigungen",
-
   "exportTitle": "Exportieren",
   "exportCsv": "Als CSV exportieren",
   "exportXlsx": "Als Excel exportieren",
@@ -1127,7 +1313,6 @@
   "dangerCleanEpicsBody": "Jedes Epic in diesem Projekt dauerhaft löschen. Die zugehörigen Vorgänge bleiben erhalten, werden aber getrennt. Dies kann nicht rückgängig gemacht werden.",
   "dangerCleanedIssuesSnack": "{count} Vorgänge gelöscht.",
   "dangerCleanedEpicsSnack": "{count} Epics gelöscht.",
-
   "actionEnable": "Aktivieren",
   "personalTokenSection": "API-Zugriff",
   "personalTokenTitle": "Persönliches App-Token",

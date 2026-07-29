@@ -20,6 +20,7 @@ import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/data/dtos/app_token_dtos.dart';
+import 'package:intellipilot/features/admin/data/dtos/security_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/auth/data/dtos/auth_dtos.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
@@ -2891,6 +2892,7 @@ class DemoAdminRepository implements AdminRepository {
   @override
   Future<Result<AdminUserList, AppFailure>> listUsers({
     String? q,
+    String? status,
     int limit = 50,
     int offset = 0,
   }) async {
@@ -2905,17 +2907,210 @@ class DemoAdminRepository implements AdminRepository {
             u.fullName.toLowerCase().contains(needle),
       );
     }
-    final all = filtered.toList(growable: false);
-    final page = all.skip(offset).take(limit).toList(growable: false);
+    var rows = filtered.map(_demoRow).toList(growable: false);
+    if (status != null && status.isNotEmpty) {
+      rows = rows
+          .where(
+            (r) => switch (status) {
+              'banned' => r.isBanned,
+              'inactive' => r.isInactive,
+              'active' => !r.isBanned && !r.isInactive,
+              'no_2fa' => !r.twoFactor.enabled,
+              _ => true,
+            },
+          )
+          .toList(growable: false);
+    }
+    final page = rows.skip(offset).take(limit).toList(growable: false);
     return Ok(
       AdminUserList(
         items: page,
-        total: all.length,
+        total: rows.length,
         limit: limit,
         offset: offset,
       ),
     );
   }
+
+  /// Wrap a demo user in a plausible security posture.
+  ///
+  /// Varied deliberately so the demo shows every state the real admin list can
+  /// render — 2FA on and off, sessions present and absent, a resolved location
+  /// and a private one.
+  AdminUserRow _demoRow(UserProfile u) {
+    final banned = _demoBanned.contains(u.id);
+    final seed = u.id.hashCode.abs();
+    final hasTotp = seed.isEven;
+    final passkeys = seed % 3 == 0 ? 1 : 0;
+    final now = DateTime.now().toUtc();
+
+    return AdminUserRow(
+      user: u,
+      status: banned ? 'banned' : (u.isActive ? 'active' : 'inactive'),
+      twoFactor: TwoFactorStatus(
+        enabled: hasTotp || passkeys > 0,
+        totp: hasTotp,
+        passkeys: passkeys,
+        recoveryCodesLeft: hasTotp ? 8 : 0,
+      ),
+      activeSessions: banned ? 0 : (seed % 3),
+      lastSession: banned || seed % 3 == 0
+          ? null
+          : SessionInfo(
+              id: 'demo-session-${u.id}',
+              createdAt: now.subtract(Duration(days: 1 + seed % 5)),
+              lastSeenAt: now.subtract(Duration(minutes: seed % 240)),
+              ip: seed.isEven ? '84.75.10.20' : '192.168.1.24',
+              countryCode: seed.isEven ? 'CH' : null,
+              city: seed.isEven ? 'Zürich' : null,
+              userAgent:
+                  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+                  'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+            ),
+      lastSeenAt: banned ? null : now.subtract(Duration(minutes: seed % 500)),
+      lastLoginAt: now.subtract(Duration(hours: 1 + seed % 72)),
+      bannedAt: banned ? now.subtract(const Duration(days: 2)) : null,
+      banReason: banned ? 'Demo: policy violation' : null,
+    );
+  }
+
+  final Set<String> _demoBanned = <String>{};
+
+  @override
+  Future<Result<TwoFactorResetResult, AppFailure>> resetTwoFactor(
+    String id,
+  ) async {
+    await _tick();
+    return const Ok(
+      TwoFactorResetResult(
+        totpCleared: true,
+        passkeysRemoved: 1,
+        recoveryCodesRemoved: 8,
+        sessionsRevoked: 2,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<UserProfile, AppFailure>> banUser(
+    String id, {
+    String? reason,
+  }) async {
+    await _tick();
+    _demoBanned.add(id);
+    final user = _s.users.where((u) => u.id == id).firstOrNull;
+    if (user == null) return const Err(NotFoundFailure());
+    return Ok(user);
+  }
+
+  @override
+  Future<Result<UserProfile, AppFailure>> unbanUser(String id) async {
+    await _tick();
+    _demoBanned.remove(id);
+    final user = _s.users.where((u) => u.id == id).firstOrNull;
+    if (user == null) return const Err(NotFoundFailure());
+    return Ok(user);
+  }
+
+  @override
+  Future<Result<List<SessionInfo>, AppFailure>> listUserSessions(
+    String id,
+  ) async {
+    await _tick();
+    final now = DateTime.now().toUtc();
+    return Ok([
+      SessionInfo(
+        id: 'demo-a-$id',
+        createdAt: now.subtract(const Duration(days: 3)),
+        lastSeenAt: now.subtract(const Duration(minutes: 4)),
+        ip: '84.75.10.20',
+        countryCode: 'CH',
+        city: 'Zürich',
+        userAgent:
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36',
+      ),
+      SessionInfo(
+        id: 'demo-b-$id',
+        createdAt: now.subtract(const Duration(days: 12)),
+        lastSeenAt: now.subtract(const Duration(hours: 30)),
+        ip: '192.168.1.24',
+        userAgent:
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '
+            'AppleWebKit/605.1.15 Version/17.0 Mobile Safari/604.1',
+      ),
+    ]);
+  }
+
+  @override
+  Future<Result<int, AppFailure>> revokeUserSessions(String id) async {
+    await _tick();
+    return const Ok(2);
+  }
+
+  @override
+  Future<Result<GeoipStatus, AppFailure>> getGeoipStatus() async {
+    await _tick();
+    return Ok(_geoip);
+  }
+
+  @override
+  Future<Result<GeoipStatus, AppFailure>> updateGeoipSettings({
+    bool? enabled,
+    String? variant,
+    bool? autoUpdate,
+  }) async {
+    await _tick();
+    _geoip = GeoipStatus(
+      enabled: enabled ?? _geoip.enabled,
+      variant: variant ?? _geoip.variant,
+      autoUpdate: autoUpdate ?? _geoip.autoUpdate,
+      databaseLoaded: _geoip.databaseLoaded,
+      attribution: _geoip.attribution,
+      installedVariant: _geoip.installedVariant,
+      buildMonth: _geoip.buildMonth,
+      fileSize: _geoip.fileSize,
+      source: _geoip.source,
+      downloadedAt: _geoip.downloadedAt,
+      checkedAt: _geoip.checkedAt,
+    );
+    return Ok(_geoip);
+  }
+
+  @override
+  Future<Result<GeoipUpdateResult, AppFailure>> updateGeoipDatabase() async {
+    await _tick();
+    _geoip = GeoipStatus(
+      enabled: _geoip.enabled,
+      variant: _geoip.variant,
+      autoUpdate: _geoip.autoUpdate,
+      databaseLoaded: true,
+      attribution: _geoip.attribution,
+      installedVariant: _geoip.variant,
+      buildMonth: '2026-07',
+      fileSize: 62244938,
+      source: 'download',
+      downloadedAt: DateTime.now().toUtc(),
+      checkedAt: DateTime.now().toUtc(),
+    );
+    return Ok(
+      GeoipUpdateResult(installed: true, status: _geoip, buildMonth: '2026-07'),
+    );
+  }
+
+  @override
+  Future<Result<int, AppFailure>> purgeGeoipData() async {
+    await _tick();
+    return const Ok(0);
+  }
+
+  GeoipStatus _geoip = const GeoipStatus(
+    enabled: false,
+    variant: 'city',
+    autoUpdate: true,
+    databaseLoaded: false,
+    attribution: 'IP geolocation by DB-IP (https://db-ip.com), CC BY 4.0',
+  );
 
   @override
   Future<Result<ActivityList, AppFailure>> listActivity({

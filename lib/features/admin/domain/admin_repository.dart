@@ -4,15 +4,56 @@ import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/data/dtos/app_token_dtos.dart';
+import 'package:intellipilot/features/admin/data/dtos/security_dtos.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 
 /// Domain contract for `/api/v1/admin/*` (V011 — platform admin).
 abstract interface class AdminRepository {
+  /// [status] filters the list: `active`, `inactive`, `banned` or `no_2fa`.
+  /// Null means all.
   Future<Result<AdminUserList, AppFailure>> listUsers({
     String? q,
+    String? status,
     int limit = 50,
     int offset = 0,
   });
+
+  // ---- Account security (V018) ----
+
+  /// Clears every second factor — TOTP, passkeys and recovery codes — and
+  /// signs the user out everywhere.
+  ///
+  /// The recovery path for a user who lost their authenticator: clearing only
+  /// TOTP would leave a passkey-only account just as locked out.
+  Future<Result<TwoFactorResetResult, AppFailure>> resetTwoFactor(String id);
+
+  /// Locks an account out. Distinct from deactivation, which an LDAP login
+  /// silently undoes.
+  Future<Result<UserProfile, AppFailure>> banUser(String id, {String? reason});
+
+  Future<Result<UserProfile, AppFailure>> unbanUser(String id);
+
+  Future<Result<List<SessionInfo>, AppFailure>> listUserSessions(String id);
+
+  /// Signs the user out of every session. Returns how many were closed.
+  Future<Result<int, AppFailure>> revokeUserSessions(String id);
+
+  // ---- Geolocation (V018) ----
+
+  Future<Result<GeoipStatus, AppFailure>> getGeoipStatus();
+
+  Future<Result<GeoipStatus, AppFailure>> updateGeoipSettings({
+    bool? enabled,
+    String? variant,
+    bool? autoUpdate,
+  });
+
+  /// Downloads the newest published database now, rather than waiting for the
+  /// monthly refresh.
+  Future<Result<GeoipUpdateResult, AppFailure>> updateGeoipDatabase();
+
+  /// Erases stored session locations. Returns the number of sessions cleared.
+  Future<Result<int, AppFailure>> purgeGeoipData();
 
   /// Superadmin-only audit feed. `action` filters by event type when set.
   Future<Result<ActivityList, AppFailure>> listActivity({

@@ -1,6 +1,5 @@
 {
   "@@locale": "ru",
-
   "appTitle": "IntelliPilot",
   "homeWelcomeTitle": "Добро пожаловать в IntelliPilot",
   "homeWelcomeBody": "Каркас фронтенда готов. Аутентификация и рабочие процессы проектов появятся в следующих этапах.",
@@ -398,7 +397,7 @@
   "boardVisibilityPersonal": "Личная",
   "boardFieldName": "Название",
   "boardFieldKey": "Ключ (URL)",
-  "boardFieldKeyHint": "Сегмент короткой ссылки, напр. \/projects\/ip\/boards\/sb — строчные буквы, цифры, дефисы",
+  "boardFieldKeyHint": "Сегмент короткой ссылки, напр. /projects/ip/boards/sb — строчные буквы, цифры, дефисы",
   "boardFieldKeyInvalid": "1–12 символов: строчные буквы, цифры, дефисы внутри",
   "boardFieldKeyTaken": "Этот ключ уже занят другой доской",
   "boardFieldColor": "Цвет",
@@ -830,6 +829,265 @@
   "adminUsersPromoteSuperadmin": "Назначить суперадминистратором",
   "adminUsersIssueReset": "Выпустить сброс пароля…",
   "adminUsersDeleteMenu": "Удалить…",
+  "relTimeNever": "никогда",
+  "relTimeJustNow": "только что",
+  "relTimeMinutes": "{n} мин назад",
+  "@relTimeMinutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeHours": "{n} ч назад",
+  "@relTimeHours": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeDays": "{n} дн назад",
+  "@relTimeDays": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeMonths": "{n} мес назад",
+  "@relTimeMonths": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "relTimeYears": "{n} г назад",
+  "@relTimeYears": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersStatusActive": "Активен",
+  "adminUsersStatusInactive": "Неактивен",
+  "adminUsersStatusBanned": "Заблокирован",
+  "adminUsersBannedReasonTooltip": "Заблокирован: {reason}",
+  "@adminUsersBannedReasonTooltip": {
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersFilterAll": "Все",
+  "adminUsersFilterNo2fa": "Без 2FA",
+  "adminUsers2faTotp": "Приложение-аутентификатор",
+  "adminUsers2faPasskeys": "{n, plural, =1{1 passkey} other{{n} passkey}}",
+  "@adminUsers2faPasskeys": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsers2faRecoveryCodes": "{n, plural, =1{1 код восстановления} other{{n} кодов восстановления}}",
+  "@adminUsers2faRecoveryCodes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsers2faOffTooltip": "Второй фактор не настроен — только пароль",
+  "adminUsersSessionsTooltip": "{n, plural, =0{Нет активных сессий} =1{1 активная сессия} other{{n} активных сессий}}",
+  "@adminUsersSessionsTooltip": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersSessionsTitle": "Сессии — {email}",
+  "@adminUsersSessionsTitle": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersSessionsEmpty": "Нет активных сессий.",
+  "adminUsersSessionsFailed": "Не удалось загрузить сессии.",
+  "adminUsersSessionStarted": "начата {when}",
+  "@adminUsersSessionStarted": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersDeviceUnknown": "Неизвестное устройство",
+  "adminUsersSignOutAll": "Выйти из всех сессий",
+  "adminUsersSignOutAllTitle": "Выйти везде?",
+  "adminUsersSignOutAllBody": "Все активные сессии {email} будут закрыты. Потребуется повторный вход.",
+  "@adminUsersSignOutAllBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersSignOutAllConfirm": "Выйти",
+  "adminUsersSignOutAllDone": "{n, plural, =0{Открытых сессий не было} =1{Закрыта 1 сессия} other{Закрыто сессий: {n}}}",
+  "@adminUsersSignOutAllDone": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminUsersLocationLocal": "Локальная сеть",
+  "adminUsersLocationUnknown": "Расположение неизвестно",
+  "adminUsersLastActiveTooltip": "последняя активность {when}",
+  "@adminUsersLastActiveTooltip": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersLastActive": "Последняя активность",
+  "adminUsersLastLogin": "Последний вход",
+  "adminUsersOnlineNow": "Активен в последние минуты",
+  "adminUsersReset2fa": "Сбросить двухфакторную…",
+  "adminUsersReset2faTitle": "Сбросить двухфакторную аутентификацию?",
+  "adminUsersReset2faBody": "Будут удалены все вторые факторы у {email}:",
+  "@adminUsersReset2faBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faSignsOut": "Все активные сессии будут закрыты",
+  "adminUsersReset2faWarning": "Пользователь будет входить только по паролю, пока не настроит фактор заново.",
+  "adminUsersReset2faConfirm": "Сбросить",
+  "adminUsersReset2faDone": "Двухфакторная сброшена для {email}.",
+  "@adminUsersReset2faDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faNothing": "У {email} не было настроено второго фактора.",
+  "@adminUsersReset2faNothing": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersReset2faFailed": "Не удалось сбросить двухфакторную.",
+  "adminUsersBan": "Заблокировать…",
+  "adminUsersUnban": "Разблокировать",
+  "adminUsersBanTitle": "Заблокировать аккаунт?",
+  "adminUsersBanBody": "{email} будет отключён и не получит доступ до снятия блокировки.",
+  "@adminUsersBanBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersBanNote": "Блокировка отделена от деактивации, снять её может только суперадмин.",
+  "adminUsersBanLdapNote": "Это учётная запись LDAP: деактивация будет отменена при следующем входе через каталог, а блокировка сохранится.",
+  "adminUsersBanReasonLabel": "Причина (необязательно)",
+  "adminUsersBanReasonHelper": "Показывается администраторам и записывается в журнал аудита.",
+  "adminUsersBanConfirm": "Заблокировать",
+  "adminUsersBanDone": "{email} заблокирован.",
+  "@adminUsersBanDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersUnbanDone": "Блокировка снята для {email}.",
+  "@adminUsersUnbanDone": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersBanFailed": "Не удалось изменить блокировку.",
+  "adminGeoipTitle": "IP-геолокация",
+  "adminGeoipSubtitle": "Определять страну и город сессий локально. По умолчанию выключено.",
+  "adminGeoipEnable": "Включить геолокацию",
+  "adminGeoipPrivacyNote": "Запросы не покидают сервер; загружается только файл базы. Определённое по IP местоположение — персональные данные.",
+  "adminGeoipVariant": "База данных",
+  "adminGeoipVariantCountry": "Только страна (~4 МБ)",
+  "adminGeoipVariantCity": "Страна и город (~62 МБ)",
+  "adminGeoipAutoUpdate": "Обновлять автоматически каждый месяц",
+  "adminGeoipInstalled": "Установлено: {variant}, сборка {month}",
+  "@adminGeoipInstalled": {
+    "placeholders": {
+      "variant": {
+        "type": "String"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipNotInstalled": "База данных ещё не установлена.",
+  "adminGeoipUpdateNow": "Обновить сейчас",
+  "adminGeoipUpdating": "Загрузка базы данных…",
+  "adminGeoipUpdated": "База обновлена до {month}.",
+  "@adminGeoipUpdated": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipAlreadyCurrent": "Уже актуально.",
+  "adminGeoipUpdateFailed": "Не удалось обновить: {error}",
+  "@adminGeoipUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipLastError": "Последнее обновление не удалось: {error}",
+  "@adminGeoipLastError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "adminGeoipPurge": "Очистить собранные данные о местоположении",
+  "adminGeoipPurgeDone": "{n, plural, =0{Нет сохранённых местоположений} =1{Очищено 1 местоположение} other{Очищено местоположений: {n}}}",
+  "@adminGeoipPurgeDone": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "adminGeoipAttribution": "Источник данных: {attribution}",
+  "@adminGeoipAttribution": {
+    "placeholders": {
+      "attribution": {
+        "type": "String"
+      }
+    }
+  },
   "adminUsersCreateTitle": "Создать пользователя",
   "adminUsersEmail": "Электронная почта",
   "adminUsersUsername": "Имя пользователя",
@@ -955,7 +1213,6 @@
   "pfUpload": "Загрузить картинку",
   "pfPickEmoji": "Выбрать эмодзи",
   "pfReset": "Сбросить",
-
   "adminAppTokensTitle": "Токены приложений",
   "appTokenNew": "Новый токен",
   "appTokenName": "Название",
@@ -977,7 +1234,6 @@
   "appTokenEmpty": "Токенов приложений пока нет.",
   "appTokenLoadFailed": "Не удалось загрузить токены приложений.",
   "appTokenPermsCount": "Прав: {count}",
-
   "exportTitle": "Экспорт",
   "exportCsv": "Экспорт в CSV",
   "exportXlsx": "Экспорт в Excel",
@@ -1057,7 +1313,6 @@
   "dangerCleanEpicsBody": "Безвозвратно удалить все эпики в этом проекте. Их задачи сохранятся, но будут отвязаны. Действие необратимо.",
   "dangerCleanedIssuesSnack": "Удалено задач: {count}.",
   "dangerCleanedEpicsSnack": "Удалено эпиков: {count}.",
-
   "actionEnable": "Включить",
   "personalTokenSection": "Доступ к API",
   "personalTokenTitle": "Персональный токен приложения",
