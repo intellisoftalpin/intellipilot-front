@@ -77,13 +77,22 @@ class BreadcrumbBar extends StatelessWidget {
   }
 }
 
-class _Segment extends StatelessWidget {
+class _Segment extends StatefulWidget {
   const _Segment({required this.crumb, required this.active});
   final Crumb crumb;
   final bool active;
 
   @override
+  State<_Segment> createState() => _SegmentState();
+}
+
+class _SegmentState extends State<_Segment> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
+    final crumb = widget.crumb;
+    final active = widget.active;
     final theme = Theme.of(context);
     final baseStyle = crumb.mono
         ? AppTheme.mono(context, size: 13)
@@ -91,15 +100,23 @@ class _Segment extends StatelessWidget {
     final style = baseStyle?.copyWith(
       fontWeight: active ? FontWeight.w700 : FontWeight.w500,
       color: active ? theme.colorScheme.onSurface : theme.colorScheme.outline,
+      decoration: _hovered ? TextDecoration.underline : null,
+      decorationColor: active
+          ? theme.colorScheme.onSurface
+          : theme.colorScheme.outline,
     );
-    if (crumb.onTap == null || active) {
+    if (crumb.onTap == null) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2),
         child: Text(crumb.label, style: style),
       );
     }
+    // An active crumb that still carries a target stays tappable — entity keys
+    // link to their own full-screen page, which matters when the detail is
+    // rendered inside the board side panel or the slide-over sheet.
     return InkWell(
       onTap: crumb.onTap,
+      onHover: (h) => setState(() => _hovered = h),
       borderRadius: BorderRadius.circular(4),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),

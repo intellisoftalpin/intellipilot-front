@@ -139,6 +139,28 @@ abstract class Routes {
   /// (e.g. `/projects/{id}/epics/PS-E-7`).
   static String epicByKeyFor(String projectId, String key) =>
       '/projects/$projectId/epics/$key';
+
+  /// The canonical short full-page route for a work item — the URL users see
+  /// and share (`/projects/ps/issues/ps-398`). Prefers the project's short
+  /// prefix over its UUID, falling back to the UUID when no prefix is set.
+  ///
+  /// Every in-app jump to an epic / issue should route through here rather
+  /// than [entityDetailFor], which produces the legacy double-UUID form.
+  static String entityByKeyFor({
+    required String projectId,
+    required String issuePrefix,
+    required EntityKind kind,
+    required String key,
+  }) {
+    final ref = issuePrefix.trim().isEmpty
+        ? projectId
+        : issuePrefix.trim().toLowerCase();
+    final k = key.toLowerCase();
+    return kind == EntityKind.epic
+        ? epicByKeyFor(ref, k)
+        : issueByKeyFor(ref, k);
+  }
+
   static String acceptInvitationFor(String token) => '/i/$token';
 }
 

@@ -2310,10 +2310,6 @@
   "@panelPeople": {
     "description": "Panel header on the entity detail page."
   },
-  "panelDates": "DATES",
-  "@panelDates": {
-    "description": "Panel header on the entity detail page."
-  },
   "panelMetadata": "METADATA",
   "@panelMetadata": {
     "description": "Read-only section header on the edit page (type/reference/timestamps)."
@@ -2333,10 +2329,6 @@
   "descriptionPlaceholder": "Click Edit to add a description.",
   "@descriptionPlaceholder": {
     "description": "Placeholder shown when an entity has no description."
-  },
-  "detailFieldType": "Type",
-  "@detailFieldType": {
-    "description": "Details row label."
   },
   "detailFieldStatus": "Status",
   "@detailFieldStatus": {
@@ -2425,10 +2417,6 @@
   "entityActionComment": "Comment",
   "@entityActionComment": {
     "description": "Action bar button label."
-  },
-  "entityActionScrollHint": "Scroll down to the activity stream to comment.",
-  "@entityActionScrollHint": {
-    "description": "Snackbar shown when the Comment action is tapped."
   },
   "entityChangeStatusTooltip": "Change status",
   "@entityChangeStatusTooltip": {
@@ -4007,5 +3995,142 @@
         "example": "Jan 5, 2026"
       }
     }
+  },
+  "panelWatchers": "WATCHERS",
+  "@panelWatchers": {
+    "description": "Watchers panel title on the issue detail page."
+  },
+  "detailFieldSize": "Size",
+  "@detailFieldSize": {
+    "description": "Details field label for the issue size estimate."
+  },
+  "detailFieldResolvedAt": "Resolved at",
+  "@detailFieldResolvedAt": {
+    "description": "Details field label for the issue resolution timestamp."
+  },
+  "detailMilestoneViaEpicHint": "Inherited from the epic — issues reach a milestone through their epic.",
+  "@detailMilestoneViaEpicHint": {
+    "description": "Tooltip on the read-only milestone row of an issue."
+  },
+  "entityChangedElsewhere": "This item was changed by someone else. Reload to see the current version.",
+  "@entityChangedElsewhere": {
+    "description": "Entity detail page."
+  },
+  "entitySaveFailed": "Couldn't save that change.",
+  "@entitySaveFailed": {
+    "description": "Entity detail page."
+  },
+  "actionReload": "Reload",
+  "@actionReload": {
+    "description": "Entity detail page."
+  },
+  "entityLoadForbidden": "You don't have access to this item.",
+  "@entityLoadForbidden": {
+    "description": "Entity detail page."
+  },
+  "entityLoadNotFound": "This item was deleted, or the link is wrong.",
+  "@entityLoadNotFound": {
+    "description": "Entity detail page."
+  },
+  "entityLoadOffline": "Couldn't reach the server.",
+  "@entityLoadOffline": {
+    "description": "Entity detail page."
+  },
+  "panelSubtasks": "SUB-TASKS",
+  "@panelSubtasks": {
+    "description": "Entity detail page."
+  },
+  "subtasksEmpty": "No sub-tasks yet.",
+  "@subtasksEmpty": {
+    "description": "Entity detail page."
+  },
+  "actionAddSubtask": "Add sub-task",
+  "@actionAddSubtask": {
+    "description": "Entity detail page."
+  },
+  "subtaskSubjectHint": "Sub-task summary",
+  "@subtaskSubjectHint": {
+    "description": "Entity detail page."
+  },
+  "activityShowAll": "Show all {count}",
+  "@activityShowAll": {
+    "description": "Expander revealing the rest of the activity stream.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "activityShowLess": "Show fewer",
+  "@activityShowLess": {
+    "description": "Entity detail page."
+  },
+  "editorPreview": "Preview",
+  "@editorPreview": {
+    "description": "Entity detail page."
+  },
+  "editorWrite": "Write",
+  "@editorWrite": {
+    "description": "Entity detail page."
+  },
+  "editorExpand": "Open in a larger editor",
+  "@editorExpand": {
+    "description": "Entity detail page."
+  },
+  "editorBold": "Bold",
+  "@editorBold": {
+    "description": "Entity detail page."
+  },
+  "editorItalic": "Italic",
+  "@editorItalic": {
+    "description": "Entity detail page."
+  },
+  "editorCode": "Code",
+  "@editorCode": {
+    "description": "Entity detail page."
+  },
+  "editorLink": "Link",
+  "@editorLink": {
+    "description": "Entity detail page."
+  },
+  "editorBulletList": "Bulleted list",
+  "@editorBulletList": {
+    "description": "Entity detail page."
+  },
+  "editorNumberedList": "Numbered list",
+  "@editorNumberedList": {
+    "description": "Entity detail page."
+  },
+  "editorQuote": "Quote",
+  "@editorQuote": {
+    "description": "Entity detail page."
+  },
+  "editorHeading": "Heading",
+  "@editorHeading": {
+    "description": "Entity detail page."
+  },
+  "editorDiscardTitle": "Discard changes?",
+  "@editorDiscardTitle": {
+    "description": "Entity detail page."
+  },
+  "editorDiscardBody": "Your edits haven't been saved yet.",
+  "@editorDiscardBody": {
+    "description": "Entity detail page."
+  },
+  "actionDiscard": "Discard",
+  "@actionDiscard": {
+    "description": "Entity detail page."
+  },
+  "editorUploading": "Uploading…",
+  "@editorUploading": {
+    "description": "Entity detail page."
+  },
+  "editorUploadFailed": "Couldn't upload that image.",
+  "@editorUploadFailed": {
+    "description": "Entity detail page."
+  },
+  "mentionPickerHint": "Mention someone",
+  "@mentionPickerHint": {
+    "description": "Entity detail page."
   }
 }

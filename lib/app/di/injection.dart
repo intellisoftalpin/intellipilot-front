@@ -18,6 +18,7 @@ import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
 import 'package:intellipilot/features/activity/data/activity_repository_impl.dart';
+import 'package:intellipilot/features/activity/data/project_lookups_cache.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/admin/data/admin_repository_impl.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
@@ -195,6 +196,15 @@ Future<void> configureDependencies({
       getIt<KeyValueStorage>(instanceName: HiveBoxes.boards),
     ),
   );
+  getIt.registerLazySingleton<ProjectLookupsCache>(
+    () => ProjectLookupsCache(
+      profile: getIt<ProfileRepository>(),
+      projects: getIt<ProjectsRepository>(),
+      catalog: getIt<CatalogRepository>(),
+      backlog: getIt<BacklogRepository>(),
+      milestones: getIt<MilestonesRepository>(),
+    ),
+  );
   getIt.registerLazySingleton<ProjectEventsService>(
     () => ProjectEventsService(
       baseUrl: getIt<ApiConfig>().baseUrl,
@@ -205,7 +215,12 @@ Future<void> configureDependencies({
     () => SessionBloc(
       repository: getIt<AuthRepository>(),
       // Cached board data must never survive the session that read it.
-      onSessionEnded: () => unawaited(getIt<BoardSnapshotCache>().clearAll()),
+      onSessionEnded: () {
+        unawaited(getIt<BoardSnapshotCache>().clearAll());
+        if (getIt.isRegistered<ProjectLookupsCache>()) {
+          getIt<ProjectLookupsCache>().clear();
+        }
+      },
     ),
   );
 }

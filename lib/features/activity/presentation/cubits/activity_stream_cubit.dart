@@ -82,6 +82,13 @@ class ActivityStreamCubit extends Cubit<ActivityStreamState> {
   final String entityId;
 
   Future<void> load() async {
+    // Comments are what people come to the activity block for; history is the
+    // audit trail they opt into. Reloads (e.g. after posting) keep whatever
+    // the user had selected rather than snapping back to the default.
+    final s = state;
+    final keepFilter = s is ActivityStreamLoaded
+        ? s.filter
+        : ActivityFilter.comments;
     if (!isClosed) emit(const ActivityStreamLoading());
     final commentsRes = await _repo.listComments(projectId, kind, entityId);
     final historyRes = await _repo.listHistory(projectId, kind, entityId);
@@ -96,7 +103,7 @@ class ActivityStreamCubit extends Cubit<ActivityStreamState> {
         ActivityStreamLoaded(
           comments: c,
           history: h,
-          filter: ActivityFilter.all,
+          filter: keepFilter,
         ),
       );
     }

@@ -4,10 +4,112 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
-## [0.6.17] - 2026-07-29
+## [0.6.20] - 2026-07-31
 
-Account security in the admin area. Backend companion release is also 0.6.17 —
-the two version lines are realigned (0.6.14–0.6.16 were frontend-only).
+Second round of epic / issue detail work: performance, concurrency safety,
+live updates, sub-tasks, and a real markdown editor.
+
+### Added
+- **Live updates.** The detail page subscribes to the project change feed, so
+  another person's edits, and their comments, appear without a reload. Your own
+  changes are suppressed (the optimistic value is already on screen), stale
+  events are rejected by version, and a dropped connection triggers a re-read
+  rather than a silent gap.
+- **Sub-tasks panel** on issues, with a done/total count, a progress bar and
+  inline quick-add. A new sub-task inherits the parent's epic. Previously you
+  could set an issue's parent but never see its children.
+- **Markdown editor** for descriptions and comments: formatting toolbar
+  (bold, italic, code, heading, lists, quote, link), a live preview, and
+  Cmd/Ctrl+Enter to save.
+- **Full-window editor.** An expand button opens the description in a large
+  dialog with a side-by-side source/preview split on wide screens — editing
+  markdown inside a 420px side panel was miserable.
+- **Paste images** into a description or comment: the image uploads as an
+  attachment and is inserted inline. `MarkdownText` now renders images.
+- **@mention autocomplete** in the editor, and mentions render as member chips.
+  Inserted handles feed the existing "mentioned" work feed.
+- **Collapsible panels**, remembered per panel and separately for the narrow
+  board panel vs. the full page. Collapsed panels keep their header summary.
+- **Retry on load failure**, with distinct messages for no-access, deleted, and
+  network errors instead of one catch-all string.
+- **Loading skeleton** shaped like the real page, replacing the bare spinner.
+
+### Changed
+- **A field edit now costs one request instead of ~18.** Changing a dropdown
+  used to re-fetch the entity for an etag, then reload the whole page: profile,
+  project, entity and 13 parallel lookups — including every issue in the
+  project. Reference data moved to a per-project session cache kept current by
+  live events; only the entity is re-fetched.
+- **Activity shows the newest 5 entries** with a "show all" expander, so a
+  noisy issue no longer lays out hundreds of history rows at once. (The API
+  returns the full list; this is a rendering cap, not pagination.)
+
+### Fixed
+- **Concurrent edits were silently overwritten.** The backend implements
+  optimistic concurrency correctly (428 without `If-Match`, 412 when stale),
+  but the client defeated it: every PATCH re-fetched the entity for a *fresh*
+  etag first, so the precondition could never fail. The etag captured at load
+  is now sent, and a 412 surfaces "changed by someone else" with a reload
+  action instead of discarding your edit.
+
+## [0.6.19] - 2026-07-31
+
+Epic / issue detail rework — how the detail page shows and organises its data.
+Frontend-only; no API, schema or backend behaviour changed.
+
+### Added
+- **Links in text are clickable.** Markdown `[label](url)` links and bare
+  `https://…` / `www.…` URLs now navigate everywhere text is rendered —
+  descriptions, comments, wiki pages, attachment previews. In-app targets route
+  through the SPA router without a page reload; external ones open in a new tab.
+- **Included issues on an epic are clickable rows** with the assignee's avatar
+  and a count in the panel header.
+- **Entity keys in the breadcrumb are clickable.** An issue that belongs to an
+  epic also shows the epic's key as its own crumb, so the trail mirrors the real
+  hierarchy. From the board side panel or the slide-over sheet, tapping a key
+  dismisses the overlay and opens the full page.
+- **Milestone can be set on an epic**, in the epic properties panel.
+
+### Changed
+- **Activity defaults to Comments** instead of All, and a reload (e.g. after
+  posting) no longer resets whichever filter you had selected.
+- **Created / Updated moved into the Details panel header**, replacing the
+  separate DATES panel that spent a whole card on two timestamps.
+- **Details shows two columns** when the panel is wide enough, roughly halving
+  its height on a desktop viewport. Measured from the panel's own width, so it
+  behaves correctly inside the narrow board panel and the slide-over sheet.
+- **Status, Issue type, Priority and Size render as coloured badges.** Size
+  shows just the letter (`M`), scaled by its weight; the numeric value stays in
+  the picker where it helps you choose.
+- **Links, Attachments, Time tracking and Watchers moved to the right column**,
+  after People — leaving Details, Description, Included issues and Activity on
+  the left. Column split re-balanced 60/40 to suit the new distribution.
+- Links now navigate by short key (`/projects/ps/issues/ps-398`) instead of the
+  legacy double-UUID URL, and the whole row is the target, key chip included.
+- The "Comment" action button scrolls to the activity panel instead of showing
+  a snackbar telling you to scroll there yourself.
+- Panels are outlined with a consistent radius and carry a leading icon.
+
+### Removed
+- **The "Type" row** from Details — it restated what the breadcrumb, the key and
+  the route already say.
+- **The editable Milestone row on issues.** A milestone is composed of epics, so
+  an issue now shows a read-only *Milestone* resolved through its epic, linking
+  to the milestone. Existing `milestone_id` values on issues are untouched.
+- **The duplicate "Relationships" panel** on issues. It read the same endpoint as
+  the Links panel and offered a strict subset of its link types.
+- **The Links panel on epics.** Links exist only between issues, so epics no
+  longer show a permanently-empty block with no way to add anything.
+
+### Fixed
+- The trailing breadcrumb segment dropped its tap target: a crumb rendered as
+  the active page was always plain text, even when it had somewhere to go.
+
+## [0.6.18] - 2026-07-29
+
+Account security in the admin area. Backend companion release is also 0.6.18 —
+the two version lines are realigned (0.6.14–0.6.16 were frontend-only; 0.6.17
+was burned by a CI failure and never released).
 
 ### Added
 - The admin user list now shows each account's security posture at a glance:

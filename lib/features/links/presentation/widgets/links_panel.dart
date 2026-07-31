@@ -55,6 +55,7 @@ class LinksPanelContent extends StatelessWidget {
     required this.sourceId,
     required this.lookup,
     required this.modifyPermission,
+    this.onNavigate,
     super.key,
   });
 
@@ -63,6 +64,10 @@ class LinksPanelContent extends StatelessWidget {
   final String sourceId;
   final LinksLookup lookup;
   final Permission modifyPermission;
+
+  /// Called just before a row navigates away — hosts embedding this panel in
+  /// a sheet / side panel wire it to dismiss themselves first.
+  final VoidCallback? onNavigate;
 
   @override
   Widget build(BuildContext context) {
@@ -90,10 +95,10 @@ class LinksPanelContent extends StatelessWidget {
           children: [
             if (state.links.isEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(
                   t.linksEmpty,
-                  style: TextStyle(
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.outline,
                     fontStyle: FontStyle.italic,
                   ),
@@ -107,6 +112,8 @@ class LinksPanelContent extends StatelessWidget {
                   _LinkRow(
                     row: row,
                     projectId: projectId,
+                    lookup: lookup,
+                    onNavigate: onNavigate,
                     onDelete: _canModify(context)
                         ? () => context.read<LinksCubit>().delete(row.link.id)
                         : null,
@@ -234,47 +241,67 @@ class _LinkRow extends StatelessWidget {
   const _LinkRow({
     required this.row,
     required this.projectId,
+    required this.lookup,
+    required this.onNavigate,
     required this.onDelete,
   });
   final _LinkRowData row;
   final String projectId;
+  final LinksLookup lookup;
+  final VoidCallback? onNavigate;
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Need a LinksLookup to resolve. The widget is wrapped at the panel
-    // level by `LinksPanelContent.lookup`. We pull it from an inherited
-    // widget via context.findAncestorWidgetOfExactType — but to avoid
-    // that, the parent passes a builder. To keep code straightforward we
-    // re-look-up via the parent context's ancestor query.
-    final lookupHost = context
-        .findAncestorWidgetOfExactType<LinksPanelContent>();
-    final resolved = lookupHost?.lookup.resolve(row.otherKind, row.otherId);
+    final resolved = lookup.resolve(row.otherKind, row.otherId);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (resolved != null) ...[
-            IssueKeyChip(text: resolved.key),
-            const SizedBox(width: 8),
+            // The whole row is the target — key chip included, not just the
+            // subject text. Routes by short key (`/projects/ps/issues/ps-398`)
+            // rather than the legacy double-UUID form.
             Expanded(
-              child: InkWell(
-                onTap: () => context.go(
-                  Routes.entityDetailFor(
-                    projectId,
-                    row.otherKind,
-                    row.otherId,
-                  ),
-                ),
-                child: Text(
-                  resolved.subject,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.primary,
-                    decoration: TextDecoration.underline,
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(6),
+                  hoverColor: theme.colorScheme.surfaceContainerHighest,
+                  onTap: () {
+                    onNavigate?.call();
+                    context.go(
+                      Routes.entityByKeyFor(
+                        projectId: projectId,
+                        issuePrefix: lookup.prefix,
+                        kind: row.otherKind,
+                        key: resolved.key,
+                      ),
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
+                    child: Row(
+                      children: [
+                        IssueKeyChip(text: resolved.key),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            resolved.subject,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -10,17 +10,19 @@ import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/io/file_picker.dart';
-import 'package:intellipilot/core/models/intellibot.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/network/api_config.dart';
+import 'package:intellipilot/core/network/sse/project_events_service.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/core/ui/issue_chips.dart';
+import 'package:intellipilot/core/ui/markdown_editor.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/core/ui/timestamps.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
+import 'package:intellipilot/features/activity/data/project_lookups_cache.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/activity/presentation/cubits/activity_stream_cubit.dart';
 import 'package:intellipilot/features/activity/presentation/cubits/attachments_cubit.dart';
@@ -31,13 +33,12 @@ import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
+import 'package:intellipilot/features/catalog/presentation/widgets/size_badge.dart';
 import 'package:intellipilot/features/links/domain/links_repository.dart';
 import 'package:intellipilot/features/links/presentation/cubits/links_cubit.dart';
 import 'package:intellipilot/features/links/presentation/widgets/links_panel.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
-import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
-import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
@@ -94,53 +95,193 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
 
   _PageData? _data;
   bool _initialLoading = true;
-  bool _failed = false;
+
+  /// Why the initial load failed, so the error state can say something useful
+  /// instead of one catch-all string. Null while loading or once loaded.
+  AppFailure? _failure;
+
+  /// Anchors the activity panel so the action bar's "Comment" button can
+  /// scroll straight to it. Owned by the State so it survives rebuilds.
+  final GlobalKey _activityAnchor = GlobalKey();
+
+  StreamSubscription<LiveEvent>? _events;
 
   @override
   void initState() {
     super.initState();
     unawaited(_initialLoad());
+    _subscribeToLiveEvents();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_events?.cancel());
+    super.dispose();
   }
 
   Future<void> _initialLoad() async {
-    final data = await _load();
+    setState(() {
+      _initialLoading = true;
+      _failure = null;
+    });
+    final res = await _load();
     if (!mounted) return;
     setState(() {
       _initialLoading = false;
-      _data = data;
-      _failed = data == null;
+      _data = res.data;
+      _failure = res.failure;
     });
   }
 
-  /// Silent refresh — re-fetches the page data and swaps it in WITHOUT
-  /// rebuilding the scaffold / showing a loading spinner. Called from
-  /// every inline editor when a PATCH succeeds so a field change feels
-  /// instantaneous (Jira-style). The optimistic cell display already
-  /// shows the new value, so even the brief network round-trip is
-  /// invisible to the user.
+  /// Silent refresh of the ENTITY ONLY — one request. Called from every inline
+  /// editor when a PATCH succeeds so a field change feels instantaneous.
+  ///
+  /// This used to re-run the whole page load (profile + project + entity + 13
+  /// parallel lookups, one of which listed every issue in the project) for a
+  /// single dropdown change. Reference data now comes from
+  /// [ProjectLookupsCache] and only the entity is re-fetched.
   Future<void> _reload() async {
-    final data = await _load();
+    final data = _data;
+    if (data == null) return;
+    final fresh = await _fetchEntity();
+    if (!mounted || fresh == null) return;
+    // Keep the project-wide lookup table in step with what we just saved, so
+    // sibling panels (links, sub-tasks, epic contents) don't show stale rows.
+    final cache = getIt<ProjectLookupsCache>();
+    switch (fresh) {
+      case _IssueRec(:final issue):
+        cache.applyIssue(widget.projectId, issue);
+      case _EpicRec(:final epic):
+        cache.applyEpic(widget.projectId, epic);
+    }
+    var next = data.copyWith(entity: fresh);
+    // The fix-version picker's candidates depend on the issue's components, so
+    // that one lookup genuinely has to be re-fetched when they change.
+    if (fresh is _IssueRec &&
+        data.entity is _IssueRec &&
+        !_sameComponents(
+          (data.entity as _IssueRec).issue.components,
+          fresh.issue.components,
+        )) {
+      final versions = await getIt<CatalogRepository>().versionsForComponents(
+        widget.projectId,
+        fresh.issue.components,
+      );
+      if (!mounted) return;
+      next = next.copyWith(
+        releaseVersionCandidates: versions.valueOrNull ?? const [],
+      );
+    }
+    setState(() => _data = next);
+  }
+
+  static bool _sameComponents(List<String> a, List<String> b) =>
+      a.length == b.length && a.toSet().containsAll(b);
+
+  /// Applies live project events to the open entity.
+  ///
+  /// Rules: ignore our own echoes (the optimistic cell already shows them),
+  /// and only move forward — an event carrying a `version` no newer than what
+  /// is on screen is a re-broadcast, not news. Control frames (`connected` /
+  /// `resync`) mean the stream may have gaps, so they trigger a real re-fetch.
+  void _subscribeToLiveEvents() {
+    _events = getIt<ProjectEventsService>()
+        .watch(widget.projectId)
+        .listen(_onLiveEvent);
+  }
+
+  void _onLiveEvent(LiveEvent e) {
     if (!mounted) return;
-    if (data != null) {
-      setState(() => _data = data);
+    final data = _data;
+    if (data == null) return;
+    final myId = data.profile.id;
+
+    // A gap in the stream: re-read rather than guess.
+    if (e.isControl) {
+      unawaited(_reload());
+      return;
+    }
+    final p = e.payload;
+    if (p['actor_id'] == myId) return;
+    final kind = p['event'] as String? ?? '';
+    final cache = getIt<ProjectLookupsCache>();
+
+    switch (kind) {
+      case 'issue.created' || 'issue.updated':
+        final raw = p['issue'];
+        if (raw is! Map<String, dynamic>) return;
+        final issue = Issue.fromJson(raw);
+        cache.applyIssue(widget.projectId, issue);
+        if (widget.kind == EntityKind.issue && issue.id == widget.entityId) {
+          if (issue.version <= data.entity.version) return;
+          setState(() => _data = data.copyWith(entity: _IssueRec(issue)));
+        } else {
+          // A sibling moved — sub-task rows and epic contents need redrawing.
+          setState(() {});
+        }
+      case 'issue.deleted':
+        final id = p['issue_id'] as String?;
+        if (id == null) return;
+        cache.removeIssue(widget.projectId, id);
+        setState(() {});
+      case 'epic.created' || 'epic.updated':
+        final raw = p['epic'];
+        if (raw is! Map<String, dynamic>) return;
+        final epic = Epic.fromJson(raw);
+        cache.applyEpic(widget.projectId, epic);
+        if (widget.kind == EntityKind.epic && epic.id == widget.entityId) {
+          if (epic.version <= data.entity.version) return;
+          setState(() => _data = data.copyWith(entity: _EpicRec(epic)));
+        } else {
+          setState(() {});
+        }
+      case 'epic.deleted':
+        final id = p['epic_id'] as String?;
+        if (id == null) return;
+        cache.removeEpic(widget.projectId, id);
+        setState(() {});
+      case 'comment.created' || 'comment.updated' || 'comment.deleted':
+        // The activity cubit owns the comment list; nudge it to re-read, but
+        // only when the comment belongs to the entity we have open.
+        if (p['target_id'] == widget.entityId) {
+          unawaited(_activityCubit?.load());
+        }
+      default:
+        break;
     }
   }
+
+  ActivityStreamCubit? _activityCubit;
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     if (_initialLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return _DetailSkeleton(
+        compact: widget.onClose != null && !widget.embeddedWide,
+        onClose: widget.onClose,
       );
     }
-    if (_failed || _data == null) {
+    final data = _data;
+    if (data == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(t.entityDetailTitle)),
-        body: Center(child: Text(t.entityDetailLoadFailed)),
+        appBar: AppBar(
+          title: Text(t.entityDetailTitle),
+          actions: [
+            if (widget.onClose != null)
+              IconButton(
+                icon: const Icon(Icons.close),
+                tooltip: t.actionCancel,
+                onPressed: widget.onClose,
+              ),
+          ],
+        ),
+        body: _DetailLoadError(
+          failure: _failure,
+          onRetry: () => unawaited(_initialLoad()),
+        ),
       );
     }
-    final data = _data!;
     return MultiBlocProvider(
       providers: [
         BlocProvider<ProjectDetailCubit>(
@@ -162,6 +303,8 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
               kind: widget.kind,
               entityId: widget.entityId,
             );
+            // Held so live comment events can ask it to re-read.
+            _activityCubit = c;
             unawaited(c.load());
             return c;
           },
@@ -201,97 +344,246 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
         onClose: widget.onClose,
         onOpen: widget.onOpen,
         embeddedWide: widget.embeddedWide,
+        activityAnchor: _activityAnchor,
       ),
     );
   }
 
-  Future<_PageData?> _load() async {
-    final profileRes = await getIt<ProfileRepository>().getProfile();
-    final profile = profileRes.valueOrNull;
-    if (profile == null) return null;
-    final backlog = getIt<BacklogRepository>();
-    final catalog = getIt<CatalogRepository>();
-    final milestones = getIt<MilestonesRepository>();
-    final projects = getIt<ProjectsRepository>();
-
-    // Fetch the entity + project + kind-specific lookups in parallel.
-    final project = (await projects.getProject(widget.projectId)).valueOrNull;
-    if (project == null) return null;
-
-    _EntityRecord? entity;
-    switch (widget.kind) {
-      case EntityKind.epic:
-        final v = (await backlog.getEpic(
-          widget.projectId,
-          widget.entityId,
-        )).valueOrNull;
-        if (v != null) entity = _EntityRecord.epic(v);
-      case EntityKind.issue:
-        final v = (await backlog.getIssue(
-          widget.projectId,
-          widget.entityId,
-        )).valueOrNull;
-        if (v != null) entity = _EntityRecord.issue(v);
+  /// Loads the page. The entity is always fetched fresh; every project-scoped
+  /// lookup comes from [ProjectLookupsCache], which fetches once per project
+  /// and is kept current by live events.
+  Future<({_PageData? data, AppFailure? failure})> _load() async {
+    final cache = getIt<ProjectLookupsCache>();
+    final profile = await cache.currentProfile();
+    if (profile == null) {
+      return (data: null, failure: const UnauthorizedFailure());
     }
-    if (entity == null) return null;
 
-    // Resolve every taxonomy item used by the kind so we can render
-    // status/type/priority/size names.
-    final lookups = <Future<dynamic>>[];
-    lookups.add(
-      catalog.listTaxonomy(widget.projectId, TaxonomyKind.issueStatus),
-    );
-    lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.issueType));
-    lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.priority));
-    lookups.add(catalog.listTaxonomy(widget.projectId, TaxonomyKind.size));
-    lookups.add(catalog.listLabels(widget.projectId));
-    lookups.add(catalog.listComponents(widget.projectId));
-    lookups.add(backlog.listEpics(widget.projectId));
-    lookups.add(milestones.list(widget.projectId));
-    lookups.add(backlog.listIssues(widget.projectId));
-    lookups.add(catalog.listCustomers(widget.projectId));
-    lookups.add(projects.listMembers(widget.projectId));
-    lookups.add(catalog.listAllReleaseVersions(widget.projectId));
+    final entityRes = await _fetchEntityResult();
+    if (entityRes.failure != null) {
+      return (data: null, failure: entityRes.failure);
+    }
+    final entity = entityRes.entity;
+    if (entity == null) {
+      return (data: null, failure: const NotFoundFailure());
+    }
+
+    final lookups = await cache.get(widget.projectId);
+    if (lookups == null) {
+      return (data: null, failure: const NotFoundFailure());
+    }
+
     // The fix-version picker only offers versions of releases linked to the
     // issue's own components — empty when the issue has none (or for epics,
     // which don't carry a fix version at all).
-    final issueComponentIds = entity is _IssueRec
+    final componentIds = entity is _IssueRec
         ? entity.issue.components
         : const <String>[];
-    lookups.add(
-      catalog.versionsForComponents(widget.projectId, issueComponentIds),
+    final candidates = await getIt<CatalogRepository>().versionsForComponents(
+      widget.projectId,
+      componentIds,
     );
-    final results = await Future.wait(lookups);
 
-    List<T> resolve<T>(int i) =>
-        (results[i] as dynamic).valueOrNull as List<T>? ?? <T>[];
-    final taxonomyAll = <TaxonomyItem>[
-      ...resolve<TaxonomyItem>(0),
-      ...resolve<TaxonomyItem>(1),
-      ...resolve<TaxonomyItem>(2),
-      ...resolve<TaxonomyItem>(3),
-    ];
-    return _PageData(
-      profile: profile,
-      project: project,
-      entity: entity,
-      taxonomyById: {for (final t in taxonomyAll) t.id: t},
-      labelsById: {for (final l in resolve<Label>(4)) l.id: l},
-      componentsById: {for (final c in resolve<Component>(5)) c.id: c},
-      epicsById: {for (final e in resolve<Epic>(6)) e.id: e},
-      milestonesById: {for (final m in resolve<Milestone>(7)) m.id: m},
-      issuesById: {for (final i in resolve<Issue>(8)) i.id: i},
-      customersById: {for (final c in resolve<Customer>(9)) c.id: c},
-      membersById: {
-        for (final m in resolve<Membership>(10)) m.userId: m.toRef(),
-        // INTELLIBOT is the actor for app-token actions but never a project
-        // member — inject it so owner/author rows resolve to its identity.
-        kIntellibotUserId: intellibotRef(),
-      },
-      releaseVersionsById: {
-        for (final v in resolve<ReleaseVersionRef>(11)) v.id: v,
-      },
-      releaseVersionCandidates: resolve<ReleaseVersionRef>(12),
+    return (
+      data: _PageData(
+        profile: profile,
+        lookups: lookups,
+        entity: entity,
+        releaseVersionCandidates: candidates.valueOrNull ?? const [],
+      ),
+      failure: null,
+    );
+  }
+
+  /// Just the entity — the one request an inline field edit needs.
+  Future<_EntityRecord?> _fetchEntity() async =>
+      (await _fetchEntityResult()).entity;
+
+  Future<({_EntityRecord? entity, AppFailure? failure})>
+  _fetchEntityResult() async {
+    final backlog = getIt<BacklogRepository>();
+    switch (widget.kind) {
+      case EntityKind.epic:
+        final res = await backlog.getEpic(widget.projectId, widget.entityId);
+        final v = res.valueOrNull;
+        return (
+          entity: v == null ? null : _EntityRecord.epic(v),
+          failure: res.failureOrNull,
+        );
+      case EntityKind.issue:
+        final res = await backlog.getIssue(widget.projectId, widget.entityId);
+        final v = res.valueOrNull;
+        return (
+          entity: v == null ? null : _EntityRecord.issue(v),
+          failure: res.failureOrNull,
+        );
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Load / error states
+// ---------------------------------------------------------------------------
+
+/// Grey placeholder blocks shaped like the real page, so the layout doesn't
+/// jump when data lands. Beats a centred spinner, which tells the user
+/// nothing about what is coming.
+class _DetailSkeleton extends StatelessWidget {
+  const _DetailSkeleton({required this.compact, this.onClose});
+  final bool compact;
+  final VoidCallback? onClose;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: const _SkeletonBar(width: 220, height: 14),
+        actions: [
+          if (onClose != null)
+            IconButton(
+              icon: const Icon(Icons.close),
+              tooltip: t.actionCancel,
+              onPressed: onClose,
+            ),
+        ],
+        bottom: PreferredSize(
+          preferredSize: Size.fromHeight(compact ? 44 : 56),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(compact ? 12 : 16, 0, 16, 12),
+            child: const Align(
+              alignment: Alignment.centerLeft,
+              child: _SkeletonBar(width: 340, height: 22),
+            ),
+          ),
+        ),
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(compact ? 12 : 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _SkeletonPanel(rows: 5),
+            SizedBox(height: compact ? 8 : 12),
+            const _SkeletonPanel(rows: 3),
+            SizedBox(height: compact ? 8 : 12),
+            const _SkeletonPanel(rows: 2),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SkeletonPanel extends StatelessWidget {
+  const _SkeletonPanel({required this.rows});
+  final int rows;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SkeletonBar(width: 90, height: 10),
+            const SizedBox(height: 14),
+            for (var i = 0; i < rows; i++)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    const _SkeletonBar(width: 110, height: 12),
+                    const SizedBox(width: 16),
+                    _SkeletonBar(
+                      width: 120.0 + (i.isEven ? 60 : 0),
+                      height: 12,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SkeletonBar extends StatelessWidget {
+  const _SkeletonBar({required this.width, required this.height});
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(4),
+      ),
+    );
+  }
+}
+
+/// Failure state with a retry. Says what actually went wrong — a missing
+/// permission, a deleted entity and a dead network need different responses
+/// from the user, so they get different messages.
+class _DetailLoadError extends StatelessWidget {
+  const _DetailLoadError({required this.failure, required this.onRetry});
+  final AppFailure? failure;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final (icon, message, retryable) = switch (failure) {
+      ForbiddenFailure() => (Icons.lock_outline, t.entityLoadForbidden, false),
+      UnauthorizedFailure() => (
+        Icons.lock_outline,
+        t.entityLoadForbidden,
+        false,
+      ),
+      NotFoundFailure() => (
+        Icons.search_off_outlined,
+        t.entityLoadNotFound,
+        false,
+      ),
+      NetworkFailure() => (Icons.wifi_off_outlined, t.entityLoadOffline, true),
+      _ => (Icons.error_outline, t.entityDetailLoadFailed, true),
+    };
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 40, color: theme.colorScheme.outline),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 20),
+            if (retryable)
+              FilledButton.tonalIcon(
+                icon: const Icon(Icons.refresh, size: 18),
+                onPressed: onRetry,
+                label: Text(t.actionRetry),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -300,46 +592,59 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
 // Loaded data structures
 // ---------------------------------------------------------------------------
 
+/// The page's view of its data: the entity itself plus the shared, cached
+/// project lookups. Every accessor the widgets already used is preserved as a
+/// pass-through, so only the way the data is *obtained* changed.
 class _PageData {
   _PageData({
     required this.profile,
-    required this.project,
+    required this.lookups,
     required this.entity,
-    required this.taxonomyById,
-    required this.labelsById,
-    required this.componentsById,
-    required this.epicsById,
-    required this.milestonesById,
-    required this.issuesById,
-    required this.customersById,
-    required this.membersById,
-    required this.releaseVersionsById,
     required this.releaseVersionCandidates,
   });
 
   final UserProfile profile;
-  final Project project;
+  final ProjectLookups lookups;
   final _EntityRecord entity;
-  final Map<String, TaxonomyItem> taxonomyById;
-  final Map<String, Label> labelsById;
-  final Map<String, Component> componentsById;
-  final Map<String, Epic> epicsById;
-  final Map<String, Milestone> milestonesById;
-  final Map<String, Issue> issuesById;
-  final Map<String, Customer> customersById;
-
-  /// Project members keyed by user id — for assignee/reporter avatars + names.
-  final Map<String, UserRef> membersById;
-
-  /// Every release version in the project, keyed by id — resolves the
-  /// currently selected fix version's name/color even if it's no longer a
-  /// valid picker candidate (e.g. its component was unlinked since).
-  final Map<String, ReleaseVersionRef> releaseVersionsById;
 
   /// Versions of releases linked to the issue's own components — the
   /// fix-version picker's candidate list. Empty (and the picker disabled)
-  /// when the issue has no components.
+  /// when the issue has no components. Entity-scoped, so not part of the
+  /// shared project lookups.
   final List<ReleaseVersionRef> releaseVersionCandidates;
+
+  Project get project => lookups.project;
+  Map<String, TaxonomyItem> get taxonomyById => lookups.taxonomyById;
+  Map<String, Label> get labelsById => lookups.labelsById;
+  Map<String, Component> get componentsById => lookups.componentsById;
+  Map<String, Epic> get epicsById => lookups.epicsById;
+  Map<String, Milestone> get milestonesById => lookups.milestonesById;
+  Map<String, Issue> get issuesById => lookups.issuesById;
+  Map<String, Customer> get customersById => lookups.customersById;
+
+  /// Project members keyed by user id — for assignee/reporter avatars + names.
+  Map<String, UserRef> get membersById => lookups.membersById;
+  Map<String, ReleaseVersionRef> get releaseVersionsById =>
+      lookups.releaseVersionsById;
+
+  /// Members keyed by lowercase handle — what `@mention` rendering and the
+  /// autocomplete both look up. `/me/issues?role=mentioned` matches on the
+  /// same `@username` text, so inserting it has real meaning server-side.
+  Map<String, UserRef> get mentionsByHandle => {
+    for (final u in lookups.membersById.values)
+      if (u.username.isNotEmpty) u.username.toLowerCase(): u,
+  };
+
+  _PageData copyWith({
+    _EntityRecord? entity,
+    List<ReleaseVersionRef>? releaseVersionCandidates,
+  }) => _PageData(
+    profile: profile,
+    lookups: lookups,
+    entity: entity ?? this.entity,
+    releaseVersionCandidates:
+        releaseVersionCandidates ?? this.releaseVersionCandidates,
+  );
 }
 
 sealed class _EntityRecord {
@@ -356,6 +661,12 @@ sealed class _EntityRecord {
   DateTime get createdAt;
   DateTime get modifiedAt;
   String get kindLabelKey;
+
+  /// Monotonic revision, used to reject stale live events.
+  int get version;
+
+  /// Canonical `"<id>:<version>"` token sent as `If-Match` on updates.
+  String? get etag;
 }
 
 class _EpicRec extends _EntityRecord {
@@ -379,6 +690,10 @@ class _EpicRec extends _EntityRecord {
   DateTime get modifiedAt => epic.modifiedAt;
   @override
   String get kindLabelKey => 'Epic';
+  @override
+  int get version => epic.version;
+  @override
+  String? get etag => epic.etag;
 }
 
 class _IssueRec extends _EntityRecord {
@@ -402,6 +717,10 @@ class _IssueRec extends _EntityRecord {
   DateTime get modifiedAt => issue.modifiedAt;
   @override
   String get kindLabelKey => 'Issue';
+  @override
+  int get version => issue.version;
+  @override
+  String? get etag => issue.etag;
 }
 
 // ---------------------------------------------------------------------------
@@ -415,10 +734,14 @@ class _DetailView extends StatelessWidget {
     required this.entityId,
     required this.projectId,
     required this.onChanged,
+    required this.activityAnchor,
     this.onClose,
     this.onOpen,
     this.embeddedWide = false,
   });
+
+  /// Scroll target for the action bar's "Comment" button.
+  final GlobalKey activityAnchor;
 
   final _PageData data;
   final EntityKind kind;
@@ -437,13 +760,18 @@ class _DetailView extends StatelessWidget {
   /// Uses the short lowercase project prefix (`/projects/ip/issues/ip-42`)
   /// when the project has one; the UUID form works too but this is the
   /// canonical link users see and share.
-  String _fullScreenRoute(String key) {
-    final prefix = data.project.issuePrefix.toLowerCase();
-    final projectRef = prefix.isEmpty ? data.project.id : prefix;
-    final keyRef = key.toLowerCase();
-    return kind == EntityKind.epic
-        ? Routes.epicByKeyFor(projectRef, keyRef)
-        : Routes.issueByKeyFor(projectRef, keyRef);
+  String _fullScreenRoute(String key) => Routes.entityByKeyFor(
+    projectId: data.project.id,
+    issuePrefix: data.project.issuePrefix,
+    kind: kind,
+    key: key,
+  );
+
+  /// Leaves for [route], dismissing the embedding panel / sheet first so the
+  /// user doesn't land on the full page with a stale overlay on top.
+  void _leaveFor(BuildContext context, String route) {
+    onClose?.call();
+    context.go(route);
   }
 
   @override
@@ -457,6 +785,11 @@ class _DetailView extends StatelessWidget {
     final key = kind == EntityKind.epic
         ? epicKeyLabel(data.project.issuePrefix, entity.reference)
         : issueKeyLabel(data.project.issuePrefix, entity.reference);
+    // An issue that belongs to an epic gets the epic's key as an extra crumb,
+    // so the trail mirrors the real hierarchy and the epic is one tap away.
+    final parentEpic = entity is _IssueRec && entity.issue.epicId != null
+        ? data.epicsById[entity.issue.epicId]
+        : null;
     return Scaffold(
       appBar: AppBar(
         title: BreadcrumbBar(
@@ -477,10 +810,30 @@ class _DetailView extends StatelessWidget {
                     : Routes.projectIssuesFor(data.project.id),
               ),
             ),
+            if (parentEpic != null)
+              Crumb(
+                label: epicKeyLabel(
+                  data.project.issuePrefix,
+                  parentEpic.reference,
+                ),
+                mono: true,
+                onTap: () => _leaveFor(
+                  context,
+                  Routes.entityByKeyFor(
+                    projectId: data.project.id,
+                    issuePrefix: data.project.issuePrefix,
+                    kind: EntityKind.epic,
+                    key: epicKeyLabel(
+                      data.project.issuePrefix,
+                      parentEpic.reference,
+                    ),
+                  ),
+                ),
+              ),
             Crumb(
               label: key,
               mono: true,
-              onTap: () => context.go(_fullScreenRoute(key)),
+              onTap: () => _leaveFor(context, _fullScreenRoute(key)),
             ),
           ],
         ),
@@ -505,11 +858,7 @@ class _DetailView extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.open_in_full),
               tooltip: t.openFullScreen,
-              onPressed: () {
-                final route = _fullScreenRoute(key);
-                onClose?.call();
-                context.go(route);
-              },
+              onPressed: () => _leaveFor(context, _fullScreenRoute(key)),
             ),
           if (onClose != null)
             IconButton(
@@ -563,6 +912,7 @@ class _DetailView extends StatelessWidget {
                 entityId: entityId,
                 projectId: projectId,
                 onChanged: onChanged,
+                activityAnchor: activityAnchor,
               ),
               const SizedBox(height: 12),
               if (isWide)
@@ -570,19 +920,21 @@ class _DetailView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      flex: 5,
+                      flex: 3,
                       child: _LeftColumn(
                         data: data,
                         kind: kind,
                         entityId: entityId,
                         projectId: projectId,
                         onChanged: onChanged,
+                        onClose: onClose,
+                        activityAnchor: activityAnchor,
                         compact: _isCompact,
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      flex: 3,
+                      flex: 2,
                       child: _RightColumn(
                         data: data,
                         kind: kind,
@@ -605,6 +957,8 @@ class _DetailView extends StatelessWidget {
                       entityId: entityId,
                       projectId: projectId,
                       onChanged: onChanged,
+                      onClose: onClose,
+                      activityAnchor: activityAnchor,
                       compact: _isCompact,
                     ),
                     SizedBox(height: _isCompact ? 8 : 12),
@@ -660,13 +1014,26 @@ class _DescriptionEditor extends StatelessWidget {
       value: data.entity.description,
       canEdit: canEdit,
       multiline: true,
+      markdown: true,
+      markdownTitle: '${t.panelDescription} — ${data.entity.subject}',
+      members: data.mentionsByHandle,
+      onUploadImage: (name, bytes) => _uploadInlineImage(
+        projectId: projectId,
+        kind: kind,
+        entityId: entityId,
+        filename: name,
+        bytes: bytes,
+      ),
       placeholder: t.descriptionPlaceholder,
       displayBuilder: (_) => Stack(
         children: [
           Padding(
             // Reserve the corner so text never runs under the copy button.
             padding: const EdgeInsets.only(right: 32),
-            child: MarkdownText(data.entity.description),
+            child: MarkdownText(
+              data.entity.description,
+              mentions: data.mentionsByHandle,
+            ),
           ),
           if (data.entity.description.trim().isNotEmpty)
             Positioned(
@@ -689,17 +1056,16 @@ class _DescriptionEditor extends StatelessWidget {
             ),
         ],
       ),
-      onSave: (next) async {
-        final ok = await _patchEntityKind(
-          kind: kind,
-          projectId: projectId,
-          entityId: entityId,
-          epicPatch: () => UpdateEpicRequest(description: next),
-          issuePatch: () => UpdateIssueRequest(description: next),
-        );
-        if (ok) onChanged();
-        return ok;
-      },
+      onSave: (next) => _patchAndReport(
+        _reporterOf(context),
+        kind: kind,
+        projectId: projectId,
+        entityId: entityId,
+        etag: data.entity.etag,
+        onChanged: onChanged,
+        epicPatch: () => UpdateEpicRequest(description: next),
+        issuePatch: () => UpdateIssueRequest(description: next),
+      ),
     );
   }
 }
@@ -773,15 +1139,16 @@ class _SubjectEditor extends StatelessWidget {
       onSave: (next) async {
         final trimmed = next.trim();
         if (trimmed.isEmpty) return false;
-        final ok = await _patchEntityKind(
+        return _patchAndReport(
+          _reporterOf(context),
           kind: kind,
           projectId: projectId,
           entityId: entityId,
+          etag: entity.etag,
+          onChanged: onChanged,
           epicPatch: () => UpdateEpicRequest(subject: trimmed),
           issuePatch: () => UpdateIssueRequest(subject: trimmed),
         );
-        if (ok) onChanged();
-        return ok;
       },
     );
   }
@@ -794,7 +1161,11 @@ class _ActionBar extends StatelessWidget {
     required this.entityId,
     required this.projectId,
     required this.onChanged,
+    required this.activityAnchor,
   });
+
+  /// The activity panel's key — the "Comment" button scrolls to it.
+  final GlobalKey activityAnchor;
 
   final _PageData data;
   final EntityKind kind;
@@ -815,13 +1186,16 @@ class _ActionBar extends StatelessWidget {
       children: [
         FilledButton.tonalIcon(
           icon: const Icon(Icons.chat_bubble_outline, size: 16),
+          // Actually take the user there instead of telling them to scroll.
           onPressed: () {
-            // Best effort: surface the activity tab area via scroll;
-            // the composer focuses on its own when tapped.
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(t.entityActionScrollHint),
-                duration: const Duration(seconds: 1),
+            final target = activityAnchor.currentContext;
+            if (target == null) return;
+            unawaited(
+              Scrollable.ensureVisible(
+                target,
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.easeOutCubic,
+                alignment: 0.1,
               ),
             );
           },
@@ -993,6 +1367,8 @@ class _LeftColumn extends StatelessWidget {
     required this.entityId,
     required this.projectId,
     required this.onChanged,
+    required this.activityAnchor,
+    this.onClose,
     this.compact = false,
   });
   final _PageData data;
@@ -1000,17 +1376,38 @@ class _LeftColumn extends StatelessWidget {
   final String entityId;
   final String projectId;
   final VoidCallback onChanged;
+  final GlobalKey activityAnchor;
+  final VoidCallback? onClose;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final gap = SizedBox(height: compact ? 8 : 12);
+    final includedIssues =
+        data.issuesById.values.where((i) => i.epicId == entityId).toList()
+          ..sort((a, b) => a.reference.compareTo(b.reference));
+    // Children of this issue. The lookup table already holds every issue in
+    // the project, so this is a filter rather than a fetch.
+    final subtasks =
+        data.issuesById.values.where((i) => i.parentId == entityId).toList()
+          ..sort((a, b) => a.reference.compareTo(b.reference));
+    final closedSubtasks = subtasks
+        .where((i) => data.taxonomyById[i.statusId]?.isClosed ?? false)
+        .length;
+    final canEdit = context.select<ProjectDetailCubit, bool>((c) {
+      final st = c.state;
+      return st is ProjectDetailLoaded && st.has(Permission.issueCreate);
+    });
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _Panel(
           compact: compact,
-          title: AppLocalizations.of(context).panelDetails,
+          icon: Icons.list_alt_outlined,
+          panelId: 'details',
+          title: t.panelDetails,
+          trailing: _TimestampsStamp(data: data),
           child: _DetailsTable(
             data: data,
             kind: kind,
@@ -1023,7 +1420,9 @@ class _LeftColumn extends StatelessWidget {
         gap,
         _Panel(
           compact: compact,
-          title: AppLocalizations.of(context).panelDescription,
+          icon: Icons.subject_outlined,
+          panelId: 'description',
+          title: t.panelDescription,
           child: _DescriptionEditor(
             data: data,
             kind: kind,
@@ -1032,77 +1431,76 @@ class _LeftColumn extends StatelessWidget {
             onChanged: onChanged,
           ),
         ),
-        gap,
-        _Panel(
-          compact: compact,
-          title: AppLocalizations.of(context).panelLinks,
-          child: LinksPanelContent(
-            projectId: data.project.id,
-            sourceKind: kind,
-            sourceId: entityId,
-            modifyPermission: _modifyPermissionFor(kind),
-            lookup: LinksLookup(
-              epics: data.epicsById,
-              issues: data.issuesById,
-              prefix: data.project.issuePrefix,
+        if (kind == EntityKind.issue && (subtasks.isNotEmpty || canEdit)) ...[
+          gap,
+          _Panel(
+            compact: compact,
+            icon: Icons.account_tree_outlined,
+            panelId: 'subtasks',
+            title: subtasks.isEmpty
+                ? t.panelSubtasks
+                : '${t.panelSubtasks} · $closedSubtasks/${subtasks.length}',
+            trailing: subtasks.isEmpty
+                ? null
+                : _MiniProgress(
+                    value: closedSubtasks / subtasks.length,
+                  ),
+            child: _SubtasksPanel(
+              parentId: entityId,
+              subtasks: subtasks,
+              taxonomyById: data.taxonomyById,
+              membersById: data.membersById,
+              project: data.project,
+              parentEpicId: data.entity is _IssueRec
+                  ? (data.entity as _IssueRec).issue.epicId
+                  : null,
+              canEdit: canEdit,
+              onChanged: onChanged,
+              onClose: onClose,
             ),
           ),
-        ),
+        ],
         if (kind == EntityKind.epic) ...[
           gap,
           _Panel(
             compact: compact,
-            title: AppLocalizations.of(context).panelIncludedIssues,
+            icon: Icons.checklist_outlined,
+            panelId: 'included',
+            title: includedIssues.isEmpty
+                ? t.panelIncludedIssues
+                : '${t.panelIncludedIssues} · ${includedIssues.length}',
             child: _IncludedIssuesPanel(
-              issues:
-                  data.issuesById.values
-                      .where((i) => i.epicId == entityId)
-                      .toList()
-                    ..sort((a, b) => a.reference.compareTo(b.reference)),
+              issues: includedIssues,
               taxonomyById: data.taxonomyById,
-              keyPrefix: data.project.issuePrefix,
+              membersById: data.membersById,
+              project: data.project,
+              onClose: onClose,
             ),
           ),
         ],
-        if (kind == EntityKind.issue) ...[
-          gap,
-          _Panel(
-            compact: compact,
-            title: 'Relationships',
-            child: _RelationshipsPanel(
-              projectId: projectId,
-              issueId: entityId,
-              canEdit: canEdit(context),
-              issuesById: data.issuesById,
-              keyPrefix: data.project.issuePrefix,
-            ),
-          ),
-          gap,
-          LogTimeSection(projectId: projectId, issueId: entityId),
-        ],
         gap,
         _Panel(
+          key: activityAnchor,
           compact: compact,
-          title: AppLocalizations.of(context).panelAttachments,
-          child: const AttachmentsView(shrinkWrap: true),
-        ),
-        gap,
-        _Panel(
-          compact: compact,
-          title: AppLocalizations.of(context).panelActivity,
+          icon: Icons.forum_outlined,
+          panelId: 'activity',
+          title: t.panelActivity,
           child: ActivityStreamView(
             draftKey: '${kind.wire}:$entityId',
             shrinkWrap: true,
             membersById: data.membersById,
+            mentions: data.mentionsByHandle,
+            onUploadImage: (name, bytes) => _uploadInlineImage(
+              projectId: projectId,
+              kind: kind,
+              entityId: entityId,
+              filename: name,
+              bytes: bytes,
+            ),
           ),
         ),
       ],
     );
-  }
-
-  bool canEdit(BuildContext context) {
-    final s = context.read<ProjectDetailCubit>().state;
-    return s is ProjectDetailLoaded && s.has(_modifyPermissionFor(kind));
   }
 }
 
@@ -1137,9 +1535,12 @@ class _RightColumn extends StatelessWidget {
         if (kind == EntityKind.epic) ...[
           _Panel(
             compact: compact,
+            icon: Icons.flag_outlined,
+            panelId: 'epic',
             title: t.panelEpic,
             child: _EpicPropertiesTable(
               epic: (data.entity as _EpicRec).epic,
+              milestonesById: data.milestonesById,
               projectId: projectId,
               entityId: entityId,
               onChanged: onChanged,
@@ -1149,6 +1550,8 @@ class _RightColumn extends StatelessWidget {
         ],
         _Panel(
           compact: compact,
+          icon: Icons.people_outline,
+          panelId: 'people',
           title: t.panelPeople,
           child: _PeopleTable(
             data: data,
@@ -1158,17 +1561,50 @@ class _RightColumn extends StatelessWidget {
             onChanged: onChanged,
           ),
         ),
-        gap,
-        _Panel(
-          compact: compact,
-          title: t.panelDates,
-          child: _DatesTable(data: data),
-        ),
+        // Links only exist between issues (the backend model is issue-scoped),
+        // so epics don't get a permanently-empty panel with no add button.
         if (kind == EntityKind.issue) ...[
           gap,
           _Panel(
             compact: compact,
-            title: 'Watchers',
+            icon: Icons.link_outlined,
+            panelId: 'links',
+            title: t.panelLinks,
+            child: LinksPanelContent(
+              projectId: data.project.id,
+              sourceKind: kind,
+              sourceId: entityId,
+              modifyPermission: _modifyPermissionFor(kind),
+              onNavigate: onClose,
+              lookup: LinksLookup(
+                epics: data.epicsById,
+                issues: data.issuesById,
+                prefix: data.project.issuePrefix,
+              ),
+            ),
+          ),
+        ],
+        gap,
+        _Panel(
+          compact: compact,
+          icon: Icons.attach_file_outlined,
+          panelId: 'attachments',
+          // Narrow board panel: fold the secondary panels away by default so
+          // the content people came for is reachable without a long scroll.
+          initiallyExpanded: !compact,
+          title: t.panelAttachments,
+          child: const AttachmentsView(shrinkWrap: true),
+        ),
+        if (kind == EntityKind.issue) ...[
+          gap,
+          LogTimeSection(projectId: projectId, issueId: entityId),
+          gap,
+          _Panel(
+            compact: compact,
+            icon: Icons.visibility_outlined,
+            panelId: 'watchers',
+            initiallyExpanded: !compact,
+            title: t.panelWatchers,
             child: _WatchersPanel(
               projectId: projectId,
               issueId: entityId,
@@ -1181,6 +1617,9 @@ class _RightColumn extends StatelessWidget {
           gap,
           _Panel(
             compact: compact,
+            icon: Icons.warning_amber_outlined,
+            panelId: 'danger',
+            initiallyExpanded: false,
             title: t.tabDangerZone,
             child: _EpicDangerZone(
               projectId: projectId,
@@ -1195,50 +1634,188 @@ class _RightColumn extends StatelessWidget {
   }
 }
 
-class _Panel extends StatelessWidget {
+/// A titled card section on the detail page.
+///
+/// Panels can be collapsed, and the choice sticks: with five or six panels in
+/// the right column — and everything stacked into one scroll inside the 420px
+/// board panel — being able to fold away what you don't use matters. Collapsed
+/// panels keep their [trailing] summary visible, so folding hides detail, not
+/// information.
+class _Panel extends StatefulWidget {
   const _Panel({
     required this.title,
     required this.child,
+    this.icon,
+    this.trailing,
     this.compact = false,
+    this.panelId,
+    this.initiallyExpanded = true,
+    super.key,
   });
   final String title;
   final Widget child;
+
+  /// Optional glyph rendered before the title — makes a long column of
+  /// panels scannable at a glance.
+  final IconData? icon;
+
+  /// Optional secondary content pinned to the right of the header row (e.g.
+  /// the Details panel's created / updated stamp). Wraps onto its own line in
+  /// compact mode, where the header has no spare width.
+  final Widget? trailing;
   final bool compact;
+
+  /// Stable id used to persist the collapsed state. Null = not collapsible.
+  final String? panelId;
+
+  /// Default when nothing has been persisted yet.
+  final bool initiallyExpanded;
+
+  @override
+  State<_Panel> createState() => _PanelState();
+}
+
+class _PanelState extends State<_Panel> {
+  late bool _expanded = widget.initiallyExpanded;
+  KeyValueStorage? _store;
+
+  /// Compact (board panel) and roomy (full page / sheet) layouts keep separate
+  /// preferences — folding Attachments away in a 420px panel shouldn't fold it
+  /// on the full page, where there's room for it.
+  String get _storeKey =>
+      'detail.panel.${widget.panelId}.${widget.compact ? 'compact' : 'wide'}';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.panelId == null) return;
+    if (getIt.isRegistered<KeyValueStorage>(instanceName: HiveBoxes.ui)) {
+      _store = getIt<KeyValueStorage>(instanceName: HiveBoxes.ui);
+      final saved = _store?.get<bool>(_storeKey);
+      if (saved != null) _expanded = saved;
+    }
+  }
+
+  void _toggle() {
+    setState(() => _expanded = !_expanded);
+    unawaited(_store?.set<bool>(_storeKey, _expanded));
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+    final collapsible = widget.panelId != null;
+    final compact = widget.compact;
+    final titleStyle = theme.textTheme.labelSmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+      letterSpacing: 0.4,
+      fontWeight: FontWeight.w700,
+    );
+    final titleRow = Row(
+      children: [
+        if (collapsible)
           Padding(
-            padding: EdgeInsets.fromLTRB(
-              compact ? 12 : 16,
-              compact ? 8 : 12,
-              compact ? 12 : 16,
-              compact ? 6 : 8,
-            ),
-            child: Text(
-              title,
-              style: theme.textTheme.labelSmall?.copyWith(
+            padding: const EdgeInsets.only(right: 4),
+            child: AnimatedRotation(
+              turns: _expanded ? 0.25 : 0,
+              duration: const Duration(milliseconds: 150),
+              child: Icon(
+                Icons.chevron_right,
+                size: 16,
                 color: theme.colorScheme.onSurfaceVariant,
-                letterSpacing: 0.4,
-                fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          const Divider(height: 1),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-              compact ? 12 : 16,
-              compact ? 8 : 12,
-              compact ? 12 : 16,
-              compact ? 12 : 16,
-            ),
-            child: child,
+        if (widget.icon != null) ...[
+          Icon(
+            widget.icon,
+            size: 14,
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
           ),
+          const SizedBox(width: 6),
         ],
+        Expanded(child: Text(widget.title, style: titleStyle)),
+        if (widget.trailing != null && !compact)
+          Flexible(child: widget.trailing!),
+      ],
+    );
+    final header = Padding(
+      padding: EdgeInsets.fromLTRB(
+        compact ? 12 : 16,
+        compact ? 8 : 12,
+        compact ? 12 : 16,
+        compact ? 6 : 8,
+      ),
+      child: widget.trailing != null && compact
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                titleRow,
+                const SizedBox(height: 4),
+                widget.trailing!,
+              ],
+            )
+          : titleRow,
+    );
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (collapsible)
+            Material(
+              type: MaterialType.transparency,
+              child: InkWell(onTap: _toggle, child: header),
+            )
+          else
+            header,
+          if (_expanded) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                compact ? 12 : 16,
+                compact ? 8 : 12,
+                compact ? 12 : 16,
+                compact ? 12 : 16,
+              ),
+              child: widget.child,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The `Created … · Updated …` stamp that replaces the old DATES panel. Lives
+/// in the Details panel header; full timestamps are one hover away.
+class _TimestampsStamp extends StatelessWidget {
+  const _TimestampsStamp({required this.data});
+  final _PageData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final created = formatTimestamp(context, data.entity.createdAt);
+    final updated = formatTimestamp(context, data.entity.modifiedAt);
+    return Tooltip(
+      message:
+          '${t.detailFieldCreated}: ${data.entity.createdAt.toLocal()}\n'
+          '${t.detailFieldUpdated}: ${data.entity.modifiedAt.toLocal()}',
+      child: Text(
+        '${t.detailFieldCreated} $created  ·  ${t.detailFieldUpdated} $updated',
+        textAlign: TextAlign.right,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.outline,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -1272,8 +1849,9 @@ class _DetailsTable extends StatelessWidget {
       final s = c.state;
       return s is ProjectDetailLoaded && s.has(_modifyPermissionFor(kind));
     });
+    // No "Type: Issue" row — the breadcrumb, the key and the whole route
+    // already say which kind this is.
     final rows = <Widget>[
-      _readonlyRow(context, t.detailFieldType, _kindLabel(t, entity)),
       _statusRow(context, canEdit: canEdit),
     ];
     switch (entity) {
@@ -1286,6 +1864,7 @@ class _DetailsTable extends StatelessWidget {
             kind: TaxonomyKind.issueType,
             canEdit: canEdit,
             patch: (id) => _patchEntity(
+              _reporterOf(context),
               issuePatch: () => UpdateIssueRequest(typeId: id),
             ),
           ),
@@ -1296,18 +1875,23 @@ class _DetailsTable extends StatelessWidget {
             kind: TaxonomyKind.priority,
             canEdit: canEdit,
             patch: (id) => _patchEntity(
+              _reporterOf(context),
               issuePatch: () => UpdateIssueRequest(priorityId: id),
             ),
           ),
+          // The cell shows just the letter as a scaled badge; the numeric
+          // weight stays in the picker, where choosing a size is the task.
           _taxonomyRow(
             context,
-            label: 'Size',
+            label: t.detailFieldSize,
             currentId: issue.sizeId,
             kind: TaxonomyKind.size,
             canEdit: canEdit,
-            displayBuilder: (item) =>
+            asSizeBadge: true,
+            pickerLabelBuilder: (item) =>
                 item.value == null ? item.name : '${item.name} (${item.value})',
             patch: (id) => _patchEntity(
+              _reporterOf(context),
               issuePatch: () => UpdateIssueRequest(sizeId: id),
             ),
           ),
@@ -1320,7 +1904,7 @@ class _DetailsTable extends StatelessWidget {
             ),
           _kvRowWith(
             context,
-            'Start date',
+            t.ttStartDate,
             _DateValue(
               value: issue.startDate,
               canEdit: canEdit,
@@ -1329,7 +1913,7 @@ class _DetailsTable extends StatelessWidget {
           ),
           _kvRowWith(
             context,
-            'Due date',
+            t.issueFieldDueDate,
             _DateValue(
               value: issue.dueDate,
               canEdit: canEdit,
@@ -1342,7 +1926,7 @@ class _DetailsTable extends StatelessWidget {
             canEdit: canEdit,
           ),
           if (issue.resolvedAt != null)
-            _kvRow(context, 'Resolved at', issue.resolvedAt!),
+            _kvRow(context, t.detailFieldResolvedAt, issue.resolvedAt!),
           _fixVersionRow(context, issue: issue, canEdit: canEdit),
           _labelsRow(
             context,
@@ -1355,32 +1939,63 @@ class _DetailsTable extends StatelessWidget {
             canEdit: canEdit,
           ),
           _epicRow(context, currentId: issue.epicId, canEdit: canEdit),
-          _milestoneRow(
-            context,
-            currentId: issue.milestoneId,
-            canEdit: canEdit,
-          ),
+          _inheritedMilestoneRow(context, issue: issue),
           _parentRow(context, currentId: issue.parentId, canEdit: canEdit),
         ]);
       case _EpicRec():
         break;
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final row in rows)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: row,
+    // Two columns when there's genuinely room for them. Measured with
+    // LayoutBuilder, NOT Breakpoints/MediaQuery: this table also renders
+    // inside the ~420px board side panel and the 72%-wide slide-over sheet,
+    // where the screen width says nothing about the space actually available.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final splitCols = !compact && constraints.maxWidth >= 560;
+        if (!splitCols || rows.length < 4) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [for (final row in rows) _detailRowPad(row)],
+          );
+        }
+        // Column-major halves keep each column readable top-to-bottom, rather
+        // than making the eye zig-zag across the pair as round-robin would.
+        final half = (rows.length + 1) ~/ 2;
+        return _KvLabelWidth(
+          width: 110,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final row in rows.take(half)) _detailRowPad(row),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final row in rows.skip(half)) _detailRowPad(row),
+                  ],
+                ),
+              ),
+            ],
           ),
-      ],
+        );
+      },
     );
   }
 
-  // ---- row builders ------------------------------------------------------
+  Widget _detailRowPad(Widget row) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 4),
+    child: row,
+  );
 
-  Widget _readonlyRow(BuildContext context, String label, String value) =>
-      _kvRow(context, label, value);
+  // ---- row builders ------------------------------------------------------
 
   Widget _statusRow(BuildContext context, {required bool canEdit}) {
     final t = AppLocalizations.of(context);
@@ -1396,12 +2011,20 @@ class _DetailsTable extends StatelessWidget {
       kind: taxonomyKind,
       canEdit: canEdit,
       patch: (id) => _patchEntity(
+        _reporterOf(context),
         epicPatch: () => UpdateEpicRequest(statusId: id),
         issuePatch: () => UpdateIssueRequest(statusId: id),
       ),
     );
   }
 
+  /// A taxonomy-backed row. Taxonomy items carry a colour, so the value cell
+  /// renders as a tinted badge rather than plain text — status, issue type,
+  /// priority and size all read as pills.
+  ///
+  /// [pickerLabelBuilder] only affects the picker list; the cell always shows
+  /// the bare item name. That split is what keeps `M (3)` in the dropdown
+  /// (where the weight helps you choose) and plain `M` in the row.
   Widget _taxonomyRow(
     BuildContext context, {
     required String label,
@@ -1409,17 +2032,20 @@ class _DetailsTable extends StatelessWidget {
     required TaxonomyKind kind,
     required bool canEdit,
     required Future<bool> Function(String? newId) patch,
-    String Function(TaxonomyItem)? displayBuilder,
+    String Function(TaxonomyItem)? pickerLabelBuilder,
+    bool asSizeBadge = false,
   }) {
     final t = AppLocalizations.of(context);
     final all = data.taxonomyById.values.where((tx) => tx.kind == kind).toList()
       ..sort((a, b) => a.order.compareTo(b.order));
     final current = currentId == null ? null : data.taxonomyById[currentId];
-    final renderLabel = displayBuilder ?? (TaxonomyItem item) => item.name;
+    final pickerLabel = pickerLabelBuilder ?? (TaxonomyItem item) => item.name;
     return _editableRow(
       context,
       label: label,
-      displayText: current == null ? '—' : renderLabel(current),
+      displayText: current?.name ?? '—',
+      colorHex: current?.color,
+      sizeItem: asSizeBadge ? current : null,
       currentId: currentId,
       noneLabel: t.statusValueNone,
       canEdit: canEdit,
@@ -1427,8 +2053,10 @@ class _DetailsTable extends StatelessWidget {
         for (final item in all)
           _Candidate(
             id: item.id,
-            label: renderLabel(item),
+            label: pickerLabel(item),
+            badgeLabel: item.name,
             colorHex: item.color,
+            sizeItem: asSizeBadge ? item : null,
           ),
       ],
       onPicked: patch,
@@ -1463,32 +2091,61 @@ class _DetailsTable extends StatelessWidget {
           ),
       ],
       onPicked: (id) => _patchEntity(
+        _reporterOf(context),
         issuePatch: () => UpdateIssueRequest(epicId: id),
       ),
     );
   }
 
-  Widget _milestoneRow(
+  /// Milestone as seen from an issue: **read-only**, resolved through the
+  /// issue's epic. Issues are never assigned to a milestone directly — a
+  /// milestone is composed of epics (see the milestone detail page), so the
+  /// only honest thing to show here is what the parent epic inherits.
+  Widget _inheritedMilestoneRow(
     BuildContext context, {
-    required String? currentId,
-    required bool canEdit,
+    required Issue issue,
   }) {
     final t = AppLocalizations.of(context);
-    final milestones = data.milestonesById.values.toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
-    final current = currentId == null ? null : data.milestonesById[currentId];
-    return _editableRow(
+    final theme = Theme.of(context);
+    final epic = issue.epicId == null ? null : data.epicsById[issue.epicId];
+    final milestoneId = epic?.milestoneId;
+    final milestone = milestoneId == null
+        ? null
+        : data.milestonesById[milestoneId];
+    final style = theme.textTheme.bodyMedium?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    return _kvRowWith(
       context,
-      label: t.detailFieldMilestone,
-      displayText: current?.name ?? '—',
-      currentId: currentId,
-      noneLabel: t.statusValueNone,
-      canEdit: canEdit,
-      candidates: [
-        for (final m in milestones) _Candidate(id: m.id, label: m.name),
-      ],
-      onPicked: (id) => _patchEntity(
-        issuePatch: () => UpdateIssueRequest(milestoneId: id),
+      t.detailFieldMilestone,
+      Tooltip(
+        message: t.detailMilestoneViaEpicHint,
+        child: milestone == null
+            ? Text('—', style: style)
+            : Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(4),
+                  onTap: () => context.go(
+                    Routes.milestoneDetailFor(data.project.id, milestone.id),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
+                    child: Text(
+                      milestone.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: style?.copyWith(
+                        color: theme.colorScheme.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
       ),
     );
   }
@@ -1538,6 +2195,7 @@ class _DetailsTable extends StatelessWidget {
           ),
       ],
       onPicked: (id) => _patchEntity(
+        _reporterOf(context),
         issuePatch: () => UpdateIssueRequest(parentId: id),
       ),
     );
@@ -1561,6 +2219,7 @@ class _DetailsTable extends StatelessWidget {
           _Candidate(id: c.wire, label: c.label),
       ],
       onPicked: (id) => _patchEntity(
+        _reporterOf(context),
         issuePatch: () => id == IssueCategory.customerRequest.wire
             ? UpdateIssueRequest(category: id)
             // Leaving customer_request clears any linked customers.
@@ -1589,6 +2248,7 @@ class _DetailsTable extends StatelessWidget {
         emptyLabel: '—',
         canEdit: canEdit,
         onSaved: (next) => _patchEntity(
+          _reporterOf(context),
           issuePatch: () => UpdateIssueRequest(customerIds: next),
         ),
       ),
@@ -1613,6 +2273,7 @@ class _DetailsTable extends StatelessWidget {
           _Candidate(id: r.wire, label: r.label),
       ],
       onPicked: (id) => _patchEntity(
+        _reporterOf(context),
         issuePatch: () => UpdateIssueRequest(resolution: id),
       ),
     );
@@ -1649,6 +2310,7 @@ class _DetailsTable extends StatelessWidget {
               displayText,
               '—',
               current?.releaseColor,
+              null,
               Theme.of(context).textTheme.bodyMedium,
             ),
           ),
@@ -1674,6 +2336,7 @@ class _DetailsTable extends StatelessWidget {
         canEdit: canEdit,
         colorHex: current?.releaseColor,
         onPicked: (id) => _patchEntity(
+          _reporterOf(context),
           issuePatch: () => UpdateIssueRequest(releaseVersionId: id),
         ),
       ),
@@ -1702,6 +2365,7 @@ class _DetailsTable extends StatelessWidget {
         emptyLabel: '—',
         canEdit: canEdit,
         onSaved: (next) => _patchEntity(
+          _reporterOf(context),
           issuePatch: () => UpdateIssueRequest(labels: next),
         ),
       ),
@@ -1729,6 +2393,7 @@ class _DetailsTable extends StatelessWidget {
         emptyLabel: '—',
         canEdit: canEdit,
         onSaved: (next) => _patchEntity(
+          _reporterOf(context),
           issuePatch: () => UpdateIssueRequest(components: next),
         ),
       ),
@@ -1739,38 +2404,21 @@ class _DetailsTable extends StatelessWidget {
   /// passes only the builder for its kind; others are null. Fetches the
   /// fresh entity for its etag, runs the PATCH, and triggers `onChanged`
   /// on success so the page reloads.
-  Future<bool> _patchEntity({
+  Future<bool> _patchEntity(
+    _Reporter reporter, {
     UpdateEpicRequest Function()? epicPatch,
     UpdateIssueRequest Function()? issuePatch,
   }) async {
-    final backlog = getIt<BacklogRepository>();
-    var ok = false;
-    switch (kind) {
-      case EntityKind.epic:
-        if (epicPatch == null) return false;
-        final fresh = (await backlog.getEpic(projectId, entityId)).valueOrNull;
-        if (fresh?.etag == null) return false;
-        final res = await backlog.updateEpic(
-          projectId,
-          entityId,
-          body: epicPatch(),
-          etag: fresh!.etag!,
-        );
-        ok = res.isOk;
-      case EntityKind.issue:
-        if (issuePatch == null) return false;
-        final fresh = (await backlog.getIssue(projectId, entityId)).valueOrNull;
-        if (fresh?.etag == null) return false;
-        final res = await backlog.updateIssue(
-          projectId,
-          entityId,
-          body: issuePatch(),
-          etag: fresh!.etag!,
-        );
-        ok = res.isOk;
-    }
-    if (ok) onChanged();
-    return ok;
+    return _patchAndReport(
+      reporter,
+      kind: kind,
+      projectId: projectId,
+      entityId: entityId,
+      etag: data.entity.etag,
+      onChanged: onChanged,
+      epicPatch: epicPatch,
+      issuePatch: issuePatch,
+    );
   }
 
   Widget _editableRow(
@@ -1782,12 +2430,16 @@ class _DetailsTable extends StatelessWidget {
     required bool canEdit,
     required List<_Candidate> candidates,
     required Future<bool> Function(String? newId) onPicked,
+    String? colorHex,
+    TaxonomyItem? sizeItem,
   }) {
     return _kvRowWith(
       context,
       label,
       _ClickToEditCell(
         displayText: displayText,
+        colorHex: colorHex,
+        sizeItem: sizeItem,
         candidates: candidates,
         currentId: currentId,
         noneLabel: noneLabel,
@@ -1796,11 +2448,6 @@ class _DetailsTable extends StatelessWidget {
       ),
     );
   }
-
-  String _kindLabel(AppLocalizations t, _EntityRecord e) => switch (e) {
-    _EpicRec() => t.kindLabelEpic,
-    _IssueRec() => t.kindLabelIssue,
-  };
 
   String _labelList(List<String> ids, Map<String, Label> by) =>
       ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
@@ -1817,6 +2464,8 @@ class _DetailsTable extends StatelessWidget {
   }) async {
     final entity = data.entity;
     if (entity is! _IssueRec) return;
+    // Captured before the picker await — the context must not be used after.
+    final reporter = _reporterOf(context);
     final raw = isStart ? entity.issue.startDate : entity.issue.dueDate;
     final picked = await showDatePicker(
       context: context,
@@ -1830,6 +2479,7 @@ class _DetailsTable extends StatelessWidget {
         '${picked.month.toString().padLeft(2, '0')}-'
         '${picked.day.toString().padLeft(2, '0')}';
     await _patchEntity(
+      reporter,
       issuePatch: () => isStart
           ? UpdateIssueRequest(startDate: s)
           : UpdateIssueRequest(dueDate: s),
@@ -1841,14 +2491,26 @@ class _Candidate {
   const _Candidate({
     required this.id,
     required this.label,
+    this.badgeLabel,
     this.colorHex,
+    this.sizeItem,
     this.icon,
     this.pinned = false,
     this.group,
   });
   final String id;
+
+  /// What the picker list shows — may carry extra context the row doesn't
+  /// need (e.g. a size's numeric weight, `M (3)`).
   final String label;
+
+  /// Short form shown in the value cell once picked. Falls back to [label].
+  final String? badgeLabel;
   final String? colorHex;
+
+  /// When set the cell renders a [SizeBadge] (scaled by the item's ordinal)
+  /// instead of the generic tinted pill.
+  final TaxonomyItem? sizeItem;
 
   /// Optional Material icon used in place of the colored bullet. Useful
   /// for shortcuts like "Assign to me" that aren't taxonomy items.
@@ -1889,6 +2551,7 @@ class _ClickToEditCell extends StatefulWidget {
     required this.canEdit,
     required this.onPicked,
     this.colorHex,
+    this.sizeItem,
   });
 
   final String displayText;
@@ -1899,18 +2562,28 @@ class _ClickToEditCell extends StatefulWidget {
   final Future<bool> Function(String? newId) onPicked;
 
   /// When set (and the shown value isn't [noneLabel]), the value renders as
-  /// a tinted badge in this color instead of plain text — e.g. the release
-  /// badge on the issue's fix-version row.
+  /// a tinted badge in this color instead of plain text — status, issue type,
+  /// priority, size and the release fix-version all use this.
   final String? colorHex;
+
+  /// Size taxonomy item: renders the purpose-built [SizeBadge] (font and
+  /// padding scale with the ordinal) instead of the generic pill.
+  final TaxonomyItem? sizeItem;
 
   @override
   State<_ClickToEditCell> createState() => _ClickToEditCellState();
 }
 
 class _ClickToEditCellState extends State<_ClickToEditCell> {
-  /// Display override for the optimistic-update window: shows the
-  /// just-picked label until the PATCH resolves; on failure we revert.
-  String? _optimisticDisplay;
+  /// Display override for the optimistic-update window: shows the just-picked
+  /// value until the PATCH resolves; on failure we revert. Held as a whole
+  /// candidate (not just its text) so the badge's colour and shape swap
+  /// together with the label instead of lagging a frame behind.
+  _Candidate? _optimisticPick;
+
+  /// Distinguishes "nothing picked yet" from "picked None" — the latter has a
+  /// null candidate but must still override the widget's display text.
+  bool _optimisticCleared = false;
   bool _saving = false;
 
   Future<void> _open() async {
@@ -1922,24 +2595,25 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
     );
     if (picked == null || !mounted) return;
     final newId = picked == _kNoneSentinel ? null : picked;
-    // Optimistic display: figure out what the next display text would be
-    final newDisplay = newId == null
-        ? '—'
+    final chosen = newId == null
+        ? null
         : widget.candidates
-                  .where((c) => c.id == newId)
-                  .cast<_Candidate?>()
-                  .firstOrNull
-                  ?.label ??
-              '—';
+              .where((c) => c.id == newId)
+              .cast<_Candidate?>()
+              .firstOrNull;
     setState(() {
-      _optimisticDisplay = newDisplay;
+      _optimisticPick = chosen;
+      _optimisticCleared = true;
       _saving = true;
     });
     final ok = await widget.onPicked(newId);
     if (!mounted) return;
     setState(() {
       _saving = false;
-      if (!ok) _optimisticDisplay = null;
+      if (!ok) {
+        _optimisticPick = null;
+        _optimisticCleared = false;
+      }
     });
   }
 
@@ -1956,7 +2630,21 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textStyle = theme.textTheme.bodyMedium;
-    final shownText = _optimisticDisplay ?? widget.displayText;
+    // During the optimistic window the picked candidate wins; otherwise the
+    // widget's own (server-backed) value does.
+    final pick = _optimisticPick;
+    final shownText = _optimisticCleared
+        ? (pick?.badgeLabel ?? pick?.label ?? '—')
+        : widget.displayText;
+    final shownColor = _optimisticCleared ? pick?.colorHex : widget.colorHex;
+    final shownSize = _optimisticCleared ? pick?.sizeItem : widget.sizeItem;
+    Widget value() => _tintedValue(
+      shownText,
+      widget.noneLabel,
+      shownColor,
+      shownSize,
+      textStyle,
+    );
     if (!widget.canEdit) {
       return MouseRegion(
         cursor: SystemMouseCursors.basic,
@@ -1966,12 +2654,7 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
           child: Tooltip(
             message: shownText,
             waitDuration: const Duration(milliseconds: 600),
-            child: _tintedValue(
-              shownText,
-              widget.noneLabel,
-              widget.colorHex,
-              textStyle,
-            ),
+            child: value(),
           ),
         ),
       );
@@ -1995,12 +2678,7 @@ class _ClickToEditCellState extends State<_ClickToEditCell> {
                 child: Tooltip(
                   message: shownText,
                   waitDuration: const Duration(milliseconds: 600),
-                  child: _tintedValue(
-                    shownText,
-                    widget.noneLabel,
-                    widget.colorHex,
-                    textStyle,
-                  ),
+                  child: value(),
                 ),
               ),
               const SizedBox(width: 4),
@@ -3104,32 +3782,6 @@ class _PeopleTable extends StatelessWidget {
   }
 }
 
-class _DatesTable extends StatelessWidget {
-  const _DatesTable({required this.data});
-  final _PageData data;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _kvRow(
-          context,
-          t.detailFieldCreated,
-          formatTimestamp(context, data.entity.createdAt),
-        ),
-        const SizedBox(height: 4),
-        _kvRow(
-          context,
-          t.detailFieldUpdated,
-          formatTimestamp(context, data.entity.modifiedAt),
-        ),
-      ],
-    );
-  }
-}
-
 Widget _kvRow(BuildContext context, String label, String value) {
   return _kvRowWith(
     context,
@@ -3186,31 +3838,40 @@ class _KvLabelWidth extends InheritedWidget {
 // Epic-only panels (cover image, colour, dates, included issues, danger zone)
 // ---------------------------------------------------------------------------
 
-/// Epic properties: cover image, colour swatch, and start / end dates. Every
-/// field PATCHes the epic via the shared dispatcher then triggers a reload.
+/// Epic properties: cover image, colour swatch, milestone and start / end
+/// dates. Every field PATCHes the epic via the shared dispatcher then
+/// triggers a reload.
+///
+/// Milestone lives here, not on the issue: a milestone is composed of epics,
+/// so the epic is the only place the assignment can be made.
 class _EpicPropertiesTable extends StatelessWidget {
   const _EpicPropertiesTable({
     required this.epic,
+    required this.milestonesById,
     required this.projectId,
     required this.entityId,
     required this.onChanged,
   });
   final Epic epic;
+  final Map<String, Milestone> milestonesById;
   final String projectId;
   final String entityId;
   final VoidCallback onChanged;
 
-  Future<void> _patch(UpdateEpicRequest body) async {
-    final ok = await _patchEntityKind(
+  Future<void> _patch(_Reporter reporter, UpdateEpicRequest body) async {
+    await _patchAndReport(
+      reporter,
       kind: EntityKind.epic,
       projectId: projectId,
       entityId: entityId,
+      etag: epic.etag,
+      onChanged: onChanged,
       epicPatch: () => body,
     );
-    if (ok) onChanged();
   }
 
   Future<void> _pickDate(BuildContext context, {required bool isStart}) async {
+    final reporter = _reporterOf(context);
     final raw = isStart ? epic.startDate : epic.endDate;
     final picked = await showDatePicker(
       context: context,
@@ -3224,6 +3885,7 @@ class _EpicPropertiesTable extends StatelessWidget {
         '${picked.month.toString().padLeft(2, '0')}-'
         '${picked.day.toString().padLeft(2, '0')}';
     await _patch(
+      reporter,
       isStart ? UpdateEpicRequest(startDate: s) : UpdateEpicRequest(endDate: s),
     );
   }
@@ -3254,14 +3916,46 @@ class _EpicPropertiesTable extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: ColorSwatchPicker(
                     selectedHex: epic.color,
-                    onChanged: (hex) =>
-                        unawaited(_patch(UpdateEpicRequest(color: hex))),
+                    onChanged: (hex) => unawaited(
+                      _patch(
+                        _reporterOf(context),
+                        UpdateEpicRequest(color: hex),
+                      ),
+                    ),
                   ),
                 )
               : Align(
                   alignment: Alignment.centerLeft,
                   child: HexColorDot(hex: epic.color, size: 14),
                 ),
+        ),
+        const SizedBox(height: 8),
+        _kvRowWith(
+          context,
+          t.detailFieldMilestone,
+          _ClickToEditCell(
+            displayText:
+                (epic.milestoneId == null
+                    ? null
+                    : milestonesById[epic.milestoneId]?.name) ??
+                '—',
+            currentId: epic.milestoneId,
+            noneLabel: t.statusValueNone,
+            canEdit: canEdit,
+            candidates: [
+              for (final m
+                  in milestonesById.values.toList()
+                    ..sort((a, b) => a.name.compareTo(b.name)))
+                _Candidate(id: m.id, label: m.name),
+            ],
+            onPicked: (id) async {
+              await _patch(
+                _reporterOf(context),
+                UpdateEpicRequest(milestoneId: id),
+              );
+              return true;
+            },
+          ),
         ),
         const SizedBox(height: 8),
         _kvRowWith(
@@ -3469,15 +4163,215 @@ class _EpicCoverImage extends StatelessWidget {
 }
 
 /// The issues grouped under this epic (read-only list).
+/// Thin progress bar shown in a panel header (sub-task completion).
+class _MiniProgress extends StatelessWidget {
+  const _MiniProgress({required this.value});
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      width: 72,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(3),
+        child: LinearProgressIndicator(
+          value: value.clamp(0, 1),
+          minHeight: 5,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+        ),
+      ),
+    );
+  }
+}
+
+/// An issue's children. Mirrors the epic's included-issues list, plus inline
+/// quick-add: a new sub-task inherits the parent's epic so it lands in the
+/// same place on the board.
+class _SubtasksPanel extends StatefulWidget {
+  const _SubtasksPanel({
+    required this.parentId,
+    required this.subtasks,
+    required this.taxonomyById,
+    required this.membersById,
+    required this.project,
+    required this.parentEpicId,
+    required this.canEdit,
+    required this.onChanged,
+    this.onClose,
+  });
+
+  final String parentId;
+  final List<Issue> subtasks;
+  final Map<String, TaxonomyItem> taxonomyById;
+  final Map<String, UserRef> membersById;
+  final Project project;
+  final String? parentEpicId;
+  final bool canEdit;
+  final VoidCallback onChanged;
+  final VoidCallback? onClose;
+
+  @override
+  State<_SubtasksPanel> createState() => _SubtasksPanelState();
+}
+
+class _SubtasksPanelState extends State<_SubtasksPanel> {
+  final _controller = TextEditingController();
+  bool _adding = false;
+  bool _saving = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _create() async {
+    final subject = _controller.text.trim();
+    if (subject.isEmpty || _saving) return;
+    setState(() => _saving = true);
+    final res = await getIt<BacklogRepository>().createIssue(
+      widget.project.id,
+      CreateIssueRequest(
+        subject: subject,
+        parentId: widget.parentId,
+        epicId: widget.parentEpicId,
+      ),
+    );
+    if (!mounted) return;
+    setState(() {
+      _saving = false;
+      if (res.isOk) {
+        _controller.clear();
+        _adding = false;
+      }
+    });
+    if (res.isOk) {
+      // The new child lives in the shared lookup table the panel reads from.
+      getIt<ProjectLookupsCache>().invalidate(widget.project.id);
+      widget.onChanged();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).entitySaveFailed)),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (widget.subtasks.isEmpty && !_adding)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text(
+              t.subtasksEmpty,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.outline,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          )
+        else
+          for (final i in widget.subtasks)
+            _IncludedIssueRow(
+              issue: i,
+              status: widget.taxonomyById[i.statusId],
+              assignee: i.assignedTo == null
+                  ? null
+                  : widget.membersById[i.assignedTo],
+              keyLabel: issueKeyLabel(widget.project.issuePrefix, i.reference),
+              onTap: () {
+                widget.onClose?.call();
+                context.go(
+                  Routes.entityByKeyFor(
+                    projectId: widget.project.id,
+                    issuePrefix: widget.project.issuePrefix,
+                    kind: EntityKind.issue,
+                    key: issueKeyLabel(
+                      widget.project.issuePrefix,
+                      i.reference,
+                    ),
+                  ),
+                );
+              },
+            ),
+        if (widget.canEdit) ...[
+          const SizedBox(height: 4),
+          if (_adding)
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    enabled: !_saving,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: t.subtaskSubjectHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => unawaited(_create()),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_saving)
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else ...[
+                  IconButton(
+                    icon: const Icon(Icons.check, size: 18),
+                    tooltip: t.actionSave,
+                    onPressed: () => unawaited(_create()),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    tooltip: t.actionCancel,
+                    onPressed: () => setState(() {
+                      _adding = false;
+                      _controller.clear();
+                    }),
+                  ),
+                ],
+              ],
+            )
+          else
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.add, size: 16),
+                label: Text(t.actionAddSubtask),
+                onPressed: () => setState(() => _adding = true),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
 class _IncludedIssuesPanel extends StatelessWidget {
   const _IncludedIssuesPanel({
     required this.issues,
     required this.taxonomyById,
-    required this.keyPrefix,
+    required this.membersById,
+    required this.project,
+    this.onClose,
   });
   final List<Issue> issues;
   final Map<String, TaxonomyItem> taxonomyById;
-  final String keyPrefix;
+  final Map<String, UserRef> membersById;
+  final Project project;
+
+  /// Dismisses the embedding panel / sheet before navigating, so tapping a
+  /// row from the board side panel lands cleanly on the issue's full page.
+  final VoidCallback? onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -3488,6 +4382,7 @@ class _IncludedIssuesPanel extends StatelessWidget {
         t.epicNoIssues,
         style: theme.textTheme.bodyMedium?.copyWith(
           color: theme.colorScheme.outline,
+          fontStyle: FontStyle.italic,
         ),
       );
     }
@@ -3495,32 +4390,81 @@ class _IncludedIssuesPanel extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final i in issues)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(
-              children: [
-                IssueKeyChip(text: issueKeyLabel(keyPrefix, i.reference)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    i.subject,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium,
-                  ),
+          _IncludedIssueRow(
+            issue: i,
+            status: taxonomyById[i.statusId],
+            assignee: i.assignedTo == null ? null : membersById[i.assignedTo],
+            keyLabel: issueKeyLabel(project.issuePrefix, i.reference),
+            onTap: () {
+              onClose?.call();
+              context.go(
+                Routes.entityByKeyFor(
+                  projectId: project.id,
+                  issuePrefix: project.issuePrefix,
+                  kind: EntityKind.issue,
+                  key: issueKeyLabel(project.issuePrefix, i.reference),
                 ),
-                if (i.statusId != null && taxonomyById[i.statusId] != null) ...[
-                  const SizedBox(width: 8),
-                  StatusPill(
-                    label: taxonomyById[i.statusId]!.name,
-                    colorHex: taxonomyById[i.statusId]!.color,
-                    dense: true,
-                  ),
-                ],
-              ],
-            ),
+              );
+            },
           ),
       ],
+    );
+  }
+}
+
+class _IncludedIssueRow extends StatelessWidget {
+  const _IncludedIssueRow({
+    required this.issue,
+    required this.status,
+    required this.assignee,
+    required this.keyLabel,
+    required this.onTap,
+  });
+  final Issue issue;
+  final TaxonomyItem? status;
+  final UserRef? assignee;
+  final String keyLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        hoverColor: theme.colorScheme.surfaceContainerHighest,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Row(
+            children: [
+              IssueKeyChip(text: keyLabel),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  issue.subject,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+              if (assignee != null) ...[
+                const SizedBox(width: 8),
+                UserAvatar(user: assignee!, size: 20),
+              ],
+              if (status != null) ...[
+                const SizedBox(width: 8),
+                StatusPill(
+                  label: status!.name,
+                  colorHex: status!.color,
+                  dense: true,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -3612,42 +4556,132 @@ Permission _modifyPermissionFor(EntityKind kind) => switch (kind) {
   EntityKind.issue => Permission.issueModify,
 };
 
-/// Shared PATCH dispatcher for any field on the entity detail page.
-/// The caller passes only the builder matching the active kind; the
-/// helper fetches the fresh entity for its etag, runs the PATCH, and
-/// returns true on success. Pages are responsible for calling
-/// `onChanged()` themselves on the result.
-Future<bool> _patchEntityKind({
+/// Uploads an image pasted into a markdown editor as an attachment of the
+/// entity being edited, and returns the stable download path to reference it
+/// by. `/attachments/{id}/download` is session-authenticated, so a same-origin
+/// web request carries the cookie without extra plumbing.
+Future<String?> _uploadInlineImage({
+  required String projectId,
+  required EntityKind kind,
+  required String entityId,
+  required String filename,
+  required Uint8List bytes,
+}) async {
+  final res = await getIt<ActivityRepository>().uploadAttachment(
+    projectId,
+    kind,
+    entityId,
+    filename: filename,
+    bytes: bytes,
+    contentType: 'image/png',
+  );
+  final a = res.valueOrNull;
+  if (a == null) return null;
+  return '/api/v1/projects/$projectId/attachments/${a.id}/download';
+}
+
+/// Outcome of a field PATCH, so callers can tell "someone else got there
+/// first" apart from a plain failure.
+enum _PatchOutcome { ok, conflict, failed }
+
+/// Shared PATCH dispatcher for any field on the entity detail page. The caller
+/// passes only the builder matching the active kind.
+///
+/// [etag] MUST be the token captured when the entity was loaded. This function
+/// used to re-fetch the entity to obtain a *fresh* etag right before the PATCH,
+/// which made the `If-Match` precondition unconditionally pass and silently
+/// clobbered concurrent edits — exactly the thing the backend's 412 exists to
+/// prevent. Passing the loaded token restores that protection (and drops a
+/// request per edit).
+Future<_PatchOutcome> _patchEntityKind({
   required EntityKind kind,
   required String projectId,
   required String entityId,
+  required String? etag,
   UpdateEpicRequest Function()? epicPatch,
   UpdateIssueRequest Function()? issuePatch,
 }) async {
+  if (etag == null || etag.isEmpty) return _PatchOutcome.failed;
   final backlog = getIt<BacklogRepository>();
   switch (kind) {
     case EntityKind.epic:
-      if (epicPatch == null) return false;
-      final fresh = (await backlog.getEpic(projectId, entityId)).valueOrNull;
-      if (fresh?.etag == null) return false;
+      if (epicPatch == null) return _PatchOutcome.failed;
       final res = await backlog.updateEpic(
         projectId,
         entityId,
         body: epicPatch(),
-        etag: fresh!.etag!,
+        etag: etag,
       );
-      return res.isOk;
+      return _outcomeOf(res.isOk, res.failureOrNull);
     case EntityKind.issue:
-      if (issuePatch == null) return false;
-      final fresh = (await backlog.getIssue(projectId, entityId)).valueOrNull;
-      if (fresh?.etag == null) return false;
+      if (issuePatch == null) return _PatchOutcome.failed;
       final res = await backlog.updateIssue(
         projectId,
         entityId,
         body: issuePatch(),
-        etag: fresh!.etag!,
+        etag: etag,
       );
-      return res.isOk;
+      return _outcomeOf(res.isOk, res.failureOrNull);
+  }
+}
+
+_PatchOutcome _outcomeOf(bool ok, AppFailure? failure) {
+  if (ok) return _PatchOutcome.ok;
+  return failure is ConflictFailure
+      ? _PatchOutcome.conflict
+      : _PatchOutcome.failed;
+}
+
+/// Runs a field PATCH and reports the result to the user.
+///
+/// Returns true only on success. On a conflict it leaves the typed value alone
+/// and offers a reload, rather than silently dropping the edit.
+/// Everything [_patchAndReport] needs from the widget tree, captured up front
+/// so callers can await a picker first without holding a `BuildContext`
+/// across the gap.
+typedef _Reporter = ({ScaffoldMessengerState messenger, AppLocalizations t});
+
+_Reporter _reporterOf(BuildContext context) => (
+  messenger: ScaffoldMessenger.of(context),
+  t: AppLocalizations.of(context),
+);
+
+Future<bool> _patchAndReport(
+  _Reporter reporter, {
+  required EntityKind kind,
+  required String projectId,
+  required String entityId,
+  required String? etag,
+  required VoidCallback onChanged,
+  UpdateEpicRequest Function()? epicPatch,
+  UpdateIssueRequest Function()? issuePatch,
+}) async {
+  final messenger = reporter.messenger;
+  final t = reporter.t;
+  final outcome = await _patchEntityKind(
+    kind: kind,
+    projectId: projectId,
+    entityId: entityId,
+    etag: etag,
+    epicPatch: epicPatch,
+    issuePatch: issuePatch,
+  );
+  switch (outcome) {
+    case _PatchOutcome.ok:
+      onChanged();
+      return true;
+    case _PatchOutcome.conflict:
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(t.entityChangedElsewhere),
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(label: t.actionReload, onPressed: onChanged),
+        ),
+      );
+      return false;
+    case _PatchOutcome.failed:
+      messenger.showSnackBar(SnackBar(content: Text(t.entitySaveFailed)));
+      return false;
   }
 }
 
@@ -3664,6 +4698,10 @@ class _InlineTextEditor extends StatefulWidget {
     this.displayBuilder,
     this.displayStyle,
     this.multiline = false,
+    this.markdown = false,
+    this.markdownTitle = '',
+    this.members = const {},
+    this.onUploadImage,
   });
 
   final String value;
@@ -3673,6 +4711,13 @@ class _InlineTextEditor extends StatefulWidget {
   final Widget Function(BuildContext)? displayBuilder;
   final TextStyle? displayStyle;
   final bool multiline;
+
+  /// Swaps the bare TextField for the full markdown editor (toolbar, preview,
+  /// mentions, image paste) and offers the expanded full-window mode.
+  final bool markdown;
+  final String markdownTitle;
+  final Map<String, UserRef> members;
+  final ImageUploader? onUploadImage;
 
   @override
   State<_InlineTextEditor> createState() => _InlineTextEditorState();
@@ -3720,6 +4765,20 @@ class _InlineTextEditorState extends State<_InlineTextEditor> {
     });
   }
 
+  /// Hands the current text to the expanded editor and saves what comes back.
+  Future<void> _openExpanded() async {
+    final next = await showExpandedMarkdownEditor(
+      context,
+      title: widget.markdownTitle,
+      initialValue: _ctrl.text,
+      members: widget.members,
+      onUploadImage: widget.onUploadImage,
+    );
+    if (next == null || !mounted) return;
+    _ctrl.text = next;
+    await _save();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -3728,22 +4787,41 @@ class _InlineTextEditorState extends State<_InlineTextEditor> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TextField(
-            controller: _ctrl,
-            autofocus: true,
-            maxLines: widget.multiline ? null : 1,
-            minLines: widget.multiline ? 3 : null,
-            onSubmitted: widget.multiline ? null : (_) => _save(),
-            style: widget.multiline ? null : widget.displayStyle,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              isDense: true,
+          if (widget.markdown)
+            MarkdownEditor(
+              controller: _ctrl,
+              members: widget.members,
+              onUploadImage: widget.onUploadImage,
+              autofocus: true,
+              onSubmitShortcut: _saving ? null : _save,
+            )
+          else
+            TextField(
+              controller: _ctrl,
+              autofocus: true,
+              maxLines: widget.multiline ? null : 1,
+              minLines: widget.multiline ? 3 : null,
+              onSubmitted: widget.multiline ? null : (_) => _save(),
+              style: widget.multiline ? null : widget.displayStyle,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
             ),
-          ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              if (widget.markdown) ...[
+                // Editing markdown in a 420px panel is miserable; this opens
+                // a full-window editor with a side-by-side preview.
+                TextButton.icon(
+                  icon: const Icon(Icons.open_in_full, size: 16),
+                  onPressed: _saving ? null : () => unawaited(_openExpanded()),
+                  label: Text(t.editorExpand),
+                ),
+                const Spacer(),
+              ],
               TextButton(
                 onPressed: _saving ? null : _cancel,
                 child: Text(t.actionCancel),
@@ -3838,217 +4916,37 @@ Color _hexToColor(String hex) {
   return v == null ? const Color(0xFF64748B) : Color(v);
 }
 
-/// Plain text, or — when [colorHex] is set and [text] isn't [neutralText] —
-/// a tinted badge in that color (mirrors [StatusPill]). Used by
-/// [_ClickToEditCell] to render e.g. the issue's fix-version as a release
-/// badge instead of plain text.
+/// Renders a click-to-edit cell's current value.
+///
+/// Unset values stay plain text. A [sizeItem] renders the purpose-built
+/// [SizeBadge] (scaled by its ordinal); anything else carrying a colour
+/// becomes a tinted [StatusPill], so status / issue type / priority / size
+/// read as one consistent badge column. Items with no colour configured fall
+/// back to plain text.
 Widget _tintedValue(
   String text,
   String neutralText,
   String? colorHex,
+  TaxonomyItem? sizeItem,
   TextStyle? style,
 ) {
-  if (colorHex == null || colorHex.isEmpty || text == neutralText) {
+  if (text.isEmpty || text == '—' || text == neutralText) {
+    return Text(text, style: style, overflow: TextOverflow.ellipsis);
+  }
+  if (sizeItem != null) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: SizeBadge(item: sizeItem),
+    );
+  }
+  if (colorHex == null || colorHex.isEmpty) {
     return Text(text, style: style, overflow: TextOverflow.ellipsis);
   }
   // Same tinted-pill look as the board card / issues list release badge.
-  return StatusPill(label: text, colorHex: colorHex, dense: true);
-}
-
-// ---------------------------------------------------------------------------
-// Issue relationships
-// ---------------------------------------------------------------------------
-
-/// Lists an issue's relationship links (in/out), with add-via-picker and
-/// remove. Talks to [CatalogRepository] directly and refreshes locally.
-class _RelationshipsPanel extends StatefulWidget {
-  const _RelationshipsPanel({
-    required this.projectId,
-    required this.issueId,
-    required this.canEdit,
-    required this.issuesById,
-    required this.keyPrefix,
-  });
-
-  final String projectId;
-  final String issueId;
-  final bool canEdit;
-  final Map<String, Issue> issuesById;
-  final String keyPrefix;
-
-  @override
-  State<_RelationshipsPanel> createState() => _RelationshipsPanelState();
-}
-
-class _RelationshipsPanelState extends State<_RelationshipsPanel> {
-  late Future<List<IssueLink>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
-  }
-
-  Future<List<IssueLink>> _load() async {
-    final res = await getIt<CatalogRepository>().listIssueLinks(
-      widget.projectId,
-      widget.issueId,
-    );
-    return res.valueOrNull ?? <IssueLink>[];
-  }
-
-  void _reload() => setState(() => _future = _load());
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return FutureBuilder<List<IssueLink>>(
-      future: _future,
-      builder: (context, snap) {
-        final links = snap.data ?? const <IssueLink>[];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (snap.connectionState != ConnectionState.done)
-              const Padding(
-                padding: EdgeInsets.all(8),
-                child: Center(
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              )
-            else if (links.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Text(
-                  'No relationships.',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-              )
-            else
-              for (final link in links)
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.link, size: 18),
-                  title: Text(
-                    '${link.relationLabel} '
-                    '${issueKeyLabel(widget.keyPrefix, link.otherRef)} · ${link.otherSubject}',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  trailing: widget.canEdit
-                      ? IconButton(
-                          icon: const Icon(Icons.close, size: 16),
-                          tooltip: 'Remove',
-                          onPressed: () async {
-                            await getIt<CatalogRepository>().deleteIssueLink(
-                              widget.projectId,
-                              widget.issueId,
-                              link.id,
-                            );
-                            _reload();
-                          },
-                        )
-                      : null,
-                ),
-            if (widget.canEdit)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add relationship'),
-                  onPressed: _addLink,
-                ),
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _addLink() async {
-    final candidates =
-        widget.issuesById.values.where((i) => i.id != widget.issueId).toList()
-          ..sort((a, b) => a.reference.compareTo(b.reference));
-    if (candidates.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No other issues to link.')),
-      );
-      return;
-    }
-    var targetId = candidates.first.id;
-    var type = IssueLinkType.blocks;
-    final result = await showDialog<({String target, String type})>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: const Text('Add relationship'),
-          content: SizedBox(
-            width: 460,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                DropdownButtonFormField<IssueLinkType>(
-                  initialValue: type,
-                  decoration: const InputDecoration(labelText: 'Type'),
-                  items: [
-                    for (final t in IssueLinkType.values)
-                      DropdownMenuItem<IssueLinkType>(
-                        value: t,
-                        child: Text(t.label),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => type = v ?? type),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: targetId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Issue'),
-                  items: [
-                    for (final i in candidates)
-                      DropdownMenuItem<String>(
-                        value: i.id,
-                        child: Text(
-                          '${issueKeyLabel(widget.keyPrefix, i.reference)} · ${i.subject}',
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                  onChanged: (v) => setState(() => targetId = v ?? targetId),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(ctx).pop((target: targetId, type: type.wire)),
-              child: const Text('Add'),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (result == null) return;
-    await getIt<CatalogRepository>().createIssueLink(
-      widget.projectId,
-      widget.issueId,
-      result.target,
-      result.type,
-    );
-    _reload();
-  }
+  return Align(
+    alignment: Alignment.centerLeft,
+    child: StatusPill(label: text, colorHex: colorHex, dense: true),
+  );
 }
 
 // ---------------------------------------------------------------------------

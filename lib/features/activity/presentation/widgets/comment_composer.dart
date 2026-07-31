@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/core/models/user_ref.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
+import 'package:intellipilot/core/ui/markdown_editor.dart';
 import 'package:intellipilot/features/activity/presentation/cubits/activity_stream_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -14,10 +16,18 @@ class CommentComposer extends StatefulWidget {
   const CommentComposer({
     required this.draftKey,
     required this.busy,
+    this.members = const {},
+    this.onUploadImage,
     super.key,
   });
   final String draftKey;
   final bool busy;
+
+  /// Mention candidates keyed by lowercase handle.
+  final Map<String, UserRef> members;
+
+  /// Enables pasting screenshots straight into a comment.
+  final ImageUploader? onUploadImage;
 
   @override
   State<CommentComposer> createState() => _CommentComposerState();
@@ -37,6 +47,9 @@ class _CommentComposerState extends State<CommentComposer> {
     _store = getIt<KeyValueStorage>(instanceName: HiveBoxes.drafts);
     final saved = _store.get<String>(widget.draftKey);
     _ctrl = TextEditingController(text: saved ?? '');
+    // The editor owns its own TextField, so autosave hangs off the controller
+    // rather than an onChanged callback.
+    _ctrl.addListener(_scheduleFlush);
     if (saved != null && saved.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _restoredNoticeShown) return;
@@ -54,6 +67,7 @@ class _CommentComposerState extends State<CommentComposer> {
   @override
   void dispose() {
     _flushTimer?.cancel();
+    _ctrl.removeListener(_scheduleFlush);
     // Best-effort flush on dispose so the user doesn't lose the last edit.
     _flush();
     _ctrl.dispose();
@@ -88,24 +102,18 @@ class _CommentComposerState extends State<CommentComposer> {
 
   @override
   Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: TextField(
+            child: MarkdownEditor(
               controller: _ctrl,
-              minLines: 1,
-              maxLines: 4,
-              enabled: !widget.busy,
-              decoration: InputDecoration(
-                hintText: t.commentComposerHint,
-                border: const OutlineInputBorder(),
-                isDense: true,
-              ),
-              onChanged: (_) => _scheduleFlush(),
+              members: widget.members,
+              onUploadImage: widget.onUploadImage,
+              minLines: 2,
+              onSubmitShortcut: widget.busy ? null : () => unawaited(_submit()),
             ),
           ),
           const SizedBox(width: 8),
@@ -118,7 +126,7 @@ class _CommentComposerState extends State<CommentComposer> {
                   )
                 : const Icon(Icons.send),
             onPressed: widget.busy ? null : _submit,
-            label: Text(t.commentPostAction),
+            label: Text(AppLocalizations.of(context).commentPostAction),
           ),
         ],
       ),

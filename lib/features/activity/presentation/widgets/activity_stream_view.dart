@@ -4,6 +4,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/io/url_opener.dart';
 import 'package:intellipilot/core/models/user_ref.dart';
+import 'package:intellipilot/core/ui/markdown_editor.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/core/ui/timestamps.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
@@ -21,13 +22,20 @@ import 'package:intellipilot/l10n/generated/app_localizations.dart';
 /// (e.g. the Jira-style entity detail page). In that mode entries render as
 /// a `Column` of rows that sizes to content rather than the default
 /// `Expanded(ListView)` fill-parent layout.
-class ActivityStreamView extends StatelessWidget {
+class ActivityStreamView extends StatefulWidget {
   const ActivityStreamView({
     required this.draftKey,
     this.shrinkWrap = false,
     this.membersById = const {},
+    this.mentions = const {},
+    this.onUploadImage,
     super.key,
   });
+
+  /// How many entries render before the "show all" expander. A busy issue can
+  /// carry hundreds of history rows, and in [shrinkWrap] mode they all lay out
+  /// eagerly inside the page's scroll view.
+  static const int collapsedCount = 5;
 
   /// Unique key per (entity kind + entity id) used by [CommentComposer] for
   /// draft autosave.
@@ -38,9 +46,32 @@ class ActivityStreamView extends StatelessWidget {
   /// name when the embedded author object is absent.
   final Map<String, UserRef> membersById;
 
+  /// Members keyed by lowercase handle, for `@mention` autocomplete + chips.
+  final Map<String, UserRef> mentions;
+
+  /// Enables pasting images into a comment.
+  final ImageUploader? onUploadImage;
+
+  @override
+  State<ActivityStreamView> createState() => _ActivityStreamViewState();
+}
+
+class _ActivityStreamViewState extends State<ActivityStreamView> {
+  bool _expanded = false;
+
+  @override
+  void didUpdateWidget(ActivityStreamView old) {
+    super.didUpdateWidget(old);
+    // A different entity is a different conversation — start collapsed again.
+    if (old.draftKey != widget.draftKey) _expanded = false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final draftKey = widget.draftKey;
+    final shrinkWrap = widget.shrinkWrap;
+    final membersById = widget.membersById;
     return BlocBuilder<ActivityStreamCubit, ActivityStreamState>(
       builder: (context, state) {
         if (state is ActivityStreamLoading) {
@@ -50,13 +81,36 @@ class ActivityStreamView extends StatelessWidget {
           return Center(child: Text(t.activityLoadFailed));
         }
         if (state is! ActivityStreamLoaded) return const SizedBox.shrink();
+        final all = state.entries;
+        final hidden = all.length - ActivityStreamView.collapsedCount;
+        final visible = _expanded || hidden <= 0
+            // Entries arrive newest-last; the cap keeps the most recent ones.
+            ? all
+            : all.sublist(all.length - ActivityStreamView.collapsedCount);
+        final toggle = hidden <= 0
+            ? null
+            : Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  icon: Icon(
+                    _expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 18,
+                  ),
+                  onPressed: () => setState(() => _expanded = !_expanded),
+                  label: Text(
+                    _expanded
+                        ? t.activityShowLess
+                        : t.activityShowAll(all.length),
+                  ),
+                ),
+              );
         if (shrinkWrap) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _FilterBar(filter: state.filter),
               const Divider(height: 1),
-              if (state.entries.isEmpty)
+              if (all.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24),
                   child: Center(child: Text(t.activityEmpty)),
@@ -70,18 +124,25 @@ class ActivityStreamView extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      for (final entry in state.entries)
+                      ?toggle,
+                      for (final entry in visible)
                         if (entry.isComment)
                           _CommentRow(
                             comment: entry.comment!,
                             membersById: membersById,
+                            mentions: widget.mentions,
                           )
                         else
                           _HistoryRow(event: entry.history!),
                     ],
                   ),
                 ),
-              _ComposerGate(draftKey: draftKey, busy: state.busy),
+              _ComposerGate(
+                draftKey: draftKey,
+                busy: state.busy,
+                members: widget.mentions,
+                onUploadImage: widget.onUploadImage,
+              ),
             ],
           );
         }
@@ -90,11 +151,20 @@ class ActivityStreamView extends StatelessWidget {
             _FilterBar(filter: state.filter),
             const Divider(height: 1),
             Expanded(
-              child: state.entries.isEmpty
+              child: all.isEmpty
                   ? Center(child: Text(t.activityEmpty))
-                  : _Stream(entries: state.entries, membersById: membersById),
+                  : _Stream(
+                      entries: all,
+                      membersById: membersById,
+                      mentions: widget.mentions,
+                    ),
             ),
-            _ComposerGate(draftKey: draftKey, busy: state.busy),
+            _ComposerGate(
+              draftKey: draftKey,
+              busy: state.busy,
+              members: widget.mentions,
+              onUploadImage: widget.onUploadImage,
+            ),
           ],
         );
       },
@@ -135,9 +205,14 @@ class _FilterBar extends StatelessWidget {
 }
 
 class _Stream extends StatelessWidget {
-  const _Stream({required this.entries, this.membersById = const {}});
+  const _Stream({
+    required this.entries,
+    this.membersById = const {},
+    this.mentions = const {},
+  });
   final List<ActivityEntry> entries;
   final Map<String, UserRef> membersById;
+  final Map<String, UserRef> mentions;
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +222,11 @@ class _Stream extends StatelessWidget {
       itemBuilder: (context, i) {
         final entry = entries[i];
         if (entry.isComment) {
-          return _CommentRow(comment: entry.comment!, membersById: membersById);
+          return _CommentRow(
+            comment: entry.comment!,
+            membersById: membersById,
+            mentions: mentions,
+          );
         }
         return _HistoryRow(event: entry.history!);
       },
@@ -156,8 +235,13 @@ class _Stream extends StatelessWidget {
 }
 
 class _CommentRow extends StatelessWidget {
-  const _CommentRow({required this.comment, this.membersById = const {}});
+  const _CommentRow({
+    required this.comment,
+    this.membersById = const {},
+    this.mentions = const {},
+  });
   final Map<String, UserRef> membersById;
+  final Map<String, UserRef> mentions;
   final Comment comment;
 
   @override
@@ -220,7 +304,7 @@ class _CommentRow extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
-            MarkdownText(comment.body),
+            MarkdownText(comment.body, mentions: mentions),
             const SizedBox(height: 6),
             _CommentAttachments(
               projectId: context.read<ActivityStreamCubit>().projectId,
@@ -375,9 +459,16 @@ class _DiffRow extends StatelessWidget {
 }
 
 class _ComposerGate extends StatelessWidget {
-  const _ComposerGate({required this.draftKey, required this.busy});
+  const _ComposerGate({
+    required this.draftKey,
+    required this.busy,
+    this.members = const {},
+    this.onUploadImage,
+  });
   final String draftKey;
   final bool busy;
+  final Map<String, UserRef> members;
+  final ImageUploader? onUploadImage;
 
   @override
   Widget build(BuildContext context) {
@@ -385,7 +476,12 @@ class _ComposerGate extends StatelessWidget {
     final canComment =
         state is ProjectDetailLoaded && state.has(Permission.commentCreate);
     if (!canComment) return const SizedBox.shrink();
-    return CommentComposer(draftKey: draftKey, busy: busy);
+    return CommentComposer(
+      draftKey: draftKey,
+      busy: busy,
+      members: members,
+      onUploadImage: onUploadImage,
+    );
   }
 }
 
