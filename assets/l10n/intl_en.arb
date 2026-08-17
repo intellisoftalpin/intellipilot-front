@@ -1886,10 +1886,6 @@
   "@milestoneCreateTitle": {
     "description": "Dialog title."
   },
-  "milestoneEditTitle": "Edit milestone",
-  "@milestoneEditTitle": {
-    "description": "Dialog title."
-  },
   "milestoneFieldName": "Name",
   "@milestoneFieldName": {
     "description": "Field label."
@@ -1905,14 +1901,6 @@
   "milestoneDateNotSet": "—",
   "@milestoneDateNotSet": {
     "description": "Placeholder shown when no date is set."
-  },
-  "milestoneStatusOpen": "Open",
-  "@milestoneStatusOpen": {
-    "description": "Status chip for an open milestone."
-  },
-  "milestoneStatusClosed": "Closed",
-  "@milestoneStatusClosed": {
-    "description": "Status chip for a closed milestone."
   },
   "milestoneDeleteTitle": "Delete milestone?",
   "@milestoneDeleteTitle": {
@@ -1936,18 +1924,6 @@
   "@milestoneLoadFailed": {
     "description": "Error state on the milestone detail page."
   },
-  "milestoneTabStats": "Stats",
-  "@milestoneTabStats": {
-    "description": "Tab label."
-  },
-  "milestoneTabScope": "Scope",
-  "@milestoneTabScope": {
-    "description": "Tab label."
-  },
-  "milestoneTabBoard": "Board",
-  "@milestoneTabBoard": {
-    "description": "Tab label."
-  },
   "milestoneStatPoints": "Story points",
   "@milestoneStatPoints": {
     "description": "Stat-card label."
@@ -1956,37 +1932,105 @@
   "@milestoneStatTasks": {
     "description": "Stat-card label."
   },
-  "milestoneScopeBacklog": "Backlog",
-  "@milestoneScopeBacklog": {
-    "description": "Column header for unassigned stories on the scope tab."
+  "actionClose": "Close",
+  "@actionClose": {
+    "description": "Generic close button (dialogs, side panels)."
   },
-  "milestoneScopeIn": "In this milestone",
-  "@milestoneScopeIn": {
-    "description": "Column header for stories assigned to this milestone."
+  "actionClear": "Clear",
+  "@actionClear": {
+    "description": "Generic clear-this-field button."
   },
-  "milestoneScopeEmpty": "Nothing here yet.",
-  "@milestoneScopeEmpty": {
-    "description": "Empty-state inside a scope column."
+  "milestoneFieldDescription": "Description",
+  "@milestoneFieldDescription": {
+    "description": "Field label in the milestone sidebar."
   },
-  "milestoneScopeAdd": "Add to milestone",
-  "@milestoneScopeAdd": {
-    "description": "Per-row tooltip on the backlog column."
+  "milestoneFieldBusinessRelease": "Business release",
+  "@milestoneFieldBusinessRelease": {
+    "description": "Field label for the commercial ship date."
   },
-  "milestoneScopeRemove": "Remove from milestone",
-  "@milestoneScopeRemove": {
-    "description": "Per-row tooltip on the milestone scope column."
+  "milestoneBusinessReleaseHint": "Commercial ship date. Must be after the technical release.",
+  "@milestoneBusinessReleaseHint": {
+    "description": "Helper text under the business release field."
   },
-  "milestoneCloseAction": "Close milestone",
-  "@milestoneCloseAction": {
-    "description": "Primary action button on the milestone detail page."
+  "milestoneTechnicalReleaseHint": "Technical release.",
+  "@milestoneTechnicalReleaseHint": {
+    "description": "Helper text under the end-date field."
   },
-  "milestoneCloseTitle": "Close this milestone?",
-  "@milestoneCloseTitle": {
-    "description": "Dialog title."
+  "milestoneCompletedLabel": "Completed",
+  "@milestoneCompletedLabel": {
+    "description": "Switch label that marks a milestone completed."
   },
-  "milestoneCloseSummary": "{count, plural, one{1 unfinished story} other{{count} unfinished stories}}",
-  "@milestoneCloseSummary": {
-    "description": "Body line summarising what's left in the milestone.",
+  "milestoneCompletedHint": "Done. Reopen it to add scope again.",
+  "@milestoneCompletedHint": {
+    "description": "Subtitle under the completion switch when on."
+  },
+  "milestoneInProgressHint": "Still in progress.",
+  "@milestoneInProgressHint": {
+    "description": "Subtitle under the completion switch when off."
+  },
+  "milestoneColumnInProgress": "In progress",
+  "@milestoneColumnInProgress": {
+    "description": "Board column header."
+  },
+  "milestoneColumnCompleted": "Completed",
+  "@milestoneColumnCompleted": {
+    "description": "Board column header, also the timeline band label."
+  },
+  "milestoneColumnInProgressEmpty": "Nothing in progress.",
+  "@milestoneColumnInProgressEmpty": {
+    "description": "Empty state inside the in-progress column."
+  },
+  "milestoneColumnCompletedEmpty": "Nothing completed yet.",
+  "@milestoneColumnCompletedEmpty": {
+    "description": "Empty state inside the completed column."
+  },
+  "milestoneSaveConflict": "Someone else changed this milestone. Reload to see their version.",
+  "@milestoneSaveConflict": {
+    "description": "Shown when a concurrent edit beat this one."
+  },
+  "milestoneSaveFailed": "Couldn't save the milestone.",
+  "@milestoneSaveFailed": {
+    "description": "Generic save error in the milestone sidebar."
+  },
+  "milestoneDeleteBlocked": "Remove every epic from this milestone before deleting it.",
+  "@milestoneDeleteBlocked": {
+    "description": "Shown when delete is refused because epics remain."
+  },
+  "milestoneZoomIn": "Zoom in",
+  "@milestoneZoomIn": {
+    "description": "Timeline zoom-in tooltip."
+  },
+  "milestoneZoomOut": "Zoom out",
+  "@milestoneZoomOut": {
+    "description": "Timeline zoom-out tooltip."
+  },
+  "milestoneZoomLabel": "Timeline scale",
+  "@milestoneZoomLabel": {
+    "description": "Tooltip on the current timeline scale."
+  },
+  "milestoneZoomDays": "Days",
+  "@milestoneZoomDays": {
+    "description": "Timeline scale name."
+  },
+  "milestoneZoomWeeks": "Weeks",
+  "@milestoneZoomWeeks": {
+    "description": "Timeline scale name."
+  },
+  "milestoneZoomMonths": "Months",
+  "@milestoneZoomMonths": {
+    "description": "Timeline scale name."
+  },
+  "milestoneZoomQuarters": "Quarters",
+  "@milestoneZoomQuarters": {
+    "description": "Timeline scale name."
+  },
+  "milestoneOverdue": "Past its technical release date",
+  "@milestoneOverdue": {
+    "description": "Tooltip on the at-risk marker."
+  },
+  "milestoneEpicCount": "{count, plural, =0{no epics} one{1 epic} other{{count} epics}}",
+  "@milestoneEpicCount": {
+    "description": "Epic count on a milestone card.",
     "placeholders": {
       "count": {
         "type": "int",
@@ -1994,9 +2038,19 @@
       }
     }
   },
-  "milestoneCloseMoveToBacklog": "Move unfinished stories back to the backlog",
-  "@milestoneCloseMoveToBacklog": {
-    "description": "Checkbox label inside the close-milestone dialog."
+  "milestoneEpicIssues": "{closed} of {total} issues done",
+  "@milestoneEpicIssues": {
+    "description": "Issue readiness under an epic in the milestone sidebar.",
+    "placeholders": {
+      "closed": {
+        "type": "int",
+        "example": "4"
+      },
+      "total": {
+        "type": "int",
+        "example": "9"
+      }
+    }
   },
   "wikiTitle": "Wiki",
   "@wikiTitle": {

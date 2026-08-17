@@ -369,13 +369,16 @@ void seedDemoStore(DemoStore s) {
       projectId: projectId,
       name: 'Sprint 1',
       slug: 'sprint-1',
+      description: 'First delivery slice: auth, backlog and the board.',
       startDate: now.subtract(const Duration(days: 7)),
       endDate: now.add(const Duration(days: 7)),
+      businessReleaseDate: now.add(const Duration(days: 21)),
       closed: false,
       order: 1,
       version: 1,
       createdAt: now.subtract(const Duration(days: 14)),
       modifiedAt: now.subtract(const Duration(days: 14)),
+      etag: s.etagOf(milestoneId, 1),
     ),
   );
 

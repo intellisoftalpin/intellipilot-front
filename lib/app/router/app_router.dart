@@ -28,7 +28,6 @@ import 'package:intellipilot/features/mfa/presentation/passkeys_page.dart';
 import 'package:intellipilot/features/mfa/presentation/recovery_codes_page.dart';
 import 'package:intellipilot/features/mfa/presentation/security_page.dart';
 import 'package:intellipilot/features/mfa/presentation/totp_setup_page.dart';
-import 'package:intellipilot/features/milestones/presentation/milestone_detail_page.dart';
 import 'package:intellipilot/features/milestones/presentation/milestones_list_page.dart';
 import 'package:intellipilot/features/profile/presentation/account_page.dart';
 import 'package:intellipilot/features/profile/presentation/profile_page.dart';
@@ -345,14 +344,18 @@ GoRouter buildRouter({required SessionBloc session}) {
               builder: (_, pid, _) => MilestonesListPage(projectId: pid),
             ),
           ),
+          // A milestone has no screen of its own: this URL renders the
+          // milestones page in whichever view the user last used, with the
+          // detail sidebar already open on the milestone. Keeps every existing
+          // deep link (and the milestone chip on an issue) working.
           GoRoute(
             path: '/projects/:projectId/milestones/:milestoneId',
             name: 'milestone_detail',
             builder: (context, state) => ShortLinkGate(
               state: state,
-              builder: (_, pid, _) => MilestoneDetailPage(
+              builder: (_, pid, _) => MilestonesListPage(
                 projectId: pid,
-                milestoneId: state.pathParameters['milestoneId']!,
+                openMilestoneId: state.pathParameters['milestoneId'],
               ),
             ),
           ),

@@ -3,6 +3,7 @@ import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/error/failure_mapper.dart';
 import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/result/result.dart';
+import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
 
@@ -61,11 +62,13 @@ class MilestonesRepositoryImpl implements MilestonesRepository {
     String projectId,
     String id, {
     required UpdateMilestoneRequest body,
+    required String etag,
   }) async {
     try {
       final response = await _api.dio.patch<dynamic>(
         '$_base/$projectId/milestones/$id',
         data: body.toJson(),
+        options: Options(headers: {'If-Match': etag}),
       );
       return Ok(Milestone.fromJson(response.data as Map<String, dynamic>));
     } on DioException catch (e) {
@@ -90,10 +93,15 @@ class MilestonesRepositoryImpl implements MilestonesRepository {
   }
 
   @override
-  Future<Result<Unit, AppFailure>> close(String projectId, String id) async {
-    final res = await _api.post('$_base/$projectId/milestones/$id/close');
+  Future<Result<Milestone, AppFailure>> setCompleted(
+    String projectId,
+    String id, {
+    required bool completed,
+  }) async {
+    final action = completed ? 'close' : 'reopen';
+    final res = await _api.post('$_base/$projectId/milestones/$id/$action');
     return res.when(
-      ok: (_) => const Ok<Unit, AppFailure>(Unit.instance),
+      ok: (r) => Ok(Milestone.fromJson(r.data as Map<String, dynamic>)),
       err: Err.new,
     );
   }
@@ -106,6 +114,26 @@ class MilestonesRepositoryImpl implements MilestonesRepository {
     final res = await _api.get('$_base/$projectId/milestones/$id/stats');
     return res.when(
       ok: (r) => Ok(MilestoneStats.fromJson(r.data as Map<String, dynamic>)),
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<List<Epic>, AppFailure>> epics(
+    String projectId,
+    String milestoneId,
+  ) async {
+    final res = await _api.get(
+      '$_base/$projectId/milestones/$milestoneId/epics',
+    );
+    return res.when(
+      ok: (r) {
+        final body = r.data as Map<String, dynamic>;
+        final raw = body['epics'] as List<dynamic>? ?? const [];
+        return Ok(
+          raw.map((e) => Epic.fromJson(e as Map<String, dynamic>)).toList(),
+        );
+      },
       err: Err.new,
     );
   }

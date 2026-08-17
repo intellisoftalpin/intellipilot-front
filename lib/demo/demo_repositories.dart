@@ -2431,13 +2431,16 @@ class DemoMilestonesRepository implements MilestonesRepository {
       projectId: projectId,
       name: body.name,
       slug: body.slug ?? body.name.toLowerCase().replaceAll(' ', '-'),
+      description: body.description,
       startDate: body.startDate,
       endDate: body.endDate,
+      businessReleaseDate: body.businessReleaseDate,
       closed: false,
       order: order.toDouble(),
       version: 1,
       createdAt: DateTime.now().toUtc(),
       modifiedAt: DateTime.now().toUtc(),
+      etag: '"$id:1"',
     );
     _s.milestones.add(ms);
     return Ok(ms);
@@ -2448,6 +2451,7 @@ class DemoMilestonesRepository implements MilestonesRepository {
     String projectId,
     String id, {
     required UpdateMilestoneRequest body,
+    required String etag,
   }) async {
     await _tick();
     final i = _s.milestones.indexWhere(
@@ -2455,28 +2459,33 @@ class DemoMilestonesRepository implements MilestonesRepository {
     );
     if (i < 0) return const Err(NotFoundFailure());
     final cur = _s.milestones[i];
+    if (cur.etag != null && cur.etag != etag) {
+      return const Err(ConflictFailure());
+    }
     final patch = body.toJson();
+    DateTime? date(String key, DateTime? fallback) => patch.containsKey(key)
+        ? (patch[key] == null ? null : DateTime.tryParse(patch[key] as String))
+        : fallback;
+    final end = date('end_date', cur.endDate);
     final next = Milestone(
       id: cur.id,
       projectId: cur.projectId,
       name: (patch['name'] as String?) ?? cur.name,
       slug: cur.slug,
-      startDate: patch.containsKey('start_date')
-          ? (patch['start_date'] == null
-                ? null
-                : DateTime.tryParse(patch['start_date'] as String))
-          : cur.startDate,
-      endDate: patch.containsKey('end_date')
-          ? (patch['end_date'] == null
-                ? null
-                : DateTime.tryParse(patch['end_date'] as String))
-          : cur.endDate,
+      description: (patch['description'] as String?) ?? cur.description,
+      startDate: date('start_date', cur.startDate),
+      endDate: end,
+      // Mirrors the backend rule: no technical release, no business release.
+      businessReleaseDate: end == null
+          ? null
+          : date('business_release_date', cur.businessReleaseDate),
       closed: cur.closed,
       closedAt: cur.closedAt,
       order: cur.order,
       version: cur.version + 1,
       createdAt: cur.createdAt,
       modifiedAt: DateTime.now().toUtc(),
+      etag: '"${cur.id}:${cur.version + 1}"',
     );
     _s.milestones[i] = next;
     return Ok(next);
@@ -2485,33 +2494,61 @@ class DemoMilestonesRepository implements MilestonesRepository {
   @override
   Future<Result<Unit, AppFailure>> delete(String projectId, String id) async {
     await _tick();
+    // Same guard as the API: epics must be detached first.
+    final occupied = _s.epics.any(
+      (e) => e.projectId == projectId && e.milestoneId == id,
+    );
+    if (occupied) return const Err(ConflictFailure());
     _s.milestones.removeWhere((m) => m.id == id && m.projectId == projectId);
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
 
   @override
-  Future<Result<Unit, AppFailure>> close(String projectId, String id) async {
+  Future<Result<Milestone, AppFailure>> setCompleted(
+    String projectId,
+    String id, {
+    required bool completed,
+  }) async {
     await _tick();
     final i = _s.milestones.indexWhere(
       (m) => m.id == id && m.projectId == projectId,
     );
     if (i < 0) return const Err(NotFoundFailure());
     final cur = _s.milestones[i];
-    _s.milestones[i] = Milestone(
+    final next = Milestone(
       id: cur.id,
       projectId: cur.projectId,
       name: cur.name,
       slug: cur.slug,
+      description: cur.description,
       startDate: cur.startDate,
       endDate: cur.endDate,
-      closed: true,
-      closedAt: DateTime.now().toUtc(),
+      businessReleaseDate: cur.businessReleaseDate,
+      closed: completed,
+      closedAt: completed ? DateTime.now().toUtc() : null,
       order: cur.order,
       version: cur.version + 1,
       createdAt: cur.createdAt,
       modifiedAt: DateTime.now().toUtc(),
+      etag: '"${cur.id}:${cur.version + 1}"',
     );
-    return const Ok<Unit, AppFailure>(Unit.instance);
+    _s.milestones[i] = next;
+    return Ok(next);
+  }
+
+  @override
+  Future<Result<List<Epic>, AppFailure>> epics(
+    String projectId,
+    String milestoneId,
+  ) async {
+    await _tick();
+    return Ok(
+      _s.epics
+          .where(
+            (e) => e.projectId == projectId && e.milestoneId == milestoneId,
+          )
+          .toList(),
+    );
   }
 
   @override
@@ -2556,8 +2593,44 @@ class DemoMilestonesRepository implements MilestonesRepository {
     List<String> epicIds,
   ) async {
     await _tick();
+    // Detach everything currently here, then attach the given set — same
+    // replace-the-whole-set semantics as the API.
+    for (var i = 0; i < _s.epics.length; i++) {
+      final e = _s.epics[i];
+      if (e.projectId != projectId) continue;
+      final shouldBeIn = epicIds.contains(e.id);
+      final isIn = e.milestoneId == milestoneId;
+      if (shouldBeIn == isIn) continue;
+      _s.epics[i] = _epicInMilestone(e, shouldBeIn ? milestoneId : null);
+    }
     return const Ok<Unit, AppFailure>(Unit.instance);
   }
+
+  /// The same epic, re-pointed at [milestoneId]. `Epic` is immutable and has
+  /// no `copyWith`, and adding one for the demo store alone isn't worth it.
+  static Epic _epicInMilestone(Epic e, String? milestoneId) => Epic(
+    id: e.id,
+    projectId: e.projectId,
+    reference: e.reference,
+    subject: e.subject,
+    description: e.description,
+    color: e.color,
+    order: e.order,
+    version: e.version,
+    createdAt: e.createdAt,
+    modifiedAt: e.modifiedAt,
+    statusId: e.statusId,
+    ownerId: e.ownerId,
+    assignedTo: e.assignedTo,
+    milestoneId: milestoneId,
+    startDate: e.startDate,
+    endDate: e.endDate,
+    coverImageKind: e.coverImageKind,
+    coverImageUpdatedAt: e.coverImageUpdatedAt,
+    taskTotal: e.taskTotal,
+    taskClosed: e.taskClosed,
+    etag: e.etag,
+  );
 }
 
 class DemoBoardRepository implements BoardRepository {

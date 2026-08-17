@@ -1,6 +1,6 @@
-/// All atomic permissions defined in the backend's `intellipilot_core::perms`
-/// (53 entries). Names match the wire strings exactly so we can round-trip
-/// without mapping tables.
+/// All atomic permissions defined in the backend's `intellipilot_core::perms`.
+/// Names match the wire strings exactly so we can round-trip without mapping
+/// tables.
 enum Permission {
   // Project
   projectView('project.view', PermissionDomain.project),
@@ -38,6 +38,17 @@ enum Permission {
   milestoneCreate('milestone.create', PermissionDomain.milestones),
   milestoneModify('milestone.modify', PermissionDomain.milestones),
   milestoneDelete('milestone.delete', PermissionDomain.milestones),
+
+  // Business release date — the commercial ship date trailing the technical
+  // one. Held by product owners and admins, not by the view baseline.
+  milestoneBusinessReleaseView(
+    'milestone.business_release.view',
+    PermissionDomain.milestones,
+  ),
+  milestoneBusinessReleaseModify(
+    'milestone.business_release.modify',
+    PermissionDomain.milestones,
+  ),
 
   // Wiki
   wikiView('wiki.view', PermissionDomain.wiki),

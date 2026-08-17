@@ -2,24 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
-/// Shared create/edit dialog. Result is a [CreateMilestoneRequest]; callers
-/// map to [UpdateMilestoneRequest] when editing an existing record.
+/// Create dialog: just enough to get a milestone into the board. Everything
+/// else — description, business release, epics, completion — is edited in the
+/// detail sidebar, so this stays deliberately small.
 Future<CreateMilestoneRequest?> showMilestoneEditDialog(
-  BuildContext context, {
-  Milestone? existing,
-}) {
-  final nameCtrl = TextEditingController(text: existing?.name ?? '');
-  var start = existing?.startDate;
-  var end = existing?.endDate;
+  BuildContext context,
+) {
+  final nameCtrl = TextEditingController();
+  DateTime? start;
+  DateTime? end;
   return showDialog<CreateMilestoneRequest>(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) {
         final t = AppLocalizations.of(ctx);
         return AlertDialog(
-          title: Text(
-            existing == null ? t.milestoneCreateTitle : t.milestoneEditTitle,
-          ),
+          title: Text(t.milestoneCreateTitle),
           content: SizedBox(
             width: 360,
             child: Column(
