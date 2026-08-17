@@ -21,6 +21,8 @@ import 'package:intellipilot/features/backlog/presentation/issues_page.dart';
 import 'package:intellipilot/features/board/presentation/board_page.dart';
 import 'package:intellipilot/features/board/presentation/board_resolver.dart';
 import 'package:intellipilot/features/board/presentation/boards_gallery_page.dart';
+import 'package:intellipilot/features/docs/presentation/docs_page.dart';
+import 'package:intellipilot/features/docs/presentation/wiki_overview_page.dart';
 import 'package:intellipilot/features/home/presentation/home_page.dart';
 import 'package:intellipilot/features/mfa/presentation/mfa_verify_page.dart';
 import 'package:intellipilot/features/mfa/presentation/passkey_signin_page.dart';
@@ -118,9 +120,28 @@ abstract class Routes {
   static String adminUserTimeFor(String id) => '/admin/users/$id/time';
   static String milestoneDetailFor(String projectId, String milestoneId) =>
       '/projects/$projectId/milestones/$milestoneId';
+
+  /// The Wiki section landing page: tiles for the internal wiki and every
+  /// external documentation source.
   static String projectWikiFor(String id) => '/projects/$id/wiki';
+
+  /// The internal wiki's own page list. Individual page URLs are deliberately
+  /// left where they were (`/wiki/{pageId}`), so existing links keep working.
+  static String wikiPagesFor(String id) => '/projects/$id/wiki/pages';
   static String wikiPageFor(String projectId, String pageId) =>
       '/projects/$projectId/wiki/$pageId';
+
+  /// One external documentation source, optionally at a specific document.
+  static String docSourceFor(
+    String projectId,
+    String sourceId, {
+    String? path,
+  }) {
+    final base = '/projects/$projectId/docs/$sourceId';
+    if (path == null || path.isEmpty) return base;
+    return '$base?path=${Uri.encodeQueryComponent(path)}';
+  }
+
   static String wikiRevisionsFor(String projectId, String pageId) =>
       '/projects/$projectId/wiki/$pageId/revisions';
   static String entityDetailFor(
@@ -364,7 +385,29 @@ GoRouter buildRouter({required SessionBloc session}) {
             name: 'project_wiki',
             builder: (context, state) => ShortLinkGate(
               state: state,
+              builder: (_, pid, _) => WikiOverviewPage(projectId: pid),
+            ),
+          ),
+          // Declared BEFORE `/wiki/:pageId` so the literal segment wins. Page
+          // ids are UUIDs, so "pages" can never be one.
+          GoRoute(
+            path: '/projects/:id/wiki/pages',
+            name: 'wiki_pages',
+            builder: (context, state) => ShortLinkGate(
+              state: state,
               builder: (_, pid, _) => WikiListPage(projectId: pid),
+            ),
+          ),
+          GoRoute(
+            path: '/projects/:projectId/docs/:sourceId',
+            name: 'doc_source',
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => DocsPage(
+                projectId: pid,
+                sourceId: state.pathParameters['sourceId']!,
+                path: state.uri.queryParameters['path'],
+              ),
             ),
           ),
           GoRoute(

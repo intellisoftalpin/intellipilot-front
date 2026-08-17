@@ -4186,5 +4186,115 @@
   "mentionPickerHint": "Mention someone",
   "@mentionPickerHint": {
     "description": "Entity detail page."
-  }
+  },
+  "tabDocumentation": "Documentation",
+  "docsTitle": "Documentation",
+  "docsInternalWiki": "Internal wiki",
+  "docsInternalWikiHint": "Pages written and stored inside IntelliPilot",
+  "docsSourcesTitle": "Documentation sources",
+  "docsSourcesHint": "Git repositories shown under Wiki. Up to 10 per project.",
+  "docsSourceCapReached": "A project may have at most 10 documentation sources.",
+  "docsNoSources": "No documentation sources yet",
+  "docsAddSource": "Add source",
+  "docsEditSource": "Edit source",
+  "docsAddSourceFailed": "Could not add the source. Check the URL, branch and key.",
+  "docsSaveFailed": "Could not save the changes",
+  "docsSourceName": "Name",
+  "docsSshUrl": "Repository SSH URL",
+  "docsWebUrl": "Web address",
+  "docsWebUrlHint": "Where links outside the shared folder send the reader",
+  "docsBranch": "Branch",
+  "docsBranchChangeHint": "Changing the branch re-downloads the repository",
+  "docsFolder": "Folder to share",
+  "docsFolderHint": "Only this folder and everything below it is shown. Leave empty for the whole repository.",
+  "docsReadOnly": "Read-only",
+  "docsReadOnlyHelp": "Nobody can edit these documents, even with a write key",
+  "docsSourceIsReadOnly": "This documentation source is read-only",
+  "docsDeployKey": "Deploy key",
+  "docsDeployKeyName": "Key name",
+  "docsGenerateDeployKey": "Generate a new read-only key",
+  "docsUseExistingKey": "Use an existing key",
+  "docsAppearance": "Appearance",
+  "docsMoveUp": "Move up",
+  "docsMoveDown": "Move down",
+  "docsDeleteSourceTitle": "Remove documentation source?",
+  "docsDeleteSourceBody": "“{name}” will no longer appear under Wiki. The repository itself is not touched.",
+  "@docsDeleteSourceBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "docsSyncNow": "Refresh",
+  "docsSyncedAgo": "Synced {when}",
+  "@docsSyncedAgo": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "docsNeverSynced": "Not yet synchronised",
+  "docsSyncFailed": "Last refresh failed",
+  "docsNotReady": "Preparing documentation…",
+  "docsNotReadyHint": "This source is still being downloaded. Try again shortly.",
+  "docsPathMissing": "The shared folder does not exist in this repository",
+  "docsPathMissingHint": "Check the folder configured for this source in project settings.",
+  "docsContents": "Contents",
+  "docsOnThisPage": "On this page",
+  "docsEmpty": "No documents here yet",
+  "docsBrowseAll": "All documents",
+  "docsDocNotFound": "This document was not found",
+  "docsOpenOnSource": "Open on source",
+  "docsLinkOutside": "That link points outside the shared folder — opening it on the source",
+  "docsLastChangedBy": "Last changed by {name}, {when}",
+  "@docsLastChangedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "docsSaveDoc": "Commit changes",
+  "docsCommitMessage": "Commit message",
+  "docsConflict": "This document changed on the server since you opened it",
+  "docsPushRejected": "The git host refused the change",
+  "docsWriteKeyMissing": "Configure a write key to edit documents",
+  "docsConfigureKey": "Configure",
+  "docsMyKeyTitle": "My documentation access",
+  "docsMyKeyIntro": "Editing a document commits and pushes as you, using your own key. Without one, documents stay read-only.",
+  "docsMyKeyRegisterHint": "Add this public key to your account on the git host so pushes are accepted.",
+  "docsGenerateMyKey": "Generate a key",
+  "docsImportMyKey": "Import a key",
+  "docsImportHint": "Paste an OpenSSH private key without a passphrase. It is encrypted at rest and never shown again.",
+  "docsPrivateKeyLabel": "OpenSSH private key",
+  "docsRemoveMyKey": "Remove key",
+  "docsCopyPublicKey": "Copy public key",
+  "docsCopied": "Copied",
+  "docsKeyGenerated": "Generated key",
+  "docsKeyImported": "Imported key",
+  "docsNoDocumentation": "No documentation yet",
+  "docsNoDocumentationHint": "The internal wiki is switched off and no documentation sources are registered.",
+  "projectWikiEnabled": "Internal wiki",
+  "projectWikiEnabledHelp": "Shown under Wiki alongside any documentation sources",
+  "projectWikiDisabledHelp": "Hidden. Pages and their history are kept and return if you switch it back on.",
+  "docsSourceKind": "Source type",
+  "docsGitSourceKind": "Git repository",
+  "docsWebSourceKind": "Web link",
+  "docsGitSourceKindHint": "Browse and edit markdown from a repository",
+  "docsWebSourceKindHint": "Embed an existing page. Always read-only.",
+  "docsPageUrl": "Page address",
+  "docsPageUrlHint": "The page to show. Some sites refuse to be embedded — the link above the page always works.",
+  "docsTitleLabel": "Title",
+  "docsTitleHint": "Shown in the sidebar and above the page",
+  "docsOpenInNewTab": "Open in a new tab",
+  "docsEmbedUnsupported": "Embedded pages are only shown in the browser version.",
+  "docsHidden": "Hidden",
+  "docsHide": "Hide from navigation",
+  "docsShow": "Show again",
+  "docsHiddenHelp": "Withdrawn from the Wiki menu. The configuration is kept and comes back when you show it again."
 }

@@ -34,6 +34,8 @@ import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/dashboard/data/dashboard_repository_impl.dart';
 import 'package:intellipilot/features/dashboard/data/dtos/dashboard_dtos.dart';
 import 'package:intellipilot/features/dashboard/domain/dashboard_repository.dart';
+import 'package:intellipilot/features/docs/data/docs_repository_impl.dart';
+import 'package:intellipilot/features/docs/domain/docs_repository.dart';
 import 'package:intellipilot/features/issues_io/data/issues_io_repository_impl.dart';
 import 'package:intellipilot/features/issues_io/domain/issues_io_repository.dart';
 import 'package:intellipilot/features/links/data/links_repository_http.dart';
@@ -170,6 +172,9 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<WikiRepository>(
     () => WikiRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<DocsRepository>(
+    () => DocsRepositoryImpl(getIt<ApiClient>()),
+  );
   getIt.registerLazySingleton<LinksRepository>(
     () => LinksRepositoryHttp(getIt<ApiClient>()),
   );
@@ -241,6 +246,7 @@ Future<void> configureForTests({
   MilestonesRepository? milestonesRepository,
   BoardRepository? boardRepository,
   WikiRepository? wikiRepository,
+  DocsRepository? docsRepository,
   LinksRepository? linksRepository,
   FileDownloader? fileDownloader,
   FilePicker? filePicker,
@@ -294,6 +300,7 @@ Future<void> configureForTests({
       boardRepository ?? _NoopBoardRepository(),
     )
     ..registerSingleton<WikiRepository>(wikiRepository ?? _NoopWikiRepository())
+    ..registerSingleton<DocsRepository>(docsRepository ?? _NoopDocsRepository())
     ..registerSingleton<LinksRepository>(
       linksRepository ?? _NoopLinksRepository(),
     )
@@ -396,6 +403,12 @@ class _NoopBoardRepository implements BoardRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('_NoopBoardRepository.${invocation.memberName}');
+}
+
+class _NoopDocsRepository implements DocsRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('_NoopDocsRepository.${invocation.memberName}');
 }
 
 class _NoopWikiRepository implements WikiRepository {

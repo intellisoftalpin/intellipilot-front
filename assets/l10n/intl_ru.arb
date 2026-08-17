@@ -1374,5 +1374,115 @@
   "actionDiscard": "Отменить",
   "editorUploading": "Загрузка…",
   "editorUploadFailed": "Не удалось загрузить изображение.",
-  "mentionPickerHint": "Упомянуть участника"
+  "mentionPickerHint": "Упомянуть участника",
+  "tabDocumentation": "Документация",
+  "docsTitle": "Документация",
+  "docsInternalWiki": "Внутренняя вики",
+  "docsInternalWikiHint": "Страницы, создаваемые и хранимые в IntelliPilot",
+  "docsSourcesTitle": "Источники документации",
+  "docsSourcesHint": "Git-репозитории в разделе «Вики». До 10 на проект.",
+  "docsSourceCapReached": "В проекте может быть не более 10 источников документации.",
+  "docsNoSources": "Источников документации пока нет",
+  "docsAddSource": "Добавить источник",
+  "docsEditSource": "Изменить источник",
+  "docsAddSourceFailed": "Не удалось добавить источник. Проверьте URL, ветку и ключ.",
+  "docsSaveFailed": "Не удалось сохранить изменения",
+  "docsSourceName": "Название",
+  "docsSshUrl": "SSH-адрес репозитория",
+  "docsWebUrl": "Веб-адрес",
+  "docsWebUrlHint": "Куда ведут ссылки за пределы общей папки",
+  "docsBranch": "Ветка",
+  "docsBranchChangeHint": "Смена ветки заново загружает репозиторий",
+  "docsFolder": "Папка для показа",
+  "docsFolderHint": "Показывается только эта папка и всё внутри неё. Оставьте пустым для всего репозитория.",
+  "docsReadOnly": "Только чтение",
+  "docsReadOnlyHelp": "Никто не сможет менять эти документы, даже с ключом на запись",
+  "docsSourceIsReadOnly": "Этот источник документации доступен только для чтения",
+  "docsDeployKey": "Ключ доступа",
+  "docsDeployKeyName": "Название ключа",
+  "docsGenerateDeployKey": "Создать новый ключ только для чтения",
+  "docsUseExistingKey": "Использовать существующий ключ",
+  "docsAppearance": "Оформление",
+  "docsMoveUp": "Выше",
+  "docsMoveDown": "Ниже",
+  "docsDeleteSourceTitle": "Удалить источник документации?",
+  "docsDeleteSourceBody": "«{name}» больше не будет показываться в разделе «Вики». Сам репозиторий не изменится.",
+  "@docsDeleteSourceBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "docsSyncNow": "Обновить",
+  "docsSyncedAgo": "Обновлено {when}",
+  "@docsSyncedAgo": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "docsNeverSynced": "Ещё не синхронизировано",
+  "docsSyncFailed": "Последнее обновление не удалось",
+  "docsNotReady": "Документация готовится…",
+  "docsNotReadyHint": "Источник ещё загружается. Повторите попытку чуть позже.",
+  "docsPathMissing": "Указанной папки нет в этом репозитории",
+  "docsPathMissingHint": "Проверьте папку, указанную для источника в настройках проекта.",
+  "docsContents": "Содержание",
+  "docsOnThisPage": "На этой странице",
+  "docsEmpty": "Здесь пока нет документов",
+  "docsBrowseAll": "Все документы",
+  "docsDocNotFound": "Документ не найден",
+  "docsOpenOnSource": "Открыть в репозитории",
+  "docsLinkOutside": "Ссылка ведёт за пределы общей папки — открываем в репозитории",
+  "docsLastChangedBy": "Последнее изменение: {name}, {when}",
+  "@docsLastChangedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "docsSaveDoc": "Зафиксировать изменения",
+  "docsCommitMessage": "Описание коммита",
+  "docsConflict": "Документ изменился на сервере с момента открытия",
+  "docsPushRejected": "Git-сервер отклонил изменение",
+  "docsWriteKeyMissing": "Настройте ключ на запись, чтобы менять документы",
+  "docsConfigureKey": "Настроить",
+  "docsMyKeyTitle": "Мой доступ к документации",
+  "docsMyKeyIntro": "При изменении документа коммит и push выполняются от вашего имени вашим ключом. Без ключа документы доступны только для чтения.",
+  "docsMyKeyRegisterHint": "Добавьте этот открытый ключ в свою учётную запись на git-сервере, чтобы push принимался.",
+  "docsGenerateMyKey": "Создать ключ",
+  "docsImportMyKey": "Импортировать ключ",
+  "docsImportHint": "Вставьте закрытый ключ OpenSSH без парольной фразы. Он хранится в зашифрованном виде и больше не показывается.",
+  "docsPrivateKeyLabel": "Закрытый ключ OpenSSH",
+  "docsRemoveMyKey": "Удалить ключ",
+  "docsCopyPublicKey": "Скопировать открытый ключ",
+  "docsCopied": "Скопировано",
+  "docsKeyGenerated": "Созданный ключ",
+  "docsKeyImported": "Импортированный ключ",
+  "docsNoDocumentation": "Документации пока нет",
+  "docsNoDocumentationHint": "Внутренняя вики отключена, а источники документации не добавлены.",
+  "projectWikiEnabled": "Внутренняя вики",
+  "projectWikiEnabledHelp": "Показывается в разделе «Вики» вместе с источниками документации",
+  "projectWikiDisabledHelp": "Скрыта. Страницы и их история сохраняются и вернутся при включении.",
+  "docsSourceKind": "Тип источника",
+  "docsGitSourceKind": "Git-репозиторий",
+  "docsWebSourceKind": "Веб-ссылка",
+  "docsGitSourceKindHint": "Просмотр и редактирование markdown из репозитория",
+  "docsWebSourceKindHint": "Встроить существующую страницу. Всегда только для чтения.",
+  "docsPageUrl": "Адрес страницы",
+  "docsPageUrlHint": "Страница для показа. Некоторые сайты запрещают встраивание — ссылка над страницей работает всегда.",
+  "docsTitleLabel": "Название",
+  "docsTitleHint": "Показывается в боковой панели и над страницей",
+  "docsOpenInNewTab": "Открыть в новой вкладке",
+  "docsEmbedUnsupported": "Встроенные страницы показываются только в браузерной версии.",
+  "docsHidden": "Скрыт",
+  "docsHide": "Скрыть из навигации",
+  "docsShow": "Показать снова",
+  "docsHiddenHelp": "Убран из меню «Вики». Настройки сохраняются и вернутся при повторном показе."
 }

@@ -17,6 +17,8 @@ import 'package:intellipilot/features/board/presentation/boards_nav_refresh.dart
 import 'package:intellipilot/features/board/presentation/widgets/board_settings_dialog.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/docs/data/dtos/doc_dtos.dart';
+import 'package:intellipilot/features/docs/domain/docs_repository.dart';
 import 'package:intellipilot/features/palette/presentation/cmd_k_dialog.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
@@ -483,11 +485,8 @@ class _ProjectRailState extends State<_ProjectRail> {
         label: t.ttTimeTracking,
         path: Routes.projectTimeFor(widget.projectId),
       ),
-      _RailItem(
-        icon: Icons.menu_book_outlined,
-        label: t.railWiki,
-        path: Routes.projectWikiFor(widget.projectId),
-      ),
+      // Wiki is not a flat row: it expands into the internal wiki plus every
+      // external documentation source. Injected after Time tracking below.
       _RailItem(
         icon: Icons.settings_outlined,
         label: t.railSettings,
@@ -500,7 +499,12 @@ class _ProjectRailState extends State<_ProjectRail> {
     // project path) doesn't also light up.
     final boardBase = Routes.projectBoardFor(widget.projectId);
     final onBoard = widget.currentRoute.startsWith(boardBase);
-    final selectedIndex = onBoard
+    // The Wiki section owns its own selection too, for the same reason.
+    final wikiBase = Routes.projectWikiFor(widget.projectId);
+    final onWiki =
+        widget.currentRoute.startsWith(wikiBase) ||
+        widget.currentRoute.startsWith('/projects/${widget.projectId}/docs/');
+    final selectedIndex = onBoard || onWiki
         ? -1
         : _selectedIndexFor(widget.currentRoute, items);
     final expanded = _currentExpanded;
@@ -552,6 +556,14 @@ class _ProjectRailState extends State<_ProjectRail> {
                   currentRoute: widget.currentRoute,
                   railExpanded: expanded,
                   active: onBoard,
+                ),
+              // Wiki sits between Time tracking and Settings, where the flat
+              // row used to be.
+              if (i == items.length - 2)
+                _WikiRailSection(
+                  projectId: widget.projectId,
+                  currentRoute: widget.currentRoute,
+                  railExpanded: expanded,
                 ),
             ],
           ],
@@ -811,7 +823,9 @@ class _BoardsRailSectionState extends State<_BoardsRailSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _BoardsParentRow(
+        _SectionParentRow(
+          icon: Icons.view_kanban_outlined,
+          label: t.railBoards,
           expanded: _expanded,
           // Highlight the parent only when on the gallery/resolver (no board).
           selected: widget.active && activeBoardId == null,
@@ -873,14 +887,20 @@ class _BoardsRailSectionState extends State<_BoardsRailSection> {
   }
 }
 
-class _BoardsParentRow extends StatelessWidget {
-  const _BoardsParentRow({
+/// Parent row of an expandable rail section (Boards, Wiki). Carries the
+/// section's own icon and label so one row widget serves every section.
+class _SectionParentRow extends StatelessWidget {
+  const _SectionParentRow({
+    required this.icon,
+    required this.label,
     required this.expanded,
     required this.selected,
     required this.onTap,
     required this.onToggle,
   });
 
+  final IconData icon;
+  final String label;
   final bool expanded;
   final bool selected;
   final VoidCallback onTap;
@@ -889,7 +909,6 @@ class _BoardsParentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final t = AppLocalizations.of(context);
     final fg = selected
         ? theme.colorScheme.onPrimaryContainer
         : theme.colorScheme.onSurfaceVariant;
@@ -909,11 +928,11 @@ class _BoardsParentRow extends StatelessWidget {
                 onTap: onTap,
                 child: Row(
                   children: [
-                    Icon(Icons.view_kanban_outlined, size: 20, color: fg),
+                    Icon(icon, size: 20, color: fg),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        t.railBoards,
+                        label,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: fg,
                           fontWeight: selected
@@ -1081,6 +1100,247 @@ class _ProjectNameState extends State<_ProjectName> {
           overflow: TextOverflow.ellipsis,
         );
       },
+    );
+  }
+}
+
+/// Expandable "Wiki" rail entry.
+///
+/// Lists the internal wiki (when the project has it enabled) and every
+/// external documentation source. The whole section disappears when a project
+/// has turned the internal wiki off *and* registered no sources — there is
+/// then nothing behind it, and an empty entry is worse than none.
+///
+/// Like the boards section, the expanded/collapsed state lives in the UI Hive
+/// box so it survives navigation.
+class _WikiRailSection extends StatefulWidget {
+  const _WikiRailSection({
+    required this.projectId,
+    required this.currentRoute,
+    required this.railExpanded,
+  });
+
+  final String projectId;
+  final String currentRoute;
+  final bool railExpanded;
+
+  @override
+  State<_WikiRailSection> createState() => _WikiRailSectionState();
+}
+
+class _WikiRailSectionState extends State<_WikiRailSection> {
+  static const _prefsKey = 'project_rail.wiki_expanded';
+
+  late final KeyValueStorage _storage = getIt<KeyValueStorage>(
+    instanceName: HiveBoxes.ui,
+  );
+
+  List<DocSource> _sources = const [];
+  bool _wikiEnabled = true;
+  bool _loaded = false;
+  late bool _expanded = _storage.get<bool>(_prefsKey) ?? true;
+  String? _resolvedProjectId;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_fetch());
+  }
+
+  @override
+  void didUpdateWidget(covariant _WikiRailSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.projectId != widget.projectId) {
+      _resolvedProjectId = null;
+      setState(() {
+        _sources = const [];
+        _loaded = false;
+      });
+      unawaited(_fetch());
+    }
+  }
+
+  /// Same short-link resolution the boards section needs: the rail sits
+  /// outside the routes, so its projectId may be a project *prefix* rather
+  /// than a UUID.
+  Future<String?> _projectUuid() async {
+    if (looksLikeUuid(widget.projectId)) return widget.projectId;
+    final cached = _resolvedProjectId;
+    if (cached != null) return cached;
+    final resolved = await getIt<ShortLinkResolver>().project(widget.projectId);
+    return _resolvedProjectId = resolved?.$1;
+  }
+
+  Future<void> _fetch() async {
+    final pid = await _projectUuid();
+    if (pid == null) return;
+    final sources = await getIt<DocsRepository>().listSources(pid);
+    final project = await getIt<ProjectsRepository>().getProject(pid);
+    if (!mounted) return;
+    setState(() {
+      // Keep the last known list on a transient failure, exactly as the
+      // boards section does — blanking it makes the menu flicker.
+      //
+      // Hidden sources are filtered here rather than server-side: a manager
+      // still receives them (so settings can list them), but hiding must
+      // withdraw a source from navigation for everyone, managers included.
+      _sources =
+          sources.valueOrNull?.where((s) => !s.hidden).toList() ?? _sources;
+      _wikiEnabled = project.valueOrNull?.wikiEnabled ?? _wikiEnabled;
+      _loaded = true;
+    });
+  }
+
+  Future<void> _toggle() async {
+    setState(() => _expanded = !_expanded);
+    await _storage.set<bool>(_prefsKey, _expanded);
+  }
+
+  bool get _onWiki {
+    final base = Routes.projectWikiFor(widget.projectId);
+    return widget.currentRoute == base ||
+        widget.currentRoute.startsWith('$base/') ||
+        widget.currentRoute.startsWith('/projects/${widget.projectId}/docs/');
+  }
+
+  /// The documentation source in the current route, if any.
+  String? _activeSourceId() {
+    final segs = Uri.tryParse(widget.currentRoute)?.pathSegments ?? const [];
+    final i = segs.indexOf('docs');
+    if (i >= 0 && i + 1 < segs.length) return segs[i + 1];
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+
+    // Nothing to show: no internal wiki and no sources. Until the first fetch
+    // lands we keep the entry visible, so it does not blink on every
+    // navigation.
+    if (_loaded && !_wikiEnabled && _sources.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (!widget.railExpanded) {
+      return _RailRow(
+        icon: Icons.menu_book_outlined,
+        label: null,
+        tooltip: t.railWiki,
+        selected: _onWiki,
+        onTap: () => context.go(Routes.projectWikiFor(widget.projectId)),
+      );
+    }
+
+    final activeSource = _activeSourceId();
+    final onPages =
+        widget.currentRoute == Routes.wikiPagesFor(widget.projectId);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionParentRow(
+          icon: Icons.menu_book_outlined,
+          label: t.railWiki,
+          expanded: _expanded,
+          // The parent is the overview, so highlight it only there.
+          selected: _onWiki && activeSource == null && !onPages,
+          onTap: () => context.go(Routes.projectWikiFor(widget.projectId)),
+          onToggle: _toggle,
+        ),
+        if (_expanded) ...[
+          if (_wikiEnabled)
+            _DocChildRow(
+              label: t.docsInternalWiki,
+              icon: Icons.article_outlined,
+              selected: onPages,
+              onTap: () => context.go(Routes.wikiPagesFor(widget.projectId)),
+            ),
+          for (final s in _sources)
+            _DocChildRow(
+              label: s.name,
+              icon: s.kind.isWeb
+                  ? Icons.language
+                  : Icons.folder_shared_outlined,
+              emoji: s.emoji,
+              color: s.color,
+              selected: s.id == activeSource,
+              onTap: () => context.go(
+                Routes.docSourceFor(widget.projectId, s.id),
+              ),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+/// A child row of the Wiki section: the internal wiki, or one documentation
+/// source shown with its own emoji or colour.
+class _DocChildRow extends StatelessWidget {
+  const _DocChildRow({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+    this.emoji = '',
+    this.color = '',
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+  final String emoji;
+  final String color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fg = selected
+        ? theme.colorScheme.onPrimaryContainer
+        : theme.colorScheme.onSurfaceVariant;
+    return Padding(
+      padding: const EdgeInsets.only(left: 24, right: 12, top: 2, bottom: 2),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: selected ? theme.colorScheme.primaryContainer : null,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              if (emoji.isNotEmpty)
+                SizedBox(
+                  width: 18,
+                  child: Text(emoji, style: const TextStyle(fontSize: 14)),
+                )
+              else if (color.isNotEmpty)
+                SizedBox(
+                  width: 18,
+                  child: Center(child: _BoardDot(color: color)),
+                )
+              else
+                Icon(icon, size: 16, color: fg),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: fg,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

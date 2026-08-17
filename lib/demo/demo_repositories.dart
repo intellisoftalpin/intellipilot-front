@@ -30,6 +30,8 @@ import 'package:intellipilot/features/board/data/dtos/board_dtos.dart';
 import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/docs/data/dtos/doc_dtos.dart';
+import 'package:intellipilot/features/docs/domain/docs_repository.dart';
 import 'package:intellipilot/features/links/data/dtos/link_dtos.dart';
 import 'package:intellipilot/features/links/domain/links_repository.dart';
 import 'package:intellipilot/features/mfa/data/passkey_service.dart';
@@ -3644,5 +3646,156 @@ class DemoAdminRepository implements AdminRepository {
   }) async {
     await _tick();
     return const Ok(Unit.instance);
+  }
+}
+
+/// Demo documentation sources.
+///
+/// The demo runs entirely in memory with no git remote, so it ships one
+/// ready-made source backed by a small in-memory tree. Registering a *new*
+/// source is refused rather than faked: without a repository behind it the
+/// result would be an entry that never syncs, which is more confusing than a
+/// clear "not available in the demo".
+class DemoDocsRepository implements DocsRepository {
+  DemoDocsRepository(this._s);
+  final DemoStore _s;
+
+  @override
+  Future<Result<List<DocSource>, AppFailure>> listSources(
+    String projectId,
+  ) async {
+    await _tick();
+    return Ok(_s.docSourcesFor(projectId));
+  }
+
+  @override
+  Future<Result<DocSource, AppFailure>> getSource(
+    String projectId,
+    String sourceId,
+  ) async {
+    await _tick();
+    final s = _s
+        .docSourcesFor(projectId)
+        .where((x) => x.id == sourceId)
+        .firstOrNull;
+    return s == null ? const Err(NotFoundFailure()) : Ok(s);
+  }
+
+  @override
+  Future<Result<DocSource, AppFailure>> createSource(
+    String projectId,
+    CreateDocSourceRequest body,
+  ) async {
+    await _tick();
+    return const Err(ForbiddenFailure());
+  }
+
+  @override
+  Future<Result<DocSource, AppFailure>> updateSource(
+    String projectId,
+    String sourceId, {
+    required UpdateDocSourceRequest body,
+    required String etag,
+  }) async {
+    await _tick();
+    return getSource(projectId, sourceId);
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteSource(
+    String projectId,
+    String sourceId,
+  ) async {
+    await _tick();
+    return const Err(ForbiddenFailure());
+  }
+
+  @override
+  Future<Result<DocSource, AppFailure>> sync(
+    String projectId,
+    String sourceId,
+  ) async {
+    await _tick();
+    return getSource(projectId, sourceId);
+  }
+
+  @override
+  Future<Result<DocTree, AppFailure>> tree(
+    String projectId,
+    String sourceId,
+  ) async {
+    await _tick();
+    return Ok(_s.docTree(sourceId));
+  }
+
+  @override
+  Future<Result<DocContent, AppFailure>> doc(
+    String projectId,
+    String sourceId,
+    String path,
+  ) async {
+    await _tick();
+    final body = _s.docBody(path);
+    if (body == null) return const Err(NotFoundFailure());
+    return Ok(
+      DocContent(
+        sourceId: sourceId,
+        path: path,
+        body: body,
+        blobOid: 'demo-${path.hashCode}',
+        commit: 'demo-commit',
+        canEdit: false,
+        lastCommit: DocCommitInfo(
+          sha: 'demo-commit',
+          authorName: 'Demo Bot',
+          message: 'seed documentation',
+          committedAt: DateTime.now().subtract(const Duration(days: 2)),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<Result<DocContent, AppFailure>> saveDoc(
+    String projectId,
+    String sourceId, {
+    required String path,
+    required String content,
+    required String etag,
+    String? message,
+  }) async {
+    await _tick();
+    return const Err(ForbiddenFailure());
+  }
+
+  @override
+  Future<Result<Uint8List, AppFailure>> blob(
+    String projectId,
+    String sourceId,
+    String path,
+  ) async {
+    await _tick();
+    return const Err(NotFoundFailure());
+  }
+
+  @override
+  Future<Result<DocUserKey?, AppFailure>> myKey(String projectId) async {
+    await _tick();
+    return const Ok<DocUserKey?, AppFailure>(null);
+  }
+
+  @override
+  Future<Result<DocUserKey, AppFailure>> registerMyKey(
+    String projectId, {
+    String? privateKey,
+  }) async {
+    await _tick();
+    return const Err(ForbiddenFailure());
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteMyKey(String projectId) async {
+    await _tick();
+    return const Err(ForbiddenFailure());
   }
 }

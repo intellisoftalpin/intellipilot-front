@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -15,6 +16,22 @@ List<TextSpan> _linkSpans(WidgetTester tester) {
       return true;
     });
   }
+  return out;
+}
+
+/// Every span in the rendered tree, including ones that only carry a style and
+/// children. `InlineSpan.visitChildren` skips those (it visits a span only when
+/// its `text` is non-null), so styling applied to a wrapper span — bold,
+/// italic, strikethrough — is invisible to it.
+List<TextSpan> _allSpans(WidgetTester tester) {
+  final out = <TextSpan>[];
+  void walk(InlineSpan? span) {
+    if (span is! TextSpan) return;
+    out.add(span);
+    span.children?.forEach(walk);
+  }
+
+  tester.widgetList<Text>(find.byType(Text)).forEach((w) => walk(w.textSpan));
   return out;
 }
 
@@ -202,6 +219,271 @@ void main() {
     testWidgets('empty source renders nothing', (tester) async {
       await _pump(tester, '');
       expect(find.byType(SelectionArea), findsNothing);
+    });
+  });
+
+  group('MarkdownText tables', () {
+    testWidgets('a pipe table renders as a Table with a header row', (
+      tester,
+    ) async {
+      await _pump(tester, '''
+| Name | Count |
+|------|------:|
+| Alpha | 12 |
+| Beta  | 7  |
+''');
+      expect(find.byType(Table), findsOneWidget);
+      final table = tester.widget<Table>(find.byType(Table));
+      // Header plus two body rows.
+      expect(table.children, hasLength(3));
+      expect(find.text('Name'), findsOneWidget);
+      expect(find.text('Alpha'), findsOneWidget);
+      expect(find.text('7'), findsOneWidget);
+    });
+
+    testWidgets('a ragged row is padded rather than dropped', (tester) async {
+      await _pump(tester, '''
+| A | B | C |
+|---|---|---|
+| 1 |
+''');
+      final table = tester.widget<Table>(find.byType(Table));
+      expect(table.children, hasLength(2));
+      // Every row is widened to the header's column count.
+      expect(table.children.last.children, hasLength(3));
+    });
+
+    testWidgets('inline markup works inside table cells', (tester) async {
+      await _pump(tester, '''
+| Link |
+|------|
+| [docs](https://example.com) |
+''');
+      expect(_linkSpans(tester).single.text, 'docs');
+    });
+
+    testWidgets('a line with pipes but no delimiter is not a table', (
+      tester,
+    ) async {
+      await _pump(tester, 'a | b | c');
+      expect(find.byType(Table), findsNothing);
+    });
+  });
+
+  group('MarkdownText lists', () {
+    testWidgets('task list items render checkboxes reflecting their state', (
+      tester,
+    ) async {
+      await _pump(tester, '''
+- [x] done thing
+- [ ] pending thing
+''');
+      expect(find.byIcon(Icons.check_box_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.check_box_outline_blank), findsOneWidget);
+      expect(find.text('done thing'), findsOneWidget);
+    });
+
+    testWidgets('nested items are indented and use a different glyph', (
+      tester,
+    ) async {
+      await _pump(tester, '''
+- top
+  - nested
+    - deeper
+''');
+      // Depth is expressed as left padding, so the three items differ.
+      final paddings = tester
+          .widgetList<Padding>(find.byType(Padding))
+          .map((p) => (p.padding as EdgeInsets).left)
+          .where((l) => l > 0)
+          .toSet();
+      expect(paddings.length, greaterThanOrEqualTo(2));
+      expect(find.text('•  '), findsOneWidget);
+      expect(find.text('◦  '), findsOneWidget);
+      expect(find.text('▪  '), findsOneWidget);
+    });
+
+    testWidgets('numbered lists restart their count per nesting level', (
+      tester,
+    ) async {
+      await _pump(tester, '''
+1. first
+2. second
+''');
+      expect(find.text('1.  '), findsOneWidget);
+      expect(find.text('2.  '), findsOneWidget);
+    });
+
+    testWidgets('a + bullet is recognised like - and *', (tester) async {
+      await _pump(tester, '+ plus item');
+      expect(find.text('plus item'), findsOneWidget);
+    });
+  });
+
+  group('MarkdownText block syntax', () {
+    testWidgets('headings h1 through h6 all parse', (tester) async {
+      final headings = <MarkdownHeading>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MarkdownText(
+              '# One\n## Two\n### Three\n#### Four\n##### Five\n###### Six\n',
+              onHeadings: headings.addAll,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(headings.map((h) => h.level), [1, 2, 3, 4, 5, 6]);
+      expect(headings.first.text, 'One');
+      expect(headings.first.anchor, 'one');
+    });
+
+    testWidgets('closing hashes are decoration, not content', (tester) async {
+      await _pump(tester, '## Title ##');
+      expect(find.text('Title'), findsOneWidget);
+    });
+
+    testWidgets('setext underlines produce headings', (tester) async {
+      final headings = <MarkdownHeading>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MarkdownText(
+              'Big Title\n=========\n\nSmaller\n-------\n',
+              onHeadings: headings.addAll,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(headings.map((h) => h.text), ['Big Title', 'Smaller']);
+      expect(headings.map((h) => h.level), [1, 2]);
+    });
+
+    testWidgets('a standalone rule is a divider, not a heading', (
+      tester,
+    ) async {
+      final headings = <MarkdownHeading>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MarkdownText(
+              'para\n\n---\n\nmore\n',
+              onHeadings: headings.addAll,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      expect(headings, isEmpty);
+      expect(find.byType(Divider), findsOneWidget);
+    });
+
+    testWidgets('a fenced block keeps its language label and content', (
+      tester,
+    ) async {
+      await _pump(tester, '```rust\nfn main() {}\n```');
+      expect(find.text('rust'), findsOneWidget);
+      expect(find.text('fn main() {}'), findsOneWidget);
+    });
+
+    testWidgets('tilde fences work and are not closed by a backtick fence', (
+      tester,
+    ) async {
+      await _pump(tester, '~~~\n```\nstill code\n~~~');
+      expect(find.text('```\nstill code'), findsOneWidget);
+    });
+
+    testWidgets('markdown inside a fence is not interpreted', (tester) async {
+      await _pump(tester, '```\n| a | b |\n|---|---|\n```');
+      expect(find.byType(Table), findsNothing);
+    });
+
+    testWidgets('strikethrough renders with a line through it', (tester) async {
+      await _pump(tester, 'this is ~~gone~~ now');
+      final struck = _allSpans(
+        tester,
+      ).where((s) => s.style?.decoration == TextDecoration.lineThrough);
+      expect(struck, hasLength(1));
+      expect(struck.single.children?.single, isA<TextSpan>());
+    });
+
+    testWidgets('footnote definitions are separated from the body', (
+      tester,
+    ) async {
+      await _pump(tester, 'A claim[^1].\n\n[^1]: The evidence.\n');
+      expect(find.text('The evidence.'), findsOneWidget);
+      expect(find.byType(Divider), findsOneWidget);
+    });
+
+    testWidgets('an angle-bracket autolink is tappable', (tester) async {
+      await _pump(tester, 'mail <https://example.com/x> here');
+      expect(_linkSpans(tester).single.text, 'https://example.com/x');
+    });
+  });
+
+  group('MarkdownText hooks', () {
+    testWidgets('onLinkTap replaces the default navigation', (tester) async {
+      final tapped = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MarkdownText(
+              '[up](../secret.md)',
+              onLinkTap: tapped.add,
+            ),
+          ),
+        ),
+      );
+      final span = _linkSpans(tester).single;
+      (span.recognizer! as TapGestureRecognizer).onTap!();
+      // The raw href reaches the caller untouched, so it can resolve the link
+      // in its own space — the documentation viewer's path jail.
+      expect(tapped, ['../secret.md']);
+    });
+
+    testWidgets('imageBuilder replaces the default network image', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MarkdownText(
+              '![chart](./img/a.png)',
+              imageBuilder: (src, alt) => Text('custom:$src'),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('custom:./img/a.png'), findsOneWidget);
+      expect(find.byType(Image), findsNothing);
+    });
+
+    testWidgets('returning null from imageBuilder falls back to the default', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MarkdownText(
+              '![chart](https://example.com/a.png)',
+              imageBuilder: (src, alt) => null,
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(Image), findsOneWidget);
+    });
+
+    testWidgets('anchors slugify the way a #fragment link spells them', (
+      tester,
+    ) async {
+      expect(markdownAnchor('Getting Started'), 'getting-started');
+      expect(markdownAnchor('API reference (v2)!'), 'api-reference-v2');
+      // Runs of whitespace collapse to a single hyphen, as GitHub does.
+      expect(markdownAnchor('  Spaced  Out  '), 'spaced-out');
+      expect(markdownAnchor('snake_case name'), 'snake-case-name');
     });
   });
 }

@@ -56,6 +56,14 @@ enum Permission {
   wikiModify('wiki.modify', PermissionDomain.wiki),
   wikiDelete('wiki.delete', PermissionDomain.wiki),
 
+  // External documentation sources (git repositories under the Wiki section).
+  // Modifying a document additionally needs a personal write key and a source
+  // that is not flagged read-only — the permission alone is not enough.
+  docSourceView('doc_source.view', PermissionDomain.wiki),
+  docSourceCreate('doc_source.create', PermissionDomain.wiki),
+  docSourceModify('doc_source.modify', PermissionDomain.wiki),
+  docSourceDelete('doc_source.delete', PermissionDomain.wiki),
+
   // Comments & attachments
   commentCreate('comment.create', PermissionDomain.commentsAndAttachments),
   commentModerate('comment.moderate', PermissionDomain.commentsAndAttachments),
@@ -162,6 +170,9 @@ abstract final class RolePresets {
       Permission.milestoneModify,
       Permission.wikiCreate,
       Permission.wikiModify,
+      // Editing an external document is the same level of trust as editing a
+      // wiki page; it still needs a personal write key at runtime.
+      Permission.docSourceModify,
       Permission.commentCreate,
       Permission.attachmentCreate,
       Permission.attachmentDelete,
@@ -188,6 +199,9 @@ abstract final class RolePresets {
       Permission.issueDelete,
       Permission.milestoneDelete,
       Permission.wikiDelete,
+      // Registering or removing a whole source is admin-level.
+      Permission.docSourceCreate,
+      Permission.docSourceDelete,
       Permission.commentModerate,
       Permission.timeViewAll,
       // Project-configuration entities.

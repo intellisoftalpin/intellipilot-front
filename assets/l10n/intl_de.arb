@@ -1374,5 +1374,115 @@
   "actionDiscard": "Verwerfen",
   "editorUploading": "Wird hochgeladen…",
   "editorUploadFailed": "Bild konnte nicht hochgeladen werden.",
-  "mentionPickerHint": "Jemanden erwähnen"
+  "mentionPickerHint": "Jemanden erwähnen",
+  "tabDocumentation": "Dokumentation",
+  "docsTitle": "Dokumentation",
+  "docsInternalWiki": "Internes Wiki",
+  "docsInternalWikiHint": "Seiten, die in IntelliPilot geschrieben und gespeichert werden",
+  "docsSourcesTitle": "Dokumentationsquellen",
+  "docsSourcesHint": "Git-Repositories, die unter Wiki erscheinen. Bis zu 10 pro Projekt.",
+  "docsSourceCapReached": "Ein Projekt darf höchstens 10 Dokumentationsquellen haben.",
+  "docsNoSources": "Noch keine Dokumentationsquellen",
+  "docsAddSource": "Quelle hinzufügen",
+  "docsEditSource": "Quelle bearbeiten",
+  "docsAddSourceFailed": "Quelle konnte nicht hinzugefügt werden. Prüfen Sie URL, Branch und Schlüssel.",
+  "docsSaveFailed": "Änderungen konnten nicht gespeichert werden",
+  "docsSourceName": "Name",
+  "docsSshUrl": "SSH-URL des Repositories",
+  "docsWebUrl": "Webadresse",
+  "docsWebUrlHint": "Wohin Links außerhalb des freigegebenen Ordners führen",
+  "docsBranch": "Branch",
+  "docsBranchChangeHint": "Ein Branch-Wechsel lädt das Repository neu herunter",
+  "docsFolder": "Freizugebender Ordner",
+  "docsFolderHint": "Nur dieser Ordner und alles darunter wird angezeigt. Leer lassen für das gesamte Repository.",
+  "docsReadOnly": "Schreibgeschützt",
+  "docsReadOnlyHelp": "Niemand kann diese Dokumente bearbeiten, auch nicht mit Schreibschlüssel",
+  "docsSourceIsReadOnly": "Diese Dokumentationsquelle ist schreibgeschützt",
+  "docsDeployKey": "Deploy-Key",
+  "docsDeployKeyName": "Schlüsselname",
+  "docsGenerateDeployKey": "Neuen schreibgeschützten Schlüssel erzeugen",
+  "docsUseExistingKey": "Vorhandenen Schlüssel verwenden",
+  "docsAppearance": "Darstellung",
+  "docsMoveUp": "Nach oben",
+  "docsMoveDown": "Nach unten",
+  "docsDeleteSourceTitle": "Dokumentationsquelle entfernen?",
+  "docsDeleteSourceBody": "„{name}“ erscheint nicht mehr unter Wiki. Das Repository selbst bleibt unverändert.",
+  "@docsDeleteSourceBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "docsSyncNow": "Aktualisieren",
+  "docsSyncedAgo": "Aktualisiert {when}",
+  "@docsSyncedAgo": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "docsNeverSynced": "Noch nicht synchronisiert",
+  "docsSyncFailed": "Letzte Aktualisierung fehlgeschlagen",
+  "docsNotReady": "Dokumentation wird vorbereitet…",
+  "docsNotReadyHint": "Diese Quelle wird noch heruntergeladen. Versuchen Sie es gleich erneut.",
+  "docsPathMissing": "Der freigegebene Ordner existiert in diesem Repository nicht",
+  "docsPathMissingHint": "Prüfen Sie den in den Projekteinstellungen konfigurierten Ordner.",
+  "docsContents": "Inhalt",
+  "docsOnThisPage": "Auf dieser Seite",
+  "docsEmpty": "Noch keine Dokumente hier",
+  "docsBrowseAll": "Alle Dokumente",
+  "docsDocNotFound": "Dieses Dokument wurde nicht gefunden",
+  "docsOpenOnSource": "Im Repository öffnen",
+  "docsLinkOutside": "Dieser Link zeigt außerhalb des freigegebenen Ordners — er wird im Repository geöffnet",
+  "docsLastChangedBy": "Zuletzt geändert von {name}, {when}",
+  "@docsLastChangedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "docsSaveDoc": "Änderungen committen",
+  "docsCommitMessage": "Commit-Nachricht",
+  "docsConflict": "Dieses Dokument wurde serverseitig geändert, seit Sie es geöffnet haben",
+  "docsPushRejected": "Der Git-Host hat die Änderung abgelehnt",
+  "docsWriteKeyMissing": "Richten Sie einen Schreibschlüssel ein, um Dokumente zu bearbeiten",
+  "docsConfigureKey": "Einrichten",
+  "docsMyKeyTitle": "Mein Dokumentationszugang",
+  "docsMyKeyIntro": "Beim Bearbeiten wird mit Ihrem eigenen Schlüssel in Ihrem Namen committet und gepusht. Ohne Schlüssel bleiben Dokumente schreibgeschützt.",
+  "docsMyKeyRegisterHint": "Fügen Sie diesen öffentlichen Schlüssel Ihrem Konto beim Git-Host hinzu, damit Pushes akzeptiert werden.",
+  "docsGenerateMyKey": "Schlüssel erzeugen",
+  "docsImportMyKey": "Schlüssel importieren",
+  "docsImportHint": "Fügen Sie einen OpenSSH-Privatschlüssel ohne Passphrase ein. Er wird verschlüsselt gespeichert und nie wieder angezeigt.",
+  "docsPrivateKeyLabel": "OpenSSH-Privatschlüssel",
+  "docsRemoveMyKey": "Schlüssel entfernen",
+  "docsCopyPublicKey": "Öffentlichen Schlüssel kopieren",
+  "docsCopied": "Kopiert",
+  "docsKeyGenerated": "Erzeugter Schlüssel",
+  "docsKeyImported": "Importierter Schlüssel",
+  "docsNoDocumentation": "Noch keine Dokumentation",
+  "docsNoDocumentationHint": "Das interne Wiki ist deaktiviert und es sind keine Dokumentationsquellen registriert.",
+  "projectWikiEnabled": "Internes Wiki",
+  "projectWikiEnabledHelp": "Wird unter Wiki neben den Dokumentationsquellen angezeigt",
+  "projectWikiDisabledHelp": "Ausgeblendet. Seiten und ihr Verlauf bleiben erhalten und kehren zurück, wenn Sie es wieder aktivieren.",
+  "docsSourceKind": "Quellentyp",
+  "docsGitSourceKind": "Git-Repository",
+  "docsWebSourceKind": "Weblink",
+  "docsGitSourceKindHint": "Markdown aus einem Repository lesen und bearbeiten",
+  "docsWebSourceKindHint": "Eine vorhandene Seite einbetten. Immer schreibgeschützt.",
+  "docsPageUrl": "Seitenadresse",
+  "docsPageUrlHint": "Die anzuzeigende Seite. Manche Websites lassen sich nicht einbetten — der Link über der Seite funktioniert immer.",
+  "docsTitleLabel": "Titel",
+  "docsTitleHint": "Wird in der Seitenleiste und über der Seite angezeigt",
+  "docsOpenInNewTab": "In neuem Tab öffnen",
+  "docsEmbedUnsupported": "Eingebettete Seiten werden nur in der Browser-Version angezeigt.",
+  "docsHidden": "Ausgeblendet",
+  "docsHide": "Aus der Navigation ausblenden",
+  "docsShow": "Wieder einblenden",
+  "docsHiddenHelp": "Aus dem Wiki-Menü entfernt. Die Konfiguration bleibt erhalten und kehrt beim Wiedereinblenden zurück."
 }

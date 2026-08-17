@@ -19,6 +19,7 @@ import 'package:intellipilot/features/catalog/presentation/widgets/labels_tab.da
 import 'package:intellipilot/features/catalog/presentation/widgets/releases_tab.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/repositories_tab.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/taxonomy_tab.dart';
+import 'package:intellipilot/features/docs/presentation/widgets/doc_sources_tab.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
@@ -114,7 +115,7 @@ class _SettingsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return DefaultTabController(
-      length: 10,
+      length: 11,
       child: Scaffold(
         appBar: AppBar(
           title: ProjectSectionBreadcrumb(
@@ -133,6 +134,7 @@ class _SettingsView extends StatelessWidget {
               const Tab(text: 'Repositories'),
               const Tab(text: 'Customers'),
               const Tab(text: 'Releases'),
+              Tab(text: t.tabDocumentation),
               Tab(text: t.tabDangerZone),
             ],
           ),
@@ -159,6 +161,7 @@ class _SettingsView extends StatelessWidget {
                   RepositoriesTab(projectId: projectId),
                   CustomersTab(projectId: projectId),
                   ReleasesTab(projectId: projectId),
+                  DocSourcesTab(projectId: projectId),
                   _DangerZoneTab(state: state),
                 ],
               );
@@ -189,6 +192,7 @@ class _GeneralTabState extends State<_GeneralTab> {
   late final TextEditingController _prefix;
   late ProjectVisibility _visibility;
   late String _color;
+  late bool _wikiEnabled;
 
   @override
   void initState() {
@@ -198,6 +202,7 @@ class _GeneralTabState extends State<_GeneralTab> {
     _prefix = TextEditingController(text: widget.state.project.issuePrefix);
     _visibility = widget.state.project.visibility;
     _color = widget.state.project.color;
+    _wikiEnabled = widget.state.project.wikiEnabled;
   }
 
   @override
@@ -225,6 +230,7 @@ class _GeneralTabState extends State<_GeneralTab> {
       visibility: _visibility,
       issuePrefix: prefix,
       color: _color.isEmpty ? null : _color,
+      wikiEnabled: _wikiEnabled,
     );
     final cubit = context.read<ProjectSettingsCubit>();
     final updated = await cubit.save(patch);
@@ -316,6 +322,19 @@ class _GeneralTabState extends State<_GeneralTab> {
         Text(t.projectFieldIcon, style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 8),
         _ProjectIconField(project: widget.state.project, canEdit: _canEdit),
+        const SizedBox(height: 20),
+        // Turning the internal wiki off only hides it. Pages and revisions
+        // stay in the database and come back untouched when it is re-enabled,
+        // which is why this is a plain switch and not a destructive action.
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _wikiEnabled,
+          onChanged: _canEdit ? (v) => setState(() => _wikiEnabled = v) : null,
+          title: Text(t.projectWikiEnabled),
+          subtitle: Text(
+            _wikiEnabled ? t.projectWikiEnabledHelp : t.projectWikiDisabledHelp,
+          ),
+        ),
         const SizedBox(height: 24),
         BlocBuilder<ProjectSettingsCubit, ProjectSettingsState>(
           builder: (context, s) {

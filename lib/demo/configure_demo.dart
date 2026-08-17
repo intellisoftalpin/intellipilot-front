@@ -18,6 +18,7 @@ import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/docs/domain/docs_repository.dart';
 import 'package:intellipilot/features/links/domain/links_repository.dart';
 import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
@@ -106,6 +107,7 @@ Future<void> configureDemoDependencies() async {
     )
     ..registerLazySingleton<BoardRepository>(() => DemoBoardRepository(store))
     ..registerLazySingleton<WikiRepository>(() => DemoWikiRepository(store))
+    ..registerLazySingleton<DocsRepository>(() => DemoDocsRepository(store))
     ..registerLazySingleton<LinksRepository>(() => DemoLinksRepository(store))
     ..registerLazySingleton<AdminRepository>(() => DemoAdminRepository(store))
     ..registerLazySingleton<PasskeyService>(DemoPasskeyService.new)

@@ -7,6 +7,7 @@
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
+import 'package:intellipilot/features/docs/data/dtos/doc_dtos.dart';
 import 'package:intellipilot/features/links/data/dtos/link_dtos.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
@@ -66,6 +67,46 @@ class DemoStore {
   final List<Comment> comments = [];
   final List<HistoryEvent> historyEvents = [];
   final List<Attachment> attachments = [];
+
+  // -- external documentation ---------------------------------------------
+  // One ready-made source with an in-memory tree. The demo has no git remote,
+  // so content is served from [_demoDocs] rather than from a cached clone.
+  final List<DocSource> docSources = [];
+
+  List<DocSource> docSourcesFor(String projectId) =>
+      docSources.where((s) => s.projectId == projectId).toList();
+
+  /// The demo source's folder tree, mirroring the shape the API returns.
+  DocTree docTree(String sourceId) => DocTree(
+    sourceId: sourceId,
+    commit: 'demo-commit',
+    entryPath: 'README.md',
+    entries: [
+      const DocEntry(
+        path: 'guides',
+        name: 'guides',
+        kind: DocEntryKind.dir,
+        children: [
+          DocEntry(
+            path: 'guides/getting-started.md',
+            name: 'getting-started.md',
+            kind: DocEntryKind.doc,
+            size: 420,
+            children: [],
+          ),
+        ],
+      ),
+      const DocEntry(
+        path: 'README.md',
+        name: 'README.md',
+        kind: DocEntryKind.doc,
+        size: 380,
+        children: [],
+      ),
+    ],
+  );
+
+  String? docBody(String path) => _demoDocs[path];
 
   // -- entity links --------------------------------------------------------
   final List<EntityLink> links = [];
@@ -673,6 +714,33 @@ Have fun.
     etag: s.etagOf('wp-welcome', 1),
   );
   s.wikiPages.add(welcomePage);
+
+  // ---- external documentation -------------------------------------------
+  s.docSources.add(
+    DocSource(
+      id: 'docsrc-1',
+      projectId: projectId,
+      name: 'Platform handbook',
+      kind: DocSourceKind.git,
+      hidden: false,
+      sshUrl: 'git@github.com:intellisoftalpin/handbook.git',
+      webUrl: 'https://github.com/intellisoftalpin/handbook',
+      branch: 'main',
+      docPath: 'docs',
+      readOnly: true,
+      order: 1,
+      color: '#3F8CFF',
+      emoji: '📘',
+      cacheStatus: DocCacheStatus.ready,
+      headCommit: 'demo-commit',
+      cacheBytes: 42 * 1024,
+      lastSyncedAt: now.subtract(const Duration(minutes: 4)),
+      lastAttemptAt: now.subtract(const Duration(minutes: 4)),
+      version: 1,
+      createdAt: now.subtract(const Duration(days: 30)),
+      modifiedAt: now.subtract(const Duration(days: 30)),
+    ),
+  );
   s.revisionsByPage['wp-welcome'] = [
     WikiRevision(
       id: 'wpr-1',
@@ -708,3 +776,39 @@ Have fun.
     ),
   );
 }
+
+/// Markdown served by the demo documentation source. Deliberately exercises
+/// tables, task lists and nested lists so the renderer's range is visible
+/// without a real repository.
+const Map<String, String> _demoDocs = {
+  'README.md': '''
+# Platform handbook
+
+Welcome to the demo documentation source. This content comes from a git
+repository in a real installation; here it is served from memory.
+
+## What lives here
+
+| Section | Purpose |
+|---------|---------|
+| Guides  | Step-by-step walkthroughs |
+| API     | Endpoint reference |
+
+See the [getting started guide](guides/getting-started.md).
+''',
+  'guides/getting-started.md': '''
+# Getting started
+
+1. Register a documentation source in project settings
+2. Add the generated deploy key to your repository
+3. Wait for the first synchronisation
+
+## Checklist
+
+- [x] Repository reachable over SSH
+- [x] Branch exists
+- [ ] Personal write key configured
+
+> Editing needs a write key of your own, so commits are attributed to you.
+''',
+};

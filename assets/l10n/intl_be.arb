@@ -1374,5 +1374,115 @@
   "actionDiscard": "Адхіліць",
   "editorUploading": "Запампоўка…",
   "editorUploadFailed": "Не ўдалося запампаваць відарыс.",
-  "mentionPickerHint": "Згадаць удзельніка"
+  "mentionPickerHint": "Згадаць удзельніка",
+  "tabDocumentation": "Дакументацыя",
+  "docsTitle": "Дакументацыя",
+  "docsInternalWiki": "Унутраная вікі",
+  "docsInternalWikiHint": "Старонкі, што ствараюцца і захоўваюцца ў IntelliPilot",
+  "docsSourcesTitle": "Крыніцы дакументацыі",
+  "docsSourcesHint": "Git-рэпазіторыі ў раздзеле «Вікі». Да 10 на праект.",
+  "docsSourceCapReached": "У праекце можа быць не больш за 10 крыніц дакументацыі.",
+  "docsNoSources": "Крыніц дакументацыі пакуль няма",
+  "docsAddSource": "Дадаць крыніцу",
+  "docsEditSource": "Змяніць крыніцу",
+  "docsAddSourceFailed": "Не атрымалася дадаць крыніцу. Праверце URL, галіну і ключ.",
+  "docsSaveFailed": "Не атрымалася захаваць змены",
+  "docsSourceName": "Назва",
+  "docsSshUrl": "SSH-адрас рэпазіторыя",
+  "docsWebUrl": "Вэб-адрас",
+  "docsWebUrlHint": "Куды вядуць спасылкі за межы агульнай папкі",
+  "docsBranch": "Галіна",
+  "docsBranchChangeHint": "Змена галіны нанова спампоўвае рэпазіторый",
+  "docsFolder": "Папка для паказу",
+  "docsFolderHint": "Паказваецца толькі гэтая папка і ўсё ўнутры яе. Пакіньце пустым для ўсяго рэпазіторыя.",
+  "docsReadOnly": "Толькі чытанне",
+  "docsReadOnlyHelp": "Ніхто не зможа мяняць гэтыя дакументы, нават з ключом на запіс",
+  "docsSourceIsReadOnly": "Гэтая крыніца дакументацыі даступная толькі для чытання",
+  "docsDeployKey": "Ключ доступу",
+  "docsDeployKeyName": "Назва ключа",
+  "docsGenerateDeployKey": "Стварыць новы ключ толькі для чытання",
+  "docsUseExistingKey": "Выкарыстаць існы ключ",
+  "docsAppearance": "Афармленне",
+  "docsMoveUp": "Вышэй",
+  "docsMoveDown": "Ніжэй",
+  "docsDeleteSourceTitle": "Выдаліць крыніцу дакументацыі?",
+  "docsDeleteSourceBody": "«{name}» больш не будзе паказвацца ў раздзеле «Вікі». Сам рэпазіторый не зменіцца.",
+  "@docsDeleteSourceBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "docsSyncNow": "Абнавіць",
+  "docsSyncedAgo": "Абноўлена {when}",
+  "@docsSyncedAgo": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "docsNeverSynced": "Яшчэ не сінхранізавана",
+  "docsSyncFailed": "Апошняе абнаўленне не ўдалося",
+  "docsNotReady": "Дакументацыя рыхтуецца…",
+  "docsNotReadyHint": "Крыніца яшчэ спампоўваецца. Паўтарыце спробу крыху пазней.",
+  "docsPathMissing": "Указанай папкі няма ў гэтым рэпазіторыі",
+  "docsPathMissingHint": "Праверце папку, указаную для крыніцы ў наладах праекта.",
+  "docsContents": "Змест",
+  "docsOnThisPage": "На гэтай старонцы",
+  "docsEmpty": "Тут пакуль няма дакументаў",
+  "docsBrowseAll": "Усе дакументы",
+  "docsDocNotFound": "Дакумент не знойдзены",
+  "docsOpenOnSource": "Адкрыць у рэпазіторыі",
+  "docsLinkOutside": "Спасылка вядзе за межы агульнай папкі — адкрываем у рэпазіторыі",
+  "docsLastChangedBy": "Апошняе змяненне: {name}, {when}",
+  "@docsLastChangedBy": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "docsSaveDoc": "Зафіксаваць змены",
+  "docsCommitMessage": "Апісанне коміту",
+  "docsConflict": "Дакумент змяніўся на серверы з моманту адкрыцця",
+  "docsPushRejected": "Git-сервер адхіліў змену",
+  "docsWriteKeyMissing": "Наладзьце ключ на запіс, каб мяняць дакументы",
+  "docsConfigureKey": "Наладзіць",
+  "docsMyKeyTitle": "Мой доступ да дакументацыі",
+  "docsMyKeyIntro": "Пры змене дакумента коміт і push выконваюцца ад вашага імя вашым ключом. Без ключа дакументы даступныя толькі для чытання.",
+  "docsMyKeyRegisterHint": "Дадайце гэты адкрыты ключ у свой уліковы запіс на git-серверы, каб push прымаўся.",
+  "docsGenerateMyKey": "Стварыць ключ",
+  "docsImportMyKey": "Імпартаваць ключ",
+  "docsImportHint": "Устаўце закрыты ключ OpenSSH без парольнай фразы. Ён захоўваецца зашыфраваным і больш не паказваецца.",
+  "docsPrivateKeyLabel": "Закрыты ключ OpenSSH",
+  "docsRemoveMyKey": "Выдаліць ключ",
+  "docsCopyPublicKey": "Скапіяваць адкрыты ключ",
+  "docsCopied": "Скапіявана",
+  "docsKeyGenerated": "Створаны ключ",
+  "docsKeyImported": "Імпартаваны ключ",
+  "docsNoDocumentation": "Дакументацыі пакуль няма",
+  "docsNoDocumentationHint": "Унутраная вікі адключана, а крыніцы дакументацыі не дададзены.",
+  "projectWikiEnabled": "Унутраная вікі",
+  "projectWikiEnabledHelp": "Паказваецца ў раздзеле «Вікі» разам з крыніцамі дакументацыі",
+  "projectWikiDisabledHelp": "Схавана. Старонкі і іх гісторыя захоўваюцца і вернуцца пры ўключэнні.",
+  "docsSourceKind": "Тып крыніцы",
+  "docsGitSourceKind": "Git-рэпазіторый",
+  "docsWebSourceKind": "Вэб-спасылка",
+  "docsGitSourceKindHint": "Прагляд і рэдагаванне markdown з рэпазіторыя",
+  "docsWebSourceKindHint": "Убудаваць існую старонку. Заўсёды толькі для чытання.",
+  "docsPageUrl": "Адрас старонкі",
+  "docsPageUrlHint": "Старонка для паказу. Некаторыя сайты забараняюць убудоўванне — спасылка над старонкай працуе заўсёды.",
+  "docsTitleLabel": "Назва",
+  "docsTitleHint": "Паказваецца ў бакавой панэлі і над старонкай",
+  "docsOpenInNewTab": "Адкрыць у новай укладцы",
+  "docsEmbedUnsupported": "Убудаваныя старонкі паказваюцца толькі ў браўзернай версіі.",
+  "docsHidden": "Схаваны",
+  "docsHide": "Схаваць з навігацыі",
+  "docsShow": "Паказаць зноў",
+  "docsHiddenHelp": "Прыбраны з меню «Вікі». Налады захоўваюцца і вернуцца пры паўторным паказе."
 }
