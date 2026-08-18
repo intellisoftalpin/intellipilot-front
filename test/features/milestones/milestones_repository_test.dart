@@ -197,4 +197,91 @@ void main() {
       },
     );
   });
+
+  group('planned vs actual end date', () {
+    const withActual =
+        '{"id":"m2","project_id":"p1","name":"Ship","slug":"ship", '
+        '"description":"","start_date":"2026-05-01","end_date":"2026-05-20", '
+        '"actual_end_date":"2026-05-27","closed":false,"closed_at":null, '
+        '"order":1.0,"version":1,"created_at":"2026-05-01T00:00:00Z", '
+        '"modified_at":"2026-05-01T00:00:00Z"}';
+
+    test('a slip is positive and drives the effective end date', () async {
+      final adapter = _Adapter((_) async => _ok(withActual));
+      final repo = MilestonesRepositoryImpl(_client(adapter));
+      final m = (await repo.get('p1', 'm2')).valueOrNull;
+      expect(m!.endDate, DateTime(2026, 5, 20));
+      expect(m.actualEndDate, DateTime(2026, 5, 27));
+      // The bar and the sort key both follow what actually happened.
+      expect(m.effectiveEndDate, DateTime(2026, 5, 27));
+      expect(m.slipDays, 7);
+    });
+
+    test('finishing early reads as a negative slip', () async {
+      final adapter = _Adapter(
+        (_) async => _ok(
+          withActual.replaceAll('"2026-05-27"', '"2026-05-15"'),
+        ),
+      );
+      final repo = MilestonesRepositoryImpl(_client(adapter));
+      final m = (await repo.get('p1', 'm2')).valueOrNull;
+      expect(m!.slipDays, -5);
+      expect(m.effectiveEndDate, DateTime(2026, 5, 15));
+    });
+
+    test(
+      'no actual end means no slip, and the plan is the effective end',
+      () async {
+        final adapter = _Adapter((_) async => _ok(_milestoneJson));
+        final repo = MilestonesRepositoryImpl(_client(adapter));
+        final m = (await repo.get('p1', 'm1')).valueOrNull;
+        expect(m!.actualEndDate, isNull);
+        expect(m.slipDays, isNull);
+        expect(m.effectiveEndDate, m.endDate);
+      },
+    );
+
+    test('landing exactly on the plan is not reported as a slip', () async {
+      final adapter = _Adapter(
+        (_) async => _ok(
+          withActual.replaceAll('"2026-05-27"', '"2026-05-20"'),
+        ),
+      );
+      final repo = MilestonesRepositoryImpl(_client(adapter));
+      final m = (await repo.get('p1', 'm2')).valueOrNull;
+      expect(m!.slipDays, isNull);
+    });
+
+    test('update sends the actual end date, and null clears it', () async {
+      final adapter = _Adapter((_) async => _ok(withActual));
+      final repo = MilestonesRepositoryImpl(_client(adapter));
+      await repo.update(
+        'p1',
+        'm2',
+        body: UpdateMilestoneRequest(actualEndDate: DateTime.utc(2026, 5, 27)),
+        etag: '"m2:1"',
+      );
+      expect(adapter.lastRequest?.data, {'actual_end_date': '2026-05-27'});
+
+      await repo.update(
+        'p1',
+        'm2',
+        body: const UpdateMilestoneRequest(actualEndDate: null),
+        etag: '"m2:1"',
+      );
+      expect(adapter.lastRequest?.data, {'actual_end_date': null});
+    });
+
+    test('an untouched actual end date is not sent at all', () async {
+      final adapter = _Adapter((_) async => _ok(withActual));
+      final repo = MilestonesRepositoryImpl(_client(adapter));
+      await repo.update(
+        'p1',
+        'm2',
+        body: const UpdateMilestoneRequest(name: 'Renamed'),
+        etag: '"m2:1"',
+      );
+      expect(adapter.lastRequest?.data, {'name': 'Renamed'});
+    });
+  });
 }

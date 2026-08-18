@@ -67,7 +67,7 @@ class _View extends StatelessWidget {
             final pageTitle = s is WikiPageLoaded ? s.page.title : '…';
             return ProjectSectionBreadcrumb(
               projectId: projectId,
-              currentLabel: t.wikiTitle,
+              currentLabel: t.railWiki,
               sectionRoute: Routes.projectWikiFor(projectId),
               extraCrumbs: [
                 Crumb(label: pageTitle),

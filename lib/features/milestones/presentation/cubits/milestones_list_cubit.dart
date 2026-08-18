@@ -51,13 +51,10 @@ class MilestonesListLoaded extends MilestonesListState {
     milestones.where((m) => !m.closed).toList(),
   );
 
-  /// Completed milestones, most recently completed first.
+  /// Completed milestones, ordered exactly like the in-progress column so the
+  /// two read the same way: earliest end date first.
   List<Milestone> get completed =>
-      milestones.where((m) => m.closed).toList()..sort((a, b) {
-        final ac = a.closedAt ?? a.modifiedAt;
-        final bc = b.closedAt ?? b.modifiedAt;
-        return bc.compareTo(ac);
-      });
+      _byEndDate(milestones.where((m) => m.closed).toList());
 
   /// Completed issues over total across a milestone's epics; `null` when the
   /// milestone has no measurable work yet.
@@ -79,7 +76,9 @@ class MilestonesListLoaded extends MilestonesListState {
   List<Object?> get props => [milestones, epics, busy];
 }
 
-/// Nearest deadline first, so what is due next sits on top.
+/// Nearest deadline first, so what is due next sits on top. Keyed on the end
+/// that really happened, so a slipped milestone moves to where its bar sits on
+/// the gantt rather than staying where it was planned.
 List<Milestone> _byEndDate(List<Milestone> items) =>
     items
       ..sort((a, b) => effectiveRange(a).end.compareTo(effectiveRange(b).end));
@@ -91,11 +90,13 @@ List<Milestone> _byEndDate(List<Milestone> items) =>
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final start = m.startDate ?? today;
-  final end = m.endDate ?? start.add(const Duration(days: 7));
+  // The bar runs to what actually happened when that is known, so a slip
+  // lengthens it rather than leaving the chart showing the plan.
+  final end = m.effectiveEndDate ?? start.add(const Duration(days: 7));
   return (
     start: start,
     end: end.isBefore(start) ? start : end,
-    estimated: m.startDate == null || m.endDate == null,
+    estimated: m.startDate == null || m.effectiveEndDate == null,
   );
 }
 

@@ -544,7 +544,7 @@
   "railBoard": "Доска",
   "railIssues": "Issues",
   "railMilestones": "Вехи",
-  "railWiki": "Вики",
+  "railWiki": "Документация",
   "railSettings": "Настройки",
   "taskBoardTitle": "Доска задач",
   "taskBoardLoadFailed": "Не удалось загрузить доску задач.",
@@ -1484,5 +1484,50 @@
   "docsHidden": "Скрыт",
   "docsHide": "Скрыть из навигации",
   "docsShow": "Показать снова",
-  "docsHiddenHelp": "Убран из меню «Вики». Настройки сохраняются и вернутся при повторном показе."
+  "docsHiddenHelp": "Убран из меню «Вики». Настройки сохраняются и вернутся при повторном показе.",
+  "docsGenerateNow": "Создать",
+  "docsDeployKeyRegisterHint": "Добавьте этот открытый ключ в deploy keys репозитория (достаточно доступа на чтение), затем проверьте подключение ниже.",
+  "docsCheckConnection": "Проверить подключение",
+  "docsCheckRequired": "Проверьте подключение перед добавлением, чтобы убедиться, что ключ работает.",
+  "docsCheckOk": "Подключено · найдено веток: {count}",
+  "@docsCheckOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "docsCheckFailed": "Не удалось подключиться к репозиторию с этим ключом",
+  "milestoneFieldEndPlanned": "Плановая дата окончания",
+  "milestoneFieldEndActual": "Фактическая дата окончания",
+  "milestoneActualEndHint": "Когда работа действительно завершилась. Подставляется из плана при отметке о завершении.",
+  "milestonePlannedShort": "План",
+  "milestoneActualShort": "Факт",
+  "milestoneSlipLate": "Завершено с опозданием",
+  "milestoneSlipEarly": "Завершено раньше срока",
+  "panelComponentVersions": "Компоненты и версии",
+  "detailNoComponentsYet": "Добавьте компонент, чтобы указать версию, в которой выйдет исправление.",
+  "detailComponentNoRelease": "Релиз не привязан",
+  "detailComponentNoReleaseHint": "Привяжите релиз к этому компоненту в настройках проекта, чтобы выбрать версию.",
+  "entityActionsMenu": "Действия",
+  "entityActionMoveToEpic": "Переместить в эпик",
+  "entityActionClone": "Клонировать",
+  "entityCloneSubject": "{subject} (копия)",
+  "@entityCloneSubject": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "entityCloneCreated": "Копия создана",
+  "entityDeleteTitle": "Удалить элемент?",
+  "entityDeleteConfirm": "«{subject}» будет удалён вместе с комментариями, вложениями и связями.",
+  "@entityDeleteConfirm": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  }
 }

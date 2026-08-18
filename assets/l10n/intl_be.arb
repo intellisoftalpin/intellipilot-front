@@ -544,7 +544,7 @@
   "railBoard": "Дошка",
   "railIssues": "Інцыдэнты",
   "railMilestones": "Вехі",
-  "railWiki": "Вікі",
+  "railWiki": "Дакументацыя",
   "railSettings": "Налады",
   "taskBoardTitle": "Дошка задач",
   "taskBoardLoadFailed": "Не атрымалася загрузіць дошку задач.",
@@ -1484,5 +1484,50 @@
   "docsHidden": "Схаваны",
   "docsHide": "Схаваць з навігацыі",
   "docsShow": "Паказаць зноў",
-  "docsHiddenHelp": "Прыбраны з меню «Вікі». Налады захоўваюцца і вернуцца пры паўторным паказе."
+  "docsHiddenHelp": "Прыбраны з меню «Вікі». Налады захоўваюцца і вернуцца пры паўторным паказе.",
+  "docsGenerateNow": "Стварыць",
+  "docsDeployKeyRegisterHint": "Дадайце гэты адкрыты ключ у deploy keys рэпазіторыя (дастаткова доступу на чытанне), затым праверце падключэнне ніжэй.",
+  "docsCheckConnection": "Праверыць падключэнне",
+  "docsCheckRequired": "Праверце падключэнне перад дадаваннем, каб пераканацца, што ключ працуе.",
+  "docsCheckOk": "Падключана · знойдзена галін: {count}",
+  "@docsCheckOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "docsCheckFailed": "Не атрымалася падключыцца да рэпазіторыя з гэтым ключом",
+  "milestoneFieldEndPlanned": "Планавая дата заканчэння",
+  "milestoneFieldEndActual": "Фактычная дата заканчэння",
+  "milestoneActualEndHint": "Калі праца сапраўды скончылася. Падстаўляецца з плана пры адзнацы аб завяршэнні.",
+  "milestonePlannedShort": "План",
+  "milestoneActualShort": "Факт",
+  "milestoneSlipLate": "Завершана з спазненнем",
+  "milestoneSlipEarly": "Завершана раней тэрміну",
+  "panelComponentVersions": "Кампаненты і версіі",
+  "detailNoComponentsYet": "Дадайце кампанент, каб указаць версію, у якой выйдзе выпраўленне.",
+  "detailComponentNoRelease": "Рэліз не прывязаны",
+  "detailComponentNoReleaseHint": "Прывяжыце рэліз да гэтага кампанента ў наладах праекта, каб выбраць версію.",
+  "entityActionsMenu": "Дзеянні",
+  "entityActionMoveToEpic": "Перамясціць у эпік",
+  "entityActionClone": "Кланіраваць",
+  "entityCloneSubject": "{subject} (копія)",
+  "@entityCloneSubject": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "entityCloneCreated": "Копія створана",
+  "entityDeleteTitle": "Выдаліць элемент?",
+  "entityDeleteConfirm": "«{subject}» будзе выдалены разам з каментарамі, укладаннямі і сувязямі.",
+  "@entityDeleteConfirm": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  }
 }

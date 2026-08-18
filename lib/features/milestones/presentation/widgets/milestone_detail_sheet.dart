@@ -151,7 +151,23 @@ class _EditorState extends State<_Editor> {
   );
   late DateTime? _start = widget.state.milestone.startDate;
   late DateTime? _end = widget.state.milestone.endDate;
+  late DateTime? _actualEnd = widget.state.milestone.actualEndDate;
   late DateTime? _business = widget.state.milestone.businessReleaseDate;
+
+  /// The technical end the business release must trail: what actually
+  /// happened when that is recorded, otherwise the plan. Mirrors the server's
+  /// rule so the form cannot offer a date the API would reject.
+  DateTime? get _technicalEnd => _actualEnd ?? _end;
+
+  /// A business release with no technical release behind it — or one that no
+  /// longer trails it — is rejected by the API. Drop it here so the user sees
+  /// the consequence of their edit rather than an error on save.
+  void _dropImpossibleBusinessRelease() {
+    final end = _technicalEnd;
+    if (end == null || (_business != null && !_business!.isAfter(end))) {
+      _business = null;
+    }
+  }
 
   Milestone get _m => widget.state.milestone;
 
@@ -168,6 +184,7 @@ class _EditorState extends State<_Editor> {
       _description.text != _m.description ||
       _start != _m.startDate ||
       _end != _m.endDate ||
+      _actualEnd != _m.actualEndDate ||
       _business != _m.businessReleaseDate;
 
   @override
@@ -219,19 +236,23 @@ class _EditorState extends State<_Editor> {
                 onPick: (d) => setState(() => _start = d),
               ),
               _DateRow(
-                label: t.milestoneFieldEnd,
+                label: t.milestoneFieldEndPlanned,
                 helper: t.milestoneTechnicalReleaseHint,
                 value: _end,
                 enabled: canModify,
                 onPick: (d) => setState(() {
                   _end = d;
-                  // A business release with no technical release behind it is
-                  // rejected by the API — drop it here so the user sees the
-                  // consequence rather than an error.
-                  if (d == null ||
-                      (_business != null && !_business!.isAfter(d))) {
-                    _business = null;
-                  }
+                  _dropImpossibleBusinessRelease();
+                }),
+              ),
+              _DateRow(
+                label: t.milestoneFieldEndActual,
+                helper: t.milestoneActualEndHint,
+                value: _actualEnd,
+                enabled: canModify,
+                onPick: (d) => setState(() {
+                  _actualEnd = d;
+                  _dropImpossibleBusinessRelease();
                 }),
               ),
               if (canSeeBusiness)
@@ -239,8 +260,8 @@ class _EditorState extends State<_Editor> {
                   label: t.milestoneFieldBusinessRelease,
                   helper: t.milestoneBusinessReleaseHint,
                   value: _business,
-                  enabled: canSetBusiness && _end != null,
-                  firstDate: _end?.add(const Duration(days: 1)),
+                  enabled: canSetBusiness && _technicalEnd != null,
+                  firstDate: _technicalEnd?.add(const Duration(days: 1)),
                   onPick: (d) => setState(() => _business = d),
                 ),
               const SizedBox(height: 20),
@@ -314,6 +335,7 @@ class _EditorState extends State<_Editor> {
       _description.text = _m.description;
       _start = _m.startDate;
       _end = _m.endDate;
+      _actualEnd = _m.actualEndDate;
       _business = _m.businessReleaseDate;
     });
   }
@@ -336,6 +358,9 @@ class _EditorState extends State<_Editor> {
             ? UpdateMilestoneRequest.absent
             : _start,
         endDate: _end == _m.endDate ? UpdateMilestoneRequest.absent : _end,
+        actualEndDate: _actualEnd == _m.actualEndDate
+            ? UpdateMilestoneRequest.absent
+            : _actualEnd,
         // Only ever send the business date when the user may set it, so a
         // read-only holder can save the rest of the form.
         businessReleaseDate:

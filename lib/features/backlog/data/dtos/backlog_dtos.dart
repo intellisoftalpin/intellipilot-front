@@ -2,6 +2,40 @@ import 'package:intellipilot/core/network/etag.dart';
 
 /// Backend epic. `etag` is the canonical `"<id>:<version>"` revision token,
 /// round-tripped as `If-Match` on subsequent updates.
+/// One component's fix version on an issue.
+///
+/// The pair is the unit: a component ships in exactly one version, and the
+/// same issue can carry a different version for each component it touches.
+class ComponentVersion {
+  const ComponentVersion({
+    required this.componentId,
+    required this.releaseVersionId,
+  });
+
+  factory ComponentVersion.fromJson(Map<String, dynamic> json) =>
+      ComponentVersion(
+        componentId: json['component_id'] as String? ?? '',
+        releaseVersionId: json['release_version_id'] as String? ?? '',
+      );
+
+  final String componentId;
+  final String releaseVersionId;
+
+  Map<String, dynamic> toJson() => {
+    'component_id': componentId,
+    'release_version_id': releaseVersionId,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      other is ComponentVersion &&
+      other.componentId == componentId &&
+      other.releaseVersionId == releaseVersionId;
+
+  @override
+  int get hashCode => Object.hash(componentId, releaseVersionId);
+}
+
 class Epic {
   const Epic({
     required this.id,
@@ -122,6 +156,7 @@ class Issue {
     this.resolvedAt,
     this.releaseVersionId,
     this.releaseText,
+    this.componentVersions = const [],
     this.watchers = const [],
     this.etag,
   });
@@ -154,6 +189,10 @@ class Issue {
       resolvedAt: json['resolved_at'] as String?,
       releaseVersionId: json['release_version_id'] as String?,
       releaseText: json['release_text'] as String?,
+      componentVersions:
+          (json['component_versions'] as List<dynamic>? ?? const [])
+              .map((e) => ComponentVersion.fromJson(e as Map<String, dynamic>))
+              .toList(),
       labels: (json['labels'] as List<dynamic>? ?? const [])
           .map((e) => e as String)
           .toList(),
@@ -209,10 +248,26 @@ class Issue {
   final String? resolvedAt;
 
   /// Structured fix-version (id) or free-text fix-version. At most one set.
+  ///
+  /// [releaseVersionId] is a server-maintained **mirror** of the first entry
+  /// in [componentVersions]; it backs the issues-list version filter and the
+  /// exports. Set versions through [componentVersions], never through this.
   final String? releaseVersionId;
   final String? releaseText;
   final List<String> labels;
   final List<String> components;
+
+  /// The version each affected component ships the fix in. A change can land
+  /// in a different version of each component it touches.
+  final List<ComponentVersion> componentVersions;
+
+  /// The version chosen for [componentId], if any.
+  String? versionFor(String componentId) {
+    for (final cv in componentVersions) {
+      if (cv.componentId == componentId) return cv.releaseVersionId;
+    }
+    return null;
+  }
 
   /// User ids watching this issue (read path; mutate via sub-resources).
   final List<String> watchers;
@@ -325,6 +380,7 @@ class CreateIssueRequest {
     this.releaseText,
     this.labels = const [],
     this.components = const [],
+    this.componentVersions = const [],
   });
 
   final String subject;
@@ -347,6 +403,10 @@ class CreateIssueRequest {
   final List<String> labels;
   final List<String> components;
 
+  /// Fix version per component. Only components also listed in [components]
+  /// are accepted.
+  final List<ComponentVersion> componentVersions;
+
   Map<String, dynamic> toJson() => {
     'subject': subject,
     'description': description,
@@ -367,6 +427,8 @@ class CreateIssueRequest {
     if (releaseText != null) 'release_text': releaseText,
     'labels': labels,
     'components': components,
+    if (componentVersions.isNotEmpty)
+      'component_versions': componentVersions.map((c) => c.toJson()).toList(),
   };
 }
 
@@ -394,6 +456,7 @@ class UpdateIssueRequest {
     this.releaseText = const _Absent(),
     this.labels,
     this.components,
+    this.componentVersions,
   });
 
   final String? subject;
@@ -422,6 +485,7 @@ class UpdateIssueRequest {
   /// Backend treats absent as "leave alone", present as "replace fully".
   final List<String>? labels;
   final List<String>? components;
+  final List<ComponentVersion>? componentVersions;
 
   Map<String, dynamic> toJson() => {
     if (subject != null) 'subject': subject,
@@ -446,6 +510,8 @@ class UpdateIssueRequest {
     if (releaseText is! _Absent) 'release_text': releaseText,
     if (labels != null) 'labels': labels,
     if (components != null) 'components': components,
+    if (componentVersions != null)
+      'component_versions': componentVersions!.map((c) => c.toJson()).toList(),
   };
 }
 

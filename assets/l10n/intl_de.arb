@@ -544,7 +544,7 @@
   "railBoard": "Board",
   "railIssues": "Issues",
   "railMilestones": "Meilensteine",
-  "railWiki": "Wiki",
+  "railWiki": "Dokumentation",
   "railSettings": "Einstellungen",
   "taskBoardTitle": "Aufgabenboard",
   "taskBoardLoadFailed": "Das Aufgabenboard konnte nicht geladen werden.",
@@ -1484,5 +1484,50 @@
   "docsHidden": "Ausgeblendet",
   "docsHide": "Aus der Navigation ausblenden",
   "docsShow": "Wieder einblenden",
-  "docsHiddenHelp": "Aus dem Wiki-Menü entfernt. Die Konfiguration bleibt erhalten und kehrt beim Wiedereinblenden zurück."
+  "docsHiddenHelp": "Aus dem Wiki-Menü entfernt. Die Konfiguration bleibt erhalten und kehrt beim Wiedereinblenden zurück.",
+  "docsGenerateNow": "Erzeugen",
+  "docsDeployKeyRegisterHint": "Fügen Sie diesen öffentlichen Schlüssel den Deploy-Keys des Repositories hinzu (Lesezugriff genügt) und prüfen Sie dann unten die Verbindung.",
+  "docsCheckConnection": "Verbindung prüfen",
+  "docsCheckRequired": "Prüfen Sie die Verbindung vor dem Hinzufügen, damit der Schlüssel nachweislich funktioniert.",
+  "docsCheckOk": "Verbunden · {count} Branches gefunden",
+  "@docsCheckOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "docsCheckFailed": "Repository mit diesem Schlüssel nicht erreichbar",
+  "milestoneFieldEndPlanned": "Geplantes Enddatum",
+  "milestoneFieldEndActual": "Tatsächliches Enddatum",
+  "milestoneActualEndHint": "Wann es tatsächlich fertig war. Wird beim Abschließen aus der Planung übernommen.",
+  "milestonePlannedShort": "Geplant",
+  "milestoneActualShort": "Tatsächlich",
+  "milestoneSlipLate": "Verspätet fertig",
+  "milestoneSlipEarly": "Früher fertig",
+  "panelComponentVersions": "Komponenten & Versionen",
+  "detailNoComponentsYet": "Fügen Sie eine Komponente hinzu, um die Version festzuhalten, in der die Korrektur ausgeliefert wird.",
+  "detailComponentNoRelease": "Kein Release verknüpft",
+  "detailComponentNoReleaseHint": "Verknüpfen Sie in den Projekteinstellungen ein Release mit dieser Komponente, um eine Version zu wählen.",
+  "entityActionsMenu": "Aktionen",
+  "entityActionMoveToEpic": "Zu Epic verschieben",
+  "entityActionClone": "Klonen",
+  "entityCloneSubject": "{subject} (Kopie)",
+  "@entityCloneSubject": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "entityCloneCreated": "Kopie erstellt",
+  "entityDeleteTitle": "Dieses Element löschen?",
+  "entityDeleteConfirm": "„{subject}“ wird entfernt. Kommentare, Anhänge und Verknüpfungen ebenfalls.",
+  "@entityDeleteConfirm": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  }
 }

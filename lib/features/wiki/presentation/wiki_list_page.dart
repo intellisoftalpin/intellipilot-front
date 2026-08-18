@@ -81,7 +81,9 @@ class _View extends StatelessWidget {
       appBar: AppBar(
         title: ProjectSectionBreadcrumb(
           projectId: projectId,
-          currentLabel: t.wikiTitle,
+          currentLabel: t.railWiki,
+          sectionRoute: Routes.projectWikiFor(projectId),
+          extraCrumbs: [Crumb(label: t.docsInternalWiki)],
         ),
       ),
       floatingActionButton: BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
@@ -124,7 +126,7 @@ class _View extends StatelessWidget {
                 detail.has(Permission.wikiCreate);
             return EmptyState(
               icon: Icons.article_outlined,
-              title: t.wikiTitle,
+              title: t.docsInternalWiki,
               body: t.wikiEmpty,
               action: canCreate
                   ? FilledButton.icon(

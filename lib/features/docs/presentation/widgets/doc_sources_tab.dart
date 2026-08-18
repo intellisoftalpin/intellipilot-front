@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/core/datetime/relative_time.dart';
+import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
@@ -13,7 +14,10 @@ import 'package:intellipilot/features/docs/data/dtos/doc_dtos.dart';
 import 'package:intellipilot/features/docs/domain/docs_repository.dart';
 import 'package:intellipilot/features/docs/presentation/cubits/doc_key_cubit.dart';
 import 'package:intellipilot/features/docs/presentation/cubits/doc_sources_cubit.dart';
+import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
+import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
+import 'package:intellipilot/features/projects/presentation/cubits/project_settings_cubit.dart';
 import 'package:intellipilot/features/projects/presentation/widgets/permission_gate.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -71,6 +75,13 @@ class _TabView extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            // The internal wiki lives here rather than under General: it is
+            // one of the places documentation comes from, alongside the
+            // sources below it.
+            const _InternalWikiSwitch(),
+            const SizedBox(height: 20),
+            const Divider(),
+            const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
@@ -160,6 +171,60 @@ class _TabView extends StatelessWidget {
       _ => moving.order,
     };
     await context.read<DocSourcesCubit>().reorder(moving, rank);
+  }
+}
+
+/// The internal-wiki toggle.
+///
+/// Turning it off only hides the wiki: pages and revisions stay in the
+/// database and come back untouched when it is switched on again, which is why
+/// this is a plain switch and not a destructive action.
+class _InternalWikiSwitch extends StatelessWidget {
+  const _InternalWikiSwitch();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return BlocBuilder<ProjectDetailCubit, ProjectDetailState>(
+      builder: (context, state) {
+        if (state is! ProjectDetailLoaded) return const SizedBox.shrink();
+        final canEdit = state.has(Permission.projectModify);
+        final enabled = state.project.wikiEnabled;
+        return BlocBuilder<ProjectSettingsCubit, ProjectSettingsState>(
+          builder: (context, saving) {
+            final busy = saving is ProjectSettingsSaving;
+            return SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value: enabled,
+              onChanged: !canEdit || busy
+                  ? null
+                  : (v) => unawaited(_toggle(context, value: v)),
+              title: Text(t.projectWikiEnabled),
+              subtitle: Text(
+                enabled ? t.projectWikiEnabledHelp : t.projectWikiDisabledHelp,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _toggle(BuildContext context, {required bool value}) async {
+    final settings = context.read<ProjectSettingsCubit>();
+    final detail = context.read<ProjectDetailCubit>();
+    final updated = await settings.save(
+      UpdateProjectRequest(wikiEnabled: value),
+    );
+    if (!context.mounted) return;
+    if (updated == null) {
+      final t = AppLocalizations.of(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.projectSaveFailed)));
+      return;
+    }
+    detail.replace(updated);
   }
 }
 
@@ -603,7 +668,22 @@ class _AddSourceDialogState extends State<_AddSourceDialog> {
   DocSourceKind _kind = DocSourceKind.git;
   bool _readOnly = false;
   bool _generateKey = true;
-  String? _existingKeyId;
+
+  /// The key the source will use, once one has been generated or picked.
+  /// Registration cannot proceed without it, because the connection check
+  /// needs a real key to authenticate with.
+  String? _keyId;
+
+  /// Public half of a key generated in this dialog, shown so it can be copied
+  /// into the git host before the connection is checked.
+  String? _generatedPublicKey;
+  bool _generatingKey = false;
+
+  /// Connection check state. `_branches` is non-null once a check has
+  /// succeeded, which is also what unlocks the Add button.
+  bool _checking = false;
+  List<String>? _branches;
+  String? _checkError;
   String _color = '';
   String _emoji = '';
   List<SshKey> _keys = const [];
@@ -612,13 +692,17 @@ class _AddSourceDialogState extends State<_AddSourceDialog> {
   @override
   void initState() {
     super.initState();
-    _sshUrl.addListener(_deriveWebUrl);
+    _sshUrl
+      ..addListener(_deriveWebUrl)
+      ..addListener(_invalidateCheck);
     unawaited(_loadKeys());
   }
 
   @override
   void dispose() {
-    _sshUrl.removeListener(_deriveWebUrl);
+    _sshUrl
+      ..removeListener(_deriveWebUrl)
+      ..removeListener(_invalidateCheck);
     for (final c in [_name, _sshUrl, _webUrl, _branch, _path, _keyName]) {
       c.dispose();
     }
@@ -629,6 +713,78 @@ class _AddSourceDialogState extends State<_AddSourceDialog> {
     final res = await getIt<CatalogRepository>().listSshKeys(widget.projectId);
     if (!mounted) return;
     setState(() => _keys = res.valueOrNull ?? const []);
+  }
+
+  /// A check only vouches for the URL and key it ran against, so changing
+  /// either one retracts it and the Add button locks again.
+  void _invalidateCheck() {
+    if (_branches == null && _checkError == null) return;
+    setState(() {
+      _branches = null;
+      _checkError = null;
+    });
+  }
+
+  /// Generate a project deploy key up front, so its public half can be copied
+  /// into the git host *before* anything tries to authenticate with it. The
+  /// old flow generated the key and connected in the same request, which could
+  /// never succeed: the key had not been registered anywhere yet.
+  Future<void> _generate() async {
+    final name = _keyName.text.trim();
+    if (name.isEmpty || _generatingKey) return;
+    setState(() => _generatingKey = true);
+    final res = await getIt<CatalogRepository>().createSshKey(
+      widget.projectId,
+      CreateSshKeyRequest(name: name),
+    );
+    if (!mounted) return;
+    setState(() {
+      _generatingKey = false;
+      final key = res.valueOrNull;
+      if (key != null) {
+        _keyId = key.id;
+        _generatedPublicKey = key.publicKey;
+        _branches = null;
+        _checkError = null;
+      }
+    });
+  }
+
+  /// Ask the server to reach the repository with the chosen key. Doubles as
+  /// the branch discovery step, so the branch field becomes a list of what is
+  /// actually there instead of something to type from memory.
+  Future<void> _check() async {
+    final keyId = _keyId;
+    final url = _sshUrl.text.trim();
+    if (keyId == null || url.isEmpty || _checking) return;
+    setState(() {
+      _checking = true;
+      _checkError = null;
+    });
+    final res = await getIt<CatalogRepository>().previewBranches(
+      widget.projectId,
+      url,
+      keyId,
+    );
+    if (!mounted) return;
+    final t = AppLocalizations.of(context);
+    setState(() {
+      _checking = false;
+      res.when(
+        ok: (info) {
+          _branches = info.branches;
+          // Prefer the remote's own default; otherwise keep what was typed if
+          // it exists, else take the first branch.
+          final current = _branch.text.trim();
+          _branch.text =
+              info.defaultBranch ??
+              (info.branches.contains(current)
+                  ? current
+                  : (info.branches.isEmpty ? '' : info.branches.first));
+        },
+        err: (f) => _checkError = f.serverMessage ?? t.docsCheckFailed,
+      );
+    });
   }
 
   /// Pre-fill the web URL from the SSH URL for the common hosts. The field
@@ -648,12 +804,17 @@ class _AddSourceDialogState extends State<_AddSourceDialog> {
     // A web link needs nothing else: a title and an address are the whole
     // configuration.
     if (_kind == DocSourceKind.web) return true;
+    // A git source may only be added once the connection has actually been
+    // proven with the key it will use — otherwise the first sync fails and the
+    // user has no idea why.
     return _sshUrl.text.trim().isNotEmpty &&
         _branch.text.trim().isNotEmpty &&
-        (_generateKey
-            ? _keyName.text.trim().isNotEmpty
-            : _existingKeyId != null);
+        _keyId != null &&
+        _branches != null;
   }
+
+  bool get _canCheck =>
+      _keyId != null && _sshUrl.text.trim().isNotEmpty && !_checking;
 
   CreateDocSourceRequest _build() => _kind == DocSourceKind.web
       ? CreateDocSourceRequest.web(
@@ -668,8 +829,9 @@ class _AddSourceDialogState extends State<_AddSourceDialog> {
           webUrl: _webUrl.text.trim(),
           branch: _branch.text.trim(),
           docPath: _path.text.trim(),
-          sshKeyId: _generateKey ? null : _existingKeyId,
-          newKeyName: _generateKey ? _keyName.text.trim() : null,
+          // Always an existing key by this point: it was generated or picked
+          // in the dialog and the connection check has used it.
+          sshKeyId: _keyId,
           readOnly: _readOnly,
           color: _color,
           emoji: _emoji,
@@ -739,7 +901,6 @@ class _AddSourceDialogState extends State<_AddSourceDialog> {
                   helper: t.docsWebUrlHint,
                   onChanged: (_) => _webTouched = true,
                 ),
-                _field(_branch, t.docsBranch),
                 _field(_path, t.docsFolder, helper: t.docsFolderHint),
                 const SizedBox(height: 8),
                 SwitchListTile(
@@ -771,16 +932,48 @@ class _AddSourceDialogState extends State<_AddSourceDialog> {
                     ),
                   ],
                   selected: {_generateKey},
-                  onSelectionChanged: (v) =>
-                      setState(() => _generateKey = v.first),
+                  onSelectionChanged: (v) => setState(() {
+                    _generateKey = v.first;
+                    _keyId = null;
+                    _generatedPublicKey = null;
+                    _branches = null;
+                    _checkError = null;
+                  }),
                 ),
-                if (_generateKey)
-                  _field(_keyName, t.docsDeployKeyName)
-                else
+                if (_generateKey) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _field(_keyName, t.docsDeployKeyName)),
+                      const SizedBox(width: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: FilledButton.tonalIcon(
+                          icon: _generatingKey
+                              ? const SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.vpn_key_outlined, size: 18),
+                          onPressed:
+                              _keyName.text.trim().isEmpty || _generatingKey
+                              ? null
+                              : () => unawaited(_generate()),
+                          label: Text(t.docsGenerateNow),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_generatedPublicKey != null)
+                    _PublicKeyBox(publicKey: _generatedPublicKey!),
+                ] else
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: DropdownButtonFormField<String>(
-                      initialValue: _existingKeyId,
+                      initialValue: _keyId,
                       isExpanded: true,
                       decoration: InputDecoration(
                         labelText: t.docsDeployKey,
@@ -791,7 +984,42 @@ class _AddSourceDialogState extends State<_AddSourceDialog> {
                         for (final k in _keys)
                           DropdownMenuItem(value: k.id, child: Text(k.name)),
                       ],
-                      onChanged: (v) => setState(() => _existingKeyId = v),
+                      onChanged: (v) => setState(() {
+                        _keyId = v;
+                        _branches = null;
+                        _checkError = null;
+                      }),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                _ConnectionCheck(
+                  canCheck: _canCheck,
+                  checking: _checking,
+                  branches: _branches,
+                  error: _checkError,
+                  onCheck: () => unawaited(_check()),
+                ),
+                // The branch list comes from the repository itself, so it can
+                // only be picked after a successful check.
+                if (_branches != null && _branches!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _branches!.contains(_branch.text)
+                          ? _branch.text
+                          : null,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: t.docsBranch,
+                        border: const OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      items: [
+                        for (final b in _branches!)
+                          DropdownMenuItem(value: b, child: Text(b)),
+                      ],
+                      onChanged: (v) =>
+                          setState(() => _branch.text = v ?? _branch.text),
                     ),
                   ),
               ],
@@ -1005,4 +1233,145 @@ String? deriveWebUrl(String sshUrl) {
       .replaceAll(RegExp(r'\.git$'), '');
   if (cleaned.isEmpty || host.isEmpty) return null;
   return 'https://$host/$cleaned';
+}
+
+/// The generated public key, shown so it can be copied into the git host.
+///
+/// This is the whole point of generating the key before registering the
+/// source: the key has to exist on the host before anything can authenticate
+/// with it, so the dialog must hand it over first and check afterwards.
+class _PublicKeyBox extends StatelessWidget {
+  const _PublicKeyBox({required this.publicKey});
+  final String publicKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Card(
+      margin: const EdgeInsets.only(top: 8),
+      color: theme.colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(t.docsDeployKeyRegisterHint, style: theme.textTheme.bodySmall),
+            const SizedBox(height: 8),
+            SelectableText(
+              publicKey,
+              maxLines: 3,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                icon: const Icon(Icons.copy, size: 16),
+                onPressed: () => unawaited(_copy(context)),
+                label: Text(t.docsCopyPublicKey),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _copy(BuildContext context) async {
+    final t = AppLocalizations.of(context);
+    await Clipboard.setData(ClipboardData(text: publicKey));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(t.docsCopied)));
+  }
+}
+
+/// The connection check: the gate between "configured" and "addable".
+///
+/// A source can only be added once this has succeeded, because that is the
+/// only proof the deploy key has actually been registered on the git host.
+class _ConnectionCheck extends StatelessWidget {
+  const _ConnectionCheck({
+    required this.canCheck,
+    required this.checking,
+    required this.branches,
+    required this.error,
+    required this.onCheck,
+  });
+
+  final bool canCheck;
+  final bool checking;
+  final List<String>? branches;
+  final String? error;
+  final VoidCallback onCheck;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final ok = branches != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            FilledButton.tonalIcon(
+              icon: checking
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.wifi_tethering, size: 18),
+              onPressed: canCheck ? onCheck : null,
+              label: Text(t.docsCheckConnection),
+            ),
+            const SizedBox(width: 12),
+            if (ok)
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 18,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        t.docsCheckOk(branches!.length),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              error!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          )
+        else if (!ok)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              t.docsCheckRequired,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
 }

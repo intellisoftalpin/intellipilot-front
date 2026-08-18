@@ -37,6 +37,7 @@ class MarkdownText extends StatefulWidget {
     this.imageBuilder,
     this.onHeadings,
     this.anchorController,
+    this.selectable = true,
     super.key,
   });
 
@@ -64,6 +65,13 @@ class MarkdownText extends StatefulWidget {
 
   /// Lets a table of contents outside this widget scroll it to a heading.
   final MarkdownAnchorController? anchorController;
+
+  /// Wrap the output in a [SelectionArea] so the reader can select and copy.
+  ///
+  /// Set false where the rendered text sits inside a click-to-edit surface:
+  /// the selection area claims taps to place a caret, which otherwise swallows
+  /// every click on the text and leaves only the surrounding padding working.
+  final bool selectable;
 
   @override
   State<MarkdownText> createState() => _MarkdownTextState();
@@ -222,23 +230,23 @@ class _MarkdownTextState extends State<MarkdownText> {
 
     _reportHeadings(blocks);
 
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final b in blocks)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: _renderBlock(context, ctx, b),
+          ),
+      ],
+    );
+    if (!widget.selectable) return body;
     // One SelectionArea over all blocks: a single drag (or Ctrl/Cmd+A) selects
     // the whole text across paragraphs, lists, tables and code — per-block
     // selectable widgets would each form their own selection island. Tap
     // recognizers on link spans still fire inside it: RenderParagraph
     // hit-tests them directly.
-    return SelectionArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final b in blocks)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: _renderBlock(context, ctx, b),
-            ),
-        ],
-      ),
-    );
+    return SelectionArea(child: body);
   }
 
   /// Hand the caller the heading outline once per parse, after the frame so a

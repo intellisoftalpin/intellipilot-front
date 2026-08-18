@@ -223,7 +223,7 @@ class _DocsViewState extends State<_DocsView> {
   ) => AppBar(
     title: ProjectSectionBreadcrumb(
       projectId: widget.projectId,
-      currentLabel: t.wikiTitle,
+      currentLabel: t.railWiki,
       sectionRoute: Routes.projectWikiFor(widget.projectId),
       extraCrumbs: [Crumb(label: source.name)],
     ),
@@ -246,7 +246,7 @@ class _DocsViewState extends State<_DocsView> {
     return AppBar(
       title: ProjectSectionBreadcrumb(
         projectId: widget.projectId,
-        currentLabel: t.wikiTitle,
+        currentLabel: t.railWiki,
         sectionRoute: Routes.projectWikiFor(widget.projectId),
         extraCrumbs: crumbs,
       ),

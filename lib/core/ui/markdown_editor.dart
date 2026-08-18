@@ -19,6 +19,18 @@ typedef ImageUploader =
 /// The renderer supports headings, lists, quotes, code, links and images, but
 /// before this widget the only way to produce any of that was to know the
 /// syntax and type it into a bare `TextField`.
+/// How the editor and its preview are arranged.
+enum MarkdownEditorLayout {
+  /// One column; the toolbar's eye button swaps the field for the preview.
+  /// Right for comments and description fields, where there is no room for
+  /// two panes.
+  stacked,
+
+  /// Source on the left, rendered preview on the right, scrolled together.
+  /// Right for a full-page editor such as a wiki page.
+  split,
+}
+
 class MarkdownEditor extends StatefulWidget {
   const MarkdownEditor({
     required this.controller,
@@ -28,6 +40,8 @@ class MarkdownEditor extends StatefulWidget {
     this.autofocus = false,
     this.onSubmitShortcut,
     this.showToolbar = true,
+    this.layout = MarkdownEditorLayout.stacked,
+    this.expand = false,
     super.key,
   });
 
@@ -46,14 +60,30 @@ class MarkdownEditor extends StatefulWidget {
   final VoidCallback? onSubmitShortcut;
   final bool showToolbar;
 
+  final MarkdownEditorLayout layout;
+
+  /// Fill the available height instead of growing with the content. Required
+  /// for [MarkdownEditorLayout.split], which needs a bounded height to scroll
+  /// the two panes against each other.
+  final bool expand;
+
   @override
   State<MarkdownEditor> createState() => _MarkdownEditorState();
 }
 
 class _MarkdownEditorState extends State<MarkdownEditor> {
   final _focus = FocusNode();
+
+  /// Split mode scrolls the two panes together, so each needs its own
+  /// controller and a guard against the echo of a programmatic scroll.
+  final _sourceScroll = ScrollController();
+  final _previewScroll = ScrollController();
+  bool _syncingScroll = false;
+
   bool _preview = false;
   bool _uploading = false;
+
+  bool get _isSplit => widget.layout == MarkdownEditorLayout.split;
 
   /// Mention autocomplete state: the `@` that opened it and the typed filter.
   int? _mentionStart;
@@ -63,11 +93,47 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
   void initState() {
     super.initState();
     widget.controller.addListener(_syncMentionState);
+    if (widget.layout == MarkdownEditorLayout.split) {
+      _sourceScroll.addListener(_mirrorScroll);
+      // The preview is on screen continuously here, so it has to repaint as
+      // the user types. The mention listener cannot serve double duty: it
+      // returns early when there are no members, which is the wiki's case.
+      widget.controller.addListener(_refreshPreview);
+    }
+  }
+
+  void _refreshPreview() {
+    if (mounted) setState(() {});
+  }
+
+  /// Keep the preview at the same relative position as the source.
+  ///
+  /// Proportional rather than line-for-line: the two panes render different
+  /// content (a heading occupies one source line but a much taller block once
+  /// rendered), so there is no shared coordinate to map exactly. Matching the
+  /// fraction scrolled puts the same part of the document under the eye, which
+  /// is what the reader is actually after.
+  void _mirrorScroll() {
+    if (_syncingScroll || !_previewScroll.hasClients) return;
+    if (!_sourceScroll.hasClients) return;
+    final from = _sourceScroll.position;
+    final to = _previewScroll.position;
+    if (from.maxScrollExtent <= 0 || to.maxScrollExtent <= 0) return;
+    final fraction = (from.pixels / from.maxScrollExtent).clamp(0.0, 1.0);
+    _syncingScroll = true;
+    _previewScroll.jumpTo(fraction * to.maxScrollExtent);
+    _syncingScroll = false;
   }
 
   @override
   void dispose() {
-    widget.controller.removeListener(_syncMentionState);
+    _sourceScroll
+      ..removeListener(_mirrorScroll)
+      ..dispose();
+    _previewScroll.dispose();
+    widget.controller
+      ..removeListener(_refreshPreview)
+      ..removeListener(_syncMentionState);
     _focus.dispose();
     super.dispose();
   }
@@ -245,16 +311,63 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     return null;
   }
 
-  @override
-  Widget build(BuildContext context) {
+  /// The rendered preview pane, scrollable so split mode can drive it.
+  Widget _previewPane(BuildContext context, {required bool scrollable}) {
     final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final empty = widget.controller.text.trim().isEmpty;
+    final content = empty
+        ? Text(
+            t.descriptionPlaceholder,
+            style: TextStyle(color: theme.colorScheme.outline),
+          )
+        : MarkdownText(widget.controller.text, mentions: widget.members);
+    return Container(
+      width: double.infinity,
+      constraints: scrollable ? null : const BoxConstraints(minHeight: 96),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: scrollable
+          ? SingleChildScrollView(
+              controller: _previewScroll,
+              child: content,
+            )
+          : content,
+    );
+  }
+
+  /// The source field. In split mode it fills its pane and owns the scroll
+  /// position the preview follows.
+  Widget _sourceField() => TextField(
+    controller: widget.controller,
+    focusNode: _focus,
+    autofocus: widget.autofocus,
+    scrollController: _isSplit ? _sourceScroll : null,
+    maxLines: widget.expand ? null : null,
+    minLines: widget.expand ? null : widget.minLines,
+    expands: widget.expand,
+    textAlignVertical: widget.expand ? TextAlignVertical.top : null,
+    keyboardType: TextInputType.multiline,
+    decoration: const InputDecoration(
+      border: OutlineInputBorder(),
+      isDense: true,
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (widget.showToolbar)
           _EditorToolbar(
-            preview: _preview,
+            // Split mode shows both panes at once, so there is nothing to
+            // toggle and the source is never disabled.
+            preview: !_isSplit && _preview,
+            showPreviewToggle: !_isSplit,
             uploading: _uploading,
             canUpload: widget.onUploadImage != null,
             onTogglePreview: () => setState(() => _preview = !_preview),
@@ -269,86 +382,74 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
             onPasteImage: () => unawaited(_pasteImage()),
           ),
         const SizedBox(height: 6),
-        if (_preview)
-          Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 96),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border.all(color: theme.colorScheme.outlineVariant),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: widget.controller.text.trim().isEmpty
-                ? Text(
-                    t.descriptionPlaceholder,
-                    style: TextStyle(color: theme.colorScheme.outline),
-                  )
-                : MarkdownText(
-                    widget.controller.text,
-                    mentions: widget.members,
-                  ),
-          )
+        if (_preview && !_isSplit)
+          _previewPane(context, scrollable: false)
+        // A filling editor must take the Column's remaining height, or the
+        // Stack inside it has nothing to size against.
+        else if (widget.expand)
+          Expanded(child: _editorArea(context))
         else
-          Stack(
-            children: [
-              CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(
-                    LogicalKeyboardKey.enter,
-                    meta: true,
-                  ): () =>
-                      widget.onSubmitShortcut?.call(),
-                  const SingleActivator(
-                    LogicalKeyboardKey.enter,
-                    control: true,
-                  ): () =>
-                      widget.onSubmitShortcut?.call(),
-                  if (widget.onUploadImage != null) ...{
-                    const SingleActivator(
-                      LogicalKeyboardKey.keyV,
-                      meta: true,
-                      shift: true,
-                    ): () =>
-                        unawaited(_pasteImage()),
-                  },
-                },
-                child: TextField(
-                  controller: widget.controller,
-                  focusNode: _focus,
-                  autofocus: widget.autofocus,
-                  maxLines: null,
-                  minLines: widget.minLines,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                ),
-              ),
-              if (_uploading)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Row(
-                    children: [
-                      const SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        t.editorUploading,
-                        style: theme.textTheme.labelSmall,
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
+          _editorArea(context),
         if (!_preview && _mentionMatches.isNotEmpty)
           _MentionSuggestions(
             matches: _mentionMatches,
             onPick: _insertMention,
+          ),
+      ],
+    );
+  }
+
+  /// The editing area: the source field (plus, in split mode, the live
+  /// preview beside it) with the paste/submit shortcuts bound.
+  Widget _editorArea(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final shortcuts = CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.enter, meta: true): () =>
+            widget.onSubmitShortcut?.call(),
+        const SingleActivator(LogicalKeyboardKey.enter, control: true): () =>
+            widget.onSubmitShortcut?.call(),
+        if (widget.onUploadImage != null) ...{
+          const SingleActivator(
+            LogicalKeyboardKey.keyV,
+            meta: true,
+            shift: true,
+          ): () =>
+              unawaited(_pasteImage()),
+        },
+      },
+      child: _isSplit
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: _sourceField()),
+                const SizedBox(width: 12),
+                Expanded(child: _previewPane(context, scrollable: true)),
+              ],
+            )
+          : _sourceField(),
+    );
+    return Stack(
+      children: [
+        // A filling editor needs the Stack sized by its child rather than the
+        // other way round, so the pane can expand into the page's height.
+        if (widget.expand) Positioned.fill(child: shortcuts) else shortcuts,
+        if (_uploading)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 6),
+                Text(t.editorUploading, style: theme.textTheme.labelSmall),
+              ],
+            ),
           ),
       ],
     );
@@ -358,6 +459,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
 class _EditorToolbar extends StatelessWidget {
   const _EditorToolbar({
     required this.preview,
+    required this.showPreviewToggle,
     required this.uploading,
     required this.canUpload,
     required this.onTogglePreview,
@@ -373,6 +475,9 @@ class _EditorToolbar extends StatelessWidget {
   });
 
   final bool preview;
+
+  /// Split mode renders both panes at once, so it has nothing to toggle.
+  final bool showPreviewToggle;
   final bool uploading;
   final bool canUpload;
   final VoidCallback onTogglePreview;
@@ -422,14 +527,15 @@ class _EditorToolbar extends StatelessWidget {
             ),
           ),
         ),
-        TextButton.icon(
-          icon: Icon(
-            preview ? Icons.edit_outlined : Icons.visibility_outlined,
-            size: 16,
+        if (showPreviewToggle)
+          TextButton.icon(
+            icon: Icon(
+              preview ? Icons.edit_outlined : Icons.visibility_outlined,
+              size: 16,
+            ),
+            onPressed: onTogglePreview,
+            label: Text(preview ? t.editorWrite : t.editorPreview),
           ),
-          onPressed: onTogglePreview,
-          label: Text(preview ? t.editorWrite : t.editorPreview),
-        ),
       ],
     );
   }

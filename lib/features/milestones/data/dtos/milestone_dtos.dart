@@ -16,6 +16,7 @@ class Milestone {
     this.description = '',
     this.startDate,
     this.endDate,
+    this.actualEndDate,
     this.businessReleaseDate,
     this.closedAt,
     this.etag,
@@ -30,6 +31,7 @@ class Milestone {
         description: (json['description'] as String?) ?? '',
         startDate: _date(json['start_date']),
         endDate: _date(json['end_date']),
+        actualEndDate: _date(json['actual_end_date']),
         businessReleaseDate: _date(json['business_release_date']),
         closed: (json['closed'] as bool?) ?? false,
         closedAt: _dt(json['closed_at']),
@@ -50,10 +52,29 @@ class Milestone {
 
   final DateTime? startDate;
 
-  /// Technical release date.
+  /// The planned technical release date.
   final DateTime? endDate;
 
-  /// Commercial ship date, always after [endDate].
+  /// When the milestone actually finished, once recorded. The gap against
+  /// [endDate] is the slip — or, when earlier, the time saved.
+  final DateTime? actualEndDate;
+
+  /// The technical end that really happened: the actual date when recorded,
+  /// otherwise the plan. Sorting and the gantt bar both key off this.
+  DateTime? get effectiveEndDate => actualEndDate ?? endDate;
+
+  /// Days late (positive) or early (negative), or null when the milestone has
+  /// no recorded actual end or nothing to compare it against.
+  int? get slipDays {
+    final planned = endDate;
+    final actual = actualEndDate;
+    if (planned == null || actual == null) return null;
+    final days = actual.difference(planned).inDays;
+    return days == 0 ? null : days;
+  }
+
+  /// Commercial ship date, always after whichever technical end really
+  /// happened — [actualEndDate] when set, otherwise [endDate].
   ///
   /// The API omits the field entirely for users without
   /// `milestone.business_release.view`, so `null` here means "unset **or** not
@@ -124,6 +145,7 @@ class UpdateMilestoneRequest {
     this.description,
     this.startDate = absent,
     this.endDate = absent,
+    this.actualEndDate = absent,
     this.businessReleaseDate = absent,
   });
 
@@ -134,6 +156,9 @@ class UpdateMilestoneRequest {
   final String? description;
   final Object? startDate;
   final Object? endDate;
+
+  /// When the milestone actually finished. `null` clears it.
+  final Object? actualEndDate;
   final Object? businessReleaseDate;
 
   Map<String, dynamic> toJson() => {
@@ -141,6 +166,7 @@ class UpdateMilestoneRequest {
     if (description != null) 'description': description,
     ..._dateField('start_date', startDate),
     ..._dateField('end_date', endDate),
+    ..._dateField('actual_end_date', actualEndDate),
     ..._dateField('business_release_date', businessReleaseDate),
   };
 

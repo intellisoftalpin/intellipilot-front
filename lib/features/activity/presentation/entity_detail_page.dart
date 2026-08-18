@@ -1025,35 +1025,53 @@ class _DescriptionEditor extends StatelessWidget {
         bytes: bytes,
       ),
       placeholder: t.descriptionPlaceholder,
-      displayBuilder: (_) => Stack(
+      displayBuilder: (context, beginEdit) => Stack(
         children: [
           Padding(
-            // Reserve the corner so text never runs under the copy button.
-            padding: const EdgeInsets.only(right: 32),
+            // Reserve the corner so text never runs under the buttons.
+            padding: const EdgeInsets.only(right: 72),
             child: MarkdownText(
               data.entity.description,
               mentions: data.mentionsByHandle,
+              // Not selectable here: the enclosing click-to-edit surface needs
+              // the taps. A SelectionArea claims them to place a caret, which
+              // is why clicking the text used to do nothing and only the
+              // margin around it opened the editor. Copy stays available
+              // through the button, and the editor selects freely.
+              selectable: false,
             ),
           ),
-          if (data.entity.description.trim().isNotEmpty)
-            Positioned(
-              top: 0,
-              right: 0,
-              child: IconButton(
-                icon: const Icon(Icons.copy_outlined, size: 16),
-                visualDensity: VisualDensity.compact,
-                tooltip: t.actionCopy,
-                onPressed: () async {
-                  final messenger = ScaffoldMessenger.of(context);
-                  await Clipboard.setData(
-                    ClipboardData(text: data.entity.description),
-                  );
-                  messenger.showSnackBar(
-                    SnackBar(content: Text(t.copiedToClipboard)),
-                  );
-                },
-              ),
+          Positioned(
+            top: 0,
+            right: 0,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (canEdit)
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: t.actionEdit,
+                    onPressed: beginEdit,
+                  ),
+                if (data.entity.description.trim().isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.copy_outlined, size: 16),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: t.actionCopy,
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      await Clipboard.setData(
+                        ClipboardData(text: data.entity.description),
+                      );
+                      messenger.showSnackBar(
+                        SnackBar(content: Text(t.copiedToClipboard)),
+                      );
+                    },
+                  ),
+              ],
             ),
+          ),
         ],
       ),
       onSave: (next) => _patchAndReport(
@@ -1210,6 +1228,17 @@ class _ActionBar extends StatelessWidget {
             projectId: projectId,
             data: data,
           ),
+        // Everything else the entity can do, in one place. Actions that also
+        // live further down the page are repeated here on purpose: the point
+        // of the menu is that nothing has to be hunted for.
+        _EntityActionsMenu(
+          data: data,
+          kind: kind,
+          entityId: entityId,
+          projectId: projectId,
+          onChanged: onChanged,
+          activityAnchor: activityAnchor,
+        ),
       ],
     );
   }
@@ -1417,6 +1446,21 @@ class _LeftColumn extends StatelessWidget {
             compact: compact,
           ),
         ),
+        if (kind == EntityKind.issue) ...[
+          gap,
+          _Panel(
+            compact: compact,
+            icon: Icons.widgets_outlined,
+            panelId: 'delivery',
+            title: t.panelComponentVersions,
+            child: _ComponentVersionsTable(
+              data: data,
+              entityId: entityId,
+              projectId: projectId,
+              onChanged: onChanged,
+            ),
+          ),
+        ],
         gap,
         _Panel(
           compact: compact,
@@ -1675,9 +1719,44 @@ class _Panel extends StatefulWidget {
   State<_Panel> createState() => _PanelState();
 }
 
+/// Lets the actions menu jump to a panel by its id.
+///
+/// A registry rather than GlobalKeys threaded down the tree: the same panel
+/// ids render in the full page, the slide-over sheet and the board side panel,
+/// and a GlobalKey shared between two live subtrees would throw. The last
+/// panel to mount wins, which is the one on screen.
+abstract final class _PanelAnchors {
+  static final Map<String, _PanelState> _live = {};
+
+  /// Expand the panel if it is folded, then scroll it into view. Returns false
+  /// when no such panel is mounted, so callers can fall back.
+  static bool reveal(String panelId) {
+    final panel = _live[panelId];
+    if (panel == null || !panel.mounted) return false;
+    panel.expand();
+    unawaited(
+      Scrollable.ensureVisible(
+        panel.context,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        alignment: 0.1,
+      ),
+    );
+    return true;
+  }
+}
+
 class _PanelState extends State<_Panel> {
   late bool _expanded = widget.initiallyExpanded;
   KeyValueStorage? _store;
+
+  /// Open a folded panel so a jump from the actions menu lands on content
+  /// rather than on a collapsed header.
+  void expand() {
+    if (_expanded || !mounted) return;
+    setState(() => _expanded = true);
+    unawaited(_store?.set<bool>(_storeKey, true));
+  }
 
   /// Compact (board panel) and roomy (full page / sheet) layouts keep separate
   /// preferences — folding Attachments away in a 420px panel shouldn't fold it
@@ -1689,11 +1768,21 @@ class _PanelState extends State<_Panel> {
   void initState() {
     super.initState();
     if (widget.panelId == null) return;
+    _PanelAnchors._live[widget.panelId!] = this;
     if (getIt.isRegistered<KeyValueStorage>(instanceName: HiveBoxes.ui)) {
       _store = getIt<KeyValueStorage>(instanceName: HiveBoxes.ui);
       final saved = _store?.get<bool>(_storeKey);
       if (saved != null) _expanded = saved;
     }
+  }
+
+  @override
+  void dispose() {
+    final id = widget.panelId;
+    if (id != null && identical(_PanelAnchors._live[id], this)) {
+      _PanelAnchors._live.remove(id);
+    }
+    super.dispose();
   }
 
   void _toggle() {
@@ -1851,6 +1940,12 @@ class _DetailsTable extends StatelessWidget {
     });
     // No "Type: Issue" row — the breadcrumb, the key and the whole route
     // already say which kind this is.
+    // Epic sits above the grid and spans it: an epic key plus subject is far
+    // too long for a half-width cell.
+    final leading = <Widget>[];
+    // Labels close the block on a full row for the same reason — there can be
+    // many of them and they wrap.
+    final trailing = <Widget>[];
     final rows = <Widget>[
       _statusRow(context, canEdit: canEdit),
     ];
@@ -1927,21 +2022,15 @@ class _DetailsTable extends StatelessWidget {
           ),
           if (issue.resolvedAt != null)
             _kvRow(context, t.detailFieldResolvedAt, issue.resolvedAt!),
-          _fixVersionRow(context, issue: issue, canEdit: canEdit),
-          _labelsRow(
-            context,
-            currentIds: issue.labels,
-            canEdit: canEdit,
-          ),
-          _componentsRow(
-            context,
-            currentIds: issue.components,
-            canEdit: canEdit,
-          ),
-          _epicRow(context, currentId: issue.epicId, canEdit: canEdit),
           _inheritedMilestoneRow(context, issue: issue),
           _parentRow(context, currentId: issue.parentId, canEdit: canEdit),
         ]);
+        leading.add(
+          _epicRow(context, currentId: issue.epicId, canEdit: canEdit),
+        );
+        trailing.add(
+          _labelsRow(context, currentIds: issue.labels, canEdit: canEdit),
+        );
       case _EpicRec():
         break;
     }
@@ -1952,10 +2041,20 @@ class _DetailsTable extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final splitCols = !compact && constraints.maxWidth >= 560;
+        Widget wrap(Widget grid) => Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final row in leading) _detailRowPad(row),
+            grid,
+            for (final row in trailing) _detailRowPad(row),
+          ],
+        );
         if (!splitCols || rows.length < 4) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [for (final row in rows) _detailRowPad(row)],
+          return wrap(
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [for (final row in rows) _detailRowPad(row)],
+            ),
           );
         }
         // Column-major halves keep each column readable top-to-bottom, rather
@@ -1963,27 +2062,29 @@ class _DetailsTable extends StatelessWidget {
         final half = (rows.length + 1) ~/ 2;
         return _KvLabelWidth(
           width: 110,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final row in rows.take(half)) _detailRowPad(row),
-                  ],
+          child: wrap(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final row in rows.take(half)) _detailRowPad(row),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final row in rows.skip(half)) _detailRowPad(row),
-                  ],
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final row in rows.skip(half)) _detailRowPad(row),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -2279,70 +2380,6 @@ class _DetailsTable extends StatelessWidget {
     );
   }
 
-  /// Fallback label when the structured fix version isn't resolvable (not
-  /// yet loaded, or cleared) — falls back to the free-text fix version.
-  String _fixVersionLabel(Issue issue) {
-    if (issue.releaseText != null && issue.releaseText!.isNotEmpty) {
-      return issue.releaseText!;
-    }
-    return '—';
-  }
-
-  Widget _fixVersionRow(
-    BuildContext context, {
-    required Issue issue,
-    required bool canEdit,
-  }) {
-    final currentId = issue.releaseVersionId;
-    final current = currentId == null
-        ? null
-        : data.releaseVersionsById[currentId];
-    final displayText = current?.version ?? _fixVersionLabel(issue);
-    if (issue.components.isEmpty) {
-      return _kvRowWith(
-        context,
-        'Fix version',
-        Tooltip(
-          message: 'Add a component first to select a release version',
-          child: Opacity(
-            opacity: 0.6,
-            child: _tintedValue(
-              displayText,
-              '—',
-              current?.releaseColor,
-              null,
-              Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-        ),
-      );
-    }
-    return _kvRowWith(
-      context,
-      'Fix version',
-      _ClickToEditCell(
-        displayText: displayText,
-        candidates: [
-          for (final v in data.releaseVersionCandidates)
-            _Candidate(
-              id: v.id,
-              label: v.version,
-              colorHex: v.releaseColor,
-              group: v.releaseName,
-            ),
-        ],
-        currentId: currentId,
-        noneLabel: '—',
-        canEdit: canEdit,
-        colorHex: current?.releaseColor,
-        onPicked: (id) => _patchEntity(
-          _reporterOf(context),
-          issuePatch: () => UpdateIssueRequest(releaseVersionId: id),
-        ),
-      ),
-    );
-  }
-
   Widget _labelsRow(
     BuildContext context, {
     required List<String> currentIds,
@@ -2367,34 +2404,6 @@ class _DetailsTable extends StatelessWidget {
         onSaved: (next) => _patchEntity(
           _reporterOf(context),
           issuePatch: () => UpdateIssueRequest(labels: next),
-        ),
-      ),
-    );
-  }
-
-  Widget _componentsRow(
-    BuildContext context, {
-    required List<String> currentIds,
-    required bool canEdit,
-  }) {
-    final t = AppLocalizations.of(context);
-    final all = data.componentsById.values.toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
-    return _kvRowWith(
-      context,
-      t.detailFieldComponents,
-      _MultiSelectCell(
-        displayText: _componentList(currentIds, data.componentsById),
-        candidates: [
-          for (final c in all) _MultiCandidate(id: c.id, label: c.name),
-        ],
-        selectedIds: currentIds,
-        title: t.detailFieldComponents,
-        emptyLabel: '—',
-        canEdit: canEdit,
-        onSaved: (next) => _patchEntity(
-          _reporterOf(context),
-          issuePatch: () => UpdateIssueRequest(components: next),
         ),
       ),
     );
@@ -2451,8 +2460,6 @@ class _DetailsTable extends StatelessWidget {
 
   String _labelList(List<String> ids, Map<String, Label> by) =>
       ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
-  String _componentList(List<String> ids, Map<String, Component> by) =>
-      ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
   String _customerList(List<String> ids, Map<String, Customer> by) =>
       ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
 
@@ -2496,7 +2503,6 @@ class _Candidate {
     this.sizeItem,
     this.icon,
     this.pinned = false,
-    this.group,
   });
   final String id;
 
@@ -2519,11 +2525,6 @@ class _Candidate {
   /// Pinned candidates render at the very top of the picker, above the
   /// search results, separated by a divider. Use for shortcuts.
   final bool pinned;
-
-  /// Optional group name (e.g. a release) — consecutive candidates sharing
-  /// the same group render under one non-selectable header row instead of
-  /// repeating the group name on every candidate.
-  final String? group;
 }
 
 /// Sentinel value popped from the searchable picker when the user
@@ -2879,9 +2880,7 @@ class _SearchablePickerBodyState extends State<_SearchablePickerBody> {
   List<_PickerRow> _rows() {
     final q = _searchCtrl.text.trim().toLowerCase();
     bool matches(_Candidate c) =>
-        q.isEmpty ||
-        c.label.toLowerCase().contains(q) ||
-        (c.group?.toLowerCase().contains(q) ?? false);
+        q.isEmpty || c.label.toLowerCase().contains(q);
     final pinned = widget.candidates.where((c) => c.pinned && matches(c));
     final regular = widget.candidates.where((c) => !c.pinned && matches(c));
     final out = <_PickerRow>[
@@ -2889,15 +2888,7 @@ class _SearchablePickerBodyState extends State<_SearchablePickerBody> {
       if (pinned.isNotEmpty) const _PickerRow.divider(),
       const _PickerRow.none(),
     ];
-    // Consecutive candidates sharing a group get one header row instead of
-    // repeating the group name on every candidate (e.g. release versions
-    // grouped under their release name).
-    String? lastGroup;
     for (final c in regular) {
-      if (c.group != null && c.group != lastGroup) {
-        out.add(_PickerRow.header(c.group!));
-      }
-      lastGroup = c.group;
       out.add(_PickerRow.candidate(c));
     }
     return out;
@@ -3003,19 +2994,6 @@ class _SearchablePickerBodyState extends State<_SearchablePickerBody> {
                         final row = rows[i];
                         if (row.isDivider) {
                           return const Divider(height: 8, thickness: 1);
-                        }
-                        if (row.isHeader) {
-                          return Padding(
-                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
-                            child: Text(
-                              row.headerLabel!,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          );
                         }
                         final selected = i == _highlight;
                         final isCurrent = row.candidate?.id == widget.currentId;
@@ -3154,35 +3132,19 @@ class _NoMatchesBody extends StatelessWidget {
 }
 
 class _PickerRow {
-  const _PickerRow.none()
-    : isNone = true,
-      isDivider = false,
-      isHeader = false,
-      candidate = null,
-      headerLabel = null;
+  const _PickerRow.none() : isNone = true, isDivider = false, candidate = null;
   const _PickerRow.candidate(_Candidate this.candidate)
     : isNone = false,
-      isDivider = false,
-      isHeader = false,
-      headerLabel = null;
+      isDivider = false;
   const _PickerRow.divider()
     : isNone = false,
       isDivider = true,
-      isHeader = false,
-      candidate = null,
-      headerLabel = null;
-  const _PickerRow.header(String this.headerLabel)
-    : isNone = false,
-      isDivider = false,
-      isHeader = true,
       candidate = null;
   final bool isNone;
   final bool isDivider;
-  final bool isHeader;
   final _Candidate? candidate;
-  final String? headerLabel;
 
-  bool get isSelectable => !isDivider && !isHeader;
+  bool get isSelectable => !isDivider;
 }
 
 class _MoveDownIntent extends Intent {
@@ -4708,7 +4670,12 @@ class _InlineTextEditor extends StatefulWidget {
   final bool canEdit;
   final Future<bool> Function(String value) onSave;
   final String? placeholder;
-  final Widget Function(BuildContext)? displayBuilder;
+
+  /// Builds the read-only view. Receives a callback that switches the field
+  /// into edit mode, so the display can offer its own edit affordance
+  /// alongside whatever else it renders.
+  final Widget Function(BuildContext context, VoidCallback beginEdit)?
+  displayBuilder;
   final TextStyle? displayStyle;
   final bool multiline;
 
@@ -4726,6 +4693,11 @@ class _InlineTextEditor extends StatefulWidget {
 class _InlineTextEditorState extends State<_InlineTextEditor> {
   late TextEditingController _ctrl;
   bool _editing = false;
+
+  void _beginEdit() {
+    if (widget.canEdit && !_editing) setState(() => _editing = true);
+  }
+
   bool _saving = false;
 
   @override
@@ -4844,7 +4816,7 @@ class _InlineTextEditorState extends State<_InlineTextEditor> {
     }
     final hasValue = widget.value.isNotEmpty;
     final display = hasValue
-        ? (widget.displayBuilder?.call(context) ??
+        ? (widget.displayBuilder?.call(context, _beginEdit) ??
               Text(widget.value, style: widget.displayStyle))
         : Text(
             widget.placeholder ?? '—',
@@ -5074,4 +5046,619 @@ class _WatchersPanelState extends State<_WatchersPanel> {
       },
     );
   }
+}
+
+/// The "Components & versions" panel.
+///
+/// A change can ship in a different version of each component it touches, so
+/// the version belongs to the (issue, component) pair rather than to the issue
+/// as a whole. The block therefore pairs the component picker with one version
+/// dropdown per chosen component.
+///
+/// Each dropdown offers only versions of releases that component actually
+/// ships in, which is what makes the choice meaningful — and why the
+/// candidates are fetched per component rather than once for the union.
+class _ComponentVersionsTable extends StatefulWidget {
+  const _ComponentVersionsTable({
+    required this.data,
+    required this.entityId,
+    required this.projectId,
+    required this.onChanged,
+  });
+
+  final _PageData data;
+  final String entityId;
+  final String projectId;
+  final VoidCallback onChanged;
+
+  @override
+  State<_ComponentVersionsTable> createState() =>
+      _ComponentVersionsTableState();
+}
+
+class _ComponentVersionsTableState extends State<_ComponentVersionsTable> {
+  /// Candidate versions per component id, populated on demand and kept for
+  /// the life of the panel — the links behind them rarely change while a
+  /// single issue is open.
+  final Map<String, List<ReleaseVersionRef>> _candidates = {};
+  final Set<String> _loading = {};
+  bool _saving = false;
+
+  Issue? get _issue {
+    final e = widget.data.entity;
+    return e is _IssueRec ? e.issue : null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _ensureCandidates();
+  }
+
+  @override
+  void didUpdateWidget(_ComponentVersionsTable old) {
+    super.didUpdateWidget(old);
+    _ensureCandidates();
+  }
+
+  void _ensureCandidates() {
+    for (final id in _issue?.components ?? const <String>[]) {
+      if (_candidates.containsKey(id) || _loading.contains(id)) continue;
+      _loading.add(id);
+      unawaited(_fetch(id));
+    }
+  }
+
+  Future<void> _fetch(String componentId) async {
+    final res = await getIt<CatalogRepository>().versionsForComponents(
+      widget.projectId,
+      [componentId],
+    );
+    if (!mounted) return;
+    setState(() {
+      _loading.remove(componentId);
+      _candidates[componentId] = res.valueOrNull ?? const [];
+    });
+  }
+
+  Future<void> _save(
+    List<ComponentVersion> next, {
+    List<String>? components,
+  }) async {
+    final issue = _issue;
+    if (issue == null || _saving) return;
+    setState(() => _saving = true);
+    final res = await getIt<BacklogRepository>().updateIssue(
+      widget.projectId,
+      widget.entityId,
+      body: UpdateIssueRequest(
+        components: components,
+        componentVersions: next,
+      ),
+      etag: issue.etag ?? '',
+    );
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (res.isOk) {
+      widget.onChanged();
+      return;
+    }
+    final t = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(res.failureOrNull?.serverMessage ?? t.errUnknown),
+      ),
+    );
+  }
+
+  /// Replace the component set, dropping any version whose component went
+  /// away so the request never contradicts itself.
+  Future<void> _setComponents(List<String> next) async {
+    final issue = _issue;
+    if (issue == null) return;
+    final kept = [
+      for (final cv in issue.componentVersions)
+        if (next.contains(cv.componentId)) cv,
+    ];
+    await _save(kept, components: next);
+  }
+
+  Future<void> _setVersion(String componentId, String? versionId) async {
+    final issue = _issue;
+    if (issue == null) return;
+    final next = [
+      for (final cv in issue.componentVersions)
+        if (cv.componentId != componentId) cv,
+      if (versionId != null)
+        ComponentVersion(
+          componentId: componentId,
+          releaseVersionId: versionId,
+        ),
+    ];
+    await _save(next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final issue = _issue;
+    if (issue == null) return const SizedBox.shrink();
+
+    final canEdit = context.select<ProjectDetailCubit, bool>((c) {
+      final s = c.state;
+      return s is ProjectDetailLoaded && s.has(Permission.issueModify);
+    });
+    final all = widget.data.componentsById.values.toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+    final chosen =
+        issue.components
+            .map((id) => widget.data.componentsById[id])
+            .whereType<Component>()
+            .toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _kvRowWith(
+          context,
+          t.detailFieldComponents,
+          _MultiSelectCell(
+            displayText: componentListLabel(
+              issue.components,
+              widget.data.componentsById,
+            ),
+            candidates: [
+              for (final c in all) _MultiCandidate(id: c.id, label: c.name),
+            ],
+            selectedIds: issue.components,
+            title: t.detailFieldComponents,
+            emptyLabel: '—',
+            canEdit: canEdit && !_saving,
+            onSaved: (next) async {
+              await _setComponents(next);
+              return true;
+            },
+          ),
+        ),
+        if (chosen.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              t.detailNoComponentsYet,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+          )
+        else ...[
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          for (final c in chosen)
+            _ComponentVersionRow(
+              component: c,
+              versionId: issue.versionFor(c.id),
+              candidates: _candidates[c.id],
+              loading: _loading.contains(c.id),
+              canEdit: canEdit && !_saving,
+              onPicked: (v) => unawaited(_setVersion(c.id, v)),
+            ),
+        ],
+      ],
+    );
+  }
+}
+
+/// One row of the versions table: the component on the left, the version it
+/// ships the fix in on the right.
+class _ComponentVersionRow extends StatelessWidget {
+  const _ComponentVersionRow({
+    required this.component,
+    required this.versionId,
+    required this.candidates,
+    required this.loading,
+    required this.canEdit,
+    required this.onPicked,
+  });
+
+  final Component component;
+  final String? versionId;
+
+  /// Null until the component's candidate versions have been fetched.
+  final List<ReleaseVersionRef>? candidates;
+  final bool loading;
+  final bool canEdit;
+  final void Function(String? versionId) onPicked;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final options = candidates ?? const <ReleaseVersionRef>[];
+    // A component nobody linked a release to has nothing to offer, which is a
+    // configuration gap rather than an error — say which one it is.
+    final unlinked = !loading && candidates != null && options.isEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                _ComponentDot(hex: component.color),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    component.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 200,
+            child: loading
+                ? const Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : unlinked
+                ? Tooltip(
+                    message: t.detailComponentNoReleaseHint,
+                    child: Text(
+                      t.detailComponentNoRelease,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                  )
+                : DropdownButtonFormField<String?>(
+                    initialValue: options.any((o) => o.id == versionId)
+                        ? versionId
+                        : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 8,
+                      ),
+                    ),
+                    items: [
+                      DropdownMenuItem<String?>(child: Text(t.statusValueNone)),
+                      for (final v in options)
+                        DropdownMenuItem<String?>(
+                          value: v.id,
+                          child: Text('${v.releaseName} · ${v.version}'),
+                        ),
+                    ],
+                    onChanged: canEdit ? onPicked : null,
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Comma-joined component names, or an em dash when there are none.
+String componentListLabel(List<String> ids, Map<String, Component> by) =>
+    ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
+
+/// A small tinted dot identifying a component in the versions table.
+class _ComponentDot extends StatelessWidget {
+  const _ComponentDot({required this.hex});
+  final String hex;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final parsed = _parseHexColor(hex);
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: parsed ?? theme.colorScheme.outlineVariant,
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+}
+
+/// `#rrggbb` to a [Color]; null when unset or malformed.
+Color? _parseHexColor(String hex) {
+  final raw = hex.replaceFirst('#', '').trim();
+  if (raw.length != 6) return null;
+  final value = int.tryParse(raw, radix: 16);
+  return value == null ? null : Color(0xFF000000 | value);
+}
+
+/// Everything an issue or epic can have done to it, in one menu.
+///
+/// Some of these also exist elsewhere on the page — the copy-link icon, the
+/// comment button, the panels further down. They are repeated here
+/// deliberately: the menu is the one place that answers "what can I do with
+/// this?", and splitting the answer across the page is what made deleting an
+/// issue impossible to find.
+class _EntityActionsMenu extends StatelessWidget {
+  const _EntityActionsMenu({
+    required this.data,
+    required this.kind,
+    required this.entityId,
+    required this.projectId,
+    required this.onChanged,
+    required this.activityAnchor,
+  });
+
+  final _PageData data;
+  final EntityKind kind;
+  final String entityId;
+  final String projectId;
+  final VoidCallback onChanged;
+  final GlobalKey activityAnchor;
+
+  bool get _isIssue => kind == EntityKind.issue;
+  Issue? get _issue {
+    final e = data.entity;
+    return e is _IssueRec ? e.issue : null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final perms = context.select<ProjectDetailCubit, (bool, bool, bool)>((c) {
+      final s = c.state;
+      if (s is! ProjectDetailLoaded) return (false, false, false);
+      return (
+        s.has(_modifyPermissionFor(kind)),
+        s.has(_isIssue ? Permission.issueDelete : Permission.epicDelete),
+        s.has(Permission.issueCreate),
+      );
+    });
+    final (canEdit, canDelete, canCreate) = perms;
+
+    return MenuAnchor(
+      menuChildren: [
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.chat_bubble_outline, size: 18),
+          onPressed: () => _scrollTo(activityAnchor),
+          child: Text(t.entityActionComment),
+        ),
+        if (_isIssue)
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.schedule_outlined, size: 18),
+            onPressed: () => _PanelAnchors.reveal('log_time'),
+            child: Text(t.ttLogTime),
+          ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.attach_file_outlined, size: 18),
+          onPressed: () => _PanelAnchors.reveal('attachments'),
+          child: Text(t.panelAttachments),
+        ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.link_outlined, size: 18),
+          onPressed: () => _PanelAnchors.reveal('links'),
+          child: Text(t.panelLinks),
+        ),
+        const Divider(height: 8),
+        if (_isIssue && canEdit)
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.drive_file_move_outlined, size: 18),
+            onPressed: () => unawaited(_moveToEpic(context)),
+            child: Text(t.entityActionMoveToEpic),
+          ),
+        if (_isIssue && canCreate)
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.copy_all_outlined, size: 18),
+            onPressed: () => unawaited(_clone(context)),
+            child: Text(t.entityActionClone),
+          ),
+        MenuItemButton(
+          leadingIcon: const Icon(Icons.link, size: 18),
+          onPressed: () => unawaited(_copyLink(context)),
+          child: Text(t.copyLink),
+        ),
+        if (canDelete) ...[
+          const Divider(height: 8),
+          MenuItemButton(
+            leadingIcon: Icon(
+              Icons.delete_outline,
+              size: 18,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => unawaited(_delete(context)),
+            child: Text(
+              t.actionDelete,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ],
+      builder: (context, controller, _) => FilledButton.tonalIcon(
+        icon: const Icon(Icons.more_horiz, size: 18),
+        onPressed: () =>
+            controller.isOpen ? controller.close() : controller.open(),
+        label: Text(t.entityActionsMenu),
+      ),
+    );
+  }
+
+  void _scrollTo(GlobalKey key) {
+    final target = key.currentContext;
+    if (target == null) return;
+    unawaited(
+      Scrollable.ensureVisible(
+        target,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        alignment: 0.1,
+      ),
+    );
+  }
+
+  Future<void> _copyLink(BuildContext context) async {
+    final t = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final origin = kIsWeb ? Uri.base.origin : getIt<ApiConfig>().baseUrl;
+    final pfx = data.project.issuePrefix;
+    final key = kind == EntityKind.epic
+        ? epicKeyLabel(pfx, data.entity.reference)
+        : issueKeyLabel(pfx, data.entity.reference);
+    final route = Routes.entityByKeyFor(
+      projectId: projectId,
+      issuePrefix: pfx,
+      kind: kind,
+      key: key,
+    );
+    await Clipboard.setData(ClipboardData(text: '$origin$route'));
+    messenger.showSnackBar(SnackBar(content: Text(t.copiedToClipboard)));
+  }
+
+  /// Re-point the issue at a different epic. The milestone follows the epic by
+  /// database trigger, so this is the only move an issue needs.
+  Future<void> _moveToEpic(BuildContext context) async {
+    final t = AppLocalizations.of(context);
+    final issue = _issue;
+    if (issue == null) return;
+    final pfx = data.project.issuePrefix;
+    final epics = data.epicsById.values.toList()
+      ..sort((a, b) => a.reference.compareTo(b.reference));
+
+    final picked = await showDialog<_EpicChoice>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(t.entityActionMoveToEpic),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(ctx).pop(const _EpicChoice(null)),
+            child: Text(t.backlogNoEpic),
+          ),
+          for (final e in epics)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(ctx).pop(_EpicChoice(e.id)),
+              child: Text(
+                '${epicKeyLabel(pfx, e.reference)} · ${e.subject}',
+              ),
+            ),
+        ],
+      ),
+    );
+    if (picked == null || !context.mounted) return;
+    await _patchAndReport(
+      _reporterOf(context),
+      kind: kind,
+      projectId: projectId,
+      entityId: entityId,
+      etag: issue.etag,
+      onChanged: onChanged,
+      epicPatch: () => const UpdateEpicRequest(),
+      issuePatch: () => UpdateIssueRequest(epicId: picked.id),
+    );
+  }
+
+  /// Copy the issue into a new one. Done client-side from the loaded entity —
+  /// there is no clone endpoint, and everything a clone needs is already here.
+  /// Deliberately NOT copied: status, resolution and time logs, which belong
+  /// to the original's history rather than to a fresh piece of work.
+  Future<void> _clone(BuildContext context) async {
+    final t = AppLocalizations.of(context);
+    final issue = _issue;
+    if (issue == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    final res = await getIt<BacklogRepository>().createIssue(
+      projectId,
+      CreateIssueRequest(
+        subject: t.entityCloneSubject(issue.subject),
+        description: issue.description,
+        typeId: issue.typeId,
+        priorityId: issue.priorityId,
+        sizeId: issue.sizeId,
+        epicId: issue.epicId,
+        parentId: issue.parentId,
+        assignedTo: issue.assignedTo,
+        category: issue.category,
+        customerIds: issue.customerIds,
+        startDate: issue.startDate,
+        dueDate: issue.dueDate,
+        labels: issue.labels,
+        components: issue.components,
+        componentVersions: issue.componentVersions,
+      ),
+    );
+    final created = res.valueOrNull;
+    if (created == null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(res.failureOrNull?.serverMessage ?? t.errUnknown),
+        ),
+      );
+      return;
+    }
+    messenger.showSnackBar(SnackBar(content: Text(t.entityCloneCreated)));
+    router.go(
+      Routes.entityDetailFor(projectId, EntityKind.issue, created.id),
+    );
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final t = AppLocalizations.of(context);
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final subject = data.entity.subject;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.entityDeleteTitle),
+        content: Text(t.entityDeleteConfirm(subject)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(t.actionCancel),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(t.actionDelete),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final backlog = getIt<BacklogRepository>();
+    // Re-read for a current ETag: the page may have been open a while.
+    final etag = kind == EntityKind.issue
+        ? (await backlog.getIssue(projectId, entityId)).valueOrNull?.etag
+        : (await backlog.getEpic(projectId, entityId)).valueOrNull?.etag;
+    if (etag == null) return;
+    final res = kind == EntityKind.issue
+        ? await backlog.deleteIssue(projectId, entityId, etag: etag)
+        : await backlog.deleteEpic(projectId, entityId, etag: etag);
+    if (!res.isOk) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(res.failureOrNull?.serverMessage ?? t.errUnknown),
+        ),
+      );
+      return;
+    }
+    unawaited(navigator.maybePop());
+  }
+}
+
+/// Wrapper so "no epic" is distinguishable from "cancelled" in the dialog's
+/// result, which a bare `String?` could not express.
+class _EpicChoice {
+  const _EpicChoice(this.id);
+  final String? id;
 }

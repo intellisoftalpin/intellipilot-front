@@ -66,7 +66,7 @@ class _OverviewView extends StatelessWidget {
       appBar: AppBar(
         title: ProjectSectionBreadcrumb(
           projectId: projectId,
-          currentLabel: t.wikiTitle,
+          currentLabel: t.railWiki,
           sectionRoute: Routes.projectWikiFor(projectId),
         ),
       ),

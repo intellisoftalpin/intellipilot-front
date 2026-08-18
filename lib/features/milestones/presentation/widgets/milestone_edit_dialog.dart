@@ -37,7 +37,7 @@ Future<CreateMilestoneRequest?> showMilestoneEditDialog(
                 ),
                 const SizedBox(height: 8),
                 _DateField(
-                  label: t.milestoneFieldEnd,
+                  label: t.milestoneFieldEndPlanned,
                   value: end,
                   onChanged: (v) => setState(() => end = v),
                 ),

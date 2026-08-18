@@ -2304,7 +2304,7 @@
   "@railMilestones": {
     "description": "Project-scoped left rail label."
   },
-  "railWiki": "Wiki",
+  "railWiki": "Documentation",
   "@railWiki": {
     "description": "Project-scoped left rail label."
   },
@@ -4296,5 +4296,50 @@
   "docsHidden": "Hidden",
   "docsHide": "Hide from navigation",
   "docsShow": "Show again",
-  "docsHiddenHelp": "Withdrawn from the Wiki menu. The configuration is kept and comes back when you show it again."
+  "docsHiddenHelp": "Withdrawn from the Wiki menu. The configuration is kept and comes back when you show it again.",
+  "docsGenerateNow": "Generate",
+  "docsDeployKeyRegisterHint": "Add this public key to the repository's deploy keys (read access is enough), then check the connection below.",
+  "docsCheckConnection": "Check connection",
+  "docsCheckRequired": "Check the connection before adding, so the key is known to work.",
+  "docsCheckOk": "Connected · {count} branches found",
+  "@docsCheckOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "docsCheckFailed": "Could not reach the repository with this key",
+  "milestoneFieldEndPlanned": "Planned end date",
+  "milestoneFieldEndActual": "Actual end date",
+  "milestoneActualEndHint": "When it really finished. Filled in from the plan when you mark the milestone completed.",
+  "milestonePlannedShort": "Planned",
+  "milestoneActualShort": "Actual",
+  "milestoneSlipLate": "Finished late",
+  "milestoneSlipEarly": "Finished early",
+  "panelComponentVersions": "Components & versions",
+  "detailNoComponentsYet": "Add a component to record the version it ships the fix in.",
+  "detailComponentNoRelease": "No release linked",
+  "detailComponentNoReleaseHint": "Link a release to this component in project settings to choose a version.",
+  "entityActionsMenu": "Actions",
+  "entityActionMoveToEpic": "Move to epic",
+  "entityActionClone": "Clone",
+  "entityCloneSubject": "{subject} (copy)",
+  "@entityCloneSubject": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  },
+  "entityCloneCreated": "Copy created",
+  "entityDeleteTitle": "Delete this item?",
+  "entityDeleteConfirm": "“{subject}” will be removed. Comments, attachments and links go with it.",
+  "@entityDeleteConfirm": {
+    "placeholders": {
+      "subject": {
+        "type": "String"
+      }
+    }
+  }
 }

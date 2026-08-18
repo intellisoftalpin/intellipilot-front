@@ -162,4 +162,74 @@ void main() {
       });
     });
   });
+
+  group('per-component fix versions', () {
+    test('parses the pairs and resolves one component at a time', () {
+      final issue = Issue.fromJson({
+        'id': 'i1',
+        'project_id': 'p1',
+        'ref': 7,
+        'subject': 'Ships twice',
+        'order': 1.0,
+        'version': 1,
+        'created_at': '2026-08-01T00:00:00Z',
+        'modified_at': '2026-08-01T00:00:00Z',
+        'components': ['c-auth', 'c-web'],
+        'release_version_id': 'v-1',
+        'component_versions': [
+          {'component_id': 'c-auth', 'release_version_id': 'v-1'},
+          {'component_id': 'c-web', 'release_version_id': 'v-2'},
+        ],
+      });
+      expect(issue.componentVersions, hasLength(2));
+      expect(issue.versionFor('c-auth'), 'v-1');
+      expect(issue.versionFor('c-web'), 'v-2');
+      // A component with no version chosen yet is simply absent.
+      expect(issue.versionFor('c-none'), isNull);
+      // The single field is the server's mirror, kept for the list filter.
+      expect(issue.releaseVersionId, 'v-1');
+    });
+
+    test('an issue without the field reads as having no versions', () {
+      final issue = Issue.fromJson({
+        'id': 'i2',
+        'project_id': 'p1',
+        'ref': 8,
+        'subject': 'Older payload',
+        'order': 1.0,
+        'version': 1,
+        'created_at': '2026-08-01T00:00:00Z',
+        'modified_at': '2026-08-01T00:00:00Z',
+      });
+      expect(issue.componentVersions, isEmpty);
+      expect(issue.versionFor('c-auth'), isNull);
+    });
+
+    test('an update sends the pairs, and an empty list clears them', () {
+      expect(
+        const UpdateIssueRequest(
+          componentVersions: [
+            ComponentVersion(componentId: 'c1', releaseVersionId: 'v1'),
+          ],
+        ).toJson(),
+        {
+          'component_versions': [
+            {'component_id': 'c1', 'release_version_id': 'v1'},
+          ],
+        },
+      );
+      // Present-but-empty means "remove them all", which is different from…
+      expect(
+        const UpdateIssueRequest(componentVersions: []).toJson(),
+        {'component_versions': <Map<String, dynamic>>[]},
+      );
+      // …absent, which leaves whatever is stored alone.
+      expect(const UpdateIssueRequest(subject: 'x').toJson(), {'subject': 'x'});
+    });
+
+    test('creating without versions omits the field entirely', () {
+      final body = const CreateIssueRequest(subject: 'plain').toJson();
+      expect(body.containsKey('component_versions'), isFalse);
+    });
+  });
 }

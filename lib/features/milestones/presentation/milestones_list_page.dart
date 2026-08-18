@@ -95,17 +95,63 @@ class MilestonesListPage extends StatelessWidget {
 // remembered view + zoom
 // ---------------------------------------------------------------------------
 
-/// Timeline scales, coarsest last. The pixel budget per day is what actually
-/// drives the drawing; the label is what the user picks.
-enum GanttZoom {
-  days(18),
-  weeks(6),
-  months(2.2),
-  quarters(0.9);
+/// Colours the timeline uses for the segments that are not the bar itself.
+/// Fixed hues rather than theme roles: they carry meaning (commercial /
+/// overrun / saved) that must not shift with the seed colour, and each is
+/// legible on both light and dark surfaces.
+abstract final class MilestonePalette {
+  /// The commercial release tail. Blue — it is a shipping date, not a
+  /// problem, and the previous grey read as disabled.
+  static const business = Color(0xFF2F6FED);
 
-  const GanttZoom(this.pxPerDay);
-  final double pxPerDay;
+  /// Time lost: the stretch between the planned end and a later actual end.
+  static const overrun = Color(0xFFE8833A);
+
+  /// Time saved: the stretch between an earlier actual end and the plan.
+  static const saved = Color(0xFF2E9E5B);
 }
+
+/// The timeline scale, in pixels per day.
+///
+/// Continuous rather than four fixed stops: the old enum jumped from 18 px/day
+/// to 6 to 2.2, so a single click of + or − changed the chart by 3x and there
+/// was nothing in between. Each click now multiplies by [step], which is a
+/// small enough ratio to feel like zooming and keeps every intermediate scale
+/// reachable.
+abstract final class GanttZoom {
+  /// A whole year fits comfortably at the far end.
+  static const double min = 0.3;
+
+  /// Individual days are clearly separated at the near end.
+  static const double max = 26;
+
+  /// One click. ~26% per step gives roughly 19 stops across the range.
+  static const double step = 1.26;
+
+  /// Opening scale: a few months in view.
+  static const double initial = 2.2;
+
+  static double zoomIn(double v) => (v * step).clamp(min, max);
+  static double zoomOut(double v) => (v / step).clamp(min, max);
+
+  // Tolerances keep the buttons from staying enabled at a bound that
+  // floating-point drift left a hair short of it.
+  static bool canZoomIn(double v) => v < max * 0.999;
+  static bool canZoomOut(double v) => v > min * 1.001;
+
+  /// Which of the four named scales this pixel budget reads as, for the label
+  /// between the buttons and for choosing tick spacing.
+  static GanttScale scaleOf(double pxPerDay) {
+    if (pxPerDay >= 10) return GanttScale.days;
+    if (pxPerDay >= 4) return GanttScale.weeks;
+    if (pxPerDay >= 1.4) return GanttScale.months;
+    return GanttScale.quarters;
+  }
+}
+
+/// The named scale a pixel budget falls into. Drives tick density and the
+/// label shown between the zoom buttons.
+enum GanttScale { days, weeks, months, quarters }
 
 /// Per-project, per-device view preferences. Kept local (Hive `ui` box, like
 /// the board's collapsed columns) so the page can render its remembered view
@@ -122,16 +168,16 @@ class _ViewPrefs {
   Future<void> setGantt({required bool value}) =>
       _storage.set<bool>(_viewKey, value);
 
-  GanttZoom get zoom {
-    final raw = _storage.get<int>(_zoomKey);
-    if (raw == null || raw < 0 || raw >= GanttZoom.values.length) {
-      return GanttZoom.months;
-    }
-    return GanttZoom.values[raw];
+  /// Stored as the scale itself rather than an index, so the remembered value
+  /// survives any future change to the range without silently meaning
+  /// something else.
+  double get zoom {
+    final raw = _storage.get<double>(_zoomKey);
+    if (raw == null || raw.isNaN) return GanttZoom.initial;
+    return raw.clamp(GanttZoom.min, GanttZoom.max);
   }
 
-  Future<void> setZoom(GanttZoom value) =>
-      _storage.set<int>(_zoomKey, value.index);
+  Future<void> setZoom(double value) => _storage.set<double>(_zoomKey, value);
 }
 
 class _MilestonesView extends StatefulWidget {
@@ -146,7 +192,7 @@ class _MilestonesView extends StatefulWidget {
 class _MilestonesViewState extends State<_MilestonesView> {
   late final _prefs = _ViewPrefs(widget.projectId);
   late bool _gantt = _prefs.gantt;
-  late GanttZoom _zoom = _prefs.zoom;
+  late double _zoom = _prefs.zoom;
 
   String get projectId => widget.projectId;
 
@@ -161,21 +207,27 @@ class _MilestonesViewState extends State<_MilestonesView> {
     }
   }
 
-  /// Open the sidebar, keeping the URL in step so the panel is shareable, and
-  /// refresh the page underneath only when something actually changed.
+  /// Open the sidebar and refresh the page underneath only when something
+  /// actually changed.
+  ///
+  /// Deliberately does **not** navigate to the detail URL on the way in. The
+  /// detail route builds its own `MilestonesListPage`, whose `initState` opens
+  /// a second sheet on top of this one — so every close revealed another copy
+  /// and the panel had to be dismissed twice. Deep links still work: they
+  /// arrive on the detail route, open the sheet once, and return to the list
+  /// URL on close.
   Future<void> _open(String milestoneId, {bool fromDeepLink = false}) async {
     final cubit = context.read<MilestonesListCubit>();
     final router = GoRouter.of(context);
-    if (!fromDeepLink) {
-      router.go(Routes.milestoneDetailFor(projectId, milestoneId));
-    }
     final result = await showMilestoneDetailSheet(
       context,
       projectId: projectId,
       milestoneId: milestoneId,
     );
     if (!mounted) return;
-    router.go(Routes.projectMilestonesFor(projectId));
+    if (fromDeepLink) {
+      router.go(Routes.projectMilestonesFor(projectId));
+    }
     if (result.deleted) {
       cubit.forget(milestoneId);
     } else if (result.changed) {
@@ -188,7 +240,7 @@ class _MilestonesViewState extends State<_MilestonesView> {
     await _prefs.setGantt(value: value);
   }
 
-  Future<void> _setZoom(GanttZoom value) async {
+  Future<void> _setZoom(double value) async {
     setState(() => _zoom = value);
     await _prefs.setZoom(value);
   }
@@ -207,9 +259,9 @@ class _MilestonesViewState extends State<_MilestonesView> {
             IconButton(
               icon: const Icon(Icons.zoom_out),
               tooltip: t.milestoneZoomOut,
-              onPressed: _zoom.index >= GanttZoom.values.length - 1
-                  ? null
-                  : () => _setZoom(GanttZoom.values[_zoom.index + 1]),
+              onPressed: GanttZoom.canZoomOut(_zoom)
+                  ? () => _setZoom(GanttZoom.zoomOut(_zoom))
+                  : null,
             ),
             Tooltip(
               message: t.milestoneZoomLabel,
@@ -221,9 +273,9 @@ class _MilestonesViewState extends State<_MilestonesView> {
             IconButton(
               icon: const Icon(Icons.zoom_in),
               tooltip: t.milestoneZoomIn,
-              onPressed: _zoom.index == 0
-                  ? null
-                  : () => _setZoom(GanttZoom.values[_zoom.index - 1]),
+              onPressed: GanttZoom.canZoomIn(_zoom)
+                  ? () => _setZoom(GanttZoom.zoomIn(_zoom))
+                  : null,
             ),
             const SizedBox(width: 8),
           ],
@@ -306,11 +358,18 @@ class _MilestonesViewState extends State<_MilestonesView> {
               detail is ProjectDetailLoaded &&
               detail.has(Permission.milestoneBusinessReleaseView);
           return _gantt
-              ? _MilestonesGantt(
-                  state: state,
-                  zoom: _zoom,
-                  showBusinessRelease: showBusiness,
-                  onOpen: _open,
+              // Animate between scales so a zoom reads as the timeline
+              // stretching rather than as the whole chart being replaced.
+              ? TweenAnimationBuilder<double>(
+                  tween: Tween<double>(end: _zoom),
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, scale, _) => _MilestonesGantt(
+                    state: state,
+                    zoom: scale,
+                    showBusinessRelease: showBusiness,
+                    onOpen: _open,
+                  ),
                 )
               : _MilestonesBoard(state: state, onOpen: _open);
         },
@@ -325,12 +384,13 @@ class _MilestonesViewState extends State<_MilestonesView> {
     await cubit.create(body);
   }
 
-  static String _zoomLabel(AppLocalizations t, GanttZoom z) => switch (z) {
-    GanttZoom.days => t.milestoneZoomDays,
-    GanttZoom.weeks => t.milestoneZoomWeeks,
-    GanttZoom.months => t.milestoneZoomMonths,
-    GanttZoom.quarters => t.milestoneZoomQuarters,
-  };
+  static String _zoomLabel(AppLocalizations t, double z) =>
+      switch (GanttZoom.scaleOf(z)) {
+        GanttScale.days => t.milestoneZoomDays,
+        GanttScale.weeks => t.milestoneZoomWeeks,
+        GanttScale.months => t.milestoneZoomMonths,
+        GanttScale.quarters => t.milestoneZoomQuarters,
+      };
 }
 
 // ---------------------------------------------------------------------------
@@ -543,7 +603,7 @@ bool isAtRisk(Milestone m) {
 // ---------------------------------------------------------------------------
 
 const double _kGanttLabelWidth = 260;
-const double _kGanttRowHeight = 48;
+const double _kGanttRowHeight = 60;
 const double _kGanttHeaderHeight = 36;
 const double _kGanttBarHeight = 20;
 
@@ -564,7 +624,7 @@ class _MilestonesGantt extends StatelessWidget {
   });
 
   final MilestonesListLoaded state;
-  final GanttZoom zoom;
+  final double zoom;
   final bool showBusinessRelease;
   final Future<void> Function(String milestoneId) onOpen;
 
@@ -599,16 +659,16 @@ class _MilestonesGantt extends StatelessWidget {
     max = max.add(const Duration(days: 7));
     final totalDays = max.difference(min).inDays.clamp(1, 3650);
 
-    final pxPerDay = zoom.pxPerDay;
+    final pxPerDay = zoom;
     final chartWidth = totalDays * pxPerDay;
     double x(DateTime d) => d.difference(min).inDays * pxPerDay;
 
     // Month ticks across the window; at the coarsest zooms label quarters only
     // so the header does not turn into a smear.
-    final everyNMonths = switch (zoom) {
-      GanttZoom.days || GanttZoom.weeks => 1,
-      GanttZoom.months => 1,
-      GanttZoom.quarters => 3,
+    final everyNMonths = switch (GanttZoom.scaleOf(zoom)) {
+      GanttScale.days || GanttScale.weeks => 1,
+      GanttScale.months => 1,
+      GanttScale.quarters => 3,
     };
     final months = <DateTime>[];
     var tick = DateTime(min.year, min.month);
@@ -729,6 +789,8 @@ class _MilestonesGantt extends StatelessWidget {
                           pxPerDay: pxPerDay,
                           estimatedLabel: t.milestonesDatesEstimated,
                           businessLabel: t.milestoneFieldBusinessRelease,
+                          lateLabel: t.milestoneSlipLate,
+                          earlyLabel: t.milestoneSlipEarly,
                         ),
                   ],
                 ),
@@ -750,6 +812,8 @@ class _MilestonesGantt extends StatelessWidget {
     required double pxPerDay,
     required String estimatedLabel,
     required String businessLabel,
+    required String lateLabel,
+    required String earlyLabel,
   }) {
     final theme = Theme.of(context);
     final completed = m.closed;
@@ -765,11 +829,13 @@ class _MilestonesGantt extends StatelessWidget {
 
     final widgets = <Widget>[];
 
-    // Business-release tail: from the technical end to the commercial date.
+    // Business-release tail: from the technical end that really happened to
+    // the commercial date.
     final business = m.businessReleaseDate;
-    if (showBusinessRelease && business != null && m.endDate != null) {
-      final tailLeft = x(m.endDate!) + pxPerDay;
-      final tailWidth = (business.difference(m.endDate!).inDays * pxPerDay)
+    final technicalEnd = m.effectiveEndDate;
+    if (showBusinessRelease && business != null && technicalEnd != null) {
+      final tailLeft = x(technicalEnd) + pxPerDay;
+      final tailWidth = (business.difference(technicalEnd).inDays * pxPerDay)
           .clamp(2.0, double.infinity);
       widgets.add(
         Positioned(
@@ -784,7 +850,7 @@ class _MilestonesGantt extends StatelessWidget {
                 width: tailWidth,
                 height: _kGanttBarHeight,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.tertiary.withValues(alpha: 0.55),
+                  color: MilestonePalette.business.withValues(alpha: 0.75),
                   borderRadius: const BorderRadius.horizontal(
                     right: Radius.circular(6),
                   ),
@@ -820,6 +886,46 @@ class _MilestonesGantt extends StatelessWidget {
         ),
       ),
     );
+
+    // The gap between plan and reality, drawn over the bar so it reads as part
+    // of it. Late slips run past the planned date in the overrun colour; early
+    // finishes run back from it in the saved colour, so the two are
+    // distinguishable at a glance rather than only by reading the dates.
+    final planned = m.endDate;
+    final actual = m.actualEndDate;
+    if (planned != null && actual != null && planned != actual) {
+      final late = actual.isAfter(planned);
+      final from = late ? planned : actual;
+      final to = late ? actual : planned;
+      final gapLeft = x(from) + pxPerDay;
+      final gapWidth = (to.difference(from).inDays * pxPerDay).clamp(
+        3.0,
+        double.infinity,
+      );
+      widgets.add(
+        Positioned(
+          left: gapLeft,
+          top: top,
+          child: Tooltip(
+            message: late
+                ? '$lateLabel: ${isoDate(planned)} → ${isoDate(actual)}'
+                : '$earlyLabel: ${isoDate(actual)} → ${isoDate(planned)}',
+            child: IgnorePointer(
+              child: Container(
+                width: gapWidth,
+                height: _kGanttBarHeight,
+                decoration: BoxDecoration(
+                  color:
+                      (late ? MilestonePalette.overrun : MilestonePalette.saved)
+                          .withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return widgets;
   }
 }
@@ -873,18 +979,74 @@ class _GanttLabel extends StatelessWidget {
             ProgressRing(value: progress, size: 28, completed: completed),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
-                milestone.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                softWrap: true,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: completed ? theme.colorScheme.onSurfaceVariant : null,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    milestone.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: true,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: completed
+                          ? theme.colorScheme.onSurfaceVariant
+                          : null,
+                    ),
+                  ),
+                  _RowDates(milestone: milestone),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The planned end date under each timeline row, plus the actual one once it
+/// is recorded — coloured by whether it slipped or came in early, so the row
+/// says the same thing as its bar without needing the chart to be read.
+class _RowDates extends StatelessWidget {
+  const _RowDates({required this.milestone});
+  final Milestone milestone;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final planned = milestone.endDate;
+    final actual = milestone.actualEndDate;
+    if (planned == null && actual == null) return const SizedBox.shrink();
+
+    final slip = milestone.slipDays;
+    final actualColour = slip == null
+        ? theme.colorScheme.onSurfaceVariant
+        : (slip > 0 ? MilestonePalette.overrun : MilestonePalette.saved);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Wrap(
+        spacing: 8,
+        children: [
+          if (planned != null)
+            Text(
+              '${t.milestonePlannedShort} ${isoDate(planned)}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.outline,
+              ),
+            ),
+          if (actual != null)
+            Text(
+              '${t.milestoneActualShort} ${isoDate(actual)}'
+              '${slip == null ? '' : ' (${slip > 0 ? '+' : ''}$slip)'}',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: actualColour,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+        ],
       ),
     );
   }

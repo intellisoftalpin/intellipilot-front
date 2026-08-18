@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
+import 'package:intellipilot/core/ui/markdown_editor.dart';
 import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
@@ -95,7 +96,7 @@ class _PageView extends StatelessWidget {
             appBar: AppBar(
               title: ProjectSectionBreadcrumb(
                 projectId: projectId,
-                currentLabel: t.wikiTitle,
+                currentLabel: t.railWiki,
                 sectionRoute: Routes.projectWikiFor(projectId),
                 extraCrumbs: [Crumb(label: t.wikiPageTitle)],
               ),
@@ -108,7 +109,7 @@ class _PageView extends StatelessWidget {
           appBar: AppBar(
             title: ProjectSectionBreadcrumb(
               projectId: projectId,
-              currentLabel: t.wikiTitle,
+              currentLabel: t.railWiki,
               sectionRoute: Routes.projectWikiFor(projectId),
               extraCrumbs: [Crumb(label: state.page.title)],
             ),
@@ -189,75 +190,74 @@ class _Reader extends StatelessWidget {
   }
 }
 
-class _Editor extends StatelessWidget {
+/// The wiki page editor: title, then a split markdown editor.
+///
+/// Stateful because it **owns** its text controllers. They used to be built
+/// inline in `build`, so every keystroke emitted new cubit state, rebuilt the
+/// widget, constructed a fresh controller and dropped the caret back to
+/// offset zero — the field was effectively unusable.
+class _Editor extends StatefulWidget {
   const _Editor({required this.state});
   final WikiPageLoaded state;
 
   @override
+  State<_Editor> createState() => _EditorState();
+}
+
+class _EditorState extends State<_Editor> {
+  late final TextEditingController _title;
+  late final TextEditingController _body;
+
+  @override
+  void initState() {
+    super.initState();
+    final s = widget.state;
+    _title = TextEditingController(text: s.draftTitle ?? s.page.title)
+      ..addListener(_pushTitle);
+    _body = TextEditingController(text: s.draftBody ?? s.page.body)
+      ..addListener(_pushBody);
+  }
+
+  @override
+  void dispose() {
+    _title
+      ..removeListener(_pushTitle)
+      ..dispose();
+    _body
+      ..removeListener(_pushBody)
+      ..dispose();
+    super.dispose();
+  }
+
+  /// The cubit holds the draft that gets saved; the controllers hold what the
+  /// user is typing. Pushing one way only — the controllers are never written
+  /// back from state — is what keeps the caret still.
+  void _pushTitle() => context.read<WikiPageCubit>().setDraftTitle(_title.text);
+  void _pushBody() => context.read<WikiPageCubit>().setDraftBody(_body.text);
+
+  @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1100),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: TextField(
-                controller: TextEditingController(
-                  text: state.draftTitle ?? state.page.title,
-                ),
-                decoration: InputDecoration(labelText: t.wikiFieldTitle),
-                onChanged: (v) =>
-                    context.read<WikiPageCubit>().setDraftTitle(v),
-              ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _title,
+            decoration: InputDecoration(labelText: t.wikiFieldTitle),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: MarkdownEditor(
+              controller: _body,
+              layout: MarkdownEditorLayout.split,
+              expand: true,
+              onSubmitShortcut: () =>
+                  unawaited(context.read<WikiPageCubit>().save()),
             ),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: TextField(
-                        controller: TextEditingController(
-                          text: state.draftBody ?? state.page.body,
-                        ),
-                        maxLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        keyboardType: TextInputType.multiline,
-                        decoration: InputDecoration(
-                          labelText: t.wikiFieldBody,
-                          border: const OutlineInputBorder(),
-                          alignLabelWithHint: true,
-                        ),
-                        onChanged: (v) =>
-                            context.read<WikiPageCubit>().setDraftBody(v),
-                      ),
-                    ),
-                  ),
-                  const VerticalDivider(width: 1),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: SingleChildScrollView(
-                        child: (state.draftBody ?? state.page.body).isEmpty
-                            ? Text(
-                                '— ${t.wikiEmptyBody} —',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.outline,
-                                ),
-                              )
-                            : MarkdownText(state.draftBody ?? state.page.body),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
