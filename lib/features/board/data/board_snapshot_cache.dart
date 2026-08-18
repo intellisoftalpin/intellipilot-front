@@ -56,7 +56,7 @@ class BoardSnapshotCache {
   final KeyValueStorage _storage;
 
   /// Bump when the envelope or any serialized DTO shape changes.
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
 
   /// Snapshot count cap across all users/boards on this device.
   static const int maxEntries = 10;
@@ -240,6 +240,13 @@ class BoardSnapshotCache {
     'resolution': i.resolution,
     'resolved_at': i.resolvedAt,
     'release_version_id': i.releaseVersionId,
+    'component_versions': [
+      for (final cv in i.componentVersions)
+        {
+          'component_id': cv.componentId,
+          'release_version_id': cv.releaseVersionId,
+        },
+    ],
     'release_text': i.releaseText,
     'labels': i.labels,
     'components': i.components,
@@ -283,6 +290,7 @@ class BoardSnapshotCache {
     'emoji': t.emoji,
     'order': t.order,
     'is_closed': t.isClosed,
+    'counts_as_done': t.countsAsDone,
     'is_new': t.isNew,
     'value': t.value,
     'created_at': t.createdAt.toIso8601String(),

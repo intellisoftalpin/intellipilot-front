@@ -224,6 +224,7 @@ void seedDemoStore(DemoStore s) {
     String color,
     double order, {
     bool? isClosed,
+    bool? countsAsDone,
     double? value,
   }) => TaxonomyItem(
     id: id,
@@ -234,6 +235,9 @@ void seedDemoStore(DemoStore s) {
     color: color,
     order: order,
     isClosed: isClosed,
+    // Mirrors the V023 backfill: a closed status counts toward progress
+    // unless the fixture says otherwise.
+    countsAsDone: countsAsDone ?? isClosed,
     value: value,
     createdAt: now,
   );

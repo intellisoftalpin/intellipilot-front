@@ -32,6 +32,7 @@ Issue _issue(
   int version = 1,
   double order = 1,
   DateTime? modifiedAt,
+  List<ComponentVersion> componentVersions = const [],
 }) => Issue(
   id: id,
   projectId: 'p1',
@@ -43,6 +44,7 @@ Issue _issue(
   statusId: statusId,
   order: order,
   version: version,
+  componentVersions: componentVersions,
   createdAt: DateTime(2026),
   modifiedAt: modifiedAt ?? DateTime(2026),
   etag: '"$id:$version"',
@@ -411,6 +413,55 @@ void main() {
       // The ETag reconstructs from id+version, so cached cards stay movable.
       expect(card.etag, '"i1:1"');
       expect(loaded.statuses.length, 2);
+    });
+
+    test('per-component fix versions survive the cache', () async {
+      // The card renders one pill per version, so a cached board that dropped
+      // them would repaint instantly but under-report what an issue ships in.
+      final cache = BoardSnapshotCache(InMemoryKeyValueStorage());
+      final withVersions = BoardSnapshot(
+        cursor: _cursor,
+        savedAt: DateTime(2026),
+        board: _board,
+        data: BoardData(
+          columns: [
+            BoardColumnData(
+              statusId: 's1',
+              total: 1,
+              cards: [
+                _issue(
+                  'i1',
+                  statusId: 's1',
+                  componentVersions: const [
+                    ComponentVersion(componentId: 'c1', releaseVersionId: 'v1'),
+                    ComponentVersion(componentId: 'c2', releaseVersionId: 'v2'),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+        statuses: [_status('s1')],
+        types: const [],
+        priorities: const [],
+        sizes: const [],
+        epics: const [],
+        labels: const [],
+        components: const [],
+        releaseVersions: const [],
+        milestones: const [],
+      );
+      await cache.save('u1', 'p1', 'b1', withVersions);
+      final card = cache
+          .load('u1', 'p1', 'b1')!
+          .data
+          .columns
+          .single
+          .cards
+          .single;
+      expect(card.componentVersions, hasLength(2));
+      expect(card.versionFor('c1'), 'v1');
+      expect(card.versionFor('c2'), 'v2');
     });
 
     test('is user-scoped, corruption-tolerant and clearable', () async {

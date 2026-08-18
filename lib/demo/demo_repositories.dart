@@ -754,6 +754,7 @@ class DemoCatalogRepository implements CatalogRepository {
       color: body.color,
       order: orderMax + 1,
       isClosed: body.isClosed,
+      countsAsDone: body.countsAsDone,
       value: body.value,
       createdAt: DateTime.now().toUtc(),
     );
@@ -789,6 +790,9 @@ class DemoCatalogRepository implements CatalogRepository {
       isClosed: patch.containsKey('is_closed')
           ? patch['is_closed'] as bool?
           : cur.isClosed,
+      countsAsDone: patch.containsKey('counts_as_done')
+          ? patch['counts_as_done'] as bool?
+          : cur.countsAsDone,
       value: patch.containsKey('value')
           ? (patch['value'] as num?)?.toDouble()
           : cur.value,
@@ -848,6 +852,7 @@ class DemoCatalogRepository implements CatalogRepository {
         color: reordered.color,
         order: (idx + 1).toDouble(),
         isClosed: reordered.isClosed,
+        countsAsDone: reordered.countsAsDone,
         value: reordered.value,
         createdAt: reordered.createdAt,
       );

@@ -1090,13 +1090,29 @@
   "@taxonomyIsClosed": {
     "description": "Switch tile for status's is_closed flag."
   },
-  "taxonomyIsClosedHint": "Items in this status are treated as 'done' on the board and in burndowns.",
+  "taxonomyIsClosedHint": "Items in this status are closed: they ask for a resolution and drop out of open-issue filters.",
   "@taxonomyIsClosedHint": {
     "description": "Sub-text on is_closed switch."
   },
   "taxonomyClosedBadge": "closed",
   "@taxonomyClosedBadge": {
     "description": "Inline badge on closed-status rows."
+  },
+  "taxonomyCountsAsDone": "Considered completed",
+  "@taxonomyCountsAsDone": {
+    "description": "Switch tile for a status's counts_as_done flag."
+  },
+  "taxonomyCountsAsDoneHint": "If checked, then epic and appropriate milestone considered this status as completed.",
+  "@taxonomyCountsAsDoneHint": {
+    "description": "Sub-text and tooltip on the counts_as_done switch."
+  },
+  "taxonomyCountsAsDoneBadge": "completed",
+  "@taxonomyCountsAsDoneBadge": {
+    "description": "Inline badge on rows whose status counts toward progress."
+  },
+  "taxonomyNoCompletedStatus": "No status is marked as considered completed, so epic and milestone progress will stay at 0%.",
+  "@taxonomyNoCompletedStatus": {
+    "description": "Warning shown above the status list when nothing counts toward progress."
   },
   "taxonomyIsNew": "New (default) status",
   "@taxonomyIsNew": {
@@ -2037,6 +2053,24 @@
         "example": "3"
       }
     }
+  },
+  "boardCardVersionsTitle": "Fix versions",
+  "@boardCardVersionsTitle": {
+    "description": "Heading of the popup listing an issue's per-component fix versions."
+  },
+  "milestoneEpicsSelected": "{count} selected",
+  "@milestoneEpicsSelected": {
+    "description": "Running count of ticked epics in the Manage epics dialog.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "milestoneEpicsNoMatch": "No epics match your search.",
+  "@milestoneEpicsNoMatch": {
+    "description": "Shown when the Manage epics search filters everything out."
   },
   "milestoneEpicIssues": "{closed} of {total} issues done",
   "@milestoneEpicIssues": {

@@ -123,6 +123,13 @@ class MilestoneDetailCubit extends Cubit<MilestoneDetailState> {
   bool get dirty => _dirty;
   bool _dirty = false;
 
+  /// Record that something outside this cubit's own writes may have changed
+  /// the milestone — currently a nested epic sheet, whose edits can move this
+  /// milestone's progress. Deliberately pessimistic: there is no way to tell
+  /// from here whether the nested sheet actually wrote anything, and the cost
+  /// of being wrong is one reload of the list underneath.
+  void markDirty() => _dirty = true;
+
   /// Set when the milestone was deleted from the sidebar, so the caller can
   /// drop it from the list without a reload.
   bool get deleted => _deleted;

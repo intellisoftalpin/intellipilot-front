@@ -14,6 +14,10 @@ enum TaxonomyKind {
   /// Kinds that carry an `is_closed` flag (the status kind).
   bool get hasClosed => this == TaxonomyKind.issueStatus;
 
+  /// Kinds that carry a `counts_as_done` flag — whether epic and milestone
+  /// progress treat the status as finished work (the status kind).
+  bool get hasCountsAsDone => this == TaxonomyKind.issueStatus;
+
   /// Kinds that carry an `is_new` flag — the default landing column; at most
   /// one status per project carries it (the status kind).
   bool get hasNew => this == TaxonomyKind.issueStatus;
@@ -47,6 +51,7 @@ class TaxonomyItem {
     required this.createdAt,
     this.emoji = '',
     this.isClosed,
+    this.countsAsDone,
     this.isNew,
     this.value,
   });
@@ -62,6 +67,7 @@ class TaxonomyItem {
       emoji: (json['emoji'] as String?) ?? '',
       order: (json['order'] as num?)?.toDouble() ?? 0.0,
       isClosed: json['is_closed'] as bool?,
+      countsAsDone: json['counts_as_done'] as bool?,
       isNew: json['is_new'] as bool?,
       value: (json['value'] as num?)?.toDouble(),
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -78,6 +84,12 @@ class TaxonomyItem {
   final double order;
   final bool? isClosed;
 
+  /// Whether epic and milestone progress count this status as finished work —
+  /// status kind only. Deliberately independent of [isClosed]: a status can
+  /// fill the progress ring without closing the issue, or close it without
+  /// counting toward progress.
+  final bool? countsAsDone;
+
   /// The "new" (default) status flag — status kind only; at most one per project.
   final bool? isNew;
   final double? value;
@@ -91,6 +103,7 @@ class CreateTaxonomyItemRequest {
     this.color = '',
     this.emoji = '',
     this.isClosed,
+    this.countsAsDone,
     this.isNew,
     this.value,
   });
@@ -100,6 +113,7 @@ class CreateTaxonomyItemRequest {
   final String color;
   final String emoji;
   final bool? isClosed;
+  final bool? countsAsDone;
   final bool? isNew;
   final double? value;
 
@@ -109,6 +123,7 @@ class CreateTaxonomyItemRequest {
     'color': color,
     'emoji': emoji,
     if (isClosed != null) 'is_closed': isClosed,
+    if (countsAsDone != null) 'counts_as_done': countsAsDone,
     if (isNew != null) 'is_new': isNew,
     if (value != null) 'value': value,
   };
@@ -120,6 +135,7 @@ class UpdateTaxonomyItemRequest {
     this.color,
     this.emoji,
     this.isClosed,
+    this.countsAsDone,
     this.isNew,
     this.value,
   });
@@ -128,6 +144,7 @@ class UpdateTaxonomyItemRequest {
   final String? color;
   final String? emoji;
   final bool? isClosed;
+  final bool? countsAsDone;
   final bool? isNew;
   final double? value;
 
@@ -136,6 +153,7 @@ class UpdateTaxonomyItemRequest {
     if (color != null) 'color': color,
     if (emoji != null) 'emoji': emoji,
     if (isClosed != null) 'is_closed': isClosed,
+    if (countsAsDone != null) 'counts_as_done': countsAsDone,
     if (isNew != null) 'is_new': isNew,
     if (value != null) 'value': value,
   };

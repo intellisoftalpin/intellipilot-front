@@ -3,7 +3,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/core/ui/detail_sheet_stack.dart';
+import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
+import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
+import 'package:intellipilot/core/ui/issue_chips.dart';
 import 'package:intellipilot/core/ui/markdown_editor.dart';
+import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
@@ -33,55 +38,66 @@ Future<MilestoneSheetResult> showMilestoneDetailSheet(
   required String projectId,
   required String milestoneId,
 }) async {
+  final key = detailSheetKey('milestone', milestoneId);
+  if (DetailSheetStack.contains(key)) return MilestoneSheetResult.none;
+
   final projectCubit = context.read<ProjectDetailCubit>();
-  final result = await showGeneralDialog<MilestoneSheetResult>(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-    barrierColor: Colors.black54,
-    transitionDuration: const Duration(milliseconds: 220),
-    pageBuilder: (ctx, _, _) {
-      final width = MediaQuery.sizeOf(ctx).width;
-      final panelWidth = width < 640
-          ? width
-          : (width * 0.5).clamp(560.0, 820.0);
-      return Align(
-        alignment: Alignment.centerRight,
-        child: Material(
-          elevation: 8,
-          child: SizedBox(
-            width: panelWidth,
-            height: double.infinity,
-            child: MultiBlocProvider(
-              providers: [
-                BlocProvider<ProjectDetailCubit>.value(value: projectCubit),
-                BlocProvider<MilestoneDetailCubit>(
-                  create: (_) {
-                    final c = MilestoneDetailCubit(
-                      milestones: getIt<MilestonesRepository>(),
-                      backlog: getIt<BacklogRepository>(),
-                      projectId: projectId,
-                      milestoneId: milestoneId,
-                    );
-                    unawaited(c.load());
-                    return c;
-                  },
-                ),
-              ],
-              child: const _SheetBody(),
+  final depth = DetailSheetStack.depth;
+  DetailSheetStack.push(key);
+  final MilestoneSheetResult? result;
+  try {
+    result = await showGeneralDialog<MilestoneSheetResult>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: depth == 0 ? Colors.black54 : Colors.black26,
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (ctx, _, _) {
+        final width = MediaQuery.sizeOf(ctx).width;
+        final inset = width >= 1024 ? 48.0 * depth : 0.0;
+        final panelWidth = width < 640
+            ? width
+            : ((width * 0.5).clamp(560.0, 820.0) - inset).clamp(360.0, width);
+        return Align(
+          alignment: Alignment.centerRight,
+          child: Material(
+            elevation: 8,
+            child: SizedBox(
+              width: panelWidth,
+              height: double.infinity,
+              child: MultiBlocProvider(
+                providers: [
+                  BlocProvider<ProjectDetailCubit>.value(value: projectCubit),
+                  BlocProvider<MilestoneDetailCubit>(
+                    create: (_) {
+                      final c = MilestoneDetailCubit(
+                        milestones: getIt<MilestonesRepository>(),
+                        backlog: getIt<BacklogRepository>(),
+                        projectId: projectId,
+                        milestoneId: milestoneId,
+                      );
+                      unawaited(c.load());
+                      return c;
+                    },
+                  ),
+                ],
+                child: const _SheetBody(),
+              ),
             ),
           ),
-        ),
-      );
-    },
-    transitionBuilder: (ctx, anim, _, child) => SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(1, 0),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-      child: child,
-    ),
-  );
+        );
+      },
+      transitionBuilder: (ctx, anim, _, child) => SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(1, 0),
+          end: Offset.zero,
+        ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+        child: child,
+      ),
+    );
+  } finally {
+    DetailSheetStack.pop(key);
+  }
   return result ?? MilestoneSheetResult.none;
 }
 
@@ -647,45 +663,74 @@ class _EpicsSection extends StatelessWidget {
           )
         else
           for (final e in epics)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                children: [
-                  ProgressRing(
-                    value: e.taskTotal == 0 ? null : e.taskClosed / e.taskTotal,
-                    size: 40,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          e.subject,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                        Text(
-                          t.milestoneEpicIssues(e.taskClosed, e.taskTotal),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+            InkWell(
+              onTap: () => _openEpic(context, e.id),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    ProgressRing(
+                      value: e.taskTotal == 0
+                          ? null
+                          : e.taskClosed / e.taskTotal,
+                      size: 40,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            e.subject,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          Text(
+                            t.milestoneEpicIssues(e.taskClosed, e.taskTotal),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 18,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ],
+                ),
               ),
             ),
       ],
     );
   }
 
-  Future<void> _manage(BuildContext context) async {
-    final t = AppLocalizations.of(context);
+  /// Layer the epic's own sheet over this one. Closing it comes back here, and
+  /// the milestone reloads because the epic may have gained, lost or finished
+  /// issues while it was open.
+  Future<void> _openEpic(BuildContext context, String epicId) async {
     final cubit = context.read<MilestoneDetailCubit>();
-    final selected = {for (final e in state.epicsInMilestone) e.id};
+    final projectId = state.milestone.projectId;
+    await showEntityDetailSheet(
+      context,
+      projectId: projectId,
+      kind: EntityKind.epic,
+      entityId: epicId,
+    );
+    cubit.markDirty();
+    await cubit.load();
+  }
+
+  Future<void> _manage(BuildContext context) async {
+    final cubit = context.read<MilestoneDetailCubit>();
+    final projectState = context.read<ProjectDetailCubit>().state;
+    final prefix = projectState is ProjectDetailLoaded
+        ? projectState.project.issuePrefix
+        : '';
     // Candidates: epics already here, plus every epic not claimed by another
     // milestone. An epic belongs to at most one milestone, so offering the
     // others would silently steal them.
@@ -696,48 +741,159 @@ class _EpicsSection extends StatelessWidget {
         .toList();
     final result = await showDialog<Set<String>>(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => AlertDialog(
-          title: Text(t.milestoneManageEpics),
-          content: SizedBox(
-            width: 440,
-            child: candidates.isEmpty
-                ? Text(t.epicsEmpty)
-                : SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (final e in candidates)
-                          CheckboxListTile(
-                            value: selected.contains(e.id),
-                            controlAffinity: ListTileControlAffinity.leading,
-                            title: Text(e.subject),
-                            onChanged: (on) => setState(() {
-                              if (on ?? false) {
-                                selected.add(e.id);
-                              } else {
-                                selected.remove(e.id);
-                              }
-                            }),
-                          ),
-                      ],
-                    ),
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(t.actionCancel),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(selected),
-              child: Text(t.actionSave),
-            ),
-          ],
-        ),
+      builder: (ctx) => _ManageEpicsDialog(
+        candidates: candidates,
+        initiallySelected: {for (final e in state.epicsInMilestone) e.id},
+        issuePrefix: prefix,
       ),
     );
     if (result == null) return;
     await cubit.setEpics(result.toList());
+  }
+}
+
+/// Pick which epics compose a milestone.
+///
+/// A project can hold hundreds of epics, so the list is searchable by subject
+/// and by epic key. Selection lives outside the filtered view: ticking an epic,
+/// searching for another and ticking that one keeps both, and Save always
+/// submits the whole set rather than what happens to be on screen.
+class _ManageEpicsDialog extends StatefulWidget {
+  const _ManageEpicsDialog({
+    required this.candidates,
+    required this.initiallySelected,
+    required this.issuePrefix,
+  });
+
+  final List<Epic> candidates;
+  final Set<String> initiallySelected;
+  final String issuePrefix;
+
+  @override
+  State<_ManageEpicsDialog> createState() => _ManageEpicsDialogState();
+}
+
+class _ManageEpicsDialogState extends State<_ManageEpicsDialog> {
+  late final Set<String> _selected = {...widget.initiallySelected};
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  List<Epic> get _visible {
+    final q = _query.trim().toLowerCase();
+    if (q.isEmpty) return widget.candidates;
+    return widget.candidates
+        .where(
+          (e) =>
+              e.subject.toLowerCase().contains(q) ||
+              epicKeyLabel(
+                widget.issuePrefix,
+                e.reference,
+              ).toLowerCase().contains(q),
+        )
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final visible = _visible;
+    return AlertDialog(
+      title: Text(t.milestoneManageEpics),
+      content: SizedBox(
+        width: 440,
+        child: widget.candidates.isEmpty
+            ? Text(t.epicsEmpty)
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _searchCtrl,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      prefixIcon: const Icon(Icons.search, size: 20),
+                      hintText: t.linkSearchHint,
+                      suffixIcon: _query.isEmpty
+                          ? null
+                          : IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              tooltip: t.actionClear,
+                              onPressed: () {
+                                _searchCtrl.clear();
+                                setState(() => _query = '');
+                              },
+                            ),
+                    ),
+                    onChanged: (v) => setState(() => _query = v),
+                  ),
+                  const SizedBox(height: 8),
+                  // Ticks made before searching stay counted here even when
+                  // the search hides them.
+                  Text(
+                    t.milestoneEpicsSelected(_selected.length),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 360),
+                    child: visible.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Text(
+                              t.milestoneEpicsNoMatch,
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: visible.length,
+                            itemBuilder: (context, i) {
+                              final e = visible[i];
+                              return CheckboxListTile(
+                                value: _selected.contains(e.id),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                title: Text(e.subject),
+                                subtitle: Text(
+                                  epicKeyLabel(widget.issuePrefix, e.reference),
+                                ),
+                                onChanged: (on) => setState(() {
+                                  if (on ?? false) {
+                                    _selected.add(e.id);
+                                  } else {
+                                    _selected.remove(e.id);
+                                  }
+                                }),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(t.actionCancel),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_selected),
+          child: Text(t.actionSave),
+        ),
+      ],
+    );
   }
 }

@@ -99,8 +99,35 @@ class _TaxonomyKindView extends StatelessWidget {
           return Center(child: Text(t.taxonomyLoadFailed));
         }
         if (state is! TaxonomyLoaded) return const SizedBox.shrink();
+        // The two status flags are independent, so a project can end up with
+        // nothing counting toward progress. Say so rather than leaving every
+        // ring stuck at zero with no explanation.
+        final noneCounted =
+            kind.hasCountsAsDone &&
+            state.items.isNotEmpty &&
+            !state.items.any((i) => i.countsAsDone ?? false);
         return Column(
           children: [
+            if (noneCounted)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.tertiary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        t.taxonomyNoCompletedStatus,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (canEdit)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -200,6 +227,7 @@ class _TaxonomyKindView extends StatelessWidget {
         ? existing!.color
         : ColorPalette.swatches.first;
     var isClosed = existing?.isClosed ?? false;
+    var countsAsDone = existing?.countsAsDone ?? false;
     var isNew = existing?.isNew ?? false;
     var emoji = existing?.emoji ?? '';
     final cubit = context.read<TaxonomyCubit>();
@@ -259,6 +287,18 @@ class _TaxonomyKindView extends StatelessWidget {
                     onChanged: (v) => setState(() => isClosed = v),
                   ),
                 ],
+                if (kind.hasCountsAsDone) ...[
+                  Tooltip(
+                    message: t.taxonomyCountsAsDoneHint,
+                    child: SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(t.taxonomyCountsAsDone),
+                      subtitle: Text(t.taxonomyCountsAsDoneHint),
+                      value: countsAsDone,
+                      onChanged: (v) => setState(() => countsAsDone = v),
+                    ),
+                  ),
+                ],
                 if (kind.hasNew) ...[
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
@@ -306,6 +346,7 @@ class _TaxonomyKindView extends StatelessWidget {
                       color: color,
                       emoji: kind.hasEmoji ? emoji : '',
                       isClosed: kind.hasClosed ? isClosed : null,
+                      countsAsDone: kind.hasCountsAsDone ? countsAsDone : null,
                       isNew: kind.hasNew ? isNew : null,
                       value: value,
                     ),
@@ -318,6 +359,7 @@ class _TaxonomyKindView extends StatelessWidget {
                       color: color,
                       emoji: kind.hasEmoji ? emoji : null,
                       isClosed: kind.hasClosed ? isClosed : null,
+                      countsAsDone: kind.hasCountsAsDone ? countsAsDone : null,
                       isNew: kind.hasNew ? isNew : null,
                       value: value,
                     ),
@@ -368,6 +410,7 @@ class _ItemSubtitle extends StatelessWidget {
     final parts = <String>[item.slug];
     if (item.isNew ?? false) parts.add(t.taxonomyNewBadge);
     if (item.isClosed ?? false) parts.add(t.taxonomyClosedBadge);
+    if (item.countsAsDone ?? false) parts.add(t.taxonomyCountsAsDoneBadge);
     if (item.value != null) {
       parts.add('${t.taxonomyValueLabel}: ${item.value}');
     }

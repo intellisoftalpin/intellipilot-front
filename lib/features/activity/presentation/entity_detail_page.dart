@@ -22,6 +22,7 @@ import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/core/ui/timestamps.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
+import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
 import 'package:intellipilot/features/activity/data/project_lookups_cache.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/activity/presentation/cubits/activity_stream_cubit.dart';
@@ -1421,8 +1422,9 @@ class _LeftColumn extends StatelessWidget {
     final subtasks =
         data.issuesById.values.where((i) => i.parentId == entityId).toList()
           ..sort((a, b) => a.reference.compareTo(b.reference));
+    // A progress bar, so it follows counts_as_done rather than is_closed.
     final closedSubtasks = subtasks
-        .where((i) => data.taxonomyById[i.statusId]?.isClosed ?? false)
+        .where((i) => data.taxonomyById[i.statusId]?.countsAsDone ?? false)
         .length;
     final canEdit = context.select<ProjectDetailCubit, bool>((c) {
       final st = c.state;
@@ -1518,7 +1520,7 @@ class _LeftColumn extends StatelessWidget {
               taxonomyById: data.taxonomyById,
               membersById: data.membersById,
               project: data.project,
-              onClose: onClose,
+              onChanged: onChanged,
             ),
           ),
         ],
@@ -4246,19 +4248,16 @@ class _SubtasksPanelState extends State<_SubtasksPanel> {
                   ? null
                   : widget.membersById[i.assignedTo],
               keyLabel: issueKeyLabel(widget.project.issuePrefix, i.reference),
-              onTap: () {
-                widget.onClose?.call();
-                context.go(
-                  Routes.entityByKeyFor(
-                    projectId: widget.project.id,
-                    issuePrefix: widget.project.issuePrefix,
-                    kind: EntityKind.issue,
-                    key: issueKeyLabel(
-                      widget.project.issuePrefix,
-                      i.reference,
-                    ),
-                  ),
+              // Same gesture as everywhere else: the subtask opens over this
+              // panel and closing it comes straight back here.
+              onTap: () async {
+                await showEntityDetailSheet(
+                  context,
+                  projectId: widget.project.id,
+                  kind: EntityKind.issue,
+                  entityId: i.id,
                 );
+                widget.onChanged();
               },
             ),
         if (widget.canEdit) ...[
@@ -4324,16 +4323,16 @@ class _IncludedIssuesPanel extends StatelessWidget {
     required this.taxonomyById,
     required this.membersById,
     required this.project,
-    this.onClose,
+    this.onChanged,
   });
   final List<Issue> issues;
   final Map<String, TaxonomyItem> taxonomyById;
   final Map<String, UserRef> membersById;
   final Project project;
 
-  /// Dismisses the embedding panel / sheet before navigating, so tapping a
-  /// row from the board side panel lands cleanly on the issue's full page.
-  final VoidCallback? onClose;
+  /// Reload the epic after a nested issue sheet closes — its status, and so
+  /// this epic's progress, may have changed while it was open.
+  final VoidCallback? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -4357,16 +4356,16 @@ class _IncludedIssuesPanel extends StatelessWidget {
             status: taxonomyById[i.statusId],
             assignee: i.assignedTo == null ? null : membersById[i.assignedTo],
             keyLabel: issueKeyLabel(project.issuePrefix, i.reference),
-            onTap: () {
-              onClose?.call();
-              context.go(
-                Routes.entityByKeyFor(
-                  projectId: project.id,
-                  issuePrefix: project.issuePrefix,
-                  kind: EntityKind.issue,
-                  key: issueKeyLabel(project.issuePrefix, i.reference),
-                ),
+            // Layer the issue over this panel instead of replacing it, so
+            // closing it returns to the epic (and to whatever opened that).
+            onTap: () async {
+              await showEntityDetailSheet(
+                context,
+                projectId: project.id,
+                kind: EntityKind.issue,
+                entityId: i.id,
               );
+              onChanged?.call();
             },
           ),
       ],

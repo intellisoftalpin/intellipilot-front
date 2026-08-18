@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
@@ -1261,15 +1262,8 @@ class _TaskCard extends StatelessWidget {
         _MetaChip(color: '', label: task.dueDate!, icon: Icons.event_outlined),
       );
     }
-    if (_fields.contains('release') && task.releaseVersionId != null) {
-      final v = state.releaseVersions
-          .where((x) => x.id == task.releaseVersionId)
-          .firstOrNull;
-      if (v != null) {
-        chips.add(
-          StatusPill(label: v.version, colorHex: v.releaseColor, dense: true),
-        );
-      }
+    if (_fields.contains('release')) {
+      chips.addAll(_versionChips(task, state));
     }
 
     final t = AppLocalizations.of(context);
@@ -1310,6 +1304,83 @@ class _TaskCard extends StatelessWidget {
     ];
   }
 
+  /// Version pills for a card.
+  ///
+  /// Since per-component fix versions landed, one issue can ship in several
+  /// versions at once. Showing only `releaseVersionId` would report just the
+  /// lowest-ordered one, which is a mirror the server maintains for filters
+  /// and exports rather than the whole truth.
+  ///
+  /// Pills are deduplicated by version — two components shipping in the same
+  /// version is one fact, not two — and capped so a card with many components
+  /// does not grow without bound. The overflow pill carries the full
+  /// component-to-version breakdown.
+  List<Widget> _versionChips(Issue task, TaskBoardLoaded state) {
+    ReleaseVersionRef? refFor(String id) =>
+        state.releaseVersions.where((x) => x.id == id).firstOrNull;
+
+    // Fall back to the mirror for an issue that carries a version but no
+    // components — nothing to break down, so the old single pill is right.
+    if (task.componentVersions.isEmpty) {
+      final id = task.releaseVersionId;
+      if (id == null) return const [];
+      final v = refFor(id);
+      return v == null
+          ? const []
+          : [
+              StatusPill(
+                label: v.version,
+                colorHex: v.releaseColor,
+                dense: true,
+              ),
+            ];
+    }
+
+    final seen = <String>{};
+    final versions = <ReleaseVersionRef>[];
+    for (final cv in task.componentVersions) {
+      if (!seen.add(cv.releaseVersionId)) continue;
+      final v = refFor(cv.releaseVersionId);
+      if (v != null) versions.add(v);
+    }
+    if (versions.isEmpty) return const [];
+    // `state.releaseVersions` arrives in the server's release/version order,
+    // so sorting by position in it keeps pills in the same order the rest of
+    // the app shows versions.
+    versions.sort(
+      (a, b) => state.releaseVersions
+          .indexWhere((x) => x.id == a.id)
+          .compareTo(state.releaseVersions.indexWhere((x) => x.id == b.id)),
+    );
+
+    const maxPills = 3;
+    final shown = versions.take(maxPills).toList();
+    final chips = <Widget>[
+      for (final v in shown)
+        StatusPill(label: v.version, colorHex: v.releaseColor, dense: true),
+    ];
+    if (versions.length > maxPills) {
+      chips.add(
+        _VersionOverflowPill(
+          hiddenCount: versions.length - maxPills,
+          rows: [
+            for (final cv in task.componentVersions)
+              (
+                component:
+                    state.components
+                        .where((c) => c.id == cv.componentId)
+                        .firstOrNull
+                        ?.name ??
+                    cv.componentId,
+                version: refFor(cv.releaseVersionId)?.version ?? '—',
+              ),
+          ]..sort((a, b) => a.component.compareTo(b.component)),
+        ),
+      );
+    }
+    return chips;
+  }
+
   /// A compact `emoji + avatar` badge for a person role on the card, with a
   /// tooltip naming the role and person. Returns null when the id does not
   /// resolve to a known member (e.g. unassigned).
@@ -1331,6 +1402,180 @@ class _TaskCard extends StatelessWidget {
           const SizedBox(width: 3),
           UserAvatar(user: u, size: size),
         ],
+      ),
+    );
+  }
+}
+
+/// The `+N` pill that stands in for versions the card has no room to show.
+///
+/// Hovering reveals the full component-to-version breakdown and moving away
+/// hides it again. Clicking *pins* the popup open — it then stays until the
+/// close button, Escape, or a tap outside dismisses it. Pinning is what makes
+/// this usable on touch, where there is no hover at all.
+class _VersionOverflowPill extends StatefulWidget {
+  const _VersionOverflowPill({required this.hiddenCount, required this.rows});
+
+  final int hiddenCount;
+  final List<({String component, String version})> rows;
+
+  @override
+  State<_VersionOverflowPill> createState() => _VersionOverflowPillState();
+}
+
+class _VersionOverflowPillState extends State<_VersionOverflowPill> {
+  final _portal = OverlayPortalController();
+  final _link = LayerLink();
+  bool _pinned = false;
+
+  void _show() {
+    if (!_portal.isShowing) _portal.show();
+  }
+
+  void _hoverOut() {
+    // A pinned popup survives the pointer leaving; that is the whole point.
+    if (!_pinned && _portal.isShowing) _portal.hide();
+  }
+
+  void _close() {
+    _pinned = false;
+    if (_portal.isShowing) _portal.hide();
+    if (mounted) setState(() {});
+  }
+
+  void _togglePin() {
+    setState(() => _pinned = !_pinned);
+    if (_pinned) {
+      _show();
+    } else {
+      _portal.hide();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final t = AppLocalizations.of(context);
+    return CompositedTransformTarget(
+      link: _link,
+      child: OverlayPortal(
+        controller: _portal,
+        overlayChildBuilder: (context) => Positioned.fill(
+          child: Stack(
+            children: [
+              // Only a pinned popup takes the screen: an unpinned one must not
+              // swallow clicks meant for the board underneath.
+              if (_pinned)
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: _close,
+                  ),
+                ),
+              CompositedTransformFollower(
+                link: _link,
+                targetAnchor: Alignment.bottomLeft,
+                followerAnchor: Alignment.topLeft,
+                offset: const Offset(0, 4),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: _popup(theme, t),
+                ),
+              ),
+            ],
+          ),
+        ),
+        child: MouseRegion(
+          onEnter: (_) => _show(),
+          onExit: (_) => _hoverOut(),
+          child: GestureDetector(
+            onTap: _togglePin,
+            child: _MetaChip(color: '', label: '+${widget.hiddenCount}'),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _popup(ThemeData theme, AppLocalizations t) {
+    return CallbackShortcuts(
+      bindings: {const SingleActivator(LogicalKeyboardKey.escape): _close},
+      child: Focus(
+        autofocus: _pinned,
+        child: Material(
+          elevation: 8,
+          borderRadius: BorderRadius.circular(8),
+          color: theme.colorScheme.surfaceContainerHigh,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320, maxHeight: 320),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 8, 8, 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          t.boardCardVersionsTitle,
+                          style: theme.textTheme.labelLarge,
+                        ),
+                      ),
+                      if (_pinned)
+                        IconButton(
+                          icon: const Icon(Icons.close, size: 16),
+                          tooltip: t.actionClose,
+                          visualDensity: VisualDensity.compact,
+                          onPressed: _close,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Table(
+                        columnWidths: const {
+                          0: FlexColumnWidth(2),
+                          1: FlexColumnWidth(1),
+                        },
+                        children: [
+                          for (final r in widget.rows)
+                            TableRow(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 3,
+                                    horizontal: 2,
+                                  ),
+                                  child: Text(
+                                    r.component,
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 3,
+                                    horizontal: 2,
+                                  ),
+                                  child: Text(
+                                    r.version,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

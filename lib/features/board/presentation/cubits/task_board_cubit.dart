@@ -689,13 +689,21 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     // cached release-version list.
     final releaseFilter = f.releaseId;
     if (releaseFilter != null) {
+      // An issue can ship in a different version per component, so the filter
+      // matches if ANY of them belongs to the release. Testing only
+      // `releaseVersionId` would consult the server's lowest-ordered mirror
+      // and hide issues whose card visibly shows a matching version.
+      final versionIds = issue.componentVersions.isEmpty
+          ? [if (issue.releaseVersionId != null) issue.releaseVersionId!]
+          : issue.componentVersions.map((cv) => cv.releaseVersionId).toList();
       if (releaseFilter == 'none') {
-        if (issue.releaseVersionId != null) return false;
+        if (versionIds.isNotEmpty) return false;
       } else {
-        final rv = _releaseVersions
-            .where((v) => v.id == issue.releaseVersionId)
-            .firstOrNull;
-        if (rv == null || rv.releaseId != releaseFilter) return false;
+        final hit = versionIds.any((id) {
+          final rv = _releaseVersions.where((v) => v.id == id).firstOrNull;
+          return rv != null && rv.releaseId == releaseFilter;
+        });
+        if (!hit) return false;
       }
     }
     return true;
