@@ -1181,6 +1181,7 @@ class _AddExistingMemberCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1188,12 +1189,7 @@ class _AddExistingMemberCard extends StatelessWidget {
           children: [
             const Icon(Icons.person_add_alt_1_outlined),
             const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Add an existing user to this project directly — no email '
-                'invitation needed.',
-              ),
-            ),
+            Expanded(child: Text(t.memberAddDirectBody)),
             FilledButton.tonalIcon(
               icon: const Icon(Icons.add),
               onPressed: roles.isEmpty
@@ -1205,7 +1201,7 @@ class _AddExistingMemberCard extends StatelessWidget {
                         child: _AddMemberDialog(roles: roles),
                       ),
                     ),
-              label: const Text('Add user'),
+              label: Text(t.memberAddUser),
             ),
           ],
         ),
@@ -1310,7 +1306,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
     final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return AlertDialog(
-      title: const Text('Add existing user'),
+      title: Text(t.memberAddExisting),
       content: SizedBox(
         width: 460,
         child: Column(
@@ -1321,7 +1317,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
               controller: _searchCtrl,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'Search by email, username or name',
+                labelText: t.memberSearchLabel,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searching
                     ? const Padding(
@@ -1340,7 +1336,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
-                  'Enter an exact email or username to add the user.',
+                  t.memberSearchHint,
                   style: theme.textTheme.bodySmall,
                 ),
               ),
@@ -1371,7 +1367,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _roleSlug,
-              decoration: const InputDecoration(labelText: 'Role'),
+              decoration: InputDecoration(labelText: t.memberRoleLabel),
               items: [
                 for (final r in widget.roles)
                   DropdownMenuItem(value: r.slug, child: Text(r.name)),
@@ -1404,7 +1400,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Add'),
+              : Text(t.actionAdd),
         ),
       ],
     );

@@ -10,6 +10,7 @@ import 'package:intellipilot/features/catalog/presentation/widgets/repositories_
     show failureText;
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// Project-settings tab managing the per-project customer directory.
 class CustomersTab extends StatelessWidget {
@@ -38,6 +39,7 @@ class _CustomersView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final detail = context.watch<ProjectDetailCubit>().state;
     final canEdit =
         detail is ProjectDetailLoaded &&
@@ -54,14 +56,14 @@ class _CustomersView extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'Customers',
+                  t.permDomainCustomers,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const Spacer(),
                 if (canEdit)
                   FilledButton.icon(
                     icon: const Icon(Icons.add),
-                    label: const Text('New customer'),
+                    label: Text(t.catCustomerNew),
                     onPressed: () => _showDialog(context, null),
                   ),
               ],
@@ -78,9 +80,9 @@ class _CustomersView extends StatelessWidget {
               Text(failureText(state.failure))
             else if (state is CustomersLoaded)
               if (state.customers.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('No customers yet.'),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(t.catCustomerEmpty),
                 )
               else
                 for (final c in state.customers)
@@ -99,6 +101,7 @@ class _CustomerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final lines = <String>[
       if (customer.companyName != null && customer.companyName!.isNotEmpty)
         customer.companyName!,
@@ -118,12 +121,12 @@ class _CustomerCard extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit_outlined),
-                    tooltip: 'Edit',
+                    tooltip: t.actionEdit,
                     onPressed: () => _showDialog(context, customer),
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
-                    tooltip: 'Delete',
+                    tooltip: t.actionDelete,
                     onPressed: () => _confirmDelete(context, customer),
                   ),
                 ],
@@ -135,22 +138,23 @@ class _CustomerCard extends StatelessWidget {
 }
 
 Future<void> _confirmDelete(BuildContext context, Customer customer) async {
+  final t = AppLocalizations.of(context);
   final cubit = context.read<CustomersCubit>();
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Delete customer'),
+      title: Text(t.catCustomerDelete),
       content: Text(
-        'Delete "${customer.name}"? It will be unlinked from any issues.',
+        t.catCustomerDeleteBody(customer.name),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('Cancel'),
+          child: Text(t.actionCancel),
         ),
         FilledButton.tonal(
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('Delete'),
+          child: Text(t.actionDelete),
         ),
       ],
     ),
@@ -161,6 +165,7 @@ Future<void> _confirmDelete(BuildContext context, Customer customer) async {
 }
 
 Future<void> _showDialog(BuildContext context, Customer? existing) async {
+  final t = AppLocalizations.of(context);
   final cubit = context.read<CustomersCubit>();
   final nameCtrl = TextEditingController(text: existing?.name ?? '');
   final companyCtrl = TextEditingController(text: existing?.companyName ?? '');
@@ -182,28 +187,30 @@ Future<void> _showDialog(BuildContext context, Customer? existing) async {
               TextField(
                 controller: nameCtrl,
                 autofocus: true,
-                decoration: const InputDecoration(labelText: 'Name'),
+                decoration: InputDecoration(labelText: t.fieldName),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: companyCtrl,
-                decoration: const InputDecoration(labelText: 'Company name'),
+                decoration: InputDecoration(labelText: t.catFieldCompany),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: emailCtrl,
-                decoration: const InputDecoration(labelText: 'Contact email'),
+                decoration: InputDecoration(
+                  labelText: t.catFieldContactEmail,
+                ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: phoneCtrl,
-                decoration: const InputDecoration(labelText: 'Phone'),
+                decoration: InputDecoration(labelText: t.catFieldPhone),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: notesCtrl,
                 maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Notes'),
+                decoration: InputDecoration(labelText: t.catFieldNotes),
               ),
             ],
           ),
@@ -212,7 +219,7 @@ Future<void> _showDialog(BuildContext context, Customer? existing) async {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('Cancel'),
+          child: Text(t.actionCancel),
         ),
         FilledButton(
           onPressed: () async {
@@ -255,7 +262,7 @@ Future<void> _showDialog(BuildContext context, Customer? existing) async {
               }
             }
           },
-          child: const Text('Save'),
+          child: Text(t.actionSaveShort),
         ),
       ],
     ),

@@ -177,7 +177,7 @@ class _GlobalTimesheetView extends StatefulWidget {
 class _GlobalTimesheetViewState extends State<_GlobalTimesheetView> {
   late int _year = DateTime.now().year;
   late int _month = DateTime.now().month;
-  List<TeamMemberMonth>? _members;
+  TeamMonth? _team;
   bool _loading = true;
 
   @override
@@ -194,7 +194,7 @@ class _GlobalTimesheetViewState extends State<_GlobalTimesheetView> {
     );
     if (!mounted) return;
     setState(() {
-      _members = res.valueOrNull ?? const [];
+      _team = res.valueOrNull;
       _loading = false;
     });
   }
@@ -244,14 +244,15 @@ class _GlobalTimesheetViewState extends State<_GlobalTimesheetView> {
         Expanded(
           child: _loading
               ? const LoadingIndicator()
-              : (_members == null || _members!.isEmpty)
+              : (_team == null || _team!.members.isEmpty)
               ? Center(child: Text(t.ttNoTeamData))
               : Padding(
                   padding: const EdgeInsets.all(8),
                   child: TeamMonthGrid(
-                    members: _members!,
+                    members: _team!.members,
                     year: _year,
                     month: _month,
+                    excludedMembers: _team!.excludedMembers,
                   ),
                 ),
         ),

@@ -11,6 +11,7 @@ import 'package:intellipilot/features/catalog/presentation/cubits/repositories_c
 import 'package:intellipilot/features/catalog/presentation/cubits/ssh_keys_cubit.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 String failureText(AppFailure f) =>
     f.problem?.detail ?? f.problem?.title ?? 'Something went wrong';
@@ -81,6 +82,7 @@ class _SshKeysSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return BlocBuilder<SshKeysCubit, SshKeysState>(
       builder: (context, state) {
         return Column(
@@ -88,12 +90,15 @@ class _SshKeysSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('SSH keys', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  t.catSshKeysTitle,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const Spacer(),
                 if (canEdit)
                   FilledButton.icon(
                     icon: const Icon(Icons.add),
-                    label: const Text('New key'),
+                    label: Text(t.catSshKeyNew),
                     onPressed: () => _showKeyDialog(context, null),
                   ),
               ],
@@ -110,11 +115,9 @@ class _SshKeysSection extends StatelessWidget {
               Text(failureText(state.failure))
             else if (state is SshKeysLoaded)
               if (state.keys.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text(
-                    'No SSH keys yet. Generate one to access a repository.',
-                  ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(t.catSshKeyEmpty),
                 )
               else
                 for (final key in state.keys)
@@ -133,6 +136,7 @@ class _SshKeyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Card(
       child: ListTile(
         leading: const Icon(Icons.vpn_key_outlined),
@@ -157,18 +161,18 @@ class _SshKeyCard extends StatelessWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.copy_outlined),
-              tooltip: 'Copy public key',
+              tooltip: t.catSshKeyCopyPublic,
               onPressed: () => _copyPublicKey(context, keyItem),
             ),
             if (canEdit) ...[
               IconButton(
                 icon: const Icon(Icons.edit_outlined),
-                tooltip: 'Edit',
+                tooltip: t.actionEdit,
                 onPressed: () => _showKeyDialog(context, keyItem),
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline),
-                tooltip: 'Delete',
+                tooltip: t.actionDelete,
                 onPressed: () => _confirmDeleteKey(context, keyItem),
               ),
             ],
@@ -180,15 +184,17 @@ class _SshKeyCard extends StatelessWidget {
 }
 
 Future<void> _copyPublicKey(BuildContext context, SshKey key) async {
+  final t = AppLocalizations.of(context);
   await Clipboard.setData(ClipboardData(text: key.publicKey));
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Public key copied to clipboard')),
+      SnackBar(content: Text(t.catSshKeyCopied)),
     );
   }
 }
 
 Future<void> _showKeyDialog(BuildContext context, SshKey? existing) async {
+  final t = AppLocalizations.of(context);
   final cubit = context.read<SshKeysCubit>();
   final nameCtrl = TextEditingController(text: existing?.name ?? '');
   var readOnly = existing?.readOnly ?? true;
@@ -207,15 +213,13 @@ Future<void> _showKeyDialog(BuildContext context, SshKey? existing) async {
               TextField(
                 controller: nameCtrl,
                 autofocus: true,
-                decoration: const InputDecoration(labelText: 'Name'),
+                decoration: InputDecoration(labelText: t.fieldName),
               ),
               const SizedBox(height: 12),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text('Read-only'),
-                subtitle: const Text(
-                  'Register as a read-only deploy key (recommended)',
-                ),
+                title: Text(t.docsReadOnly),
+                subtitle: Text(t.catSshKeyReadOnlyHint),
                 value: readOnly,
                 onChanged: (v) => setState(() => readOnly = v),
               ),
@@ -225,7 +229,7 @@ Future<void> _showKeyDialog(BuildContext context, SshKey? existing) async {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(null),
-            child: const Text('Cancel'),
+            child: Text(t.actionCancel),
           ),
           FilledButton(
             onPressed: () async {
@@ -239,7 +243,7 @@ Future<void> _showKeyDialog(BuildContext context, SshKey? existing) async {
                 if (ctx.mounted) Navigator.of(ctx).pop(null);
               }
             },
-            child: const Text('Save'),
+            child: Text(t.actionSaveShort),
           ),
         ],
       ),
@@ -253,20 +257,18 @@ Future<void> _showKeyDialog(BuildContext context, SshKey? existing) async {
 }
 
 Future<void> _showKeyCreatedDialog(BuildContext context, SshKey key) async {
+  final t = AppLocalizations.of(context);
   await showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Deploy key generated'),
+      title: Text(t.catSshKeyGenerated),
       content: SizedBox(
         width: 520,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Add this public key as a deploy key on your git host. The '
-              'private key never leaves the server.',
-            ),
+            Text(t.catSshKeyGeneratedBody),
             const SizedBox(height: 12),
             SelectableText(
               key.publicKey,
@@ -280,11 +282,11 @@ Future<void> _showKeyCreatedDialog(BuildContext context, SshKey key) async {
       actions: [
         TextButton(
           onPressed: () => _copyPublicKey(ctx, key),
-          child: const Text('Copy'),
+          child: Text(t.actionCopy),
         ),
         FilledButton(
           onPressed: () => Navigator.of(ctx).pop(),
-          child: const Text('Done'),
+          child: Text(t.actionDone),
         ),
       ],
     ),
@@ -292,12 +294,13 @@ Future<void> _showKeyCreatedDialog(BuildContext context, SshKey key) async {
 }
 
 Future<void> _confirmDeleteKey(BuildContext context, SshKey key) async {
+  final t = AppLocalizations.of(context);
   final cubit = context.read<SshKeysCubit>();
   final inUse = key.usedByRepoCount > 0;
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Delete SSH key'),
+      title: Text(t.catSshKeyDelete),
       content: Text(
         inUse
             ? 'This key is used by ${key.usedByRepoCount} repositories. '
@@ -308,11 +311,11 @@ Future<void> _confirmDeleteKey(BuildContext context, SshKey key) async {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('Cancel'),
+          child: Text(t.actionCancel),
         ),
         FilledButton.tonal(
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('Delete'),
+          child: Text(t.actionDelete),
         ),
       ],
     ),
@@ -332,6 +335,7 @@ class _RepositoriesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return BlocBuilder<RepositoriesCubit, RepositoriesState>(
       builder: (context, state) {
         return Column(
@@ -340,14 +344,14 @@ class _RepositoriesSection extends StatelessWidget {
             Row(
               children: [
                 Text(
-                  'Repositories',
+                  t.permDomainRepositories,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const Spacer(),
                 if (canEdit)
                   FilledButton.icon(
                     icon: const Icon(Icons.add),
-                    label: const Text('Add repository'),
+                    label: Text(t.catRepoAdd),
                     onPressed: () => _showRepoDialog(context, null),
                   ),
               ],
@@ -364,9 +368,9 @@ class _RepositoriesSection extends StatelessWidget {
               Text(failureText(state.failure))
             else if (state is RepositoriesLoaded)
               if (state.repositories.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('No repositories yet.'),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(t.catRepoEmpty),
                 )
               else
                 for (final repo in state.repositories)
@@ -385,6 +389,7 @@ class _RepositoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final keyName = _keyNameFor(context, repo.sshKeyId);
     return Card(
       child: ListTile(
@@ -408,12 +413,12 @@ class _RepositoryCard extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.edit_outlined),
-                    tooltip: 'Edit',
+                    tooltip: t.actionEdit,
                     onPressed: () => _showRepoDialog(context, repo),
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
-                    tooltip: 'Delete',
+                    tooltip: t.actionDelete,
                     onPressed: () => _confirmDeleteRepo(context, repo),
                   ),
                 ],
@@ -436,22 +441,23 @@ String _keyNameFor(BuildContext context, String? keyId) {
 }
 
 Future<void> _confirmDeleteRepo(BuildContext context, Repository repo) async {
+  final t = AppLocalizations.of(context);
   final cubit = context.read<RepositoriesCubit>();
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Delete repository'),
+      title: Text(t.catRepoDelete),
       content: Text(
-        'Delete "${repo.name}"? It will be unlinked from any components.',
+        t.catRepoDeleteBody(repo.name),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('Cancel'),
+          child: Text(t.actionCancel),
         ),
         FilledButton.tonal(
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('Delete'),
+          child: Text(t.actionDelete),
         ),
       ],
     ),
@@ -464,6 +470,7 @@ Future<void> _confirmDeleteRepo(BuildContext context, Repository repo) async {
 /// Create/edit a repository. Supports picking an existing key or creating a
 /// new one inline, plus fetching branches to choose the default branch.
 Future<void> _showRepoDialog(BuildContext context, Repository? existing) async {
+  final t = AppLocalizations.of(context);
   final repoCubit = context.read<RepositoriesCubit>();
   final keysState = context.read<SshKeysCubit>().state;
   final keys = keysState is SshKeysLoaded ? keysState.keys : <SshKey>[];
@@ -497,23 +504,25 @@ Future<void> _showRepoDialog(BuildContext context, Repository? existing) async {
                   TextField(
                     controller: nameCtrl,
                     autofocus: true,
-                    decoration: const InputDecoration(labelText: 'Name'),
+                    decoration: InputDecoration(labelText: t.fieldName),
                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: urlCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'SSH URL',
+                    decoration: InputDecoration(
+                      labelText: t.catFieldSshUrl,
                       hintText: 'git@github.com:org/repo.git',
                     ),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String?>(
                     initialValue: selectedKey,
-                    decoration: const InputDecoration(labelText: 'SSH key'),
+                    decoration: InputDecoration(
+                      labelText: t.catFieldSshKey,
+                    ),
                     items: [
-                      const DropdownMenuItem<String?>(
-                        child: Text('— No key —'),
+                      DropdownMenuItem<String?>(
+                        child: Text(t.catSshKeyNoneOption),
                       ),
                       for (final k in keys)
                         DropdownMenuItem<String?>(
@@ -522,9 +531,9 @@ Future<void> _showRepoDialog(BuildContext context, Repository? existing) async {
                             '${k.name} (${k.readOnly ? "ro" : "rw"})',
                           ),
                         ),
-                      const DropdownMenuItem<String?>(
+                      DropdownMenuItem<String?>(
                         value: newKeySentinel,
-                        child: Text('+ Create new key…'),
+                        child: Text(t.catSshKeyCreateNew),
                       ),
                     ],
                     onChanged: (v) => setState(() {
@@ -536,13 +545,13 @@ Future<void> _showRepoDialog(BuildContext context, Repository? existing) async {
                     const SizedBox(height: 12),
                     TextField(
                       controller: newKeyNameCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'New key name',
+                      decoration: InputDecoration(
+                        labelText: t.catSshKeyNewName,
                       ),
                     ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Read-only'),
+                      title: Text(t.docsReadOnly),
                       value: newKeyReadOnly,
                       onChanged: (v) => setState(() => newKeyReadOnly = v),
                     ),
@@ -553,8 +562,8 @@ Future<void> _showRepoDialog(BuildContext context, Repository? existing) async {
                       Expanded(
                         child: TextField(
                           controller: branchCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Default branch',
+                          decoration: InputDecoration(
+                            labelText: t.catFieldDefaultBranch,
                           ),
                         ),
                       ),
@@ -599,7 +608,7 @@ Future<void> _showRepoDialog(BuildContext context, Repository? existing) async {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Fetch branches'),
+                            : Text(t.catFetchBranches),
                       ),
                     ],
                   ),
@@ -622,7 +631,7 @@ Future<void> _showRepoDialog(BuildContext context, Repository? existing) async {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
+              child: Text(t.actionCancel),
             ),
             FilledButton(
               onPressed: () async {
@@ -672,7 +681,7 @@ Future<void> _showRepoDialog(BuildContext context, Repository? existing) async {
                   }
                 }
               },
-              child: const Text('Save'),
+              child: Text(t.actionSaveShort),
             ),
           ],
         );

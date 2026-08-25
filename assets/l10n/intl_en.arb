@@ -4395,5 +4395,169 @@
         "type": "int"
       }
     }
+  },
+  "actionSaveShort": "Save",
+  "actionRefresh": "Refresh",
+  "actionPrevious": "Previous",
+  "actionNext": "Next",
+  "actionAttach": "Attach",
+  "actionLink": "Link",
+  "actionUnlink": "Unlink",
+  "paginatorRange": "{start}–{end} of {total}",
+  "@paginatorRange": {
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "paginatorRows": "Rows:",
+  "adminNavUsers": "Admin · users",
+  "adminNavSettings": "Admin · settings",
+  "adminNavAppTokens": "Admin · app tokens",
+  "adminActivityTitle": "Activity log",
+  "adminActivityFilter": "Filter",
+  "adminActivityEmpty": "No activity yet.",
+  "adminActivityLoadFailed": "Failed to load activity: {detail}",
+  "@adminActivityLoadFailed": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "adminSettingsActivitySubtitle": "Recent auth and account events",
+  "adminLdapReadOnlyBody": "You are signed in via LDAP. LDAP settings can only be changed by a local administrator.",
+  "boardColumnsTitle": "Board columns",
+  "boardColumnsHint": "Toggle visibility and drag to reorder the board columns.",
+  "detailNoWatchers": "No watchers.",
+  "epicNotFound": "Epic not found",
+  "issueNotFound": "Issue not found",
+  "invitationAccepting": "Accepting…",
+  "memberAddUser": "Add user",
+  "memberAddExisting": "Add existing user",
+  "memberSearchLabel": "Search by email, username or name",
+  "memberSearchHint": "Enter an exact email or username to add the user.",
+  "permOverlayTitle": "Permissions",
+  "permOverlayNoProject": "No project context",
+  "permOverlayFor": "Permissions · {project}",
+  "@permOverlayFor": {
+    "placeholders": {
+      "project": {
+        "type": "String"
+      }
+    }
+  },
+  "memberAddDirectBody": "Add an existing user to this project directly — no email invitation needed.",
+  "catCustomerNew": "New customer",
+  "catCustomerEmpty": "No customers yet.",
+  "catCustomerDelete": "Delete customer",
+  "catCustomerDeleteBody": "Delete \"{name}\"? It will be unlinked from any issues.",
+  "@catCustomerDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "catFieldCompany": "Company name",
+  "catFieldContactEmail": "Contact email",
+  "catFieldPhone": "Phone",
+  "catFieldNotes": "Notes",
+  "catReleaseNew": "New release",
+  "catReleaseEmpty": "No releases yet.",
+  "catReleaseEdit": "Edit release",
+  "catReleaseDelete": "Delete release",
+  "catReleaseDeleteBody": "Delete \"{name}\"? All its versions and component links are removed.",
+  "@catReleaseDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "catVersionEmpty": "No versions yet.",
+  "catVersionEdit": "Edit version",
+  "catVersionDelete": "Delete version",
+  "catVersionAdd": "Add version",
+  "catBadgeColor": "Badge color",
+  "catFieldTargetDate": "Target date",
+  "catFieldGitTag": "Git tag",
+  "catFieldRepository": "Repository",
+  "catNoneOption": "— None —",
+  "catHintReleaseName": "e.g. PSBP",
+  "catHintVersion": "e.g. 1.0",
+  "catSshKeysTitle": "SSH keys",
+  "catSshKeyNew": "New key",
+  "catSshKeyEmpty": "No SSH keys yet. Generate one to access a repository.",
+  "catSshKeyCopyPublic": "Copy public key",
+  "catSshKeyCopied": "Public key copied to clipboard",
+  "catSshKeyReadOnlyHint": "Register as a read-only deploy key (recommended)",
+  "catSshKeyGenerated": "Deploy key generated",
+  "catSshKeyGeneratedBody": "Add this public key as a deploy key on your git host. The private key never leaves the server.",
+  "catSshKeyDelete": "Delete SSH key",
+  "catSshKeyNewName": "New key name",
+  "catSshKeyCreateNew": "+ Create new key…",
+  "catSshKeyNoneOption": "— No key —",
+  "catRepoAdd": "Add repository",
+  "catRepoEmpty": "No repositories yet.",
+  "catRepoDelete": "Delete repository",
+  "catRepoDeleteBody": "Delete \"{name}\"? It will be unlinked from any components.",
+  "@catRepoDeleteBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "catFieldSshUrl": "SSH URL",
+  "catFieldSshKey": "SSH key",
+  "catFieldDefaultBranch": "Default branch",
+  "catFetchBranches": "Fetch branches",
+  "catCompLinksTooltip": "Linked repositories & releases",
+  "catCompLinksTitle": "Links — {component}",
+  "@catCompLinksTitle": {
+    "placeholders": {
+      "component": {
+        "type": "String"
+      }
+    }
+  },
+  "catRepoLinkEmpty": "No repositories linked yet.",
+  "catRepoLinkAdd": "Link repository",
+  "catRepoLinkNoneLeft": "No more repositories to link.",
+  "catReleaseLinkEmpty": "No releases linked yet.",
+  "catReleaseLinkAdd": "Link release",
+  "catReleaseLinkNoneLeft": "No more releases to link.",
+  "catChangeBranch": "Change branch",
+  "catRepoLinkSubtitle": "{url}\nBranch: {branch}",
+  "@catRepoLinkSubtitle": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      },
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersExcludeTimeReports": "Exclude from timesheet reports",
+  "adminUsersIncludeTimeReports": "Include in timesheet reports",
+  "adminUsersExcludeTimeReportsHint": "Hides this user from team timesheet tables and reports. They can still track their own time.",
+  "adminUsersExcludedBadge": "Not in reports",
+  "ttExcludedMembers": "{count,plural,=1{1 user excluded from this report}other{{count} users excluded from this report}}",
+  "@ttExcludedMembers": {
+    "description": "Footer note on a team timesheet grid, superadmins only.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

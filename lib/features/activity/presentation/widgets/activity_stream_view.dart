@@ -554,6 +554,7 @@ class _CommentAttachmentsState extends State<_CommentAttachments> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return FutureBuilder<List<Attachment>>(
       future: _future,
@@ -585,10 +586,7 @@ class _CommentAttachmentsState extends State<_CommentAttachments> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.attach_file, size: 16),
-                label: Text(
-                  'Attach',
-                  style: theme.textTheme.bodySmall,
-                ),
+                label: Text(t.actionAttach, style: theme.textTheme.bodySmall),
                 onPressed: _busy ? null : _upload,
               ),
           ],

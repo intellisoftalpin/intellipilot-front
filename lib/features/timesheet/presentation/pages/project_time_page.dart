@@ -30,7 +30,7 @@ class ProjectTimePage extends StatefulWidget {
 class _ProjectTimePageState extends State<ProjectTimePage> {
   late int _year = DateTime.now().year;
   late int _month = DateTime.now().month;
-  List<TeamMemberMonth>? _members;
+  TeamMonth? _team;
   Set<int> _lockedMonths = {};
   bool _loading = true;
 
@@ -104,7 +104,7 @@ class _ProjectTimePageState extends State<ProjectTimePage> {
     final locks = await _repo.listLocks(widget.projectId);
     if (!mounted) return;
     setState(() {
-      _members = team.valueOrNull ?? const [];
+      _team = team.valueOrNull;
       _lockedMonths = {
         for (final l in (locks.valueOrNull ?? const <PeriodLock>[]))
           if (l.year == _year) l.month,
@@ -305,14 +305,15 @@ class _ProjectTimePageState extends State<ProjectTimePage> {
           Expanded(
             child: _loading
                 ? const LoadingIndicator()
-                : (_members == null || _members!.isEmpty)
+                : (_team == null || _team!.members.isEmpty)
                 ? Center(child: Text(t.ttNoTeamData))
                 : Padding(
                     padding: const EdgeInsets.all(8),
                     child: TeamMonthGrid(
-                      members: _members!,
+                      members: _team!.members,
                       year: _year,
                       month: _month,
+                      excludedMembers: _team!.excludedMembers,
                       onTapDay: _canManage ? _openMemberDay : null,
                     ),
                   ),

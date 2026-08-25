@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// Debug-only floating panel that lists the permissions the current user
 /// holds in the active project. Hidden in release builds.
@@ -39,7 +40,7 @@ class _Toggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Tooltip(
-      message: 'Permissions',
+      message: AppLocalizations.of(context).permOverlayTitle,
       child: FloatingActionButton.small(
         heroTag: 'perm-debug-toggle',
         onPressed: onOpen,
@@ -67,7 +68,7 @@ class _Panel extends StatelessWidget {
               if (state is! ProjectDetailLoaded) {
                 return Row(
                   children: [
-                    const Text('No project context'),
+                    Text(AppLocalizations.of(context).permOverlayNoProject),
                     const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -87,7 +88,9 @@ class _Panel extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        'Permissions · ${state.project.name}',
+                        AppLocalizations.of(
+                          context,
+                        ).permOverlayFor(state.project.name),
                         style: theme.textTheme.titleSmall,
                       ),
                       const Spacer(),

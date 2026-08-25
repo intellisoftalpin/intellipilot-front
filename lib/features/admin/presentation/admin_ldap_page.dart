@@ -246,13 +246,10 @@ class _LdapFormState extends State<_LdapForm> {
         if (ro)
           Card(
             color: theme.colorScheme.tertiaryContainer,
-            child: const ListTile(
-              leading: Icon(Icons.lock_outline),
-              title: Text('Read-only'),
-              subtitle: Text(
-                'You are signed in via LDAP. LDAP settings can only be changed '
-                'by a superadmin who signs in with a local password.',
-              ),
+            child: ListTile(
+              leading: const Icon(Icons.lock_outline),
+              title: Text(l10n.docsReadOnly),
+              subtitle: Text(l10n.adminLdapReadOnlyBody),
             ),
           ),
         SwitchListTile(

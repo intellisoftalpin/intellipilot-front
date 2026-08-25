@@ -90,7 +90,7 @@ class _ComponentsView extends StatelessWidget {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.account_tree_outlined),
-                          tooltip: 'Linked repositories & releases',
+                          tooltip: t.catCompLinksTooltip,
                           onPressed: () => _showLinksDialog(
                             context,
                             component,
@@ -301,9 +301,10 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return AlertDialog(
-      title: Text('Links — ${widget.component.name}'),
+      title: Text(t.catCompLinksTitle(widget.component.name)),
       content: SizedBox(
         width: 480,
         child: SingleChildScrollView(
@@ -311,7 +312,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Repositories', style: theme.textTheme.titleSmall),
+              Text(t.permDomainRepositories, style: theme.textTheme.titleSmall),
               BlocBuilder<ComponentReposCubit, ComponentReposState>(
                 builder: (context, state) {
                   if (state is ComponentReposLoading) {
@@ -333,9 +334,9 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       if (state.links.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Text('No repositories linked yet.'),
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(t.catRepoLinkEmpty),
                         )
                       else
                         for (final link in state.links)
@@ -344,7 +345,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                             leading: const Icon(Icons.commit_outlined),
                             title: Text(link.repositoryName),
                             subtitle: Text(
-                              '${link.sshUrl}\nBranch: ${link.branch}',
+                              t.catRepoLinkSubtitle(link.sshUrl, link.branch),
                             ),
                             isThreeLine: true,
                             trailing: widget.canEdit
@@ -353,13 +354,13 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                                     children: [
                                       IconButton(
                                         icon: const Icon(Icons.edit_outlined),
-                                        tooltip: 'Change branch',
+                                        tooltip: t.catChangeBranch,
                                         onPressed: () =>
                                             _editBranch(context, link),
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.link_off),
-                                        tooltip: 'Unlink',
+                                        tooltip: t.actionUnlink,
                                         onPressed: () => context
                                             .read<ComponentReposCubit>()
                                             .unlink(link.repositoryId),
@@ -381,7 +382,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                           alignment: Alignment.centerLeft,
                           child: TextButton.icon(
                             icon: const Icon(Icons.add_link, size: 18),
-                            label: const Text('Link repository'),
+                            label: Text(t.catRepoLinkAdd),
                             onPressed: () => _addLink(context),
                           ),
                         ),
@@ -390,7 +391,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                 },
               ),
               const Divider(height: 24),
-              Text('Releases', style: theme.textTheme.titleSmall),
+              Text(t.permDomainReleases, style: theme.textTheme.titleSmall),
               BlocBuilder<ComponentReleasesCubit, ComponentReleasesState>(
                 builder: (context, state) {
                   if (state is ComponentReleasesLoading) {
@@ -412,9 +413,9 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       if (state.links.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.all(8),
-                          child: Text('No releases linked yet.'),
+                        Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Text(t.catReleaseLinkEmpty),
                         )
                       else
                         for (final link in state.links)
@@ -425,7 +426,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                             trailing: widget.canEdit
                                 ? IconButton(
                                     icon: const Icon(Icons.link_off),
-                                    tooltip: 'Unlink',
+                                    tooltip: t.actionUnlink,
                                     onPressed: () => context
                                         .read<ComponentReleasesCubit>()
                                         .unlink(link.releaseId),
@@ -445,7 +446,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                           alignment: Alignment.centerLeft,
                           child: TextButton.icon(
                             icon: const Icon(Icons.add_link, size: 18),
-                            label: const Text('Link release'),
+                            label: Text(t.catReleaseLinkAdd),
                             onPressed: () => _addRelease(context),
                           ),
                         ),
@@ -460,13 +461,14 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
       actions: [
         FilledButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+          child: Text(t.actionClose),
         ),
       ],
     );
   }
 
   Future<void> _addRelease(BuildContext context) async {
+    final t = AppLocalizations.of(context);
     final cubit = context.read<ComponentReleasesCubit>();
     final releases =
         (await getIt<CatalogRepository>().listReleases(
@@ -482,7 +484,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
     final available = releases.where((r) => !linkedIds.contains(r.id)).toList();
     if (available.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No more releases to link.')),
+        SnackBar(content: Text(t.catReleaseLinkNoneLeft)),
       );
       return;
     }
@@ -491,12 +493,12 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title: const Text('Link release'),
+          title: Text(t.catReleaseLinkAdd),
           content: SizedBox(
             width: 420,
             child: DropdownButtonFormField<String>(
               initialValue: releaseId,
-              decoration: const InputDecoration(labelText: 'Release'),
+              decoration: InputDecoration(labelText: t.issueFieldRelease),
               items: [
                 for (final r in available)
                   DropdownMenuItem<String>(value: r.id, child: Text(r.name)),
@@ -507,11 +509,11 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
+              child: Text(t.actionCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(releaseId),
-              child: const Text('Link'),
+              child: Text(t.actionLink),
             ),
           ],
         ),
@@ -524,25 +526,26 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
     BuildContext context,
     ComponentRepositoryLink link,
   ) async {
+    final t = AppLocalizations.of(context);
     final cubit = context.read<ComponentReposCubit>();
     final ctrl = TextEditingController(text: link.branch);
     final branch = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Change branch'),
+        title: Text(t.catChangeBranch),
         content: TextField(
           controller: ctrl,
           autofocus: true,
-          decoration: const InputDecoration(labelText: 'Branch'),
+          decoration: InputDecoration(labelText: t.docsBranch),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text(t.actionCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
-            child: const Text('Save'),
+            child: Text(t.actionSaveShort),
           ),
         ],
       ),
@@ -553,6 +556,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
   }
 
   Future<void> _addLink(BuildContext context) async {
+    final t = AppLocalizations.of(context);
     final cubit = context.read<ComponentReposCubit>();
     final repos = await _repos;
     if (!context.mounted) return;
@@ -564,7 +568,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
     final available = repos.where((r) => !linkedIds.contains(r.id)).toList();
     if (available.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No more repositories to link.')),
+        SnackBar(content: Text(t.catRepoLinkNoneLeft)),
       );
       return;
     }
@@ -580,7 +584,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
         builder: (ctx, setState) {
           final selected = available.firstWhere((r) => r.id == repoId);
           return AlertDialog(
-            title: const Text('Link repository'),
+            title: Text(t.catRepoLinkAdd),
             content: SizedBox(
               width: 460,
               child: Column(
@@ -589,7 +593,9 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                 children: [
                   DropdownButtonFormField<String>(
                     initialValue: repoId,
-                    decoration: const InputDecoration(labelText: 'Repository'),
+                    decoration: InputDecoration(
+                      labelText: t.catFieldRepository,
+                    ),
                     items: [
                       for (final r in available)
                         DropdownMenuItem<String>(
@@ -608,8 +614,8 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                       Expanded(
                         child: TextField(
                           controller: branchCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Branch',
+                          decoration: InputDecoration(
+                            labelText: t.docsBranch,
                           ),
                         ),
                       ),
@@ -650,7 +656,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text('Fetch branches'),
+                            : Text(t.catFetchBranches),
                       ),
                     ],
                   ),
@@ -672,7 +678,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
+                child: Text(t.actionCancel),
               ),
               FilledButton(
                 onPressed: () {
@@ -680,7 +686,7 @@ class _ComponentLinksViewState extends State<_ComponentLinksView> {
                   if (repoId == null || branch.isEmpty) return;
                   Navigator.of(ctx).pop((repoId: repoId!, branch: branch));
                 },
-                child: const Text('Link'),
+                child: Text(t.actionLink),
               ),
             ],
           );

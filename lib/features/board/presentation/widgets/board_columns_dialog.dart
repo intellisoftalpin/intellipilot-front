@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// The result of the board-columns settings dialog: the full ordering of status
 /// ids and the subset that should stay hidden.
@@ -31,10 +32,11 @@ Future<BoardColumnsResult?> showBoardColumnsDialog(
   return showDialog<BoardColumnsResult>(
     context: context,
     builder: (ctx) {
+      final t = AppLocalizations.of(ctx);
       final theme = Theme.of(ctx);
       return StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
-          title: const Text('Board columns'),
+          title: Text(t.boardColumnsTitle),
           content: SizedBox(
             width: 460,
             child: Column(
@@ -42,7 +44,7 @@ Future<BoardColumnsResult?> showBoardColumnsDialog(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Toggle visibility and drag to reorder the board columns.',
+                  t.boardColumnsHint,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
@@ -83,13 +85,13 @@ Future<BoardColumnsResult?> showBoardColumnsDialog(
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
+              child: Text(t.actionCancel),
             ),
             FilledButton(
               onPressed: () => Navigator.of(ctx).pop(
                 BoardColumnsResult(order: working, hidden: hiddenSet),
               ),
-              child: const Text('Save'),
+              child: Text(t.actionSaveShort),
             ),
           ],
         ),

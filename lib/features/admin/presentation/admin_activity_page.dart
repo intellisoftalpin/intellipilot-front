@@ -6,6 +6,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_activity_cubit.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// Friendly label, icon and accent colour for a known activity action. Unknown
 /// actions fall back to the raw action string with a neutral icon.
@@ -62,15 +63,16 @@ class _ActivityView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final cubit = context.read<AdminActivityCubit>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Activity log'),
+        title: Text(t.adminActivityTitle),
         actions: [
           IconButton(
             onPressed: () => unawaited(cubit.load()),
             icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
+            tooltip: t.actionRefresh,
           ),
         ],
       ),
@@ -87,9 +89,9 @@ class _ActivityView extends StatelessWidget {
                     : null;
                 return DropdownButtonFormField<String?>(
                   initialValue: current,
-                  decoration: const InputDecoration(
-                    labelText: 'Filter',
-                    prefixIcon: Icon(Icons.filter_list),
+                  decoration: InputDecoration(
+                    labelText: t.adminActivityFilter,
+                    prefixIcon: const Icon(Icons.filter_list),
                   ),
                   items: [
                     for (final (label, value) in _filters)
@@ -110,11 +112,11 @@ class _ActivityView extends StatelessWidget {
                   child: CircularProgressIndicator(),
                 ),
                 AdminActivityFailed(:final failure) => Center(
-                  child: Text('Failed to load activity: ${failure.debugLabel}'),
+                  child: Text(t.adminActivityLoadFailed(failure.debugLabel)),
                 ),
                 AdminActivityLoaded(:final items) =>
                   items.isEmpty
-                      ? const Center(child: Text('No activity yet.'))
+                      ? Center(child: Text(t.adminActivityEmpty))
                       : ListView.separated(
                           itemBuilder: (_, i) => _EventTile(event: items[i]),
                           separatorBuilder: (_, _) => const Divider(height: 0),

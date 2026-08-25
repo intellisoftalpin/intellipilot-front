@@ -52,12 +52,12 @@ class _AcceptView extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: switch (state) {
-                AcceptInvitationRunning() => const Column(
+                AcceptInvitationRunning() => Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Accepting…'),
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(AppLocalizations.of(context).invitationAccepting),
                   ],
                 ),
                 AcceptInvitationAccepted() => const SizedBox.shrink(),

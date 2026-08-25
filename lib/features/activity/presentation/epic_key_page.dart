@@ -4,6 +4,7 @@ import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// Full-page epic view reached by a human-readable key URL
 /// (`/projects/{id}/epics/PS-E-7`). Resolves the trailing numeric ref to the
@@ -64,7 +65,9 @@ class _EpicKeyPageState extends State<EpicKeyPage> {
         if (epic == null) {
           return Scaffold(
             appBar: AppBar(),
-            body: const Center(child: Text('Epic not found')),
+            body: Center(
+              child: Text(AppLocalizations.of(context).epicNotFound),
+            ),
           );
         }
         return EntityDetailPage(

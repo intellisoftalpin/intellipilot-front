@@ -15,6 +15,7 @@ class UserProfile {
     required this.mustChangePassword,
     required this.createdAt,
     this.authSource = 'local',
+    this.excludeFromTimeReports = false,
     this.card = const UserCard(),
   });
 
@@ -31,6 +32,8 @@ class UserProfile {
       mustChangePassword: json['must_change_password'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String),
       authSource: (json['auth_source'] as String?) ?? 'local',
+      excludeFromTimeReports:
+          json['exclude_from_time_reports'] as bool? ?? false,
       card: UserCard.fromJson(json),
     );
   }
@@ -60,6 +63,11 @@ class UserProfile {
   /// gates the `/admin/*` surface in the SPA.
   final bool isSuperadmin;
 
+  /// Hidden from timesheet reports (team grids, project time lists and
+  /// exports) and not warned about unfilled days. Does NOT restrict their
+  /// own time tracking.
+  final bool excludeFromTimeReports;
+
   /// True when the account was created or reset by an admin and a fresh
   /// password is required before any other navigation.
   final bool mustChangePassword;
@@ -73,6 +81,7 @@ class UserProfile {
     String? timezone,
     bool? mustChangePassword,
     bool? isSuperadmin,
+    bool? excludeFromTimeReports,
     UserCard? card,
   }) => UserProfile(
     id: id,
@@ -83,6 +92,8 @@ class UserProfile {
     timezone: timezone ?? this.timezone,
     isActive: isActive,
     isSuperadmin: isSuperadmin ?? this.isSuperadmin,
+    excludeFromTimeReports:
+        excludeFromTimeReports ?? this.excludeFromTimeReports,
     mustChangePassword: mustChangePassword ?? this.mustChangePassword,
     createdAt: createdAt,
     authSource: authSource,

@@ -11,6 +11,7 @@ import 'package:intellipilot/features/catalog/presentation/widgets/repositories_
     show failureText;
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 const _statusOptions = <String>['planned', 'in_progress', 'released'];
 
@@ -43,6 +44,7 @@ class _ReleasesView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final detail = context.watch<ProjectDetailCubit>().state;
     final canEdit =
         detail is ProjectDetailLoaded &&
@@ -58,12 +60,15 @@ class _ReleasesView extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('Releases', style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  t.permDomainReleases,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
                 const Spacer(),
                 if (canEdit)
                   FilledButton.icon(
                     icon: const Icon(Icons.add),
-                    label: const Text('New release'),
+                    label: Text(t.catReleaseNew),
                     onPressed: () => _showReleaseDialog(context, null),
                   ),
               ],
@@ -80,9 +85,9 @@ class _ReleasesView extends StatelessWidget {
               Text(failureText(state.failure))
             else if (state is ReleasesLoaded)
               if (state.releases.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('No releases yet.'),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(t.catReleaseEmpty),
                 )
               else
                 for (final r in state.releases)
@@ -113,6 +118,7 @@ class _ReleaseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Card(
       child: ExpansionTile(
         leading: const Icon(Icons.rocket_launch_outlined),
@@ -141,13 +147,13 @@ class _ReleaseCard extends StatelessWidget {
                 children: [
                   TextButton.icon(
                     icon: const Icon(Icons.edit_outlined, size: 18),
-                    label: const Text('Edit release'),
+                    label: Text(t.catReleaseEdit),
                     onPressed: () => _showReleaseDialog(context, release),
                   ),
                   const Spacer(),
                   TextButton.icon(
                     icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('Delete'),
+                    label: Text(t.actionDelete),
                     onPressed: () => _confirmDeleteRelease(context, release),
                   ),
                 ],
@@ -166,9 +172,9 @@ class _ReleaseCard extends StatelessWidget {
             )
           else ...[
             if (versions!.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(12),
-                child: Text('No versions yet.'),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Text(t.catVersionEmpty),
               )
             else
               for (final v in versions!)
@@ -190,13 +196,13 @@ class _ReleaseCard extends StatelessWidget {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.edit_outlined),
-                              tooltip: 'Edit version',
+                              tooltip: t.catVersionEdit,
                               onPressed: () =>
                                   _showVersionDialog(context, release.id, v),
                             ),
                             IconButton(
                               icon: const Icon(Icons.delete_outline),
-                              tooltip: 'Delete version',
+                              tooltip: t.catVersionDelete,
                               onPressed: () => context
                                   .read<ReleasesCubit>()
                                   .deleteVersion(release.id, v.id),
@@ -212,7 +218,7 @@ class _ReleaseCard extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                   child: TextButton.icon(
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add version'),
+                    label: Text(t.catVersionAdd),
                     onPressed: () =>
                         _showVersionDialog(context, release.id, null),
                   ),
@@ -229,23 +235,21 @@ Future<void> _confirmDeleteRelease(
   BuildContext context,
   Release release,
 ) async {
+  final t = AppLocalizations.of(context);
   final cubit = context.read<ReleasesCubit>();
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Delete release'),
-      content: Text(
-        'Delete "${release.name}"? All its versions and component links are '
-        'removed.',
-      ),
+      title: Text(t.catReleaseDelete),
+      content: Text(t.catReleaseDeleteBody(release.name)),
       actions: [
         TextButton(
           onPressed: () => Navigator.of(ctx).pop(false),
-          child: const Text('Cancel'),
+          child: Text(t.actionCancel),
         ),
         FilledButton.tonal(
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: const Text('Delete'),
+          child: Text(t.actionDelete),
         ),
       ],
     ),
@@ -256,6 +260,7 @@ Future<void> _confirmDeleteRelease(
 }
 
 Future<void> _showReleaseDialog(BuildContext context, Release? existing) async {
+  final t = AppLocalizations.of(context);
   final cubit = context.read<ReleasesCubit>();
   final nameCtrl = TextEditingController(text: existing?.name ?? '');
   final descCtrl = TextEditingController(text: existing?.description ?? '');
@@ -277,19 +282,21 @@ Future<void> _showReleaseDialog(BuildContext context, Release? existing) async {
               TextField(
                 controller: nameCtrl,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  hintText: 'e.g. PSBP',
+                decoration: InputDecoration(
+                  labelText: t.fieldName,
+                  hintText: t.catHintReleaseName,
                 ),
               ),
               const SizedBox(height: 12),
               TextField(
                 controller: descCtrl,
                 maxLines: 3,
-                decoration: const InputDecoration(labelText: 'Description'),
+                decoration: InputDecoration(
+                  labelText: t.projectFieldDescription,
+                ),
               ),
               const SizedBox(height: 12),
-              const Text('Badge color'),
+              Text(t.catBadgeColor),
               const SizedBox(height: 4),
               ColorSwatchPicker(
                 selectedHex: color,
@@ -301,7 +308,7 @@ Future<void> _showReleaseDialog(BuildContext context, Release? existing) async {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text(t.actionCancel),
           ),
           FilledButton(
             onPressed: () async {
@@ -336,7 +343,7 @@ Future<void> _showReleaseDialog(BuildContext context, Release? existing) async {
                 }
               }
             },
-            child: const Text('Save'),
+            child: Text(t.actionSaveShort),
           ),
         ],
       ),
@@ -349,6 +356,7 @@ Future<void> _showVersionDialog(
   String releaseId,
   ReleaseVersion? existing,
 ) async {
+  final t = AppLocalizations.of(context);
   final cubit = context.read<ReleasesCubit>();
   final projectId = cubit.projectId;
   final versionCtrl = TextEditingController(text: existing?.version ?? '');
@@ -381,15 +389,17 @@ Future<void> _showVersionDialog(
                 TextField(
                   controller: versionCtrl,
                   autofocus: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Version',
-                    hintText: 'e.g. 1.0',
+                  decoration: InputDecoration(
+                    labelText: t.aboutFieldVersion,
+                    hintText: t.catHintVersion,
                   ),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: status,
-                  decoration: const InputDecoration(labelText: 'Status'),
+                  decoration: InputDecoration(
+                    labelText: t.issueFieldStatus,
+                  ),
                   items: [
                     for (final s in _statusOptions)
                       DropdownMenuItem<String>(value: s, child: Text(s)),
@@ -399,17 +409,21 @@ Future<void> _showVersionDialog(
                 const SizedBox(height: 12),
                 TextField(
                   controller: targetCtrl,
-                  decoration: const InputDecoration(
-                    labelText: 'Target date',
+                  decoration: InputDecoration(
+                    labelText: t.catFieldTargetDate,
                     hintText: 'YYYY-MM-DD',
                   ),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String?>(
                   initialValue: repoId,
-                  decoration: const InputDecoration(labelText: 'Repository'),
+                  decoration: InputDecoration(
+                    labelText: t.catFieldRepository,
+                  ),
                   items: [
-                    const DropdownMenuItem<String?>(child: Text('— None —')),
+                    DropdownMenuItem<String?>(
+                      child: Text(t.catNoneOption),
+                    ),
                     for (final r in repos)
                       DropdownMenuItem<String?>(
                         value: r.id,
@@ -421,13 +435,15 @@ Future<void> _showVersionDialog(
                 const SizedBox(height: 12),
                 TextField(
                   controller: tagCtrl,
-                  decoration: const InputDecoration(labelText: 'Git tag'),
+                  decoration: InputDecoration(
+                    labelText: t.catFieldGitTag,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: notesCtrl,
                   maxLines: 3,
-                  decoration: const InputDecoration(labelText: 'Notes'),
+                  decoration: InputDecoration(labelText: t.catFieldNotes),
                 ),
               ],
             ),
@@ -436,7 +452,7 @@ Future<void> _showVersionDialog(
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text(t.actionCancel),
           ),
           FilledButton(
             onPressed: () async {
@@ -481,7 +497,7 @@ Future<void> _showVersionDialog(
                 }
               }
             },
-            child: const Text('Save'),
+            child: Text(t.actionSaveShort),
           ),
         ],
       ),

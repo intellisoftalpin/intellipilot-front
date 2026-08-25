@@ -94,7 +94,7 @@ abstract interface class TimesheetRepository {
     String? userId,
   });
 
-  Future<Result<List<TeamMemberMonth>, AppFailure>> teamMonth(
+  Future<Result<TeamMonth, AppFailure>> teamMonth(
     String projectId, {
     required int year,
     required int month,
@@ -164,7 +164,7 @@ abstract interface class TimesheetRepository {
 
   /// Cross-project month grid for every user (superadmin only). Backed by
   /// `/admin/time/summary`.
-  Future<Result<List<TeamMemberMonth>, AppFailure>> adminGlobalMonth({
+  Future<Result<TeamMonth, AppFailure>> adminGlobalMonth({
     required int year,
     required int month,
   });

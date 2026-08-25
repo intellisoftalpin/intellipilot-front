@@ -114,8 +114,8 @@ class _SettingsView extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.history),
-                title: const Text('Activity log'),
-                subtitle: const Text('Recent auth and account events'),
+                title: Text(l10n.adminActivityTitle),
+                subtitle: Text(l10n.adminSettingsActivitySubtitle),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => context.go(Routes.adminActivity),
               ),

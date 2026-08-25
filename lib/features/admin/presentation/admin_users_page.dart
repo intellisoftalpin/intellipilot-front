@@ -417,6 +417,10 @@ class _UsersList extends StatelessWidget {
                   onPatch(items[i], UpdateUserRequest(isActive: v)),
               onToggleSuperadmin: (v) =>
                   onPatch(items[i], UpdateUserRequest(isSuperadmin: v)),
+              onToggleTimeReports: (v) => onPatch(
+                items[i],
+                UpdateUserRequest(excludeFromTimeReports: v),
+              ),
               onDelete: () => onDelete(items[i]),
               onResetPassword: () => onResetPassword(items[i]),
               onResetTwoFactor: () => onResetTwoFactor(items[i]),
@@ -444,6 +448,7 @@ class _UserRow extends StatelessWidget {
     required this.row,
     required this.onToggleActive,
     required this.onToggleSuperadmin,
+    required this.onToggleTimeReports,
     required this.onDelete,
     required this.onResetPassword,
     required this.onResetTwoFactor,
@@ -456,6 +461,9 @@ class _UserRow extends StatelessWidget {
   final AdminUserRow row;
   final ValueChanged<bool> onToggleActive;
   final ValueChanged<bool> onToggleSuperadmin;
+
+  /// Sets/clears the timesheet-report exclusion.
+  final ValueChanged<bool> onToggleTimeReports;
   final VoidCallback onDelete;
   final VoidCallback onResetPassword;
   final VoidCallback onResetTwoFactor;
@@ -543,6 +551,11 @@ class _UserRow extends StatelessWidget {
                           icon: Icons.key_outlined,
                           label: l10n.adminUsersChipTempPw,
                         ),
+                      if (user.excludeFromTimeReports)
+                        _MiniTag(
+                          icon: Icons.visibility_off_outlined,
+                          label: l10n.adminUsersExcludedBadge,
+                        ),
                       ...security,
                     ],
                   ),
@@ -553,6 +566,7 @@ class _UserRow extends StatelessWidget {
               row: row,
               onToggleActive: onToggleActive,
               onToggleSuperadmin: onToggleSuperadmin,
+              onToggleTimeReports: onToggleTimeReports,
               onDelete: onDelete,
               onResetPassword: onResetPassword,
               onResetTwoFactor: onResetTwoFactor,
@@ -611,6 +625,7 @@ class _RowMenu extends StatelessWidget {
     required this.row,
     required this.onToggleActive,
     required this.onToggleSuperadmin,
+    required this.onToggleTimeReports,
     required this.onDelete,
     required this.onResetPassword,
     required this.onResetTwoFactor,
@@ -622,6 +637,7 @@ class _RowMenu extends StatelessWidget {
   final AdminUserRow row;
   final ValueChanged<bool> onToggleActive;
   final ValueChanged<bool> onToggleSuperadmin;
+  final ValueChanged<bool> onToggleTimeReports;
   final VoidCallback onDelete;
   final VoidCallback onResetPassword;
   final VoidCallback onResetTwoFactor;
@@ -649,6 +665,8 @@ class _RowMenu extends StatelessWidget {
             onToggleActive(!row.user.isActive);
           case 'toggle_superadmin':
             onToggleSuperadmin(!row.user.isSuperadmin);
+          case 'toggle_time_reports':
+            onToggleTimeReports(!row.user.excludeFromTimeReports);
           case 'reset':
             onResetPassword();
           case 'time':
@@ -722,6 +740,14 @@ class _RowMenu extends StatelessWidget {
             row.user.isSuperadmin
                 ? l10n.adminUsersRevokeSuperadmin
                 : l10n.adminUsersPromoteSuperadmin,
+          ),
+        ),
+        PopupMenuItem(
+          value: 'toggle_time_reports',
+          child: Text(
+            row.user.excludeFromTimeReports
+                ? l10n.adminUsersIncludeTimeReports
+                : l10n.adminUsersExcludeTimeReports,
           ),
         ),
         PopupMenuItem(

@@ -2343,7 +2343,7 @@ class _DetailsTable extends StatelessWidget {
           for (final c in all) _MultiCandidate(id: c.id, label: c.name),
         ],
         selectedIds: currentIds,
-        title: 'Customers',
+        title: AppLocalizations.of(context).permDomainCustomers,
         emptyLabel: '—',
         canEdit: canEdit,
         onSaved: (next) => _patchEntity(
@@ -4966,6 +4966,7 @@ class _WatchersPanelState extends State<_WatchersPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return FutureBuilder<List<String>>(
       future: _future,
@@ -5012,7 +5013,7 @@ class _WatchersPanelState extends State<_WatchersPanel> {
               const SizedBox(height: 8),
               if (watchers.isEmpty)
                 Text(
-                  'No watchers.',
+                  t.detailNoWatchers,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),

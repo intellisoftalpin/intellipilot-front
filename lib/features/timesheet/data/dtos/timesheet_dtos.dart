@@ -226,6 +226,22 @@ class Availability {
   String get displayName => fullName.isNotEmpty ? fullName : username;
 }
 
+/// One month of a team grid: the visible rows, plus how many members the
+/// server withheld because they are excluded from timesheet reports.
+///
+/// [excludedMembers] is `null` when the caller is not entitled to know — the
+/// API omits the field for non-superadmins rather than sending zero, so a
+/// project manager cannot infer that a specific colleague is excluded.
+class TeamMonth {
+  const TeamMonth({required this.members, this.excludedMembers});
+
+  final List<TeamMemberMonth> members;
+  final int? excludedMembers;
+
+  /// True when there is a non-zero, disclosed exclusion count to surface.
+  bool get hasExclusions => (excludedMembers ?? 0) > 0;
+}
+
 class TeamMemberMonth {
   const TeamMemberMonth({
     required this.userId,

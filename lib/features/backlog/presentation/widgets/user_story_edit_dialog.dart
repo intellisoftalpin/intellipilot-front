@@ -108,11 +108,9 @@ Future<CreateIssueRequest?> showBacklogIssueDialog(
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String?>(
                   initialValue: pointsId,
-                  decoration: const InputDecoration(labelText: 'Size'),
+                  decoration: InputDecoration(labelText: t.detailFieldSize),
                   items: [
-                    const DropdownMenuItem<String?>(
-                      child: Text('No estimate'),
-                    ),
+                    DropdownMenuItem<String?>(child: Text(t.backlogNoPoints)),
                     ...points.map(
                       (p) => DropdownMenuItem<String?>(
                         value: p.id,

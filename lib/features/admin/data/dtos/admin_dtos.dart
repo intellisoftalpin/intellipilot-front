@@ -140,16 +140,27 @@ class CreateUserResponse {
 }
 
 class UpdateUserRequest {
-  const UpdateUserRequest({this.isActive, this.isSuperadmin, this.fullName});
+  const UpdateUserRequest({
+    this.isActive,
+    this.isSuperadmin,
+    this.fullName,
+    this.excludeFromTimeReports,
+  });
 
   final bool? isActive;
   final bool? isSuperadmin;
   final String? fullName;
 
+  /// Hide the user from timesheet reports. A reporting exclusion only — it
+  /// does not stop them tracking their own time.
+  final bool? excludeFromTimeReports;
+
   Map<String, dynamic> toJson() => {
     if (isActive != null) 'is_active': isActive,
     if (isSuperadmin != null) 'is_superadmin': isSuperadmin,
     if (fullName != null) 'full_name': fullName,
+    if (excludeFromTimeReports != null)
+      'exclude_from_time_reports': excludeFromTimeReports,
   };
 }
 

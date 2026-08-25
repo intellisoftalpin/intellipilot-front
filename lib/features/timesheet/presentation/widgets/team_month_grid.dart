@@ -13,12 +13,19 @@ class TeamMonthGrid extends StatelessWidget {
     required this.year,
     required this.month,
     this.onTapDay,
+    this.excludedMembers,
     super.key,
   });
 
   final List<TeamMemberMonth> members;
   final int year;
   final int month;
+
+  /// How many members the server withheld from this grid because they are
+  /// excluded from timesheet reports. Rendered as a quiet footer note so a
+  /// deliberately absent row doesn't read as a bug. `null` (or zero) shows
+  /// nothing — the API omits the count for callers not entitled to it.
+  final int? excludedMembers;
 
   /// When set, cells with logged time become tappable — used by managers to
   /// drill into a member's day and edit/delete their entries.
@@ -35,7 +42,8 @@ class TeamMonthGrid extends StatelessWidget {
     final theme = Theme.of(context);
     final days = [for (var d = 1; d <= lastDay(year, month); d++) d];
 
-    return SingleChildScrollView(
+    final excluded = excludedMembers ?? 0;
+    final grid = SingleChildScrollView(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -107,6 +115,24 @@ class TeamMonthGrid extends StatelessWidget {
           ),
         ],
       ),
+    );
+    if (excluded == 0) return grid;
+    // Quiet, name-free note: tells whoever set the flag that the
+    // missing row is deliberate, without exposing who is hidden.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(child: grid),
+        Padding(
+          padding: const EdgeInsets.only(top: 8, left: 4),
+          child: Text(
+            t.ttExcludedMembers(excluded),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.outline,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

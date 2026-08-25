@@ -4,6 +4,7 @@ import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// Full-page issue view reached by a human-readable key URL
 /// (`/projects/{id}/issues/PS-398`). Resolves the trailing numeric ref to the
@@ -60,7 +61,9 @@ class _IssueKeyPageState extends State<IssueKeyPage> {
         if (issue == null) {
           return Scaffold(
             appBar: AppBar(),
-            body: const Center(child: Text('Issue not found')),
+            body: Center(
+              child: Text(AppLocalizations.of(context).issueNotFound),
+            ),
           );
         }
         return EntityDetailPage(

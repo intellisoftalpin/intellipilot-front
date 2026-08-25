@@ -205,7 +205,7 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
   }
 
   @override
-  Future<Result<List<TeamMemberMonth>, AppFailure>> teamMonth(
+  Future<Result<TeamMonth, AppFailure>> teamMonth(
     String projectId, {
     required int year,
     required int month,
@@ -217,10 +217,15 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
     return res.when(
       ok: (r) {
         final body = r.data as Map<String, dynamic>;
-        final list = (body['members'] as List<dynamic>? ?? const [])
-            .map((e) => TeamMemberMonth.fromJson(e as Map<String, dynamic>))
-            .toList();
-        return Ok(list);
+        return Ok(
+          TeamMonth(
+            members: (body['members'] as List<dynamic>? ?? const [])
+                .map((e) => TeamMemberMonth.fromJson(e as Map<String, dynamic>))
+                .toList(),
+            // Absent for callers who may not know; never coerce to 0.
+            excludedMembers: (body['excluded_members'] as num?)?.toInt(),
+          ),
+        );
       },
       err: Err.new,
     );
@@ -375,7 +380,7 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
   // --- superadmin -----------------------------------------------------
 
   @override
-  Future<Result<List<TeamMemberMonth>, AppFailure>> adminGlobalMonth({
+  Future<Result<TeamMonth, AppFailure>> adminGlobalMonth({
     required int year,
     required int month,
   }) async {
@@ -386,10 +391,15 @@ class TimesheetRepositoryImpl implements TimesheetRepository {
     return res.when(
       ok: (r) {
         final body = r.data as Map<String, dynamic>;
-        final list = (body['members'] as List<dynamic>? ?? const [])
-            .map((e) => TeamMemberMonth.fromJson(e as Map<String, dynamic>))
-            .toList();
-        return Ok(list);
+        return Ok(
+          TeamMonth(
+            members: (body['members'] as List<dynamic>? ?? const [])
+                .map((e) => TeamMemberMonth.fromJson(e as Map<String, dynamic>))
+                .toList(),
+            // Absent for callers who may not know; never coerce to 0.
+            excludedMembers: (body['excluded_members'] as num?)?.toInt(),
+          ),
+        );
       },
       err: Err.new,
     );

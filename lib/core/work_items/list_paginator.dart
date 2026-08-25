@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// A compact, modern paginator: an "X–Y of N" count, a rows-per-page selector,
 /// and numbered page buttons (with ellipses for large ranges). Stateless — the
@@ -46,6 +47,7 @@ class ListPaginator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final start = total == 0 ? 0 : pageIndex * pageSize + 1;
     final end = ((pageIndex + 1) * pageSize).clamp(0, total);
@@ -61,11 +63,11 @@ class ListPaginator extends StatelessWidget {
           child: Row(
             children: [
               Text(
-                '$start–$end of $total',
+                t.paginatorRange(start, end, total),
                 style: theme.textTheme.bodySmall,
               ),
               const SizedBox(width: 16),
-              Text('Rows:', style: theme.textTheme.bodySmall),
+              Text(t.paginatorRows, style: theme.textTheme.bodySmall),
               const SizedBox(width: 6),
               DropdownButton<int>(
                 value: pageSizeOptions.contains(pageSize)
@@ -84,7 +86,7 @@ class ListPaginator extends StatelessWidget {
               const SizedBox(width: 12),
               IconButton(
                 icon: const Icon(Icons.chevron_left),
-                tooltip: 'Previous',
+                tooltip: t.actionPrevious,
                 visualDensity: VisualDensity.compact,
                 onPressed: pageIndex > 0 ? () => onPage(pageIndex - 1) : null,
               ),
@@ -102,7 +104,7 @@ class ListPaginator extends StatelessWidget {
                   ),
               IconButton(
                 icon: const Icon(Icons.chevron_right),
-                tooltip: 'Next',
+                tooltip: t.actionNext,
                 visualDensity: VisualDensity.compact,
                 onPressed: pageIndex < pageCount - 1
                     ? () => onPage(pageIndex + 1)
