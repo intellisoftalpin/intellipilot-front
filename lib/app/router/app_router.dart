@@ -21,6 +21,7 @@ import 'package:intellipilot/features/backlog/presentation/issues_page.dart';
 import 'package:intellipilot/features/board/presentation/board_page.dart';
 import 'package:intellipilot/features/board/presentation/board_resolver.dart';
 import 'package:intellipilot/features/board/presentation/boards_gallery_page.dart';
+import 'package:intellipilot/features/board/presentation/my_issues_page.dart';
 import 'package:intellipilot/features/docs/presentation/docs_page.dart';
 import 'package:intellipilot/features/docs/presentation/wiki_overview_page.dart';
 import 'package:intellipilot/features/home/presentation/home_page.dart';
@@ -105,6 +106,10 @@ abstract class Routes {
   /// specific board.
   static String projectBoardFor(String id, [String? boardId]) =>
       boardId == null ? '/projects/$id/board' : '/projects/$id/boards/$boardId';
+
+  /// The My Issues board: the signed-in user's work in this project, laned by
+  /// their role on each issue.
+  static String projectMyIssuesFor(String id) => '/projects/$id/my-issues';
 
   /// The boards gallery (index) route — lists the project's boards as cards.
   /// Redirects straight to the board when the project has exactly one.
@@ -320,6 +325,14 @@ GoRouter buildRouter({required SessionBloc session}) {
                 ),
               );
             },
+          ),
+          GoRoute(
+            path: '/projects/:id/my-issues',
+            name: 'project_my_issues',
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => MyIssuesPage(projectId: pid),
+            ),
           ),
           GoRoute(
             path: '/projects/:id/board',

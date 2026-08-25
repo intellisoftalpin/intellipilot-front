@@ -23,6 +23,9 @@ abstract interface class ProjectsRepository {
   );
   Future<Result<Unit, AppFailure>> deleteProject(String id);
 
+  /// Active-object counts for the project rail badges.
+  Future<Result<ProjectCounts, AppFailure>> getProjectCounts(String projectId);
+
   /// Hard-purge every issue in the project (irreversible). Returns the count.
   Future<Result<int, AppFailure>> purgeIssues(String projectId);
 

@@ -445,6 +445,48 @@ class DemoProjectsRepository implements ProjectsRepository {
   }
 
   @override
+  Future<Result<ProjectCounts, AppFailure>> getProjectCounts(
+    String projectId,
+  ) async {
+    await _tick();
+    final closed = {
+      for (final t in _s.taxonomyByProject[projectId] ?? const <TaxonomyItem>[])
+        if (t.isClosed ?? false) t.id,
+    };
+    final me = _s.currentUser.id;
+    final open = _s.issues
+        .where((i) => i.projectId == projectId && !closed.contains(i.statusId))
+        .toList();
+    // Mirrors the server: distinct issues, top-level only, any role. Mentions
+    // are text-derived server-side; the demo approximates with the handle.
+    final handle = '@${_s.currentUser.username.toLowerCase()}';
+    final mine = open.where(
+      (i) =>
+          i.parentId == null &&
+          (i.assignedTo == me ||
+              i.qaAssigneeId == me ||
+              i.reviewerId == me ||
+              i.ownerId == me ||
+              i.watchers.contains(me) ||
+              i.description.toLowerCase().contains(handle)),
+    );
+    return Ok(
+      ProjectCounts(
+        myIssues: mine.length,
+        issues: open.length,
+        epics: _s.epics
+            .where(
+              (e) => e.projectId == projectId && !closed.contains(e.statusId),
+            )
+            .length,
+        milestones: _s.milestones
+            .where((m) => m.projectId == projectId && !m.closed)
+            .length,
+      ),
+    );
+  }
+
+  @override
   Future<Result<int, AppFailure>> purgeIssues(String projectId) async {
     await _tick();
     final n = _s.issues.where((i) => i.projectId == projectId).length;

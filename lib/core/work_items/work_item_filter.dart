@@ -24,6 +24,7 @@ class WorkItemFilter {
     this.releaseId,
     this.category,
     this.overdueOnly = false,
+    this.myRole,
   });
 
   factory WorkItemFilter.fromJson(Map<String, dynamic> j) => WorkItemFilter(
@@ -42,6 +43,7 @@ class WorkItemFilter {
     releaseId: j['release'] as String?,
     category: j['category'] as String?,
     overdueOnly: j['overdue'] as bool? ?? false,
+    myRole: j['my_role'] as String?,
   );
 
   /// Decode from a JSON string stored in [KeyValueStorage]; empty/invalid → a
@@ -77,6 +79,11 @@ class WorkItemFilter {
   final String? category;
   final bool overdueOnly;
 
+  /// Restricts to issues the current user holds one role on: a
+  /// [MyIssuesLane.wire] value, or `'any'` for "at least one role". Only the
+  /// My Issues board sets this — it is how a single lane is paged.
+  final String? myRole;
+
   static const _keep = Object();
 
   WorkItemFilter copyWith({
@@ -95,6 +102,7 @@ class WorkItemFilter {
     Object? releaseId = _keep,
     Object? category = _keep,
     bool? overdueOnly,
+    Object? myRole = _keep,
   }) => WorkItemFilter(
     search: search ?? this.search,
     statusId: statusId == _keep ? this.statusId : statusId as String?,
@@ -117,6 +125,7 @@ class WorkItemFilter {
     releaseId: releaseId == _keep ? this.releaseId : releaseId as String?,
     category: category == _keep ? this.category : category as String?,
     overdueOnly: overdueOnly ?? this.overdueOnly,
+    myRole: myRole == _keep ? this.myRole : myRole as String?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -135,6 +144,7 @@ class WorkItemFilter {
     if (releaseId != null) 'release': releaseId,
     if (category != null) 'category': category,
     if (overdueOnly) 'overdue': true,
+    if (myRole != null) 'my_role': myRole,
   };
 
   String encode() => jsonEncode(toJson());
@@ -156,6 +166,9 @@ class WorkItemFilter {
       releaseId != null ||
       category != null ||
       overdueOnly;
+  // `myRole` is deliberately absent: on the My Issues board it is the board's
+  // own baseline rather than a user-applied narrowing, and `isActive` gates
+  // snapshot persistence.
 
   /// Whether [issue] passes this filter. [closedStatusIds] flags closed
   /// statuses (for the overdue test, which only counts open, past-due items).
@@ -205,7 +218,9 @@ class WorkItemFilter {
   /// Universal person predicate: any of assignee / QA / reviewer matches
   /// (reporter deliberately excluded); `'none'` requires all three unset.
   /// Note: [releaseId] has no client-side predicate — the mapping from fix
-  /// version to release lives server-side, where that filter is applied.
+  /// version to release lives server-side, where that filter is applied. Nor
+  /// does [myRole]: role membership needs the current user's id, so the My
+  /// Issues board resolves it through its lane keys instead.
   bool _involvedMatches(Issue issue) {
     if (involvedId == null) return true;
     final people = [issue.assignedTo, issue.qaAssigneeId, issue.reviewerId];

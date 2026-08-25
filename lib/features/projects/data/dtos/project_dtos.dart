@@ -374,3 +374,31 @@ class ChangeMemberRoleRequest {
 
   Map<String, dynamic> toJson() => {'role': role};
 }
+
+/// Active-object counts for one project's navigation rail.
+///
+/// A `null` field means the caller lacks the view permission for that section,
+/// which renders as no badge at all — never as a `0`, which would read as "the
+/// section is empty".
+class ProjectCounts {
+  const ProjectCounts({
+    this.myIssues,
+    this.issues,
+    this.epics,
+    this.milestones,
+  });
+
+  factory ProjectCounts.fromJson(Map<String, dynamic> json) => ProjectCounts(
+    myIssues: (json['my_issues'] as num?)?.toInt(),
+    issues: (json['issues'] as num?)?.toInt(),
+    epics: (json['epics'] as num?)?.toInt(),
+    milestones: (json['milestones'] as num?)?.toInt(),
+  );
+
+  /// Distinct active issues the user holds any role on — the My Issues board's
+  /// card count, not the sum of its lane totals.
+  final int? myIssues;
+  final int? issues;
+  final int? epics;
+  final int? milestones;
+}

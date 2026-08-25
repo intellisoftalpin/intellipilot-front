@@ -129,6 +129,17 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   }
 
   @override
+  Future<Result<ProjectCounts, AppFailure>> getProjectCounts(
+    String projectId,
+  ) async {
+    final res = await _api.get('$_basePath/$projectId/counts');
+    return res.when(
+      ok: (r) => Ok(ProjectCounts.fromJson(r.data as Map<String, dynamic>)),
+      err: Err.new,
+    );
+  }
+
+  @override
   Future<Result<int, AppFailure>> purgeIssues(String projectId) =>
       _purge('$_basePath/$projectId/issues');
 

@@ -1536,5 +1536,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "railMyIssues": "Meine Aufgaben",
+  "myIssuesTitle": "Meine Aufgaben",
+  "myIssuesEmpty": "In diesem Projekt ist dir nichts zugewiesen, wartet auf deine Prüfung oder steht auf deiner Beobachtungsliste.",
+  "myIssuesLaneWatching": "Ich beobachte",
+  "myIssuesLaneAssignee": "Mir zugewiesen",
+  "myIssuesLaneQa": "QA durch mich",
+  "myIssuesLaneReviewer": "Von mir zu prüfen",
+  "myIssuesLaneReporter": "Ich bin Anforderer",
+  "myIssuesLaneMentioned": "Ich wurde erwähnt",
+  "myIssuesColumnsTooltip": "Spalten",
+  "boardLaneDropRejected": "Karten können hier nicht zwischen Bahnen gezogen werden — eine Bahn ist deine Rolle im Vorgang.",
+  "railCountTooltip": "{count,plural,=1{1 aktives Element}other{{count} aktive Elemente}}"
 }

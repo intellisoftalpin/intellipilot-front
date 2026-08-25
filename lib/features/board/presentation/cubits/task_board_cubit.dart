@@ -13,6 +13,8 @@ import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/data/board_snapshot_cache.dart';
 import 'package:intellipilot/features/board/domain/board_config.dart';
+import 'package:intellipilot/features/board/domain/board_source.dart';
+import 'package:intellipilot/features/board/domain/my_issues_lanes.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
@@ -92,6 +94,12 @@ class TaskBoardLoaded extends TaskBoardState {
   final Set<String> highlightedIds;
 
   BoardGroupBy? get group => config.group;
+
+  /// True when the lanes are a dimension a card cannot be dragged along — the
+  /// caller's role on the issue. Drop targets use this to refuse a cross-lane
+  /// drop, which would otherwise patch only the status and leave the card in a
+  /// visibly wrong lane.
+  bool get lanesAreFixed => config.group == BoardGroupBy.myRole;
 
   /// Locked + ad-hoc merged (locked win), with the swimlane group dimension
   /// stripped — what's effectively shown in the filter bar.
@@ -187,12 +195,24 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     BoardSnapshotCache? cache,
     ProjectEventsService? events,
     String currentUserId = '',
+    String currentUsername = '',
+    BoardSource? source,
   }) : _repo = repo,
        _catalog = catalog,
        _milestones = milestones,
        _cache = cache,
        _events = events,
        _currentUserId = currentUserId,
+       _currentUsername = currentUsername,
+       // Defaults to the server-backed board; the My Issues page injects a
+       // synthetic one instead.
+       _source =
+           source ??
+           RemoteBoardSource(
+             catalog: catalog,
+             projectId: projectId,
+             boardId: boardId,
+           ),
        super(const TaskBoardLoading());
 
   final BacklogRepository _repo;
@@ -201,12 +221,23 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
   final BoardSnapshotCache? _cache;
   final ProjectEventsService? _events;
   final String _currentUserId;
+
+  /// The caller's handle, for the client-side half of the `mentioned` lane
+  /// (an `@handle` in an issue description). Comment mentions are not visible
+  /// to the client — see [_myRoleKeysFor].
+  final String _currentUsername;
   final String projectId;
   final String boardId;
+  final BoardSource _source;
 
   static const Duration _taxonomyTtl = Duration(minutes: 15);
   static const Duration _highlightFor = Duration(seconds: 4);
   static const Duration _snapshotDebounce = Duration(seconds: 3);
+
+  /// A comment can move an issue in or out of the My Issues `mentioned` lane,
+  /// but the event carries no body — so the only way to know is to refetch.
+  /// Debounced, because a busy discussion would otherwise refetch per comment.
+  static const Duration _mentionDebounce = Duration(seconds: 5);
   static const int _maxDeltaPages = 5;
 
   // Cached after the first full load so data-only refetches (filter changes,
@@ -233,12 +264,14 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
   String? _cursor;
   bool _syncing = false;
   Timer? _snapshotTimer;
+  Timer? _mentionTimer;
   StreamSubscription<LiveEvent>? _liveSub;
 
   @override
   Future<void> close() async {
     await _liveSub?.cancel();
     _snapshotTimer?.cancel();
+    _mentionTimer?.cancel();
     for (final t in _highlightTimers.values) {
       t.cancel();
     }
@@ -258,7 +291,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
       final snap = _cache?.load(_currentUserId, projectId, boardId);
       if (snap != null) {
         _restoreSnapshot(snap);
-        unawaited(_catalog.setLastOpenedBoard(projectId, boardId));
+        unawaited(_source.markOpened());
         unawaited(_revalidate(snap));
         return;
       }
@@ -266,7 +299,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
 
     if (!isClosed) emit(const TaskBoardLoading());
 
-    final boardRes = await _catalog.getBoard(projectId, boardId);
+    final boardRes = await _source.load();
     final board = boardRes.valueOrNull;
     if (board == null) {
       if (!isClosed) emit(const TaskBoardFailed());
@@ -274,7 +307,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     }
     _board = board;
     _config = BoardConfig.fromMap(board.config);
-    unawaited(_catalog.setLastOpenedBoard(projectId, boardId));
+    unawaited(_source.markOpened());
 
     if (!await _loadTaxonomy()) {
       if (!isClosed) emit(const TaskBoardFailed());
@@ -314,7 +347,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
   /// (layout changes invalidate the data shape), then delta sync; taxonomy is
   /// refreshed only when the snapshot has aged past [_taxonomyTtl].
   Future<void> _revalidate(BoardSnapshot snap) async {
-    final boardRes = await _catalog.getBoard(projectId, boardId);
+    final boardRes = await _source.load();
     final board = boardRes.valueOrNull;
     if (board == null) {
       // Distinguish "gone/unauthorized" from a transient network error: the
@@ -457,16 +490,18 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     _flatColumns = data.isGrouped
         ? const <BoardColumnData>[]
         : _orderColumns(data.columns, visible);
-    _lanes = data.isGrouped
-        ? [
-            for (final lane in data.lanes)
-              BoardLaneData(
-                key: lane.key,
-                total: lane.total,
-                columns: _orderColumns(lane.columns, visible),
-              ),
-          ]
-        : const <BoardLaneData>[];
+    _lanes = _normaliseLanes(
+      data.isGrouped
+          ? [
+              for (final lane in data.lanes)
+                BoardLaneData(
+                  key: lane.key,
+                  total: lane.total,
+                  columns: _orderColumns(lane.columns, visible),
+                ),
+            ]
+          : const <BoardLaneData>[],
+    );
     _emitLoaded();
   }
 
@@ -548,8 +583,18 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
       case 'issue.deleted':
         final id = payload['issue_id'] as String?;
         if (id != null && _removeById(id)) _scheduleSnapshotSave();
+      case 'comment.created' || 'comment.updated' || 'comment.deleted':
+        // Only the My Issues board is affected: a comment can add or remove an
+        // issue from the `mentioned` lane, and the event carries no body to
+        // tell which. Refetching is the only way to know.
+        if (_config.group == BoardGroupBy.myRole &&
+            payload['target_type'] == 'issue') {
+          _scheduleMentionRefetch();
+        }
       case 'board.changed':
-        if (payload['board_id'] == boardId) unawaited(_onBoardChanged());
+        if (_source.isRemote && payload['board_id'] == boardId) {
+          unawaited(_onBoardChanged());
+        }
       default:
         break;
     }
@@ -557,7 +602,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
 
   /// Someone edited this board's definition: refresh config, then data.
   Future<void> _onBoardChanged() async {
-    final board = (await _catalog.getBoard(projectId, boardId)).valueOrNull;
+    final board = (await _source.load()).valueOrNull;
     if (board == null) return;
     _board = board;
     _config = BoardConfig.fromMap(board.config);
@@ -644,7 +689,9 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
         targetStatus: _targetStatusId(issue),
       );
     } else {
-      _lanes = _upsertIntoLanes(_lanes, issue, belongs: belongs);
+      _lanes = _normaliseLanes(
+        _upsertIntoLanes(_lanes, issue, belongs: belongs),
+      );
     }
     if (highlight) _flashHighlight(issue.id);
     _emitLoaded();
@@ -657,7 +704,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     if (_config.group == null) {
       _flatColumns = _stripFromColumns(_flatColumns, id).columns;
     } else {
-      _lanes = [
+      _lanes = _normaliseLanes([
         for (final lane in _lanes)
           () {
             final stripped = _stripFromColumns(lane.columns, id);
@@ -669,7 +716,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
                   )
                 : lane;
           }(),
-      ];
+      ]);
     }
     _emitLoaded();
     return true;
@@ -723,7 +770,55 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
       BoardGroupBy.priority => {issue.priorityId ?? 'none'},
       BoardGroupBy.component =>
         issue.components.isEmpty ? const {'none'} : issue.components.toSet(),
+      BoardGroupBy.myRole => _myRoleKeysFor(issue),
     };
+  }
+
+  /// Lane keys on the My Issues board.
+  ///
+  /// The five structural roles read straight off the issue — assignee, QA,
+  /// reviewer, reporter and the watcher list are on every payload (list, delta
+  /// and SSE alike). `mentioned` is the exception: the server also derives it
+  /// from comment bodies, which the client never receives. So that lane is
+  /// **sticky** — an issue already in it stays until a refetch says otherwise —
+  /// and a description `@handle` can still add it locally. Comment events
+  /// schedule the refetch that actually reconciles it.
+  Set<String> _myRoleKeysFor(Issue issue) {
+    final keys = MyIssuesLane.structuralKeysFor(issue, _currentUserId);
+    if (_mentionsMe(issue.description) ||
+        _isInLane(issue.id, MyIssuesLane.mentioned.wire)) {
+      keys.add(MyIssuesLane.mentioned.wire);
+    }
+    return keys;
+  }
+
+  bool _mentionsMe(String text) =>
+      _currentUsername.isNotEmpty &&
+      text.toLowerCase().contains('@${_currentUsername.toLowerCase()}');
+
+  bool _isInLane(String issueId, String laneKey) => _lanes.any(
+    (l) =>
+        l.key == laneKey &&
+        l.columns.any((c) => c.cards.any((x) => x.id == issueId)),
+  );
+
+  /// The My Issues board always renders all six lanes, in a fixed order, so
+  /// its layout doesn't jump as work moves between roles. The server returns
+  /// only non-empty groups, so the rest are synthesised empty; any unexpected
+  /// key is dropped.
+  List<BoardLaneData> _normaliseLanes(List<BoardLaneData> lanes) {
+    if (_config.group != BoardGroupBy.myRole) return lanes;
+    final byKey = {for (final l in lanes) l.key: l};
+    final visible = _visibleColumnIds;
+    return [
+      for (final key in MyIssuesLane.wireKeys)
+        byKey[key] ??
+            BoardLaneData(
+              key: key,
+              total: 0,
+              columns: _orderColumns(const [], visible),
+            ),
+    ];
   }
 
   ({List<BoardColumnData> columns, bool removed}) _stripFromColumns(
@@ -912,6 +1007,13 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
   // Snapshot persistence
   // ==========================================================================
 
+  void _scheduleMentionRefetch() {
+    _mentionTimer?.cancel();
+    _mentionTimer = Timer(_mentionDebounce, () {
+      if (!isClosed) unawaited(_refetchData());
+    });
+  }
+
   void _scheduleSnapshotSave() {
     _snapshotTimer?.cancel();
     _snapshotTimer = Timer(_snapshotDebounce, () => unawaited(_saveSnapshot()));
@@ -961,6 +1063,27 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
   /// Cheap catch-up (no full reload) — used after a detail sheet closes so
   /// any edits are reflected.
   Future<void> refresh() => _deltaSync();
+
+  /// Persist a new column layout through the board's source, then re-render.
+  ///
+  /// For a server-backed board this is a `PUT`; for a synthetic one it writes
+  /// to local storage. Either way the fresh definition drives the refetch.
+  Future<void> saveColumns({
+    required List<String> order,
+    required List<String> visible,
+  }) async {
+    final next = _config.copyWith(
+      columnOrder: order,
+      visibleColumnIds: visible,
+    );
+    final saved = await _source.saveConfig(next);
+    final board = saved.valueOrNull;
+    if (board == null) return;
+    _board = board;
+    _config = BoardConfig.fromMap(board.config);
+    _defaultColumnsFromTaxonomy();
+    await _refetchData();
+  }
 
   /// Replace the user's ad-hoc filter. Locked + group dimensions are stripped
   /// so the ad-hoc layer stays purely additive.
@@ -1014,7 +1137,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
           if (c.statusId == statusId) appendTo(c) else c,
       ];
     } else {
-      _lanes = [
+      _lanes = _normaliseLanes([
         for (final lane in _lanes)
           if (lane.key == laneKey)
             BoardLaneData(
@@ -1027,7 +1150,7 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
             )
           else
             lane,
-      ];
+      ]);
     }
     _emitLoaded();
   }
@@ -1048,6 +1171,9 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
     String? epicId;
     String? priorityId;
     var components = const <String>[];
+    // On a My Issues board the lane is a role, and `CreateIssueRequest` can
+    // only carry the assignee — the rest are applied right after the create.
+    MyIssuesLane? roleLane;
     final g = _config.group;
     if (g != null && laneKey != null && laneKey != 'none') {
       switch (g) {
@@ -1059,6 +1185,9 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
           epicId = laneKey;
         case BoardGroupBy.priority:
           priorityId = laneKey;
+        case BoardGroupBy.myRole:
+          roleLane = MyIssuesLane.fromWire(laneKey);
+          if (roleLane == MyIssuesLane.assignee) assignedTo = _currentUserId;
       }
     }
     final res = await _repo.createIssue(
@@ -1073,11 +1202,51 @@ class TaskBoardCubit extends Cubit<TaskBoardState> {
         components: components,
       ),
     );
-    final created = res.valueOrNull;
+    var created = res.valueOrNull;
     if (created == null) return null;
+    if (roleLane != null) {
+      created = await _placeInRoleLane(created, roleLane);
+    }
     _upsert(created, force: true);
     _scheduleSnapshotSave();
     return created;
+  }
+
+  /// Put a freshly created issue into the My Issues lane it was created in.
+  ///
+  /// `reporter` needs nothing (the creator IS the reporter) and `mentioned`
+  /// cannot be reached this way, so the UI does not offer creation there.
+  /// Everything else is a follow-up write on the created issue.
+  Future<Issue> _placeInRoleLane(Issue created, MyIssuesLane lane) async {
+    if (_currentUserId.isEmpty) return created;
+    switch (lane) {
+      case MyIssuesLane.watching:
+        await _catalog.addWatcher(projectId, created.id);
+        // The watcher list is not echoed by the add, so reload the issue to
+        // get a payload the lane derivation can place.
+        return (await _repo.getIssue(projectId, created.id)).valueOrNull ??
+            created;
+      case MyIssuesLane.qa:
+        final r = await _repo.updateIssue(
+          projectId,
+          created.id,
+          body: UpdateIssueRequest(qaAssigneeId: _currentUserId),
+          etag: created.etag ?? '',
+        );
+        return r.valueOrNull ?? created;
+      case MyIssuesLane.reviewer:
+        final r = await _repo.updateIssue(
+          projectId,
+          created.id,
+          body: UpdateIssueRequest(reviewerId: _currentUserId),
+          etag: created.etag ?? '',
+        );
+        return r.valueOrNull ?? created;
+      case MyIssuesLane.assignee || MyIssuesLane.reporter:
+        return created;
+      case MyIssuesLane.mentioned:
+        return created;
+    }
   }
 
   /// Move an issue to a different `statusId` — optimistically: the card moves

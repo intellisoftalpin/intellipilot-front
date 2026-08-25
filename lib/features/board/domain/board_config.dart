@@ -8,7 +8,12 @@ enum BoardGroupBy {
   component('component', 'component'),
   assignee('assignee', 'assignee'),
   epic('epic', 'epic'),
-  priority('priority', 'priority');
+  priority('priority', 'priority'),
+
+  /// The My Issues board: lanes are the caller's roles on the issue. Not
+  /// offered in the board settings dialog — it belongs to the dedicated My
+  /// Issues page, whose board is synthetic.
+  myRole('my_role', 'my_role');
 
   const BoardGroupBy(this.wire, this.filterKey);
   final String wire;

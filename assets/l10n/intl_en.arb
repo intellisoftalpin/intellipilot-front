@@ -4375,5 +4375,25 @@
         "type": "String"
       }
     }
+  },
+  "railMyIssues": "My Issues",
+  "myIssuesTitle": "My Issues",
+  "myIssuesEmpty": "Nothing is assigned to you, waiting on your review or on your watch list in this project.",
+  "myIssuesLaneWatching": "I am watching",
+  "myIssuesLaneAssignee": "Assigned to me",
+  "myIssuesLaneQa": "QA by me",
+  "myIssuesLaneReviewer": "I have to review",
+  "myIssuesLaneReporter": "I am the requestor",
+  "myIssuesLaneMentioned": "I was mentioned",
+  "myIssuesColumnsTooltip": "Columns",
+  "boardLaneDropRejected": "Cards cannot be dragged between lanes here — a lane is your role on the issue.",
+  "railCountTooltip": "{count,plural,=1{1 active item}other{{count} active items}}",
+  "@railCountTooltip": {
+    "description": "Tooltip on a project rail count badge.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

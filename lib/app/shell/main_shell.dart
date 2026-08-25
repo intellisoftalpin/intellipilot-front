@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +13,7 @@ import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
+import 'package:intellipilot/core/network/sse/project_events_service.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/board/presentation/boards_nav_refresh.dart';
 import 'package:intellipilot/features/board/presentation/widgets/board_settings_dialog.dart';
@@ -24,6 +26,7 @@ import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
+import 'package:intellipilot/features/projects/presentation/cubits/project_counts_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// App-wide chrome wrapping the routed page. Adds:
@@ -75,7 +78,21 @@ class MainShell extends StatelessWidget {
           return Scaffold(
             body: Row(
               children: [
-                _ProjectRail(projectId: scope, currentRoute: route),
+                // Keyed by project so switching projects starts a fresh
+                // count fetch and SSE subscription rather than showing the
+                // previous project's badges.
+                BlocProvider<ProjectCountsCubit>(
+                  key: ValueKey(scope),
+                  create: (_) => ProjectCountsCubit(
+                    repo: getIt<ProjectsRepository>(),
+                    projectId: scope,
+                    events: getIt<ProjectEventsService>(),
+                  ),
+                  child: _ProjectRail(
+                    projectId: scope,
+                    currentRoute: route,
+                  ),
+                ),
                 const VerticalDivider(width: 1),
                 Expanded(
                   child: Column(
@@ -459,6 +476,10 @@ class _ProjectRailState extends State<_ProjectRail> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    // Rail order: Overview → My Issues → Boards → Issues → Epics →
+    // Milestones → Time tracking → Wiki → Settings. Boards and Wiki are
+    // expandable sections injected between these flat rows below.
+    final counts = context.watch<ProjectCountsCubit>().state.counts;
     final items = [
       _RailItem(
         icon: Icons.dashboard_outlined,
@@ -466,19 +487,28 @@ class _ProjectRailState extends State<_ProjectRail> {
         path: Routes.projectDetailFor(widget.projectId),
       ),
       _RailItem(
+        icon: Icons.assignment_ind_outlined,
+        label: t.railMyIssues,
+        path: Routes.projectMyIssuesFor(widget.projectId),
+        count: counts?.myIssues,
+      ),
+      _RailItem(
         icon: Icons.bug_report_outlined,
         label: t.railIssues,
         path: Routes.projectIssuesFor(widget.projectId),
-      ),
-      _RailItem(
-        icon: Icons.flag_outlined,
-        label: t.railMilestones,
-        path: Routes.projectMilestonesFor(widget.projectId),
+        count: counts?.issues,
       ),
       _RailItem(
         icon: Icons.bookmarks_outlined,
         label: t.railEpics,
         path: Routes.projectEpicsFor(widget.projectId),
+        count: counts?.epics,
+      ),
+      _RailItem(
+        icon: Icons.flag_outlined,
+        label: t.railMilestones,
+        path: Routes.projectMilestonesFor(widget.projectId),
+        count: counts?.milestones,
       ),
       _RailItem(
         icon: Icons.schedule_outlined,
@@ -546,10 +576,11 @@ class _ProjectRailState extends State<_ProjectRail> {
                 label: expanded ? Text(items[i].label) : null,
                 tooltip: items[i].label,
                 selected: i == selectedIndex,
+                count: items[i].count,
                 onTap: () => context.go(items[i].path),
               ),
-              // Inject the expandable Boards section right after Overview
-              // (index 1) so the rail order stays Overview → Boards → Issues.
+              // Boards follows My Issues (items[1]), so the order reads
+              // Overview → My Issues → Boards → Issues.
               if (i == 1)
                 _BoardsRailSection(
                   projectId: widget.projectId,
@@ -590,10 +621,14 @@ class _RailItem {
     required this.icon,
     required this.label,
     required this.path,
+    this.count,
   });
   final IconData icon;
   final String label;
   final String path;
+
+  /// Active-object count for the badge, or null for no badge.
+  final int? count;
 }
 
 /// Rail header tap target — a single tile that toggles the rail and,
@@ -656,6 +691,7 @@ class _RailRow extends StatelessWidget {
     required this.tooltip,
     required this.selected,
     required this.onTap,
+    this.count,
   });
 
   final IconData icon;
@@ -665,6 +701,11 @@ class _RailRow extends StatelessWidget {
   final String tooltip;
   final bool selected;
   final VoidCallback onTap;
+
+  /// Active-object count for this section. `null` renders no badge — which is
+  /// also what a caller without the section's view permission gets, so a
+  /// hidden count never masquerades as an empty one.
+  final int? count;
 
   @override
   Widget build(BuildContext context) {
@@ -683,7 +724,17 @@ class _RailRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: fg),
+            // Collapsed rail: the count rides the icon as a compact badge,
+            // since there is no room for a pill.
+            if (label == null && count != null)
+              Badge.count(
+                count: count!,
+                backgroundColor: theme.colorScheme.secondaryContainer,
+                textColor: theme.colorScheme.onSecondaryContainer,
+                child: Icon(icon, size: 20, color: fg),
+              )
+            else
+              Icon(icon, size: 20, color: fg),
             if (label != null) ...[
               const SizedBox(width: 12),
               Expanded(
@@ -695,6 +746,10 @@ class _RailRow extends StatelessWidget {
                   child: label!,
                 ),
               ),
+              if (count != null) ...[
+                const SizedBox(width: 6),
+                _RailBadge(count: count!, selected: selected),
+              ],
             ],
           ],
         ),
@@ -704,6 +759,62 @@ class _RailRow extends StatelessWidget {
     return label == null
         ? Tooltip(message: tooltip, child: tappable)
         : tappable;
+  }
+}
+
+/// The count badge on a project rail row: a tonal stadium pill.
+///
+/// Digits use tabular figures so the pill doesn't twitch as counts change, and
+/// the number cross-fades rather than snapping. On the selected row it borrows
+/// the highlight's own container colour so it reads as part of it.
+class _RailBadge extends StatelessWidget {
+  const _RailBadge({required this.count, required this.selected});
+
+  final int count;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final bg = selected
+        ? scheme.secondaryContainer
+        : scheme.surfaceContainerHighest;
+    final fg = selected ? scheme.onSecondaryContainer : scheme.onSurfaceVariant;
+    final label = count > 999 ? '999+' : '$count';
+    return Tooltip(
+      message: AppLocalizations.of(context).railCountTooltip(count),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        constraints: const BoxConstraints(minWidth: 24),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.85, end: 1).animate(animation),
+              child: child,
+            ),
+          ),
+          child: Text(
+            label,
+            key: ValueKey(label),
+            textAlign: TextAlign.center,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: fg,
+              fontWeight: FontWeight.w600,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

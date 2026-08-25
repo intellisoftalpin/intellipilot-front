@@ -20,8 +20,12 @@ import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/data/board_snapshot_cache.dart';
 import 'package:intellipilot/features/board/domain/board_config.dart';
+import 'package:intellipilot/features/board/domain/board_source.dart';
+import 'package:intellipilot/features/board/domain/my_issues_lanes.dart';
 import 'package:intellipilot/features/board/presentation/boards_nav_refresh.dart';
 import 'package:intellipilot/features/board/presentation/cubits/task_board_cubit.dart';
+import 'package:intellipilot/features/board/presentation/my_issues_labels.dart';
+import 'package:intellipilot/features/board/presentation/widgets/board_columns_dialog.dart';
 import 'package:intellipilot/features/board/presentation/widgets/board_settings_dialog.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
@@ -39,9 +43,25 @@ import 'package:intellipilot/l10n/generated/app_localizations.dart';
 /// swimlane group, locked filters, column limit). Per-column counts + capped
 /// cards come from `fetchBoardData`; "Load more" pages a single column.
 class BoardPage extends StatelessWidget {
-  const BoardPage({required this.projectId, required this.boardId, super.key});
+  const BoardPage({
+    required this.projectId,
+    required this.boardId,
+    this.sourceBuilder,
+    this.titleOverride,
+    super.key,
+  });
   final String projectId;
   final String boardId;
+
+  /// Supplies the board definition. Null means the server-backed board named
+  /// by [boardId]; the My Issues page passes a synthetic source instead. It is
+  /// a builder because a synthetic board is scoped to the signed-in user, who
+  /// is only known once the profile has loaded.
+  final BoardSource Function(UserProfile profile)? sourceBuilder;
+
+  /// Replaces the board name in the app bar (and suppresses the board
+  /// switcher) for boards that are not one of several.
+  final String? titleOverride;
 
   Future<(UserProfile?, Map<String, UserRef>)> _loadContext() async {
     final p = await getIt<ProfileRepository>().getProfile();
@@ -97,13 +117,19 @@ class BoardPage extends StatelessWidget {
                     cache: getIt<BoardSnapshotCache>(),
                     events: getIt<ProjectEventsService>(),
                     currentUserId: profile.id,
+                    currentUsername: profile.username,
+                    source: sourceBuilder?.call(profile),
                   );
                   unawaited(c.load());
                   return c;
                 },
               ),
             ],
-            child: _BoardView(projectId: projectId, currentUserId: profile.id),
+            child: _BoardView(
+              projectId: projectId,
+              currentUserId: profile.id,
+              titleOverride: titleOverride,
+            ),
           ),
         );
       },
@@ -112,9 +138,17 @@ class BoardPage extends StatelessWidget {
 }
 
 class _BoardView extends StatefulWidget {
-  const _BoardView({required this.projectId, required this.currentUserId});
+  const _BoardView({
+    required this.projectId,
+    required this.currentUserId,
+    this.titleOverride,
+  });
   final String projectId;
   final String currentUserId;
+
+  /// Set for a board that isn't one of several: shows this label and drops the
+  /// board switcher and the board-settings dialog.
+  final String? titleOverride;
 
   @override
   State<_BoardView> createState() => _BoardViewState();
@@ -168,11 +202,12 @@ class _BoardViewState extends State<_BoardView> {
         title: BlocBuilder<TaskBoardCubit, TaskBoardState>(
           builder: (context, state) {
             final board = state is TaskBoardLoaded ? state.board : null;
-            final label = board?.name ?? t.boardTitle;
+            final fixed = widget.titleOverride;
+            final label = fixed ?? board?.name ?? t.boardTitle;
             return ProjectSectionBreadcrumb(
               projectId: widget.projectId,
               currentLabel: label,
-              activeWidget: board == null
+              activeWidget: board == null || fixed != null
                   ? null
                   : _BoardSwitcher(
                       projectId: widget.projectId,
@@ -190,10 +225,15 @@ class _BoardViewState extends State<_BoardView> {
             onPressed: () =>
                 unawaited(context.read<TaskBoardCubit>().fullReload()),
           ),
-          _BoardSettingsButton(
-            projectId: widget.projectId,
-            currentUserId: widget.currentUserId,
-          ),
+          if (widget.titleOverride == null)
+            _BoardSettingsButton(
+              projectId: widget.projectId,
+              currentUserId: widget.currentUserId,
+            )
+          else
+            // A synthetic board has no name, colour or locked filters to edit
+            // — only its columns.
+            const _BoardColumnsButton(),
           const SizedBox(width: 8),
         ],
       ),
@@ -394,6 +434,47 @@ class _BoardSettingsButton extends StatelessWidget {
   }
 }
 
+/// Column show/hide/reorder for a board with no server-side definition — the
+/// only part of a synthetic board that is the user's to configure.
+class _BoardColumnsButton extends StatelessWidget {
+  const _BoardColumnsButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    return BlocBuilder<TaskBoardCubit, TaskBoardState>(
+      builder: (context, state) {
+        if (state is! TaskBoardLoaded) return const SizedBox.shrink();
+        return IconButton(
+          tooltip: t.myIssuesColumnsTooltip,
+          icon: const Icon(Icons.view_column_outlined),
+          onPressed: () async {
+            final cubit = context.read<TaskBoardCubit>();
+            final cfg = state.config;
+            final order = cfg.columnOrder.isEmpty
+                ? BoardConfig.defaultColumnOrder(state.statuses)
+                : cfg.columnOrder;
+            final res = await showBoardColumnsDialog(
+              context,
+              statuses: state.statuses,
+              order: order,
+              hidden: cfg.hiddenColumnIds,
+            );
+            if (res == null) return;
+            await cubit.saveColumns(
+              order: res.order,
+              visible: [
+                for (final id in res.order)
+                  if (!res.hidden.contains(id)) id,
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
 class _TaskBoardBody extends StatelessWidget {
   const _TaskBoardBody({
     required this.projectId,
@@ -498,9 +579,18 @@ class _TasksLoaded extends StatelessWidget {
             components: state.components,
             showStatus: false,
             lockedDimensions: state.config.lockedDimensions,
-            // The board hides the issue-type filter (board-only decision) and the
-            // active swimlane dimension.
-            hiddenDimensions: {'type', ?state.group?.filterKey},
+            // The board hides the issue-type filter (board-only decision) and
+            // the active swimlane dimension. On the My Issues board the person
+            // filters duplicate the lanes, so they go too.
+            hiddenDimensions: {
+              'type',
+              ?state.group?.filterKey,
+              if (state.group == BoardGroupBy.myRole) ...[
+                'assignee',
+                'qa_assignee',
+                'involved',
+              ],
+            },
           ),
         ),
         Expanded(
@@ -655,9 +745,14 @@ class _SwimlanesState extends State<_Swimlanes> {
         BoardGroupBy.assignee => t.dashKpiUnassigned,
         BoardGroupBy.epic => t.backlogNoEpic,
         BoardGroupBy.priority => t.boardLaneNoPriority,
+        // Role lanes have no "unset" bucket: an issue with no role for the
+        // caller is simply not on the board.
+        BoardGroupBy.myRole => key,
       };
     }
     switch (group) {
+      case BoardGroupBy.myRole:
+        return myIssuesLaneLabel(context, key);
       case BoardGroupBy.component:
         return state.components.where((e) => e.id == key).firstOrNull?.name ??
             key;
@@ -914,14 +1009,28 @@ class _TaskColumn extends StatelessWidget {
     final canCreate =
         detail is ProjectDetailLoaded &&
         detail.has(Permission.issueCreate) &&
-        status != null;
-    return DragTarget<String>(
+        status != null &&
+        // You cannot create an issue that mentions you: a card created here
+        // could not land in this lane, so don't offer it.
+        !(state.group == BoardGroupBy.myRole &&
+            laneKey == MyIssuesLane.mentioned.wire);
+    return DragTarget<BoardDragData>(
+      // A drop is only ever a status change. On a board whose lanes are a
+      // dimension the card cannot be moved along by dragging (the caller's
+      // role on the issue), a cross-lane drop would silently patch the status
+      // and leave the card in a visibly wrong lane — so refuse it outright
+      // rather than half-apply it.
+      onWillAcceptWithDetails: (details) => boardAcceptsDrop(
+        drag: details.data,
+        laneKey: laneKey,
+        lanesAreFixed: state.lanesAreFixed,
+      ),
       onAcceptWithDetails: (details) {
         final cubit = context.read<TaskBoardCubit>();
         final messenger = ScaffoldMessenger.of(context);
         unawaited(() async {
           final moved = await cubit.moveTask(
-            taskId: details.data,
+            taskId: details.data.issueId,
             targetStatusId: status?.id,
           );
           if (moved == null) return;
@@ -947,6 +1056,7 @@ class _TaskColumn extends StatelessWidget {
               task: card,
               projectId: projectId,
               keyPrefix: keyPrefix,
+              laneKey: laneKey,
               selected: card.id == selectedId,
               highlighted: state.highlightedIds.contains(card.id),
               onTap: () => onSelect(card.id),
@@ -1139,6 +1249,39 @@ class _ColumnCreateDialogState extends State<_ColumnCreateDialog> {
   }
 }
 
+/// Whether [drag] may be dropped on a column in [laneKey].
+///
+/// A drop only ever changes the status. When the lanes are a dimension the card
+/// cannot be moved along by dragging — the caller's role on the issue, on the
+/// My Issues board — a cross-lane drop would patch the status and leave the
+/// card in a visibly wrong lane, so it is refused outright instead of being
+/// half-applied. Flat and ordinarily-grouped boards accept every drop.
+bool boardAcceptsDrop({
+  required BoardDragData drag,
+  required String? laneKey,
+  required bool lanesAreFixed,
+}) => !lanesAreFixed || drag.laneKey == laneKey;
+
+/// What a dragged card carries: the issue, plus the lane it started in so a
+/// drop target can refuse a cross-lane move.
+@immutable
+class BoardDragData {
+  const BoardDragData({required this.issueId, this.laneKey});
+  final String issueId;
+
+  /// Null on a flat (ungrouped) board.
+  final String? laneKey;
+
+  @override
+  bool operator ==(Object other) =>
+      other is BoardDragData &&
+      other.issueId == issueId &&
+      other.laneKey == laneKey;
+
+  @override
+  int get hashCode => Object.hash(issueId, laneKey);
+}
+
 class _TaskCard extends StatelessWidget {
   const _TaskCard({
     required this.state,
@@ -1147,12 +1290,16 @@ class _TaskCard extends StatelessWidget {
     required this.keyPrefix,
     required this.selected,
     required this.onTap,
+    this.laneKey,
     this.highlighted = false,
   });
   final TaskBoardLoaded state;
   final Issue task;
   final String projectId;
   final String keyPrefix;
+
+  /// The lane this card is rendered in; travels with the drag payload.
+  final String? laneKey;
   final bool selected;
 
   /// Recently changed by another user — rendered with a selection-like glow
@@ -1216,8 +1363,8 @@ class _TaskCard extends StatelessWidget {
         ),
       ),
     );
-    return Draggable<String>(
-      data: task.id,
+    return Draggable<BoardDragData>(
+      data: BoardDragData(issueId: task.id, laneKey: laneKey),
       dragAnchorStrategy: pointerDragAnchorStrategy,
       feedback: Material(
         elevation: 4,

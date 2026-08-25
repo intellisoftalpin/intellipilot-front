@@ -1536,5 +1536,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "railMyIssues": "Мае задачы",
+  "myIssuesTitle": "Мае задачы",
+  "myIssuesEmpty": "У гэтым праекце вам нічога не прызначана, не чакае вашага рэвю і не адследковаецца вамі.",
+  "myIssuesLaneWatching": "Адследковаю",
+  "myIssuesLaneAssignee": "Прызначана мне",
+  "myIssuesLaneQa": "QA за мною",
+  "myIssuesLaneReviewer": "Мне на рэвю",
+  "myIssuesLaneReporter": "Я замоўнік",
+  "myIssuesLaneMentioned": "Мяне згадалі",
+  "myIssuesColumnsTooltip": "Калонкі",
+  "boardLaneDropRejected": "Тут карткі нельга перацягваць паміж дарожкамі — дарожка гэта ваша роля ў задачы.",
+  "railCountTooltip": "{count,plural,=1{1 актыўны элемент}few{{count} актыўныя элементы}other{{count} актыўных элементаў}}"
 }

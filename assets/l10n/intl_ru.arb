@@ -1536,5 +1536,17 @@
         "type": "String"
       }
     }
-  }
+  },
+  "railMyIssues": "Мои задачи",
+  "myIssuesTitle": "Мои задачи",
+  "myIssuesEmpty": "В этом проекте на вас ничего не назначено, не ждёт вашего ревью и не отслеживается вами.",
+  "myIssuesLaneWatching": "Отслеживаю",
+  "myIssuesLaneAssignee": "Назначено мне",
+  "myIssuesLaneQa": "QA за мной",
+  "myIssuesLaneReviewer": "Мне на ревью",
+  "myIssuesLaneReporter": "Я заказчик",
+  "myIssuesLaneMentioned": "Меня упомянули",
+  "myIssuesColumnsTooltip": "Колонки",
+  "boardLaneDropRejected": "Здесь карточки нельзя перетаскивать между дорожками — дорожка это ваша роль в задаче.",
+  "railCountTooltip": "{count,plural,=1{1 активный элемент}few{{count} активных элемента}other{{count} активных элементов}}"
 }

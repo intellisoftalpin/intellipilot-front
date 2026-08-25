@@ -405,12 +405,25 @@ class _BoardSettingsFormState extends State<_BoardSettingsForm> {
     }
   }
 
+  /// Groupings a user can pick for a normal board. [BoardGroupBy.myRole] is
+  /// excluded: it belongs to the dedicated My Issues board, whose lanes are the
+  /// caller's roles and whose definition is synthetic.
+  static const _selectableGroups = <BoardGroupBy?>[
+    null,
+    BoardGroupBy.component,
+    BoardGroupBy.assignee,
+    BoardGroupBy.epic,
+    BoardGroupBy.priority,
+  ];
+
   String _groupLabel(BoardGroupBy? g, AppLocalizations t) => switch (g) {
     null => t.boardGroupNone,
     BoardGroupBy.component => t.issueFieldComponents,
     BoardGroupBy.assignee => t.issueFieldAssignee,
     BoardGroupBy.epic => t.detailFieldEpic,
     BoardGroupBy.priority => t.issueFieldPriority,
+    // Unreachable via _selectableGroups; labelled for exhaustiveness.
+    BoardGroupBy.myRole => t.railMyIssues,
   };
 
   String _cardFieldLabel(String key, AppLocalizations t) => switch (key) {
@@ -498,7 +511,7 @@ class _BoardSettingsFormState extends State<_BoardSettingsForm> {
               Wrap(
                 spacing: 8,
                 children: [
-                  for (final g in <BoardGroupBy?>[null, ...BoardGroupBy.values])
+                  for (final g in _selectableGroups)
                     ChoiceChip(
                       label: Text(_groupLabel(g, t)),
                       selected: _group == g,
