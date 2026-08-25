@@ -201,7 +201,7 @@ void main() {
       for (final k in TaxonomyKind.values.where(
         (k) => k != TaxonomyKind.issueStatus,
       )) {
-        expect(k.hasCountsAsDone, isFalse, reason: '\$k');
+        expect(k.hasCountsAsDone, isFalse, reason: r'$k');
       }
     });
 

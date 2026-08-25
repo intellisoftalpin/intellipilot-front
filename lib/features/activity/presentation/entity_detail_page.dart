@@ -22,11 +22,11 @@ import 'package:intellipilot/core/ui/markdown_text.dart';
 import 'package:intellipilot/core/ui/timestamps.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
-import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
 import 'package:intellipilot/features/activity/data/project_lookups_cache.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/activity/presentation/cubits/activity_stream_cubit.dart';
 import 'package:intellipilot/features/activity/presentation/cubits/attachments_cubit.dart';
+import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
 import 'package:intellipilot/features/activity/presentation/widgets/activity_stream_view.dart';
 import 'package:intellipilot/features/activity/presentation/widgets/attachments_view.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
@@ -1209,13 +1209,11 @@ class _ActionBar extends StatelessWidget {
           onPressed: () {
             final target = activityAnchor.currentContext;
             if (target == null) return;
-            unawaited(
-              Scrollable.ensureVisible(
-                target,
-                duration: const Duration(milliseconds: 280),
-                curve: Curves.easeOutCubic,
-                alignment: 0.1,
-              ),
+            Scrollable.ensureVisible(
+              target,
+              duration: const Duration(milliseconds: 280),
+              curve: Curves.easeOutCubic,
+              alignment: 0.1,
             );
           },
           label: Text(t.entityActionComment),
@@ -1736,13 +1734,11 @@ abstract final class _PanelAnchors {
     final panel = _live[panelId];
     if (panel == null || !panel.mounted) return false;
     panel.expand();
-    unawaited(
-      Scrollable.ensureVisible(
-        panel.context,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOutCubic,
-        alignment: 0.1,
-      ),
+    Scrollable.ensureVisible(
+      panel.context,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      alignment: 0.1,
     );
     return true;
   }
@@ -4477,7 +4473,7 @@ class _EpicDangerZone extends StatelessWidget {
     if (onClose != null) {
       onClose!();
     } else {
-      unawaited(navigator.maybePop());
+      navigator.maybePop();
     }
   }
 
@@ -5496,13 +5492,11 @@ class _EntityActionsMenu extends StatelessWidget {
   void _scrollTo(GlobalKey key) {
     final target = key.currentContext;
     if (target == null) return;
-    unawaited(
-      Scrollable.ensureVisible(
-        target,
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOutCubic,
-        alignment: 0.1,
-      ),
+    Scrollable.ensureVisible(
+      target,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      alignment: 0.1,
     );
   }
 
@@ -5651,7 +5645,7 @@ class _EntityActionsMenu extends StatelessWidget {
       );
       return;
     }
-    unawaited(navigator.maybePop());
+    navigator.maybePop();
   }
 }
 

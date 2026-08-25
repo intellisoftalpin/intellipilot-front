@@ -52,12 +52,11 @@ Future<BoardColumnsResult?> showBoardColumnsDialog(
                   child: ReorderableListView(
                     shrinkWrap: true,
                     buildDefaultDragHandles: false,
-                    onReorder: (oldIndex, newIndex) => setState(() {
-                      final target = newIndex > oldIndex
-                          ? newIndex - 1
-                          : newIndex;
+                    // onReorderItem adjusts newIndex for the removed item
+                    // itself, so no manual `newIndex - 1` when dragging down.
+                    onReorderItem: (oldIndex, newIndex) => setState(() {
                       final id = working.removeAt(oldIndex);
-                      working.insert(target, id);
+                      working.insert(newIndex, id);
                     }),
                     children: [
                       for (var i = 0; i < working.length; i++)

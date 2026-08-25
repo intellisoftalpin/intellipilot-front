@@ -248,7 +248,7 @@ class _MarkdownEditorState extends State<MarkdownEditor> {
     final lines = block.split('\n');
     final rewritten = [
       for (var i = 0; i < lines.length; i++)
-        numbered ? '${i + 1}. ${lines[i]}' : '$prefix${lines[i]}',
+        if (numbered) '${i + 1}. ${lines[i]}' else '$prefix${lines[i]}',
     ].join('\n');
     final next = text.replaceRange(start, end, rewritten);
     widget.controller.value = TextEditingValue(

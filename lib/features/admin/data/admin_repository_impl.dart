@@ -140,9 +140,9 @@ class AdminRepositoryImpl implements AdminRepository {
         '$_base/geoip',
         // Null fields are omitted so the server leaves them unchanged.
         data: <String, dynamic>{
-          if (enabled != null) 'enabled': enabled,
-          if (variant != null) 'variant': variant,
-          if (autoUpdate != null) 'auto_update': autoUpdate,
+          'enabled': ?enabled,
+          'variant': ?variant,
+          'auto_update': ?autoUpdate,
         },
       );
       return Ok(GeoipStatus.fromJson(r.data as Map<String, dynamic>));

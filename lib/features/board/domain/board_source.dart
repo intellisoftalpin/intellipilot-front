@@ -1,3 +1,6 @@
+// `_catalog` / `_storage` are intentionally private fields for clarity.
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:convert';
 
 import 'package:intellipilot/core/error/app_failure.dart';

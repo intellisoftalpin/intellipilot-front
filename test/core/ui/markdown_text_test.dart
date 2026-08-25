@@ -164,17 +164,17 @@ void main() {
   });
 
   group('MarkdownText mentions', () {
-    final ann = UserRef(
+    const ann = UserRef(
       id: 'u1',
       username: 'ann',
       fullName: 'Ann Lee',
       email: 'ann@example.com',
-      card: const UserCard(),
+      card: UserCard(),
     );
 
     testWidgets('a known @handle renders as a chip', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: MarkdownText('ping @ann please', mentions: {'ann': ann}),
           ),
@@ -185,7 +185,7 @@ void main() {
 
     testWidgets('an unknown @handle stays plain text', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: MarkdownText('ping @nobody', mentions: {'ann': ann}),
           ),
@@ -197,7 +197,7 @@ void main() {
 
     testWidgets('an email address does not open a mention', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: MarkdownText('mail a@ann.com', mentions: {'ann': ann}),
           ),

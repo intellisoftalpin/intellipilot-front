@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,9 +10,9 @@ import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/router/short_links.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
+import 'package:intellipilot/core/network/sse/project_events_service.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
-import 'package:intellipilot/core/network/sse/project_events_service.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
 import 'package:intellipilot/features/board/presentation/boards_nav_refresh.dart';
 import 'package:intellipilot/features/board/presentation/widgets/board_settings_dialog.dart';

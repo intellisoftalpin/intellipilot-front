@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
-import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/core/network/sse/project_events_service.dart';
+import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/work_items/work_item_filter.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
@@ -118,8 +118,6 @@ class _FakeCatalog extends Fake implements CatalogRepository {
 }
 
 class _FakeBacklog extends Fake implements BacklogRepository {
-  _FakeBacklog({this.created});
-  Issue? created;
   CreateIssueRequest? lastCreate;
   UpdateIssueRequest? lastUpdate;
 
@@ -133,7 +131,7 @@ class _FakeBacklog extends Fake implements BacklogRepository {
     CreateIssueRequest body,
   ) async {
     lastCreate = body;
-    return Ok(created ?? _issue('new', statusId: body.statusId));
+    return Ok(_issue('new', statusId: body.statusId));
   }
 
   @override
@@ -178,7 +176,8 @@ class _FakeEvents extends Fake implements ProjectEventsService {
     }),
   );
 
-  Future<void> dispose() => _controller.close();
+  /// Not [ProjectEventsService.dispose] — this just closes the fake's stream.
+  Future<void> closeStream() => _controller.close();
 }
 
 class _FakeMilestones extends Fake implements MilestonesRepository {
@@ -425,7 +424,7 @@ void main() {
         ],
         ['a'],
       );
-      await events.dispose();
+      await events.closeStream();
       await cubit.close();
     });
 
@@ -450,7 +449,7 @@ void main() {
           expect(col.cards, isEmpty, reason: 'still present in ${lane.key}');
         }
       }
-      await events.dispose();
+      await events.closeStream();
       await cubit.close();
     });
 
@@ -477,7 +476,7 @@ void main() {
         ],
         ['a'],
       );
-      await events.dispose();
+      await events.closeStream();
       await cubit.close();
     });
 
@@ -512,7 +511,7 @@ void main() {
         ['a'],
         reason: 'comment mentions are invisible to the client, so stay put',
       );
-      await events.dispose();
+      await events.closeStream();
       await cubit.close();
     });
 

@@ -67,7 +67,7 @@ class _LoginViewState extends State<_LoginView>
     );
     // Kick off the staggered entrance after the first frame.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_entrance.forward());
+      if (mounted) _entrance.forward();
     });
   }
 
@@ -482,7 +482,7 @@ class _AnimatedBlobBackgroundState extends State<_AnimatedBlobBackground>
       vsync: this,
       duration: const Duration(seconds: 24),
     );
-    if (_animate) unawaited(_c.repeat());
+    if (_animate) _c.repeat();
   }
 
   @override
@@ -574,7 +574,7 @@ class _FloatingLogoState extends State<_FloatingLogo>
       vsync: this,
       duration: const Duration(milliseconds: 3600),
     );
-    if (_animate) unawaited(_c.repeat(reverse: true));
+    if (_animate) _c.repeat(reverse: true);
   }
 
   @override

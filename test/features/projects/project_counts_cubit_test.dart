@@ -34,7 +34,8 @@ class _FakeEvents extends Fake implements ProjectEventsService {
 
   void reconnected() => _controller.add(const LiveEvent.control('connected'));
 
-  Future<void> dispose() => _controller.close();
+  /// Not [ProjectEventsService.dispose] — this just closes the fake's stream.
+  Future<void> closeStream() => _controller.close();
 }
 
 void main() {
@@ -74,7 +75,7 @@ void main() {
         async.elapse(const Duration(seconds: 5));
         expect(repo.calls, 2, reason: 'one refetch for the whole burst');
 
-        unawaited(events.dispose());
+        unawaited(events.closeStream());
         unawaited(cubit.close());
         async.elapse(const Duration(seconds: 1));
       });
@@ -96,7 +97,7 @@ void main() {
         async.elapse(const Duration(seconds: 6));
         expect(repo.calls, 1);
 
-        unawaited(events.dispose());
+        unawaited(events.closeStream());
         unawaited(cubit.close());
         async.elapse(const Duration(seconds: 1));
       });
@@ -118,7 +119,7 @@ void main() {
         async.elapse(const Duration(seconds: 6));
         expect(repo.calls, 2);
 
-        unawaited(events.dispose());
+        unawaited(events.closeStream());
         unawaited(cubit.close());
         async.elapse(const Duration(seconds: 1));
       });
@@ -139,7 +140,7 @@ void main() {
         async.elapse(const Duration(seconds: 6));
         expect(repo.calls, 2);
 
-        unawaited(events.dispose());
+        unawaited(events.closeStream());
         unawaited(cubit.close());
         async.elapse(const Duration(seconds: 1));
       });
