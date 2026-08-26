@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "ch.alpeinsoft" "\0"
+            VALUE "CompanyName", "IntelliSoftAlpin eG" "\0"
             VALUE "FileDescription", "intellipilot" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "intellipilot" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 ch.alpeinsoft. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 IntelliSoftAlpin eG. All rights reserved." "\0"
             VALUE "OriginalFilename", "intellipilot.exe" "\0"
             VALUE "ProductName", "intellipilot" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

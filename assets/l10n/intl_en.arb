@@ -4559,5 +4559,61 @@
         "type": "int"
       }
     }
-  }
+  },
+  "connectTitle": "Connect to your server",
+  "connectSubtitle": "Enter the address of your IntelliPilot instance. You can change it later by signing out.",
+  "connectFieldLabel": "Server address",
+  "connectFieldHint": "pilot.example.com",
+  "connectAction": "Continue",
+  "connectChange": "Change server",
+  "connectConnectedTo": "Connected to {host}",
+  "@connectConnectedTo": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "connectErrInvalid": "That is not a valid server address. Use just the host, for example pilot.example.com.",
+  "connectErrUnreachable": "Could not reach that server. Check the address and your network.",
+  "connectErrNotIntellipilot": "Something answered at that address, but it is not an IntelliPilot server.",
+  "connectCleartextWarning": "This address is not encrypted (http). Your password and data will be sent in the clear.",
+  "connectCertTitle": "Untrusted certificate",
+  "connectCertBody": "This server's certificate could not be verified. Only continue if you recognise the fingerprint below.",
+  "connectCertSubject": "Subject",
+  "connectCertIssuer": "Issuer",
+  "connectCertValid": "Valid",
+  "connectCertFingerprint": "SHA-256 fingerprint",
+  "connectCertTrust": "Trust and continue",
+  "connectCertExpired": "This certificate has expired.",
+  "connectTrustedCertNotice": "Using a certificate you chose to trust",
+  "accountsAddAnother": "Add another account",
+  "accountsSwitchTooltip": "Switch account",
+  "accountsSignOut": "Sign out of this account",
+  "accountsSwitchFailed": "Could not switch to that account — you may need to sign in again.",
+  "compatBlockedTitle": "Update required",
+  "compatBlockedBody": "This app (version {client}) is older than the IntelliPilot server it is connected to (version {server}). Ask your administrator to upgrade the backend.",
+  "@compatBlockedBody": {
+    "placeholders": {
+      "client": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "compatBlockedWebBody": "This page is running an older build (version {client}) than the server (version {server}). Reload to pick up the current version.",
+  "@compatBlockedWebBody": {
+    "placeholders": {
+      "client": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "compatReload": "Reload",
+  "compatRetry": "Check again"
 }

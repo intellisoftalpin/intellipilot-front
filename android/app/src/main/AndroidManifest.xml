@@ -1,8 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for the app to talk to its server at all. Flutter's template
+         only declares this in the debug/ and profile/ manifests, so without it
+         here a RELEASE build has no network access and login simply fails. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="intellipilot"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"

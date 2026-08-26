@@ -66,5 +66,19 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- The server address is supplied by the user at runtime, so the set of
+	     hosts cannot be enumerated as ATS exception domains. Arbitrary loads
+	     are therefore permitted to support self-hosted instances that are not
+	     on TLS; the connect screen warns explicitly before any credentials are
+	     sent over an http:// address. NSAllowsLocalNetworking additionally
+	     covers LAN installs. Note for App Store review: this is required for a
+	     self-hostable client. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

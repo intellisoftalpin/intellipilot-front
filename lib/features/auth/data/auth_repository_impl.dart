@@ -76,8 +76,13 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Result<TokenResponse, AppFailure>> refresh() async {
-    final res = await _api.post('$_basePath/refresh');
+  Future<Result<TokenResponse, AppFailure>> refresh({
+    String? refreshToken,
+  }) async {
+    final res = await _api.post(
+      '$_basePath/refresh',
+      body: refreshToken == null ? null : {'refresh_token': refreshToken},
+    );
     return res.when(
       ok: (response) {
         final data = response.data;
@@ -93,9 +98,12 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Result<Unit, AppFailure>> logout() async {
+  Future<Result<Unit, AppFailure>> logout({String? refreshToken}) async {
     try {
-      await _api.dio.post<dynamic>('$_basePath/logout');
+      await _api.dio.post<dynamic>(
+        '$_basePath/logout',
+        data: refreshToken == null ? null : {'refresh_token': refreshToken},
+      );
       return const Ok<Unit, AppFailure>(Unit.instance);
     } on DioException catch (e) {
       if (e.response?.statusCode == 204) {

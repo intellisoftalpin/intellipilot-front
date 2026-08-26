@@ -67,7 +67,9 @@ class FakeAuthRepository implements AuthRepository {
       Future.value(const Err<Unit, AppFailure>(UnknownFailure()));
 
   @override
-  Future<Result<TokenResponse, AppFailure>> refresh() async {
+  Future<Result<TokenResponse, AppFailure>> refresh({
+    String? refreshToken,
+  }) async {
     refreshCalls++;
     return refreshHandler?.call() ??
         Future.value(
@@ -76,7 +78,7 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<Result<Unit, AppFailure>> logout() async {
+  Future<Result<Unit, AppFailure>> logout({String? refreshToken}) async {
     logoutCalls++;
     return logoutHandler?.call() ??
         Future.value(const Ok<Unit, AppFailure>(Unit.instance));

@@ -30,6 +30,11 @@ abstract class KeyValueStorage {
   T? get<T>(String key);
   Future<void> set<T>(String key, T value);
   Future<void> remove(String key);
+
+  /// Drop every key in this box. Used when the app switches servers: cached
+  /// data keyed by `(userId, projectId)` carries no notion of *which* server it
+  /// came from, so it cannot be allowed to outlive the connection.
+  Future<void> clear();
 }
 
 class HiveKeyValueStorage implements KeyValueStorage {
@@ -47,6 +52,9 @@ class HiveKeyValueStorage implements KeyValueStorage {
 
   @override
   Future<void> remove(String key) => _box.delete(key);
+
+  @override
+  Future<void> clear() => _box.clear();
 }
 
 /// In-memory implementation used in tests.
@@ -67,5 +75,10 @@ class InMemoryKeyValueStorage implements KeyValueStorage {
   @override
   Future<void> remove(String key) async {
     _store.remove(key);
+  }
+
+  @override
+  Future<void> clear() async {
+    _store.clear();
   }
 }

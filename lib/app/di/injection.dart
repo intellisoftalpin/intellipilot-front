@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:intellipilot/app/branding/branding_cubit.dart';
 import 'package:intellipilot/app/l10n/locale_cubit.dart';
@@ -13,10 +14,18 @@ import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/network/api_config.dart';
 import 'package:intellipilot/core/network/cookie_setup.dart';
+import 'package:intellipilot/core/network/server_connection_service.dart';
+import 'package:intellipilot/core/network/server_endpoint.dart';
 import 'package:intellipilot/core/network/sse/project_events_service.dart';
+import 'package:intellipilot/core/network/tls/cert_trust.dart';
 import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
+import 'package:intellipilot/features/accounts/data/account_store.dart';
+import 'package:intellipilot/features/accounts/data/scoped_storage.dart';
+import 'package:intellipilot/features/accounts/data/secret_store.dart';
+import 'package:intellipilot/features/accounts/domain/account_scope.dart';
+import 'package:intellipilot/features/accounts/domain/account_switcher.dart';
 import 'package:intellipilot/features/activity/data/activity_repository_impl.dart';
 import 'package:intellipilot/features/activity/data/project_lookups_cache.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
@@ -31,6 +40,7 @@ import 'package:intellipilot/features/board/data/board_snapshot_cache.dart';
 import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/data/catalog_repository_impl.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
+import 'package:intellipilot/features/compatibility/domain/compatibility_cubit.dart';
 import 'package:intellipilot/features/dashboard/data/dashboard_repository_impl.dart';
 import 'package:intellipilot/features/dashboard/data/dtos/dashboard_dtos.dart';
 import 'package:intellipilot/features/dashboard/domain/dashboard_repository.dart';
@@ -77,23 +87,59 @@ Future<void> configureDependencies({
   // --- Boxes (already opened in bootstrap before this runs). -----------
   // Tests can pass [storageFactory] to bypass Hive bootstrap.
   final makeStorage = storageFactory ?? HiveKeyValueStorage.new;
+
+  // Accounts hold the scope that namespaces per-user caches. Registered before
+  // the boxes because the scoped ones close over it.
+  final accountStore = AccountStore(secrets: KeychainSecretStore());
+  final accountScope = AccountScope();
   getIt
+    ..registerSingleton<AccountStore>(accountStore)
+    ..registerSingleton<AccountScope>(accountScope);
+
+  /// Per-account view of a box: every key is prefixed with the active account,
+  /// so one account can never read another's cached data. See
+  /// [ScopedKeyValueStorage] for why this is a decorator and not six edits.
+  KeyValueStorage scoped(String box) => ScopedKeyValueStorage(
+    inner: makeStorage(box),
+    scope: () => accountScope.key,
+  );
+
+  getIt
+    // `settings` is deliberately NOT scoped: theme, locale, week-start and the
+    // chosen server are the user's global preferences, not one account's data.
     ..registerLazySingleton<KeyValueStorage>(
       () => makeStorage(HiveBoxes.settings),
       instanceName: HiveBoxes.settings,
     )
     ..registerLazySingleton<KeyValueStorage>(
-      () => makeStorage(HiveBoxes.ui),
+      () => scoped(HiveBoxes.ui),
       instanceName: HiveBoxes.ui,
     )
     ..registerLazySingleton<KeyValueStorage>(
-      () => makeStorage(HiveBoxes.drafts),
+      () => scoped(HiveBoxes.drafts),
       instanceName: HiveBoxes.drafts,
     )
     ..registerLazySingleton<KeyValueStorage>(
-      () => makeStorage(HiveBoxes.boards),
+      () => scoped(HiveBoxes.boards),
       instanceName: HiveBoxes.boards,
     );
+
+  // --- Server endpoint --------------------------------------------------
+  // Desktop/mobile pick their server at runtime; web is served BY its instance
+  // and must keep using relative URLs, so `ServerEndpoint.active` is left unset
+  // there and `ApiConfig` falls back to its compile-time (empty) value.
+  final endpoint = ServerEndpoint(
+    storage: makeStorage(HiveBoxes.settings),
+    // An explicitly supplied config is authoritative — that is how tests and
+    // alternate entry points pin a server. Only when none is given do we fall
+    // back to the define / debug-localhost resolution.
+    compileTimeBase: overrideConfig?.baseUrl ?? ServerEndpoint.compileTimePin(),
+  );
+  getIt.registerSingleton<ServerEndpoint>(endpoint);
+  if (!kIsWeb) ServerEndpoint.active = endpoint;
+  getIt.registerLazySingleton<CertPinStore>(
+    () => CertPinStore(makeStorage(HiveBoxes.settings)),
+  );
 
   // --- Primitives ------------------------------------------------------
   final cookies = overrideCookies ?? await CookieSetup.create();
@@ -130,7 +176,7 @@ Future<void> configureDependencies({
   // construction has completed.
   getIt.registerLazySingleton<ApiClient>(() {
     final cookies = getIt<CookieSetup>();
-    return ApiClient(
+    final client = ApiClient(
       config: getIt<ApiConfig>(),
       uuidGen: getIt<UuidGen>(),
       tokenProvider: () => getIt<SessionBloc>().currentAccessToken,
@@ -138,7 +184,20 @@ Future<void> configureDependencies({
       cookieManager: cookies.manager,
       refreshHook: () => getIt<SessionBloc>().refreshHook(),
     );
+    // Honour user-pinned certificates for self-hosted instances. No-op on web,
+    // and it only ever accepts an exact pinned fingerprint — see CertPinStore.
+    installCertPinning(client.dio, getIt<CertPinStore>());
+    return client;
   });
+  getIt.registerLazySingleton<ServerConnectionService>(
+    () => ServerConnectionService(
+      endpoint: getIt<ServerEndpoint>(),
+      apiClient: getIt<ApiClient>(),
+      certPins: getIt<CertPinStore>(),
+      cookies: getIt<CookieSetup>(),
+      storage: makeStorage,
+    ),
+  );
   getIt.registerLazySingleton<AuthRepository>(
     () => AuthRepositoryImpl(getIt<ApiClient>()),
   );
@@ -212,15 +271,53 @@ Future<void> configureDependencies({
   );
   getIt.registerLazySingleton<ProjectEventsService>(
     () => ProjectEventsService(
-      baseUrl: getIt<ApiConfig>().baseUrl,
+      baseUrl: () => getIt<ApiConfig>().baseUrl,
       tokenProvider: () => getIt<SessionBloc>().currentAccessToken,
+    ),
+  );
+  getIt.registerLazySingleton<CompatibilityCubit>(
+    () => CompatibilityCubit(api: getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<AccountSwitcher>(
+    () => AccountSwitcher(
+      store: getIt<AccountStore>(),
+      scope: getIt<AccountScope>(),
+      endpoint: getIt<ServerEndpoint>(),
+      apiClient: getIt<ApiClient>(),
+      auth: getIt<AuthRepository>(),
+      profiles: getIt<ProfileRepository>(),
+      // Lazy: SessionBloc depends on the switcher's callbacks, so resolving it
+      // eagerly here would close the cycle.
+      session: () => getIt<SessionBloc>(),
+      events: () => getIt<ProjectEventsService>(),
     ),
   );
   getIt.registerLazySingleton<SessionBloc>(
     () => SessionBloc(
       repository: getIt<AuthRepository>(),
       // Cached board data must never survive the session that read it.
+      // Desktop/mobile present the active account's own refresh token; web
+      // passes null and keeps using its HttpOnly cookie.
+      refreshTokenProvider: kIsWeb
+          ? null
+          : () => getIt<AccountSwitcher>().currentRefreshToken(),
+      onTokensRotated: kIsWeb
+          ? null
+          : (token) => getIt<AccountSwitcher>().rememberRotatedToken(token),
+      onSessionEstablished: kIsWeb
+          ? null
+          : (tokens) {
+              final switcher = getIt<AccountSwitcher>();
+              // A switch establishes a session for an account that is already
+              // registered; re-adopting would refetch the profile for nothing.
+              if (!switcher.isSwitching) {
+                unawaited(switcher.adoptAfterLogin(tokens));
+              }
+            },
       onSessionEnded: () {
+        // Scoped by construction: the board cache reads and writes through an
+        // account-namespaced box, so this clears only the account that ended —
+        // it used to wipe every account's cache at once.
         unawaited(getIt<BoardSnapshotCache>().clearAll());
         if (getIt.isRegistered<ProjectLookupsCache>()) {
           getIt<ProjectLookupsCache>().clear();
@@ -267,6 +364,24 @@ Future<void> configureForTests({
       InMemoryKeyValueStorage(),
       instanceName: HiveBoxes.boards,
     )
+    // Registered as already-configured so the router guard does not divert
+    // every test to the connect wizard, and the login footer can resolve it.
+    ..registerSingleton<ServerEndpoint>(
+      ServerEndpoint(
+        storage: settingsStorage,
+        compileTimeBase: apiConfig?.baseUrl.isNotEmpty ?? false
+            ? apiConfig!.baseUrl
+            : ApiConfig.devFallbackBaseUrl,
+      ),
+    )
+    ..registerSingleton<CertPinStore>(CertPinStore(settingsStorage))
+    // Accounts: registered so the shell and router can resolve them. Tests get
+    // an empty in-memory store, which reports no accounts — the switcher then
+    // renders nothing, exactly as with a single account.
+    ..registerSingleton<AccountScope>(AccountScope())
+    ..registerSingleton<AccountStore>(
+      AccountStore(secrets: InMemorySecretStore()),
+    )
     ..registerSingleton<UuidGen>(const DefaultUuidGen())
     ..registerSingleton<Logger>(Logger())
     ..registerSingleton<ApiConfig>(
@@ -312,6 +427,21 @@ Future<void> configureForTests({
     ..registerSingleton<SearchRepository>(_NoopSearchRepository())
     ..registerSingleton<DashboardRepository>(_NoopDashboardRepository())
     ..registerSingleton<SessionBloc>(SessionBloc(repository: authRepository))
+    ..registerLazySingleton<CompatibilityCubit>(
+      () => CompatibilityCubit(api: getIt<ApiClient>()),
+    )
+    ..registerLazySingleton<AccountSwitcher>(
+      () => AccountSwitcher(
+        store: getIt<AccountStore>(),
+        scope: getIt<AccountScope>(),
+        endpoint: getIt<ServerEndpoint>(),
+        apiClient: getIt<ApiClient>(),
+        auth: authRepository,
+        profiles: getIt<ProfileRepository>(),
+        session: () => getIt<SessionBloc>(),
+        events: () => getIt<ProjectEventsService>(),
+      ),
+    )
     ..registerSingleton<ThemeCubit>(ThemeCubit(settingsStorage))
     ..registerSingleton<LocaleCubit>(LocaleCubit(settingsStorage))
     ..registerSingleton<WeekStartCubit>(WeekStartCubit(settingsStorage))

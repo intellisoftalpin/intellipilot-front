@@ -97,13 +97,15 @@ class DemoAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<Result<TokenResponse, AppFailure>> refresh() async {
+  Future<Result<TokenResponse, AppFailure>> refresh({
+    String? refreshToken,
+  }) async {
     await _tick();
     return Ok(_tokens());
   }
 
   @override
-  Future<Result<Unit, AppFailure>> logout() async {
+  Future<Result<Unit, AppFailure>> logout({String? refreshToken}) async {
     await _tick();
     return const Ok<Unit, AppFailure>(Unit.instance);
   }

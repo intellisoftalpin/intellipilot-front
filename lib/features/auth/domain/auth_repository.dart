@@ -22,9 +22,16 @@ abstract interface class AuthRepository {
     String? invitationToken,
   });
 
-  Future<Result<TokenResponse, AppFailure>> refresh();
+  /// Rotate the session.
+  ///
+  /// [refreshToken] is for clients with no cookie jar of their own to share —
+  /// desktop and mobile hold several accounts at once, so each must present its
+  /// own token. Web passes null and the HttpOnly cookie is used, exactly as
+  /// before. The server reads the cookie first regardless.
+  Future<Result<TokenResponse, AppFailure>> refresh({String? refreshToken});
 
-  Future<Result<Unit, AppFailure>> logout();
+  /// Revoke the session. [refreshToken] as per [refresh].
+  Future<Result<Unit, AppFailure>> logout({String? refreshToken});
 
   Future<Result<PasswordResetRequestResponse, AppFailure>> requestPasswordReset(
     String email,

@@ -8,6 +8,7 @@ import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/network/api_config.dart';
 import 'package:intellipilot/core/network/cookie_setup.dart';
+import 'package:intellipilot/core/network/server_endpoint.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
 import 'package:intellipilot/demo/demo_repositories.dart';
@@ -61,6 +62,15 @@ Future<void> configureDemoDependencies() async {
       instanceName: HiveBoxes.boards,
     )
     ..registerSingleton<DemoStore>(store)
+    // Demo mode fakes every repository, so nothing is ever fetched — but the
+    // bootstrap gate and the router guard both consult this, so it must exist
+    // and must report itself configured.
+    ..registerSingleton<ServerEndpoint>(
+      ServerEndpoint(
+        storage: makeStorage(HiveBoxes.settings),
+        compileTimeBase: 'http://demo.local',
+      ),
+    )
     ..registerLazySingleton<UuidGen>(DefaultUuidGen.new)
     ..registerLazySingleton<Logger>(Logger.new)
     ..registerLazySingleton<ApiConfig>(

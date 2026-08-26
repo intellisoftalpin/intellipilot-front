@@ -147,9 +147,14 @@ final class _SessionRefreshFailed extends SessionEvent {
 // ---------------------------------------------------------------------------
 
 class SessionBloc extends Bloc<SessionEvent, SessionState> {
-  SessionBloc({required AuthRepository repository, this.onSessionEnded})
-    : _repo = repository,
-      super(const SessionUnknown()) {
+  SessionBloc({
+    required AuthRepository repository,
+    this.onSessionEnded,
+    this.refreshTokenProvider,
+    this.onTokensRotated,
+    this.onSessionEstablished,
+  }) : _repo = repository,
+       super(const SessionUnknown()) {
     on<SessionStartupRequested>(_onStartup);
     on<SessionMfaChallenged>(_onMfaChallenged);
     on<SessionEstablished>(_onEstablished);
@@ -164,7 +169,35 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   /// Fired whenever the session ends (logout or a failed refresh) — used to
   /// purge per-user local caches so no data crosses accounts.
   final void Function()? onSessionEnded;
+
+  /// Supplies the active account's refresh token on platforms that hold several
+  /// accounts and therefore cannot rely on a single cookie jar. Null on web,
+  /// where the HttpOnly cookie is used and this must stay out of the way.
+  final String? Function()? refreshTokenProvider;
+
+  /// Called with a rotated refresh token immediately after every successful
+  /// refresh.
+  ///
+  /// **This is the write-after-rotate invariant and it is not optional.** The
+  /// server treats a replayed refresh token as a compromise and revokes the
+  /// whole session family, so persisting late does not merely lose a rotation —
+  /// it signs the account out and writes a `reuse_detected` audit entry.
+  final void Function(String refreshToken)? onTokensRotated;
+
+  /// Called whenever a session is newly established — password login, MFA
+  /// completion, passkey, invitation acceptance. One hook here covers every
+  /// entry point, so a new sign-in path cannot forget to register its account.
+  final void Function(TokenResponse tokens)? onSessionEstablished;
   Timer? _refreshTimer;
+
+  /// Hand a rotated refresh token to the account store before the previous one
+  /// could ever be replayed. No-op on web, where the server rotates the cookie.
+  void _persistRotated(TokenResponse tokens) {
+    final rotated = tokens.refreshToken;
+    if (rotated != null && rotated.isNotEmpty) {
+      onTokensRotated?.call(rotated);
+    }
+  }
 
   /// Access-token provider for the [AuthInterceptor].
   String? get currentAccessToken {
@@ -194,9 +227,12 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     SessionStartupRequested event,
     Emitter<SessionState> emit,
   ) async {
-    final result = await _repo.refresh();
+    final result = await _repo.refresh(
+      refreshToken: refreshTokenProvider?.call(),
+    );
     result.when(
       ok: (tokens) {
+        _persistRotated(tokens);
         _scheduleRefresh(tokens.expiresIn);
         emit(
           SessionAuthenticated(
@@ -221,6 +257,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   }
 
   void _onEstablished(SessionEstablished event, Emitter<SessionState> emit) {
+    onSessionEstablished?.call(event.tokens);
     _scheduleRefresh(event.tokens.expiresIn);
     emit(
       SessionAuthenticated(
@@ -243,9 +280,14 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
         : (current as SessionRefreshing).staleAccessToken;
     emit(SessionRefreshing(staleAccessToken: stale));
 
-    final result = await _repo.refresh();
+    final result = await _repo.refresh(
+      refreshToken: refreshTokenProvider?.call(),
+    );
     result.when(
-      ok: (tokens) => add(_SessionRefreshSucceeded(tokens)),
+      ok: (tokens) {
+        _persistRotated(tokens);
+        add(_SessionRefreshSucceeded(tokens));
+      },
       err: (_) => add(const _SessionRefreshFailed()),
     );
   }

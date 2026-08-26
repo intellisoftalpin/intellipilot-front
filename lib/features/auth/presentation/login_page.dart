@@ -1,15 +1,19 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/branding/brand_logo.dart';
 import 'package:intellipilot/app/branding/branding_cubit.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/io/url_opener.dart';
+import 'package:intellipilot/core/network/server_endpoint.dart';
+import 'package:intellipilot/core/network/tls/cert_trust.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:intellipilot/features/auth/presentation/auth_validators.dart';
 import 'package:intellipilot/features/auth/presentation/cubits/login_cubit.dart';
@@ -336,6 +340,18 @@ class _LoginViewState extends State<_LoginView>
     bool reduceMotion,
   ) {
     return [
+      // Which server this is, and the way back to step ① of the wizard.
+      // Deliberately the first thing in the form: it lived in the legal footer
+      // at first, which put it below the fold inside a scroll view and made it
+      // one of five similar links — unfindable exactly when someone has
+      // mistyped their server and needs it.
+      //
+      // Desktop/mobile only: on web the origin IS the server, and a build
+      // pinned via --dart-define is not the user's to change.
+      if (!kIsWeb && !getIt<ServerEndpoint>().isPinnedAtBuildTime) ...[
+        const _ServerBanner(),
+        const SizedBox(height: 16),
+      ],
       if (branding.appMessage != null) ...[
         _entranceItem(
           3,
@@ -837,6 +853,93 @@ class _LoginFooter extends StatelessWidget {
           onTap: () => openExternalUrl(_license),
         ),
       ],
+    );
+  }
+}
+
+/// The server this app is pointed at, with a way back to the connect step.
+///
+/// Rendered as a tonal row at the top of the sign-in form rather than a link in
+/// the footer: the single most likely reason to want it is having just typed the
+/// wrong address, and at that moment it has to be impossible to miss.
+///
+/// Also surfaces when the connection rests on a certificate the user chose to
+/// trust — that decision bypasses CA validation for this host, so it stays
+/// visible rather than being made once and forgotten.
+class _ServerBanner extends StatelessWidget {
+  const _ServerBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final endpoint = getIt<ServerEndpoint>();
+    final url = endpoint.effective;
+    if (url.isEmpty) return const SizedBox.shrink();
+    final uri = Uri.tryParse(url);
+    final host = uri == null
+        ? url
+        : '${uri.host}${uri.hasPort ? ':${uri.port}' : ''}';
+    final pinned =
+        uri != null &&
+        getIt<CertPinStore>().hasPinFor(
+          uri.host,
+          uri.hasPort ? uri.port : 443,
+        );
+    final cleartext = uri?.scheme == 'http';
+
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 6, 6),
+        child: Row(
+          children: [
+            Icon(
+              Icons.dns_outlined,
+              size: 16,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                t.connectConnectedTo(host),
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            if (cleartext)
+              Tooltip(
+                message: t.connectCleartextWarning,
+                child: Icon(
+                  Icons.lock_open_outlined,
+                  size: 14,
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            if (pinned)
+              Tooltip(
+                message: t.connectTrustedCertNotice,
+                child: Icon(
+                  Icons.verified_user_outlined,
+                  size: 14,
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
+            const SizedBox(width: 4),
+            TextButton(
+              onPressed: () => context.go(Routes.connect),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
+              child: Text(t.connectChange),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

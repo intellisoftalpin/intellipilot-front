@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/short_links.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/shell/main_shell.dart';
+import 'package:intellipilot/core/network/server_endpoint.dart';
 import 'package:intellipilot/core/utils/listenable_stream.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_page.dart';
@@ -22,6 +25,7 @@ import 'package:intellipilot/features/board/presentation/board_page.dart';
 import 'package:intellipilot/features/board/presentation/board_resolver.dart';
 import 'package:intellipilot/features/board/presentation/boards_gallery_page.dart';
 import 'package:intellipilot/features/board/presentation/my_issues_page.dart';
+import 'package:intellipilot/features/connect/presentation/connect_page.dart';
 import 'package:intellipilot/features/docs/presentation/docs_page.dart';
 import 'package:intellipilot/features/docs/presentation/wiki_overview_page.dart';
 import 'package:intellipilot/features/home/presentation/home_page.dart';
@@ -50,6 +54,10 @@ import 'package:intellipilot/features/wiki/presentation/wiki_revisions_page.dart
 abstract class Routes {
   static const home = '/';
   static const settings = '/me/settings';
+
+  /// Step ① of the desktop/mobile sign-in wizard: which server. Never
+  /// reachable on web, which is served by its own instance.
+  static const connect = '/connect';
   static const login = '/login';
   static const register = '/register';
   static const forgotPassword = '/forgot-password';
@@ -190,6 +198,7 @@ abstract class Routes {
 }
 
 const _publicRoutes = {
+  Routes.connect,
   Routes.login,
   Routes.register,
   Routes.forgotPassword,
@@ -518,6 +527,13 @@ GoRouter buildRouter({required SessionBloc session}) {
         builder: (context, state) =>
             InvitationAcceptPage(token: state.pathParameters['token']!),
       ),
+      // Desktop/mobile only: on web `kIsWeb` keeps the guard from ever
+      // targeting this, and the app's own origin is the server.
+      GoRoute(
+        path: Routes.connect,
+        name: 'connect',
+        builder: (context, state) => const ConnectPage(),
+      ),
       GoRoute(
         path: Routes.login,
         name: 'login',
@@ -557,6 +573,19 @@ GoRouter buildRouter({required SessionBloc session}) {
 String? _guard(SessionState session, GoRouterState routerState) {
   final loc = routerState.matchedLocation;
   final isPublic = _publicRoutes.contains(loc);
+
+  // Step ①. Desktop/mobile with no server chosen yet has nowhere to send a
+  // request, so nothing else can be attempted first. Web is exempt: it is
+  // served by its instance and its base URL is intentionally empty.
+  if (!kIsWeb && !getIt<ServerEndpoint>().isConfigured) {
+    return loc == Routes.connect ? null : Routes.connect;
+  }
+  // Conversely, once a server IS configured the connect screen is only
+  // reachable deliberately (via "change server"), never as a landing page for
+  // an authenticated user.
+  if (loc == Routes.connect && session is SessionAuthenticated) {
+    return Routes.projects;
+  }
 
   // MFA challenge in-flight: corner the user on the verify page until they
   // complete it (or cancel — that dispatches a logout via the page UI).

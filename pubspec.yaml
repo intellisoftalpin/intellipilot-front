@@ -1,7 +1,7 @@
 name: intellipilot
 description: "IntelliPilot frontend client (Jira-grade project management)."
 publish_to: 'none'
-version: 0.6.29+73
+version: 0.6.32+76
 
 environment:
   sdk: ^3.12.0
@@ -14,6 +14,9 @@ dependencies:
   bloc: ^9.0.0
   collection: ^1.18.0
   cookie_jar: ^4.0.8
+  # Declared directly (already present transitively) so the connect wizard
+  # can show a SHA-256 certificate fingerprint for the trust decision.
+  crypto: ^3.0.3
   dio: ^5.7.0
   dio_cookie_manager: ^3.1.1
   dynamic_color: ^1.7.0
@@ -30,7 +33,6 @@ dependencies:
   freezed_annotation: ^3.0.0
   get_it: ^9.2.1
   go_router: ^17.3.0
-  google_fonts: ^8.1.0
   hive_ce: ^2.0.0
   hive_ce_flutter: ^2.0.0
   intl: any
@@ -49,6 +51,9 @@ dev_dependencies:
   # Deterministic timer control for debounce/throttle tests. Comes in via
   # flutter_test transitively, but must be declared to be imported directly.
   fake_async: ^1.3.1
+  # Generates the per-platform app icon sets from one master, so macOS,
+  # iOS, Android, Windows and Linux cannot drift apart.
+  flutter_launcher_icons: ^0.14.1
   flutter_test:
     sdk: flutter
   freezed: ^3.0.0
@@ -62,3 +67,64 @@ flutter:
   assets:
     - assets/icons/
     - assets/images/
+
+  # Bundled so the app never fetches a typeface at runtime. Previously these
+  # came from `google_fonts`, which downloads from fonts.gstatic.com on first
+  # use — that fails on a sandboxed/offline/locked-down host and showed the
+  # user a red error box. Static cuts (not variable fonts) because the code
+  # selects weights with FontWeight.wNNN, which does not drive a variable
+  # weight axis in Flutter. Licences: assets/fonts/OFL-*.txt (SIL OFL 1.1).
+  fonts:
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/PlusJakartaSans-ExtraBold.ttf
+          weight: 800
+    - family: JetBrains Mono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/JetBrainsMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/JetBrainsMono-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/JetBrainsMono-Bold.ttf
+          weight: 700
+
+# App icons for every platform, generated from one master by
+# `dart run flutter_launcher_icons`.
+#
+# The master is the same artwork the web app already uses: web/icons/* are plain
+# downscales of it (measured: content fills 50.7% x 64.5% of the canvas in both),
+# so desktop and mobile now match web exactly rather than shipping Flutter's
+# default logo.
+#
+# The artwork has no alpha and a white ground, which is what iOS requires (it
+# rejects transparency in app icons). Its content sits well inside Android's
+# 66% adaptive safe zone, so the same file serves as the adaptive foreground.
+flutter_launcher_icons:
+  image_path: "assets/branding/app_icon.png"
+  android: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/branding/app_icon.png"
+  ios: true
+  remove_alpha_ios: true
+  macos:
+    generate: true
+    image_path: "assets/branding/app_icon.png"
+  windows:
+    generate: true
+    image_path: "assets/branding/app_icon.png"
+    icon_size: 256
+  # No linux: entry. Flutter's Linux template ships no app icon at all — the
+  # window icon comes from the .desktop entry at packaging time — and
+  # flutter_launcher_icons silently ignores the key rather than failing.
+  web:
+    generate: false  # already correct; regenerating would only churn bytes

@@ -65,6 +65,16 @@ class ApiClient {
   ApiConfig get config => _config;
   Dio get dio => _dio;
 
+  /// The server this client is currently pointed at.
+  String get baseUrl => _dio.options.baseUrl;
+
+  /// Re-point this client at a different server.
+  ///
+  /// Dio snapshots `baseUrl` into its options at construction, so switching
+  /// servers has to reach in here. Rebuilding the DI graph is not an option —
+  /// `configureDependencies()` is one-shot by design.
+  set baseUrl(String value) => _dio.options.baseUrl = value;
+
   /// Convenience GET that returns a typed [Result] rather than throwing.
   Future<Result<Response<dynamic>, AppFailure>> get(
     String path, {

@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "ch.alpeinsoft.intellipilot"
+    namespace = "com.intellisoftalpin.intellipilot"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,8 +15,10 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "ch.alpeinsoft.intellipilot"
+        // The Play Store identity. Kept without a platform suffix: Android has a
+        // single listing, unlike Apple where the phone and Mac apps are separate
+        // records and therefore need distinct ids.
+        applicationId = "com.intellisoftalpin.intellipilot"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

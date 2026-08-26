@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intellipilot/app/theme/status_palette.dart';
 
 /// Builds [ThemeData] for a given seed color, brightness, and optional
@@ -8,13 +7,22 @@ import 'package:intellipilot/app/theme/status_palette.dart';
 /// Brand identity (locked in 2026-05):
 /// - Seed: `#5B5BD6` (IntelliPilot indigo-violet) — distinct from Atlassian
 ///   blue, reads as "smart / pilot".
-/// - UI typeface: Plus Jakarta Sans via `google_fonts`.
+/// - UI typeface: Plus Jakarta Sans (bundled — see `assets/fonts/`).
+///   Deliberately NOT fetched at runtime: a downloaded typeface fails on a
+///   sandboxed, offline or CSP-restricted host and greets the user with an
+///   error box instead of text.
 /// - Mono typeface for issue keys + code: JetBrains Mono.
 /// - Status colours are NOT taxonomy-driven; they live in [StatusPalette]
 ///   and are registered as a [ThemeExtension] so components can resolve
 ///   them via `StatusPalette.of(context)`.
 class AppTheme {
   const AppTheme._();
+
+  /// Bundled family names. Must match the `family:` entries in pubspec.yaml
+  /// exactly — a typo here silently falls back to the platform default rather
+  /// than failing, so both names live in one place.
+  static const _uiFont = 'Plus Jakarta Sans';
+  static const _monoFont = 'JetBrains Mono';
 
   static ThemeData light({
     required Color seedColor,
@@ -41,7 +49,7 @@ class AppTheme {
       useMaterial3: true,
       visualDensity: VisualDensity.adaptivePlatformDensity,
     );
-    final textTheme = GoogleFonts.plusJakartaSansTextTheme(base.textTheme);
+    final textTheme = base.textTheme.apply(fontFamily: _uiFont);
 
     return base.copyWith(
       textTheme: textTheme.apply(
@@ -141,8 +149,9 @@ class AppTheme {
   /// diff lines, and the keyboard-shortcut help chips.
   static TextStyle mono(BuildContext context, {double? size}) {
     final base = Theme.of(context).textTheme.bodyMedium;
-    return GoogleFonts.jetBrainsMono(
-      textStyle: base?.copyWith(fontSize: size),
+    return (base ?? const TextStyle()).copyWith(
+      fontFamily: _monoFont,
+      fontSize: size,
     );
   }
 }

@@ -12,6 +12,7 @@ import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/shell/keyboard_shortcuts.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
+import 'package:intellipilot/features/compatibility/presentation/compatibility_gate.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 class IntelliPilotApp extends StatefulWidget {
@@ -79,8 +80,13 @@ class _IntelliPilotAppState extends State<IntelliPilotApp> {
                         Localizations.localeOf(context),
                         context.watch<WeekStartCubit>().state,
                       );
-                      return GlobalShortcutsShell(
-                        child: child ?? const SizedBox.shrink(),
+                      // Above the router, so an incompatible client cannot
+                      // reach any screen by deep link — but inside the
+                      // MaterialApp, so the notice is themed and localised.
+                      return CompatibilityGate(
+                        child: GlobalShortcutsShell(
+                          child: child ?? const SizedBox.shrink(),
+                        ),
                       );
                     },
                   );

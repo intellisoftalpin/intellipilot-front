@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -14,6 +15,8 @@ import 'package:intellipilot/core/network/sse/project_events_service.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
 import 'package:intellipilot/core/widgets/user_avatar.dart';
+import 'package:intellipilot/features/accounts/domain/account_switcher.dart';
+import 'package:intellipilot/features/accounts/presentation/account_switcher_menu.dart';
 import 'package:intellipilot/features/board/presentation/boards_nav_refresh.dart';
 import 'package:intellipilot/features/board/presentation/widgets/board_settings_dialog.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
@@ -63,6 +66,12 @@ class MainShell extends StatelessWidget {
         // Under a [ShellRoute] so [GoRouterState.of] is available and rebuilds
         // on every navigation.
         final route = GoRouterState.of(context).uri.toString();
+        // Remember where each account was, so switching back returns here.
+        // This builder already runs on every navigation, which makes it the
+        // cheapest correct hook; the switcher de-duplicates repeats.
+        if (!kIsWeb && session is SessionAuthenticated) {
+          unawaited(getIt<AccountSwitcher>().rememberRoute(route));
+        }
         final hide = _shouldHide(session, route);
         if (hide) return child;
 
@@ -212,6 +221,12 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                   activeProjectId: activeProjectId,
                 ),
                 const SizedBox(width: 8),
+                // Account switching is a main-screen affordance, not a menu
+                // entry: with two instances open you need to see which one you
+                // are on. Renders nothing on web or with a single account, and
+                // fits inside the bar's fixed 52px.
+                AccountSwitcherMenu(compact: compact),
+                const SizedBox(width: 4),
                 const _AvatarMenu(),
                 const SizedBox(width: 12),
               ],
@@ -364,6 +379,19 @@ class _AvatarMenuState extends State<_AvatarMenu> {
     }
   }
 
+  /// Log the active account out; land on whichever account remains, or the
+  /// login screen when none do.
+  Future<void> _signOutAndSwitch(BuildContext context) async {
+    final router = GoRouter.of(context);
+    final next = await getIt<AccountSwitcher>().logoutActive();
+    if (next == null) {
+      getIt<SessionBloc>().add(const SessionLogoutRequested());
+      return;
+    }
+    final restored = await getIt<AccountSwitcher>().restoredRouteFor(next);
+    router.go(restored ?? Routes.projects);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -406,10 +434,26 @@ class _AvatarMenuState extends State<_AvatarMenu> {
           ),
         ],
         const Divider(height: 1),
+        // "Add another account" lives here, not only in the switcher: the
+        // switcher appears once there are two accounts, so with one signed in
+        // this is the only route to a second.
+        if (!kIsWeb)
+          MenuItemButton(
+            leadingIcon: const Icon(Icons.person_add_alt),
+            onPressed: () => context.go(Routes.login),
+            child: Text(t.accountsAddAnother),
+          ),
         MenuItemButton(
           leadingIcon: const Icon(Icons.logout),
-          onPressed: () =>
-              getIt<SessionBloc>().add(const SessionLogoutRequested()),
+          onPressed: () {
+            if (kIsWeb) {
+              getIt<SessionBloc>().add(const SessionLogoutRequested());
+              return;
+            }
+            // Signing out of one account activates the next signed-in one
+            // rather than dumping the user on a login screen they don't need.
+            unawaited(_signOutAndSwitch(context));
+          },
           child: Text(t.topMenuSignOut),
         ),
       ],

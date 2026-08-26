@@ -35,14 +35,17 @@ typedef AccessTokenProvider = String? Function();
 /// listener and closes when the last one cancels.
 class ProjectEventsService with WidgetsBindingObserver {
   ProjectEventsService({
-    required String baseUrl,
+    required String Function() baseUrl,
     required AccessTokenProvider tokenProvider,
   }) : _baseUrl = baseUrl,
        _tokenProvider = tokenProvider {
     WidgetsBinding.instance.addObserver(this);
   }
 
-  final String _baseUrl;
+  /// Resolved per connection rather than captured once: on desktop the server
+  /// can change at runtime, and a stream still pointing at the previous host is
+  /// the kind of half-switch that is hard to notice and harder to debug.
+  final String Function() _baseUrl;
   final AccessTokenProvider _tokenProvider;
   final Map<String, _ProjectFeed> _feeds = {};
   bool _suspended = false;
@@ -51,7 +54,7 @@ class ProjectEventsService with WidgetsBindingObserver {
     final feed = _feeds.putIfAbsent(
       projectId,
       () => _ProjectFeed(
-        uri: Uri.parse('$_baseUrl/api/v1/projects/$projectId/events'),
+        uri: Uri.parse('${_baseUrl()}/api/v1/projects/$projectId/events'),
         tokenProvider: _tokenProvider,
         isSuspended: () => _suspended,
         onIdle: () => _feeds.remove(projectId),
@@ -81,6 +84,15 @@ class ProjectEventsService with WidgetsBindingObserver {
 
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    shutdownAll();
+  }
+
+  /// Close every live feed without retiring the service.
+  ///
+  /// Used when the app changes account or server: the streams carry the old
+  /// identity's authorisation and point at the old host, so they must be gone
+  /// before anything reconnects. Watchers re-subscribe on the next `watch`.
+  void shutdownAll() {
     for (final feed in _feeds.values.toList()) {
       feed.shutdown();
     }

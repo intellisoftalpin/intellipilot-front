@@ -16,16 +16,20 @@
 class BuildInfo {
   const BuildInfo._();
 
-  /// Semver string, e.g. `0.1.0`. Keep in lockstep with `pubspec.yaml`.
+  /// Semver string. **Must equal `pubspec.yaml`'s version** — a test asserts
+  /// it, because the server-compatibility gate compares this against the
+  /// backend and a stale fallback would make every build without the
+  /// `--dart-define` (any `flutter run`, and today every desktop/mobile build)
+  /// look years out of date.
   static const String version = String.fromEnvironment(
     'INTELLIPILOT_VERSION',
-    defaultValue: '0.1.0',
+    defaultValue: '0.6.32',
   );
 
   /// Build identifier (`+N` suffix in pubspec). Often a CI build number.
   static const String build = String.fromEnvironment(
     'INTELLIPILOT_BUILD',
-    defaultValue: '1',
+    defaultValue: '76',
   );
 
   /// Flavor — drives flavor-specific UI accents and API base resolution.
