@@ -7,7 +7,8 @@ import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/core/network/server_connection_service.dart';
 import 'package:intellipilot/core/network/server_endpoint.dart';
 import 'package:intellipilot/core/network/tls/cert_trust.dart';
-import 'package:intellipilot/features/compatibility/domain/compatibility_cubit.dart';
+import 'package:intellipilot/features/accounts/domain/account_switcher.dart';
+import 'package:intellipilot/features/accounts/presentation/add_account_notice.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// Step ① of the sign-in wizard on desktop and mobile: which server?
@@ -29,14 +30,37 @@ class _ConnectPageState extends State<ConnectPage> {
   final _controller = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _busy = false;
+  bool _prefilled = false;
   ConnectResult? _result;
 
+  /// Whether this is step ① of adding a *second* account rather than changing
+  /// the server for the only one.
+  ///
+  /// Read from the route rather than passed in, so a deep link or a restored
+  /// location behaves the same as the menu item. Tolerates the absence of a
+  /// GoRouter ancestor for the benefit of widget tests that pump the page bare.
+  bool get _addingAccount {
+    final router = GoRouter.maybeOf(context);
+    if (router == null) return false;
+    return Routes.isAddAccount(router.routerDelegate.currentConfiguration.uri);
+  }
+
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_prefilled) return;
+    _prefilled = true;
     // Prefill with the current server so "change server" is an edit, not a
-    // retype.
-    _controller.text = getIt<ServerEndpoint>().stored ?? '';
+    // retype — but NOT when adding an account: that server is the one the user
+    // is already on, and the whole reason for this step is entering a
+    // different one. Prefilling it invited exactly the mistake of signing in
+    // to the same place twice.
+    //
+    // In `didChangeDependencies` rather than `initState` because reading the
+    // router needs an inherited-widget lookup.
+    if (!_addingAccount) {
+      _controller.text = getIt<ServerEndpoint>().stored ?? '';
+    }
   }
 
   @override
@@ -51,9 +75,20 @@ class _ConnectPageState extends State<ConnectPage> {
       _busy = true;
       if (!trustCertificate) _result = null;
     });
+    final adding = _addingAccount;
+    final router = GoRouter.of(context);
     final res = await getIt<ServerConnectionService>().connect(
       _controller.text,
       trustCertificate: trustCertificate,
+      addingAccount: adding,
+      // Only runs once the address is known good. Stands the current account
+      // down so the app never holds its token while pointed at the new server.
+      suspendActive: adding
+          ? () => getIt<AccountSwitcher>().beginAddAccount(
+              currentRoute: router.routerDelegate.currentConfiguration.uri
+                  .toString(),
+            )
+          : null,
     );
     if (!mounted) return;
     setState(() {
@@ -61,11 +96,11 @@ class _ConnectPageState extends State<ConnectPage> {
       _result = res;
     });
     if (res.isOk) {
-      // A different server means the previous verdict is meaningless. Reset
-      // first so a stale "blocked" cannot hide the login screen, then re-probe.
-      getIt<CompatibilityCubit>().reset();
-      unawaited(getIt<CompatibilityCubit>().check());
-      context.go(Routes.login);
+      // Branding and the compatibility verdict are invalidated by the service's
+      // own server-changed hook — see `invalidateServerDerivedState` in the DI
+      // wiring. Doing it here too meant an account switch, which does not go
+      // through this page, silently skipped it.
+      context.go(adding ? Routes.addAccountLogin() : Routes.login);
     }
   }
 
@@ -98,6 +133,12 @@ class _ConnectPageState extends State<ConnectPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Adding a second account: say so, and give a way out. The
+                  // user is still signed in, so a wizard with no exit is a trap.
+                  if (_addingAccount) ...[
+                    const AddAccountNotice(),
+                    const SizedBox(height: 24),
+                  ],
                   Icon(
                     Icons.dns_outlined,
                     size: 48,

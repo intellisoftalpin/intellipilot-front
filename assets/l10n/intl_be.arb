@@ -1668,5 +1668,11 @@
   "compatBlockedBody": "Гэта праграма (версія {client}) старэйшая за сервер IntelliPilot, да якога яна падключана (версія {server}). Папрасіце адміністратара абнавіць бэкэнд.",
   "compatBlockedWebBody": "Гэта старонка выкарыстоўвае старэйшую зборку (версія {client}), чым сервер (версія {server}). Перазагрузіце старонку, каб атрымаць актуальную версію.",
   "compatReload": "Перазагрузіць",
-  "compatRetry": "Праверыць зноў"
+  "compatRetry": "Праверыць зноў",
+  "accountsAddTitle": "Дадаць іншы акаўнт",
+  "accountsAddHint": "Увайдзіце, каб дадаць другі акаўнт. Вы застанецеся ў акаўнце {current}.",
+  "accountsAddCancel": "Скасаваць",
+  "accountsContinueAs": "Працягнуць як",
+  "accountsContinueAsHint": "Абярыце акаўнт, у які вы ўжо ўвайшлі.",
+  "accountsOrSignIn": "або ўвайдзіце ніжэй"
 }

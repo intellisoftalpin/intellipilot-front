@@ -55,6 +55,7 @@ class _Fixture {
       dio: Dio(),
     );
     service = ServerConnectionService(
+      onServerChanged: () => serverChanges++,
       endpoint: endpoint,
       apiClient: client,
       certPins: CertPinStore(settings),
@@ -78,6 +79,9 @@ class _Fixture {
   late final ServerEndpoint endpoint;
   late final ApiClient client;
   late final ServerConnectionService service;
+
+  /// How many times the service reported an actual change of server.
+  int serverChanges = 0;
 }
 
 void main() {
@@ -177,6 +181,110 @@ void main() {
       await f.service.connect('same.example.com');
 
       expect(f.boards.get<String>('snapshot'), 'keep-me');
+    });
+  });
+
+  group('adding an account', () {
+    /// Seed the caches, point at server A, then connect to server B.
+    Future<_Fixture> switchTo(
+      String next, {
+      required bool addingAccount,
+    }) async {
+      final f = _Fixture((_) async => _json(_validConfig));
+      await f.service.connect('a.example.com');
+      await f.boards.set('snapshot', 'kept?');
+      await f.ui.set('lanes', 'kept?');
+      await f.drafts.set('draft', 'kept?');
+      await f.service.connect(next, addingAccount: addingAccount);
+      return f;
+    }
+
+    test('replacing the server still wipes its cached data', () async {
+      final f = await switchTo('b.example.com', addingAccount: false);
+
+      expect(f.boards.get<String>('snapshot'), isNull);
+      expect(f.ui.get<String>('lanes'), isNull);
+      expect(f.drafts.get<String>('draft'), isNull);
+    });
+
+    test('adding an account preserves it', () async {
+      // These boxes are unscoped here, so the wipe would take every other
+      // account's cache with it — not just the one being left behind.
+      final f = await switchTo('b.example.com', addingAccount: true);
+
+      expect(f.boards.get<String>('snapshot'), 'kept?');
+      expect(f.ui.get<String>('lanes'), 'kept?');
+      expect(f.drafts.get<String>('draft'), 'kept?');
+      expect(f.endpoint.effective, 'https://b.example.com');
+    });
+
+    test('the active account is stood down before the endpoint moves', () async {
+      final f = _Fixture((_) async => _json(_validConfig));
+      await f.service.connect('a.example.com');
+
+      String? endpointWhenSuspended;
+      String? dioWhenSuspended;
+      final res = await f.service.connect(
+        'b.example.com',
+        addingAccount: true,
+        suspendActive: () async {
+          endpointWhenSuspended = f.endpoint.effective;
+          dioWhenSuspended = f.client.dio.options.baseUrl;
+        },
+      );
+
+      expect(res.outcome, ConnectOutcome.ok);
+      // The whole point of the hook: it runs while the app still points at the
+      // old server, so nothing can send the old token to the new host.
+      expect(endpointWhenSuspended, 'https://a.example.com');
+      expect(dioWhenSuspended, 'https://a.example.com');
+      expect(f.endpoint.effective, 'https://b.example.com');
+    });
+
+    test('a failed attempt never stands the account down', () async {
+      final f = _Fixture((_) async => _json({'nope': true}));
+      var suspended = false;
+      final res = await f.service.connect(
+        'b.example.com',
+        addingAccount: true,
+        suspendActive: () async => suspended = true,
+      );
+
+      expect(res.outcome, ConnectOutcome.notIntelliPilot);
+      expect(suspended, isFalse);
+      expect(f.endpoint.isConfigured, isFalse);
+    });
+  });
+
+  group('server-derived state', () {
+    test('adopting a different server reports the change', () async {
+      // Branding, and the version verdict, are only true of one server. Both
+      // paths that can move the app — this and an account switch — have to say
+      // so, or the login screen wears the previous instance's name and logo.
+      final f = _Fixture((_) async => _json(_validConfig));
+
+      // Including the very first connect: there was no server before, so
+      // everything server-derived is unloaded rather than merely stale.
+      await f.service.connect('a.example.com');
+      expect(f.serverChanges, 1);
+
+      await f.service.connect('b.example.com');
+      expect(f.serverChanges, 2);
+    });
+
+    test('re-connecting to the same server reports nothing', () async {
+      final f = _Fixture((_) async => _json(_validConfig));
+      await f.service.connect('a.example.com');
+      await f.service.connect('a.example.com');
+
+      expect(f.serverChanges, 1);
+    });
+
+    test('a rejected address reports nothing', () async {
+      final f = _Fixture((_) async => _json({'nope': true}));
+      await f.service.connect('a.example.com');
+
+      expect(f.serverChanges, 0);
     });
   });
 }

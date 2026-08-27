@@ -440,7 +440,7 @@ class _AvatarMenuState extends State<_AvatarMenu> {
         if (!kIsWeb)
           MenuItemButton(
             leadingIcon: const Icon(Icons.person_add_alt),
-            onPressed: () => context.go(Routes.login),
+            onPressed: () => context.go(Routes.addAccount()),
             child: Text(t.accountsAddAnother),
           ),
         MenuItemButton(
@@ -612,34 +612,49 @@ class _ProjectRailState extends State<_ProjectRail> {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            for (var i = 0; i < items.length; i++) ...[
-              _RailRow(
-                icon: items[i].icon,
-                label: expanded ? Text(items[i].label) : null,
-                tooltip: items[i].label,
-                selected: i == selectedIndex,
-                count: items[i].count,
-                onTap: () => context.go(items[i].path),
+            // The rows scroll; the header does not. Every row is a fixed 48px
+            // and the Boards and Wiki sections expand to list however many
+            // boards and doc sources a project has, so the total routinely
+            // exceeds a short window — without this the Column overflows and
+            // the bottom rows become unreachable.
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 8),
+                    for (var i = 0; i < items.length; i++) ...[
+                      _RailRow(
+                        icon: items[i].icon,
+                        label: expanded ? Text(items[i].label) : null,
+                        tooltip: items[i].label,
+                        selected: i == selectedIndex,
+                        count: items[i].count,
+                        onTap: () => context.go(items[i].path),
+                      ),
+                      // Boards follows My Issues (items[1]), so the order reads
+                      // Overview → My Issues → Boards → Issues.
+                      if (i == 1)
+                        _BoardsRailSection(
+                          projectId: widget.projectId,
+                          currentRoute: widget.currentRoute,
+                          railExpanded: expanded,
+                          active: onBoard,
+                        ),
+                      // Wiki sits between Time tracking and Settings, where the
+                      // flat row used to be.
+                      if (i == items.length - 2)
+                        _WikiRailSection(
+                          projectId: widget.projectId,
+                          currentRoute: widget.currentRoute,
+                          railExpanded: expanded,
+                        ),
+                    ],
+                    const SizedBox(height: 8),
+                  ],
+                ),
               ),
-              // Boards follows My Issues (items[1]), so the order reads
-              // Overview → My Issues → Boards → Issues.
-              if (i == 1)
-                _BoardsRailSection(
-                  projectId: widget.projectId,
-                  currentRoute: widget.currentRoute,
-                  railExpanded: expanded,
-                  active: onBoard,
-                ),
-              // Wiki sits between Time tracking and Settings, where the flat
-              // row used to be.
-              if (i == items.length - 2)
-                _WikiRailSection(
-                  projectId: widget.projectId,
-                  currentRoute: widget.currentRoute,
-                  railExpanded: expanded,
-                ),
-            ],
+            ),
           ],
         ),
       ),

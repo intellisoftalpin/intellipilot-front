@@ -58,6 +58,27 @@ abstract class Routes {
   /// Step ① of the desktop/mobile sign-in wizard: which server. Never
   /// reachable on web, which is served by its own instance.
   static const connect = '/connect';
+
+  /// Marks a wizard screen as belonging to an "add another account" run.
+  ///
+  /// Both steps need it. The guard otherwise bounces an authenticated user off
+  /// `/connect` *and* `/login` — correct when someone stumbles back onto them,
+  /// wrong when they deliberately asked to add a second account.
+  static const addAccountFlag = 'add';
+
+  /// Where "add another account" goes: step ① of the wizard, not step ②.
+  ///
+  /// The second account usually lives on a *different* server, so the flow has
+  /// to start by asking which one. Jumping straight to `/login` silently
+  /// assumed the current server and left no way to enter another.
+  static String addAccount() => '$connect?$addAccountFlag=1';
+
+  /// Step ② of the same run, once a server has been chosen.
+  static String addAccountLogin() => '$login?$addAccountFlag=1';
+
+  /// Whether [uri] is a wizard screen in add-account mode.
+  static bool isAddAccount(Uri uri) =>
+      uri.queryParameters[addAccountFlag] == '1';
   static const login = '/login';
   static const register = '/register';
   static const forgotPassword = '/forgot-password';
@@ -574,6 +595,11 @@ String? _guard(SessionState session, GoRouterState routerState) {
   final loc = routerState.matchedLocation;
   final isPublic = _publicRoutes.contains(loc);
 
+  // A deliberate "add another account" run: the user is signed in and is
+  // *supposed* to see the wizard. Desktop/mobile only — web holds a single
+  // cookie-backed session, so there is no second account to add.
+  final addingAccount = !kIsWeb && Routes.isAddAccount(routerState.uri);
+
   // Step ①. Desktop/mobile with no server chosen yet has nowhere to send a
   // request, so nothing else can be attempted first. Web is exempt: it is
   // served by its instance and its base URL is intentionally empty.
@@ -583,8 +609,10 @@ String? _guard(SessionState session, GoRouterState routerState) {
   // Conversely, once a server IS configured the connect screen is only
   // reachable deliberately (via "change server"), never as a landing page for
   // an authenticated user.
+  // Step ① of an add-account run is the exception: reaching the server picker
+  // while signed in is the entire point there.
   if (loc == Routes.connect && session is SessionAuthenticated) {
-    return Routes.projects;
+    if (!addingAccount) return Routes.projects;
   }
 
   // MFA challenge in-flight: corner the user on the verify page until they
@@ -604,6 +632,8 @@ String? _guard(SessionState session, GoRouterState routerState) {
     return '${Routes.login}?from=$from';
   }
   if (isAuthed && loc == Routes.login) {
+    // Step ② of the same run.
+    if (addingAccount) return null;
     final from = routerState.uri.queryParameters['from'];
     if (from != null && from.isNotEmpty) return Uri.decodeComponent(from);
     return Routes.projects;

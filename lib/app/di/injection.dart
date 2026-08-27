@@ -124,6 +124,23 @@ Future<void> configureDependencies({
       instanceName: HiveBoxes.boards,
     );
 
+  /// Everything the app believes purely because of *which* server it talks to.
+  ///
+  /// Two paths can move the app to a different server — the connect wizard and
+  /// an account switch — and anything server-derived has to be invalidated by
+  /// both. Keeping it in one closure is the point: the compatibility verdict
+  /// was handled ad hoc at each site and branding at neither, which is how the
+  /// login screen ended up showing one instance's name, motto and logo while
+  /// pointed at a completely different one.
+  void invalidateServerDerivedState() {
+    // Reset before re-loading, so a server that is unreachable or has no
+    // branding shows the bundled default rather than the previous server's.
+    getIt<BrandingCubit>().reset();
+    unawaited(getIt<BrandingCubit>().load());
+    getIt<CompatibilityCubit>().reset();
+    unawaited(getIt<CompatibilityCubit>().check());
+  }
+
   // --- Server endpoint --------------------------------------------------
   // Desktop/mobile pick their server at runtime; web is served BY its instance
   // and must keep using relative URLs, so `ServerEndpoint.active` is left unset
@@ -196,6 +213,7 @@ Future<void> configureDependencies({
       certPins: getIt<CertPinStore>(),
       cookies: getIt<CookieSetup>(),
       storage: makeStorage,
+      onServerChanged: invalidateServerDerivedState,
     ),
   );
   getIt.registerLazySingleton<AuthRepository>(
@@ -290,6 +308,7 @@ Future<void> configureDependencies({
       // eagerly here would close the cycle.
       session: () => getIt<SessionBloc>(),
       events: () => getIt<ProjectEventsService>(),
+      onServerChanged: invalidateServerDerivedState,
     ),
   );
   getIt.registerLazySingleton<SessionBloc>(
@@ -440,6 +459,16 @@ Future<void> configureForTests({
         profiles: getIt<ProfileRepository>(),
         session: () => getIt<SessionBloc>(),
         events: () => getIt<ProjectEventsService>(),
+      ),
+    )
+    // Lazy: the constructor registers a WidgetsBinding observer, so it must not
+    // be built by unit tests that never bring a binding up. Registered at all
+    // because an account switch shuts the live feeds down, and without this the
+    // whole switch path threw "not registered" the moment a test exercised it.
+    ..registerLazySingleton<ProjectEventsService>(
+      () => ProjectEventsService(
+        baseUrl: () => getIt<ApiConfig>().baseUrl,
+        tokenProvider: () => null,
       ),
     )
     ..registerSingleton<ThemeCubit>(ThemeCubit(settingsStorage))

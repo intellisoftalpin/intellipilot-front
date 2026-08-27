@@ -34,6 +34,16 @@ class BrandingCubit extends Cubit<Branding> {
   final AuthRepository _repo;
   final ApiConfig _config;
 
+  /// Forget the current server's branding, falling back to the bundled name
+  /// and logo.
+  ///
+  /// Called whenever the app changes server. Showing one instance's name,
+  /// motto and logo while pointed at another is not a cosmetic glitch — on the
+  /// login screen it is a claim about who you are signing in to, so the
+  /// bundled default is the only safe thing to show until the new server has
+  /// answered.
+  void reset() => emit(const Branding.defaults());
+
   Future<void> load() async {
     final res = await _repo.authConfig();
     res.when(
@@ -54,7 +64,9 @@ class BrandingCubit extends Cubit<Branding> {
           ),
         );
       },
-      // Branding is best-effort chrome — on failure we silently keep defaults.
+      // Best-effort chrome: on failure keep whatever is showing. Paired with
+      // [reset] on a server change, that is the bundled default rather than
+      // the previous server's identity.
       err: (_) {},
     );
   }

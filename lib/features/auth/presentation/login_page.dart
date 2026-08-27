@@ -14,6 +14,8 @@ import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/io/url_opener.dart';
 import 'package:intellipilot/core/network/server_endpoint.dart';
 import 'package:intellipilot/core/network/tls/cert_trust.dart';
+import 'package:intellipilot/features/accounts/presentation/add_account_notice.dart';
+import 'package:intellipilot/features/accounts/presentation/signed_in_accounts.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:intellipilot/features/auth/presentation/auth_validators.dart';
 import 'package:intellipilot/features/auth/presentation/cubits/login_cubit.dart';
@@ -132,7 +134,13 @@ class _LoginViewState extends State<_LoginView>
           body: BlocListener<LoginCubit, LoginState>(
             listener: (context, state) {
               if (state is LoginSucceeded) {
-                // Router guard redirects automatically; no-op.
+                // Normally the guard redirects an authenticated user off
+                // /login, which is what moves us on. In add-account mode the
+                // guard deliberately lets us stay, so nothing would navigate —
+                // this has to do it explicitly.
+                if (_isAddAccountMode(context)) {
+                  context.go(Routes.projects);
+                }
               }
             },
             child: Stack(
@@ -339,7 +347,15 @@ class _LoginViewState extends State<_LoginView>
     Branding branding,
     bool reduceMotion,
   ) {
+    final addingAccount = _isAddAccountMode(context);
     return [
+      // Adding a second account: make it obvious this is not a re-login, and
+      // give a way out — the user is still signed in, so being stranded on a
+      // login screen with no exit would be a trap.
+      if (addingAccount) ...[
+        const AddAccountNotice(),
+        const SizedBox(height: 16),
+      ],
       // Which server this is, and the way back to step ① of the wizard.
       // Deliberately the first thing in the form: it lived in the legal footer
       // at first, which put it below the fold inside a scroll view and made it
@@ -352,6 +368,12 @@ class _LoginViewState extends State<_LoginView>
         const _ServerBanner(),
         const SizedBox(height: 16),
       ],
+      // Accounts already signed in on this device. Above the credential fields
+      // because on this screen it is usually the answer: the login screen is
+      // reachable mid-add-account, after a session expired, and after a cold
+      // start whose stored token was dead — in all three the other accounts
+      // still work, and re-typing a password is the long way round.
+      const SignedInAccounts(),
       if (branding.appMessage != null) ...[
         _entranceItem(
           3,
@@ -857,6 +879,20 @@ class _LoginFooter extends StatelessWidget {
   }
 }
 
+/// Whether the login screen is in "add another account" mode.
+///
+/// Tolerates the absence of a GoRouter ancestor: the auth pages are pumped
+/// directly inside a bare Navigator by the widget tests, and
+/// `GoRouterState.of` requires a router. No router means no add-account flag,
+/// which is the correct answer for a standalone LoginPage.
+bool _isAddAccountMode(BuildContext context) {
+  final router = GoRouter.maybeOf(context);
+  if (router == null) return false;
+  return Routes.isAddAccount(
+    router.routerDelegate.currentConfiguration.uri,
+  );
+}
+
 /// The server this app is pointed at, with a way back to the connect step.
 ///
 /// Rendered as a tonal row at the top of the sign-in form rather than a link in
@@ -930,7 +966,14 @@ class _ServerBanner extends StatelessWidget {
               ),
             const SizedBox(width: 4),
             TextButton(
-              onPressed: () => context.go(Routes.connect),
+              // Stay inside an add-account run: dropping the flag here would
+              // leave the previous account suspended with no way back, and the
+              // next connect would wipe caches it must preserve.
+              onPressed: () => context.go(
+                _isAddAccountMode(context)
+                    ? Routes.addAccount()
+                    : Routes.connect,
+              ),
               style: TextButton.styleFrom(
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 8),

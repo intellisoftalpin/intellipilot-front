@@ -4,6 +4,8 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/core/network/api_client.dart';
 import 'package:intellipilot/core/network/server_endpoint.dart';
@@ -18,9 +20,15 @@ import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 /// Owns the multi-account lifecycle: adopting a fresh login, switching between
 /// signed-in accounts, and logging one out without disturbing the others.
 ///
+/// A [ChangeNotifier] because the set of accounts changes *after* the UI that
+/// shows it has been built. Adoption follows a login by a profile round-trip,
+/// while the login screen navigates on success immediately — so anything that
+/// read the list once at construction reliably missed the account just added
+/// and showed no switcher at all.
+///
 /// Desktop and mobile only. Web is served by its own instance and keeps exactly
 /// one cookie-backed session, so nothing here runs there.
-class AccountSwitcher {
+class AccountSwitcher extends ChangeNotifier {
   AccountSwitcher({
     required AccountStore store,
     required AccountScope scope,
@@ -30,7 +38,9 @@ class AccountSwitcher {
     required ProfileRepository profiles,
     required SessionBloc Function() session,
     required ProjectEventsService Function() events,
-  }) : _store = store,
+    void Function()? onServerChanged,
+  }) : _onServerChanged = onServerChanged,
+       _store = store,
        _scope = scope,
        _endpoint = endpoint,
        _api = apiClient,
@@ -47,6 +57,14 @@ class AccountSwitcher {
   final ProfileRepository _profiles;
   final SessionBloc Function() _session;
   final ProjectEventsService Function() _events;
+
+  /// Invoked when [_apply] actually moves the app to a different server.
+  ///
+  /// Anything derived from *which* server we talk to — the version
+  /// compatibility verdict above all — is stale the moment the endpoint
+  /// changes, and a stale "your app is too old" verdict from one server would
+  /// otherwise block the app on another.
+  final void Function()? _onServerChanged;
 
   /// The active account's refresh token, held in memory because
   /// [SessionBloc.refreshTokenProvider] is synchronous and a keychain read is
@@ -112,6 +130,10 @@ class AccountSwitcher {
     );
     await _store.upsert(account, refreshToken: refresh);
     await _apply(account, refresh);
+    // The add-account run (if this was one) succeeded, so there is no longer a
+    // suspended account to restore — the user is on the new one now.
+    _suspended = null;
+    notifyListeners();
     return account;
   }
 
@@ -139,6 +161,7 @@ class AccountSwitcher {
       final token = await _store.tokenFor(account);
       if (token == null) {
         await _store.remove(account);
+        notifyListeners();
         return false;
       }
       await _apply(account, token);
@@ -153,14 +176,68 @@ class AccountSwitcher {
         _active = null;
         _activeToken = null;
         _scope.set(null);
+        notifyListeners();
         return false;
       }
       rememberRotatedToken(tokens.refreshToken ?? token);
       _session().add(SessionEstablished(tokens));
+      // Choosing an account explicitly ends any add-account run in progress —
+      // otherwise a later cancel would resurrect an account the user has
+      // already moved on from.
+      _suspended = null;
+      notifyListeners();
       return true;
     } finally {
       _switching = false;
     }
+  }
+
+  /// The account put on hold by [beginAddAccount], awaiting a completed login
+  /// or a cancellation.
+  Account? _suspended;
+
+  /// The account an add-account run stood down, if any. Read by the wizard
+  /// header, which must still name it after step ① cleared [active].
+  Account? get suspendedAccount => _suspended;
+
+  /// Stand the active account down so a *different* server can be adopted.
+  ///
+  /// Mirrors steps 1–2 of [switchTo], and exists for the same reason: between
+  /// pointing the app at the new server and signing in there, the app would
+  /// otherwise still hold the previous account's token — and one background
+  /// refresh or SSE reconnect in that window sends account A's credential to
+  /// server B. So the outgoing identity's connections are closed first.
+  ///
+  /// The account is not removed: it stays signed in and stored, so
+  /// [cancelAddAccount] can bring it back. Call this only once validation has
+  /// succeeded — a failed connect attempt must leave the session untouched.
+  Future<void> beginAddAccount({String? currentRoute}) async {
+    final outgoing = _active;
+    if (outgoing == null) return;
+    if (currentRoute != null) {
+      await _store.rememberRoute(outgoing, currentRoute);
+    }
+    _events().shutdownAll();
+    _session().add(const SessionLogoutRequested(callBackend: false));
+    _suspended = outgoing;
+    // Cleared rather than kept, so nothing can read a live identity while the
+    // app points at a server that has not authenticated it.
+    _active = null;
+    _activeToken = null;
+    _scope.set(null);
+    notifyListeners();
+  }
+
+  /// Abandon an add-account run and restore whatever [beginAddAccount] stood
+  /// down — server, token and session.
+  ///
+  /// Returns false when there was nothing to restore, which is the normal case
+  /// for cancelling at step ① before any server was adopted.
+  Future<bool> cancelAddAccount() async {
+    final back = _suspended;
+    _suspended = null;
+    if (back == null) return false;
+    return switchTo(back);
   }
 
   /// Log the active account out and activate the next one, if any.
@@ -183,6 +260,7 @@ class AccountSwitcher {
       _activeToken = null;
       _scope.set(null);
       await _store.clearActive();
+      notifyListeners();
       return null;
     }
     await switchTo(next);
@@ -203,6 +281,9 @@ class AccountSwitcher {
 
   String? _lastRememberedRoute;
 
+  /// Every account with stored credentials, active or not.
+  Future<List<Account>> accounts() => _store.list();
+
   /// The route to land on after switching in: the remembered one, or null to
   /// use the default landing page.
   Future<String?> restoredRouteFor(Account account) async {
@@ -215,11 +296,15 @@ class AccountSwitcher {
     if (account.serverUrl != _endpoint.effective) {
       await _endpoint.save(account.serverUrl);
       _api.baseUrl = account.serverUrl;
+      _onServerChanged?.call();
     }
     _active = account;
     _activeToken = token;
     _lastRememberedRoute = null;
     _scope.set(account);
     await _store.setActive(account);
+    // Single point where the active account moves, so a startup restore is
+    // covered along with adoption and switching.
+    notifyListeners();
   }
 }

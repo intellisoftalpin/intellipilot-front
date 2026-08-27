@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/network/api_client.dart';
@@ -117,6 +117,27 @@ void main() {
       final cfg = ApiConfig.fromEnvironment();
       expect(cfg.baseUrl, 'http://localhost:8080');
       expect(cfg.withCredentials, isTrue);
+    });
+  });
+
+  group('cookie-less clients', () {
+    test('asks the server for the refresh token in the body', () {
+      // Desktop and mobile hold several accounts, so they cannot keep one
+      // refresh cookie per account in a single jar — each token goes to the OS
+      // keychain instead. Without this header a native login receives only a
+      // Set-Cookie it has no jar for, stores nothing, and multi-account
+      // switching has nothing to switch between.
+      //
+      // A default header rather than three call sites: login, 2FA verify and
+      // passkey authentication all mint sessions.
+      final client = _client(_StubAdapter(status: 200));
+
+      expect(
+        client.dio.options.headers['X-IntelliPilot-Refresh-In-Body'],
+        // Never on web, where the HttpOnly cookie is the entire point. The
+        // flag is compile-time, so this asserts whichever platform runs it.
+        kIsWeb ? isNull : '1',
+      );
     });
   });
 }

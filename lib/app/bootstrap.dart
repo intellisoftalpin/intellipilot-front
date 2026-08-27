@@ -35,6 +35,18 @@ Future<void> bootstrap() async {
       }
 
       FlutterError.onError = (details) {
+        // In debug, hand the error back to the framework's own presenter first.
+        //
+        // `details.exception` and `details.stack` alone are close to useless for
+        // layout errors: the exception is a bare sentence ("A RenderFlex
+        // overflowed by 16 pixels on the bottom") and the stack only shows the
+        // paint machinery that reported it. Everything that identifies the
+        // culprit — the "relevant error-causing widget", its file and line, and
+        // the offending render object's constraints — lives in
+        // `details.context` and `details.informationCollector`, which this
+        // handler used to drop on the floor. `presentError` prints the full
+        // dump, so an overflow becomes a file:line instead of a guessing game.
+        if (kDebugMode) FlutterError.presentError(details);
         getIt<Logger>().e(
           'Flutter error',
           error: details.exception,

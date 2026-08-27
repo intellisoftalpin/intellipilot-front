@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/error/failure_mapper.dart';
 import 'package:intellipilot/core/network/api_config.dart';
@@ -38,6 +39,20 @@ class ApiClient {
       ..options.headers.addAll({
         'Accept': 'application/json',
         'Content-Type': 'application/json',
+        // Ask the server to put the refresh token in the response body when it
+        // mints a session. Desktop and mobile hold several accounts at once and
+        // so cannot keep one refresh cookie per account in a single jar — each
+        // account's token goes to the OS keychain instead. Without this a
+        // native client signs in, gets a Set-Cookie it has no jar for, and has
+        // nothing to persist: no account is stored and multi-account switching
+        // silently has nothing to switch between.
+        //
+        // A default header rather than three call sites: login, 2FA verify and
+        // passkey authentication all mint sessions, and per-call opt-in is how
+        // the server side came to cover refresh but not login.
+        //
+        // Never on web, where the HttpOnly cookie is the point.
+        if (!kIsWeb) 'X-IntelliPilot-Refresh-In-Body': '1',
       });
 
     if (cookieManager != null) {

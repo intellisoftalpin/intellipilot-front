@@ -37,8 +37,20 @@ class _AccountSwitcherMenuState extends State<AccountSwitcherMenu> {
   @override
   void initState() {
     super.initState();
+    // Follow the switcher rather than reading it once: an account is adopted a
+    // profile round-trip after login, by which time this widget is already
+    // built, so a one-shot read misses the account that was just added.
+    getIt<AccountSwitcher>().addListener(_reload);
     unawaited(_load());
   }
+
+  @override
+  void dispose() {
+    getIt<AccountSwitcher>().removeListener(_reload);
+    super.dispose();
+  }
+
+  void _reload() => unawaited(_load());
 
   Future<void> _load() async {
     final accounts = await getIt<AccountStore>().list();
@@ -104,7 +116,7 @@ class _AccountSwitcherMenuState extends State<AccountSwitcherMenu> {
         const Divider(height: 8),
         MenuItemButton(
           leadingIcon: const Icon(Icons.person_add_alt, size: 16),
-          onPressed: () => context.go(Routes.login),
+          onPressed: () => context.go(Routes.addAccount()),
           child: Text(t.accountsAddAnother),
         ),
       ],

@@ -1668,5 +1668,11 @@
   "compatBlockedBody": "Diese App (Version {client}) ist älter als der verbundene IntelliPilot-Server (Version {server}). Bitten Sie Ihren Administrator, das Backend zu aktualisieren.",
   "compatBlockedWebBody": "Diese Seite verwendet einen älteren Build (Version {client}) als der Server (Version {server}). Laden Sie die Seite neu, um die aktuelle Version zu erhalten.",
   "compatReload": "Neu laden",
-  "compatRetry": "Erneut prüfen"
+  "compatRetry": "Erneut prüfen",
+  "accountsAddTitle": "Weiteres Konto hinzufügen",
+  "accountsAddHint": "Melden Sie sich an, um ein zweites Konto hinzuzufügen. Sie bleiben bei {current} angemeldet.",
+  "accountsAddCancel": "Abbrechen",
+  "accountsContinueAs": "Weiter als",
+  "accountsContinueAsHint": "Wählen Sie ein Konto, bei dem Sie bereits angemeldet sind.",
+  "accountsOrSignIn": "oder unten anmelden"
 }

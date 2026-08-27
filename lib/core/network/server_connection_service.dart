@@ -53,8 +53,10 @@ class ServerConnectionService {
     required CertPinStore certPins,
     required CookieSetup cookies,
     required KeyValueStorage Function(String box) storage,
+    void Function()? onServerChanged,
     @visibleForTesting Dio Function(String baseUrl)? probeDioFactory,
-  }) : _endpoint = endpoint,
+  }) : _onServerChanged = onServerChanged,
+       _endpoint = endpoint,
        _apiClient = apiClient,
        _certPins = certPins,
        _cookies = cookies,
@@ -66,6 +68,12 @@ class ServerConnectionService {
   final CertPinStore _certPins;
   final CookieSetup _cookies;
   final KeyValueStorage Function(String box) _storage;
+
+  /// Invoked once the app is actually pointed at a different server, so state
+  /// that only made sense for the previous one can be invalidated. See the
+  /// same hook on `AccountSwitcher` — both paths must fire it, or whichever
+  /// one is missed shows the old server's branding under the new one.
+  final void Function()? _onServerChanged;
 
   /// Lets tests drive the validation probe without a live server.
   final Dio Function(String baseUrl)? _probeDioFactory;
@@ -117,9 +125,20 @@ class ServerConnectionService {
   /// [trustCertificate] re-runs an attempt that previously reported
   /// [ConnectOutcome.untrustedCertificate], pinning the certificate the user
   /// was shown. Never set it without having shown them the fingerprint.
+  /// [addingAccount] marks this as step ① of adding a *second* account rather
+  /// than replacing the server. Two things change: cached data is preserved
+  /// (it is namespaced per account, so there is nothing to invalidate — and
+  /// clearing it would destroy the other accounts' caches, since these boxes
+  /// are unscoped here), and [suspendActive] runs in the one dangerous window.
+  ///
+  /// [suspendActive] is invoked after validation succeeds and before the
+  /// endpoint is adopted. That is the only moment where the app would hold the
+  /// previous account's token while already pointing at the new server.
   Future<ConnectResult> connect(
     String raw, {
     bool trustCertificate = false,
+    bool addingAccount = false,
+    Future<void> Function()? suspendActive,
   }) async {
     final url = normalise(raw);
     if (url == null) return const ConnectResult(ConnectOutcome.invalidUrl);
@@ -182,11 +201,24 @@ class ServerConnectionService {
       probeDio.close(force: true);
     }
 
+    // Everything past this point mutates app-wide state, so it runs only once
+    // the address is known good.
+    await suspendActive?.call();
     // Adopt it. A *changed* server invalidates everything cached for the old
     // one, so that goes first — see [_wipePerServerState].
-    final changed = await _endpoint.save(url);
-    if (changed) await _wipePerServerState();
+    final previous = _endpoint.stored;
+    // Two different questions, deliberately asked separately. The wipe needs
+    // "did this replace a previous server?" — false on a fresh install, where
+    // there is nothing to invalidate. The hook needs "are we pointed somewhere
+    // new?", which is true the first time too: a first connect that skipped it
+    // left the login screen wearing the bundled branding instead of the
+    // server's own until the next app start.
+    final replaced = await _endpoint.save(url);
+    if (replaced && !addingAccount) await _wipePerServerState();
     _apiClient.baseUrl = url;
+    // Last, so anything the hook triggers already resolves against the new
+    // host — both the endpoint and the Dio client are pointed at it by now.
+    if (previous != url) _onServerChanged?.call();
     return ConnectResult(ConnectOutcome.ok, url: url);
   }
 
@@ -199,6 +231,11 @@ class ServerConnectionService {
   ///
   /// `settings` deliberately survives — theme, locale and week-start are the
   /// user's global preferences, not the server's data.
+  ///
+  /// These handles are deliberately *unscoped*, so this clears every account's
+  /// data, not just the outgoing one. That is right when replacing the server
+  /// on a single-account install and catastrophic while adding an account —
+  /// hence `addingAccount` in [connect].
   Future<void> _wipePerServerState() async {
     await _storage(HiveBoxes.boards).clear();
     await _storage(HiveBoxes.ui).clear();

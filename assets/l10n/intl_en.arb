@@ -4615,5 +4615,18 @@
     }
   },
   "compatReload": "Reload",
-  "compatRetry": "Check again"
+  "compatRetry": "Check again",
+  "accountsAddTitle": "Add another account",
+  "accountsAddHint": "Sign in to add a second account. You will stay signed in to {current}.",
+  "@accountsAddHint": {
+    "placeholders": {
+      "current": {
+        "type": "String"
+      }
+    }
+  },
+  "accountsAddCancel": "Cancel",
+  "accountsContinueAs": "Continue as",
+  "accountsContinueAsHint": "Pick an account you are already signed in to.",
+  "accountsOrSignIn": "or sign in below"
 }
