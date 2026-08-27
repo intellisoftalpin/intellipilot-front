@@ -58,17 +58,23 @@ Future<void> bootstrap() async {
       // settles into SessionAuthenticated on success or SessionUnauthenticated
       // on failure — the router guard reacts on the next stream tick.
       //
-      // Skipped when no server is configured yet (a fresh desktop/mobile
+      // Skipped only when no server is configured yet (a fresh desktop/mobile
       // install): there is nowhere to send the request, and attempting it would
       // probe the dev localhost default on every cold start. The router sends
       // the user to the connect wizard instead.
+      //
+      // Web is never skipped. Its base URL is deliberately empty — meaning
+      // "same origin" — and treating that as unconfigured meant restoration
+      // never started, so the session stayed in its initial state and the
+      // router, which correctly refuses to redirect while restoration is
+      // pending, waited forever on a spinner.
       // Desktop/mobile: bring back the account that was last active, which
       // also restores its server, cache namespace and refresh token. Must
       // happen before the startup refresh, which needs that token.
       if (!kIsWeb && !isDemoMode) {
         await getIt<AccountSwitcher>().restore();
       }
-      if (isDemoMode || getIt<ServerEndpoint>().isConfigured) {
+      if (isDemoMode || getIt<ServerEndpoint>().canReachServer) {
         getIt<SessionBloc>().add(const SessionStartupRequested());
         // Version handshake against the server. Unauthenticated, so it does not
         // wait on the session; a failure leaves the app usable.

@@ -20,7 +20,9 @@ class ServerEndpoint extends ChangeNotifier {
   ServerEndpoint({
     required KeyValueStorage storage,
     required String compileTimeBase,
+    @visibleForTesting bool? isWeb,
   }) : _storage = storage,
+       _isWeb = isWeb ?? kIsWeb,
        _compileTimeBase = compileTimeBase.trim();
 
   /// The endpoint a desktop/mobile build is pinned to at compile time, if any.
@@ -57,6 +59,13 @@ class ServerEndpoint extends ChangeNotifier {
   final KeyValueStorage _storage;
   final String _compileTimeBase;
 
+  /// Injectable so both platform branches are reachable from a VM test.
+  ///
+  /// A bare `kIsWeb` is a compile-time constant, so under `flutter test` the
+  /// web side of every branch is dead code that no test can enter — which is
+  /// precisely how the web app shipped unable to start.
+  final bool _isWeb;
+
   /// True when the endpoint is fixed at build time and the wizard must be
   /// skipped entirely.
   bool get isPinnedAtBuildTime => _compileTimeBase.isNotEmpty;
@@ -72,9 +81,27 @@ class ServerEndpoint extends ChangeNotifier {
   String get effective =>
       isPinnedAtBuildTime ? _compileTimeBase : (stored ?? '');
 
-  /// Whether the app knows where to connect. False sends the user to the
-  /// connect wizard.
+  /// Whether a non-empty base URL is set. Prefer [canReachServer] or
+  /// [needsServerChoice] for "can the app work?" — on web an empty base URL
+  /// means *same origin*, not *unknown*, and this getter cannot tell them
+  /// apart.
   bool get isConfigured => effective.isNotEmpty;
+
+  /// Whether the app knows where to send requests.
+  ///
+  /// True on web whatever [isConfigured] says: the web app is served by its own
+  /// instance, so an empty base URL resolves against the page origin. Only
+  /// desktop and mobile can be genuinely unconfigured.
+  ///
+  /// This distinction lives here, in one place, because it was previously
+  /// spelled out at each call site — and the two sites disagreed. The router
+  /// guarded its check with `!kIsWeb`; bootstrap did not, so on web it never
+  /// started session restoration, the session never left its initial state, and
+  /// the guard waited for a restoration that was never going to happen.
+  bool get canReachServer => _isWeb || isConfigured;
+
+  /// Whether the user must be sent to the connect wizard before anything else.
+  bool get needsServerChoice => !canReachServer;
 
   /// Resolve for a caller holding its own fallback (an [ApiConfig] built with
   /// an explicit base, as tests and demo mode do).

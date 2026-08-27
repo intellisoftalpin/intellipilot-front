@@ -603,7 +603,7 @@ String? _guard(SessionState session, GoRouterState routerState) {
   // Step ①. Desktop/mobile with no server chosen yet has nowhere to send a
   // request, so nothing else can be attempted first. Web is exempt: it is
   // served by its instance and its base URL is intentionally empty.
-  if (!kIsWeb && !getIt<ServerEndpoint>().isConfigured) {
+  if (getIt<ServerEndpoint>().needsServerChoice) {
     return loc == Routes.connect ? null : Routes.connect;
   }
   // Conversely, once a server IS configured the connect screen is only

@@ -196,4 +196,59 @@ void main() {
       expect(s.get<String>('b'), isNull);
     });
   });
+
+  group('can the app reach a server', () {
+    ServerEndpoint web() => ServerEndpoint(
+      storage: InMemoryKeyValueStorage(),
+      // The web release build passes INTELLIPILOT_API_BASE deliberately empty
+      // so requests stay relative to the page origin.
+      compileTimeBase: '',
+      isWeb: true,
+    );
+    ServerEndpoint native() => ServerEndpoint(
+      storage: InMemoryKeyValueStorage(),
+      compileTimeBase: '',
+      isWeb: false,
+    );
+
+    test('web can, with no base URL at all', () {
+      // The bug this pins: an empty base URL on web means "same origin", not
+      // "unknown". Read as unknown, bootstrap skipped session restoration, the
+      // session never left its initial state, and the router — which correctly
+      // will not redirect while restoration is pending — showed a spinner
+      // forever instead of the login screen.
+      final e = web();
+
+      expect(e.isConfigured, isFalse, reason: 'no base URL is set');
+      expect(e.canReachServer, isTrue, reason: 'the page origin is the server');
+      expect(e.needsServerChoice, isFalse);
+    });
+
+    test('desktop and mobile cannot, until asked', () {
+      final e = native();
+
+      expect(e.canReachServer, isFalse);
+      expect(e.needsServerChoice, isTrue, reason: 'the wizard must run');
+    });
+
+    test('desktop can once a server is chosen', () async {
+      final e = native();
+      await e.save('https://pilot.example.com');
+
+      expect(e.canReachServer, isTrue);
+      expect(e.needsServerChoice, isFalse);
+    });
+
+    test('a build-time pin answers it on every platform', () {
+      for (final isWeb in [true, false]) {
+        final e = ServerEndpoint(
+          storage: InMemoryKeyValueStorage(),
+          compileTimeBase: 'https://pinned.example.com',
+          isWeb: isWeb,
+        );
+        expect(e.canReachServer, isTrue, reason: 'isWeb=$isWeb');
+        expect(e.needsServerChoice, isFalse, reason: 'isWeb=$isWeb');
+      }
+    });
+  });
 }

@@ -347,4 +347,49 @@ void main() {
     expect(Routes.forgotPassword, '/forgot-password');
     expect(Routes.resetPassword, '/reset-password');
   });
+
+  testWidgets('a web-shaped endpoint does not demand the connect wizard', (
+    tester,
+  ) async {
+    // Web has no base URL by design — requests resolve against the page
+    // origin. Reading that as "no server chosen" would divert every web visit
+    // to a wizard that must not exist there.
+    final endpoint = ServerEndpoint(
+      storage: InMemoryKeyValueStorage(),
+      compileTimeBase: '',
+      isWeb: true,
+    );
+    getIt.registerSingleton<ServerEndpoint>(endpoint);
+
+    final session = getIt<SessionBloc>();
+    session.add(const SessionLogoutRequested(callBackend: false));
+    await tester.pump();
+
+    final router = buildRouter(session: session);
+    await tester.pumpWidget(
+      MultiBlocProvider(
+        providers: [
+          BlocProvider<ThemeCubit>.value(value: getIt<ThemeCubit>()),
+          BlocProvider<LocaleCubit>.value(value: getIt<LocaleCubit>()),
+          BlocProvider<WeekStartCubit>.value(value: getIt<WeekStartCubit>()),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    router.go('/');
+    await tester.pumpAndSettle();
+
+    // The login screen, not the wizard and not a spinner.
+    expect(
+      router.routerDelegate.currentConfiguration.uri.path,
+      Routes.login,
+    );
+    expect(find.text('Connect to your server'), findsNothing);
+  });
 }
