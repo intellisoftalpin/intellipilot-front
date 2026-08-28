@@ -1,7 +1,7 @@
 name: intellipilot
 description: "IntelliPilot frontend client (Jira-grade project management)."
 publish_to: 'none'
-version: 0.6.37+81
+version: 0.7.0+82
 
 environment:
   sdk: ^3.12.0
@@ -41,6 +41,11 @@ dependencies:
   path_provider: ^2.1.4
   reactive_forms: ^18.2.2
   super_clipboard: ^0.9.0
+  # Opens the identity provider's verification page for the single-sign-on
+  # device flow. A convenience only: the dialog always shows the URL as
+  # selectable, copyable text, so a platform where launching fails is still
+  # usable.
+  url_launcher: ^6.3.0
   uuid: ^4.5.0
   video_player: ^2.9.2
   web: ^1.1.0

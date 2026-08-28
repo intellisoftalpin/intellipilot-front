@@ -5,6 +5,7 @@ import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/data/dtos/app_token_dtos.dart';
 import 'package:intellipilot/features/admin/data/dtos/security_dtos.dart';
+import 'package:intellipilot/features/admin/data/dtos/sso_admin_dtos.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 
 /// Domain contract for `/api/v1/admin/*` (V011 — platform admin).
@@ -88,6 +89,39 @@ abstract interface class AdminRepository {
   Future<Result<PlatformSettings, AppFailure>> updateOpenRegistration(
     bool value,
   );
+
+  /// Switch the local password form on or off (V025).
+  ///
+  /// [openRegistration] must be passed through because the endpoint takes the
+  /// whole settings object; omitting the SSO switch is what lets an older
+  /// client patch open registration without touching it.
+  Future<Result<PlatformSettings, AppFailure>> updateLoginPolicy({
+    required bool openRegistration,
+    required bool localPasswordLoginDisabled,
+  });
+
+  // ---- Single sign-on (OIDC) providers ----
+
+  Future<Result<List<OidcProviderConfig>, AppFailure>> listOidcProviders();
+
+  Future<Result<OidcProviderConfig, AppFailure>> createOidcProvider(
+    UpsertOidcProviderRequest req,
+  );
+
+  Future<Result<OidcProviderConfig, AppFailure>> updateOidcProvider(
+    String id,
+    UpsertOidcProviderRequest req,
+  );
+
+  Future<Result<Unit, AppFailure>> deleteOidcProvider(String id);
+
+  /// Fetch the provider's discovery document and report what it publishes.
+  Future<Result<OidcTestResult, AppFailure>> testOidcProvider(String id);
+
+  /// Open or close the one-shot window in which a user's next SSO sign-in may
+  /// link to their existing account by verified email. The rescue route for
+  /// someone who can no longer sign in to use the self-service option.
+  Future<Result<Unit, AppFailure>> setOidcLinkArmed(String userId, bool armed);
 
   // ---- White-label branding ----
 

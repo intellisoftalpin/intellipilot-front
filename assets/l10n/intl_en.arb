@@ -4628,5 +4628,138 @@
   "accountsAddCancel": "Cancel",
   "accountsContinueAs": "Continue as",
   "accountsContinueAsHint": "Pick an account you are already signed in to.",
-  "accountsOrSignIn": "or sign in below"
+  "accountsOrSignIn": "or sign in below",
+  "ssoSignInWith": "Sign in with {provider}",
+  "@ssoSignInWith": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoOrDivider": "or",
+  "ssoAdministratorSignIn": "Administrator sign-in",
+  "ssoErrorEmailConflict": "An account already uses this email address. Sign in with your existing credentials, then connect single sign-on from Security settings.",
+  "ssoErrorEmailUnverified": "Your identity provider has not verified your email address.",
+  "ssoErrorProvisioningDisabled": "This provider may not create new accounts. Ask an administrator to invite you.",
+  "ssoErrorAlreadyLinked": "This identity is already connected to another account.",
+  "ssoErrorAccountBanned": "This account has been banned.",
+  "ssoErrorAccountInactive": "This account is inactive.",
+  "ssoErrorUnavailable": "The identity provider could not be reached. Try again shortly.",
+  "ssoErrorMisconfigured": "Single sign-on is not configured correctly on this server. Contact an administrator.",
+  "ssoErrorExpired": "That sign-in attempt expired. Please try again.",
+  "ssoErrorRefused": "The identity provider declined the sign-in.",
+  "ssoErrorGeneric": "Single sign-on did not complete. Please try again.",
+  "ssoSignInDialogTitle": "Sign in with {provider}",
+  "@ssoSignInDialogTitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoConnectDialogTitle": "Connect {provider}",
+  "@ssoConnectDialogTitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoDeviceInstructions": "Open the page below on any device and enter this code.",
+  "ssoDeviceOpenThisPage": "Verification page",
+  "ssoDeviceOpenBrowser": "Open in browser",
+  "ssoDeviceWaiting": "Waiting for you to finish — {remaining} left",
+  "@ssoDeviceWaiting": {
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoDeviceExpired": "This code has expired. Close and try again.",
+  "securitySectionSso": "Single sign-on",
+  "ssoNoneConnected": "No identity providers connected.",
+  "ssoConnectSubtitle": "Connect this provider to your account",
+  "ssoDisconnectAction": "Disconnect",
+  "ssoDisconnectTitle": "Disconnect provider",
+  "ssoDisconnectConfirm": "You will no longer be able to sign in with {provider}.",
+  "@ssoDisconnectConfirm": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoLinkedSnack": "Provider connected.",
+  "ssoUnlinkedSnack": "Provider disconnected.",
+  "adminSettingsSso": "Single sign-on (OIDC)",
+  "adminSettingsSsoDesc": "Let people sign in through an OpenID Connect identity provider.",
+  "adminSettingsDisablePasswordLogin": "Disable password sign-in",
+  "adminSettingsDisablePasswordLoginDesc": "Hide the password form and refuse password sign-in. A superadmin with a local password can always sign in, so this cannot lock you out.",
+  "adminSsoTitle": "Single sign-on",
+  "adminSsoIntro": "Configure the provider, press Test, then enable it. A provider stays invisible on the login screen until it is enabled.",
+  "adminSsoEmpty": "No identity providers configured yet.",
+  "adminSsoAddProvider": "Add provider",
+  "adminSsoEditTitle": "Edit provider",
+  "adminSsoSaved": "Provider saved.",
+  "adminSsoEnabled": "Enabled",
+  "adminSsoDisabled": "Disabled",
+  "adminSsoRedirectUri": "Redirect URI (register this at the provider)",
+  "adminSsoBackchannelUri": "Back-channel logout URI",
+  "adminSsoTest": "Test",
+  "adminSsoTestTitle": "Connection test",
+  "adminSsoDeleteTitle": "Delete provider",
+  "adminSsoDeleteConfirm": "Deleting {provider} also removes every connected identity. Anyone who signs in only this way will lose that route.",
+  "@adminSsoDeleteConfirm": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "adminSsoFieldDisplayName": "Button label",
+  "adminSsoFieldSlug": "Key",
+  "adminSsoFieldSlugHelp": "Used in the sign-in URL. Lowercase letters, digits and hyphens. Cannot be changed later.",
+  "adminSsoFieldIssuer": "Issuer URL",
+  "adminSsoFieldIssuerHelp": "Must match the issuer the provider publishes, exactly. The Test button reports what it found.",
+  "adminSsoFieldClientId": "Client ID",
+  "adminSsoFieldClientSecret": "Client secret",
+  "adminSsoFieldClientSecretHelp": "Leave empty for a public client using PKCE only.",
+  "adminSsoFieldClientSecretStored": "A secret is stored. Leave empty to keep it.",
+  "adminSsoFieldScopes": "Scopes",
+  "adminSsoFieldSuperadminGroup": "Superadmin group",
+  "adminSsoFieldSuperadminGroupHelp": "Membership grants superadmin and absence revokes it, on every sign-in. Leave empty to manage the flag here instead. The last superadmin is never demoted.",
+  "adminSsoClaimsSection": "Claim names",
+  "adminSsoFieldClaimEmail": "Email claim",
+  "adminSsoFieldClaimUsername": "Username claim",
+  "adminSsoFieldClaimDisplayName": "Display name claim",
+  "adminSsoFieldClaimGroups": "Groups claim",
+  "adminSsoEnabledLabel": "Enabled",
+  "adminSsoEnabledHelp": "Show this provider on the login screen.",
+  "adminSsoJitLabel": "Create accounts on first sign-in",
+  "adminSsoJitHelp": "Off means only people who already have an account, or a linked identity, can sign in.",
+  "adminSsoVerifiedEmailLabel": "Require a verified email address",
+  "adminSsoVerifiedEmailHelp": "Turning this off means trusting the provider about an address it may never have checked.",
+  "adminSsoDeviceFlowLabel": "Allow desktop and mobile sign-in",
+  "adminSsoDeviceFlowHelp": "Uses the device code flow. Requires the provider to publish a device authorization endpoint.",
+  "adminSsoSkipTlsLabel": "Skip TLS certificate checks",
+  "adminSsoSkipTlsHelp": "Lab and self-signed certificates only.",
+  "adminSsoAuthorizationEndpoint": "Authorization endpoint",
+  "adminSsoTokenEndpoint": "Token endpoint",
+  "adminSsoDeviceFlow": "Device flow",
+  "adminSsoDeviceFlowYes": "Supported",
+  "adminSsoDeviceFlowNo": "Not published by this provider",
+  "adminSsoSigningKeys": "Signing keys published",
+  "adminUsersArmSsoLink": "Allow single sign-on linking",
+  "adminUsersArmSsoLinkBody": "For the next 24 hours, a single sign-on attempt presenting a verified {email} will connect to this account. Normally people connect a provider themselves from Security — use this only when they cannot sign in at all.",
+  "@adminUsersArmSsoLinkBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersArmSsoLinkConfirm": "Allow for 24 hours",
+  "adminUsersArmSsoLinkDone": "Linking window opened for 24 hours."
 }

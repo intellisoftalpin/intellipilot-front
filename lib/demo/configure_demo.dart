@@ -16,6 +16,7 @@ import 'package:intellipilot/demo/demo_store.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
+import 'package:intellipilot/features/auth/domain/sso_repository.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
@@ -97,6 +98,7 @@ Future<void> configureDemoDependencies() async {
   getIt
     ..registerLazySingleton<AuthRepository>(() => DemoAuthRepository(store))
     ..registerLazySingleton<MfaRepository>(() => DemoMfaRepository(store))
+    ..registerLazySingleton<SsoRepository>(() => DemoSsoRepository(store))
     ..registerLazySingleton<ProfileRepository>(
       () => DemoProfileRepository(store),
     )

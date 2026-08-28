@@ -51,6 +51,19 @@ class UserProfile {
   /// password in the directory, not in IntelliPilot.
   bool get isLdap => authSource == 'ldap';
 
+  /// Provisioned by an identity provider on first single sign-on (V025) and
+  /// holding no local password.
+  ///
+  /// A user who *linked* a provider to an account they already had keeps their
+  /// original source: linking adds a way in, it does not take the password
+  /// away.
+  bool get isOidc => authSource == 'oidc';
+
+  /// Whether the password lives somewhere other than IntelliPilot, so the
+  /// change-password and reset flows do not apply. The server draws the same
+  /// line with `auth_source != "local"`.
+  bool get isExternallyAuthenticated => authSource != 'local';
+
   final String id;
   final String email;
   final String username;

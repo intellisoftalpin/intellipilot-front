@@ -1674,5 +1674,138 @@
   "accountsAddCancel": "Abbrechen",
   "accountsContinueAs": "Weiter als",
   "accountsContinueAsHint": "Wählen Sie ein Konto, bei dem Sie bereits angemeldet sind.",
-  "accountsOrSignIn": "oder unten anmelden"
+  "accountsOrSignIn": "oder unten anmelden",
+  "ssoSignInWith": "Mit {provider} anmelden",
+  "@ssoSignInWith": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoOrDivider": "oder",
+  "ssoAdministratorSignIn": "Administrator-Anmeldung",
+  "ssoErrorEmailConflict": "Ein Konto verwendet diese E-Mail-Adresse bereits. Melden Sie sich mit Ihren bisherigen Zugangsdaten an und verbinden Sie Single Sign-on anschliessend in den Sicherheitseinstellungen.",
+  "ssoErrorEmailUnverified": "Ihr Identitätsanbieter hat Ihre E-Mail-Adresse nicht bestätigt.",
+  "ssoErrorProvisioningDisabled": "Dieser Anbieter darf keine neuen Konten anlegen. Bitten Sie eine Administratorin oder einen Administrator um eine Einladung.",
+  "ssoErrorAlreadyLinked": "Diese Identität ist bereits mit einem anderen Konto verbunden.",
+  "ssoErrorAccountBanned": "Dieses Konto wurde gesperrt.",
+  "ssoErrorAccountInactive": "Dieses Konto ist deaktiviert.",
+  "ssoErrorUnavailable": "Der Identitätsanbieter ist nicht erreichbar. Versuchen Sie es in Kürze erneut.",
+  "ssoErrorMisconfigured": "Single Sign-on ist auf diesem Server nicht korrekt konfiguriert. Wenden Sie sich an die Administration.",
+  "ssoErrorExpired": "Der Anmeldeversuch ist abgelaufen. Bitte erneut versuchen.",
+  "ssoErrorRefused": "Der Identitätsanbieter hat die Anmeldung abgelehnt.",
+  "ssoErrorGeneric": "Single Sign-on wurde nicht abgeschlossen. Bitte erneut versuchen.",
+  "ssoSignInDialogTitle": "Mit {provider} anmelden",
+  "@ssoSignInDialogTitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoConnectDialogTitle": "{provider} verbinden",
+  "@ssoConnectDialogTitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoDeviceInstructions": "Öffnen Sie die Seite unten auf einem beliebigen Gerät und geben Sie diesen Code ein.",
+  "ssoDeviceOpenThisPage": "Bestätigungsseite",
+  "ssoDeviceOpenBrowser": "Im Browser öffnen",
+  "ssoDeviceWaiting": "Warten auf den Abschluss — noch {remaining}",
+  "@ssoDeviceWaiting": {
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoDeviceExpired": "Dieser Code ist abgelaufen. Schliessen und erneut versuchen.",
+  "securitySectionSso": "Single Sign-on",
+  "ssoNoneConnected": "Keine Identitätsanbieter verbunden.",
+  "ssoConnectSubtitle": "Diesen Anbieter mit Ihrem Konto verbinden",
+  "ssoDisconnectAction": "Trennen",
+  "ssoDisconnectTitle": "Anbieter trennen",
+  "ssoDisconnectConfirm": "Sie können sich dann nicht mehr mit {provider} anmelden.",
+  "@ssoDisconnectConfirm": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoLinkedSnack": "Anbieter verbunden.",
+  "ssoUnlinkedSnack": "Anbieter getrennt.",
+  "adminSettingsSso": "Single Sign-on (OIDC)",
+  "adminSettingsSsoDesc": "Anmeldung über einen OpenID-Connect-Identitätsanbieter erlauben.",
+  "adminSettingsDisablePasswordLogin": "Passwort-Anmeldung deaktivieren",
+  "adminSettingsDisablePasswordLoginDesc": "Blendet das Passwortformular aus und weist Passwort-Anmeldungen ab. Ein Superadmin mit lokalem Passwort kann sich weiterhin anmelden — Sie können sich also nicht aussperren.",
+  "adminSsoTitle": "Single Sign-on",
+  "adminSsoIntro": "Anbieter konfigurieren, Test drücken, dann aktivieren. Ein Anbieter bleibt auf der Anmeldeseite unsichtbar, bis er aktiviert ist.",
+  "adminSsoEmpty": "Noch keine Identitätsanbieter konfiguriert.",
+  "adminSsoAddProvider": "Anbieter hinzufügen",
+  "adminSsoEditTitle": "Anbieter bearbeiten",
+  "adminSsoSaved": "Anbieter gespeichert.",
+  "adminSsoEnabled": "Aktiv",
+  "adminSsoDisabled": "Inaktiv",
+  "adminSsoRedirectUri": "Redirect-URI (beim Anbieter eintragen)",
+  "adminSsoBackchannelUri": "Back-Channel-Logout-URI",
+  "adminSsoTest": "Testen",
+  "adminSsoTestTitle": "Verbindungstest",
+  "adminSsoDeleteTitle": "Anbieter löschen",
+  "adminSsoDeleteConfirm": "Beim Löschen von {provider} werden auch alle verbundenen Identitäten entfernt. Wer sich nur so anmeldet, verliert diesen Zugang.",
+  "@adminSsoDeleteConfirm": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "adminSsoFieldDisplayName": "Beschriftung der Schaltfläche",
+  "adminSsoFieldSlug": "Schlüssel",
+  "adminSsoFieldSlugHelp": "Wird in der Anmelde-URL verwendet. Kleinbuchstaben, Ziffern und Bindestriche. Später nicht änderbar.",
+  "adminSsoFieldIssuer": "Issuer-URL",
+  "adminSsoFieldIssuerHelp": "Muss exakt dem vom Anbieter veröffentlichten Issuer entsprechen. Die Schaltfläche „Testen\" zeigt den gefundenen Wert.",
+  "adminSsoFieldClientId": "Client-ID",
+  "adminSsoFieldClientSecret": "Client-Secret",
+  "adminSsoFieldClientSecretHelp": "Für einen öffentlichen Client mit reinem PKCE leer lassen.",
+  "adminSsoFieldClientSecretStored": "Ein Secret ist gespeichert. Leer lassen, um es beizubehalten.",
+  "adminSsoFieldScopes": "Scopes",
+  "adminSsoFieldSuperadminGroup": "Superadmin-Gruppe",
+  "adminSsoFieldSuperadminGroupHelp": "Mitgliedschaft erteilt Superadmin, Nichtmitgliedschaft entzieht ihn — bei jeder Anmeldung. Leer lassen, um das Recht hier zu verwalten. Der letzte Superadmin wird nie entzogen.",
+  "adminSsoClaimsSection": "Claim-Namen",
+  "adminSsoFieldClaimEmail": "E-Mail-Claim",
+  "adminSsoFieldClaimUsername": "Benutzername-Claim",
+  "adminSsoFieldClaimDisplayName": "Anzeigename-Claim",
+  "adminSsoFieldClaimGroups": "Gruppen-Claim",
+  "adminSsoEnabledLabel": "Aktiviert",
+  "adminSsoEnabledHelp": "Diesen Anbieter auf der Anmeldeseite anzeigen.",
+  "adminSsoJitLabel": "Konten bei erster Anmeldung anlegen",
+  "adminSsoJitHelp": "Aus bedeutet: nur Personen mit vorhandenem Konto oder verbundener Identität können sich anmelden.",
+  "adminSsoVerifiedEmailLabel": "Bestätigte E-Mail-Adresse verlangen",
+  "adminSsoVerifiedEmailHelp": "Wird dies deaktiviert, vertrauen Sie dem Anbieter bei einer Adresse, die er womöglich nie geprüft hat.",
+  "adminSsoDeviceFlowLabel": "Anmeldung auf Desktop und Mobil erlauben",
+  "adminSsoDeviceFlowHelp": "Nutzt den Device-Code-Flow. Der Anbieter muss einen Device-Authorization-Endpunkt veröffentlichen.",
+  "adminSsoSkipTlsLabel": "TLS-Zertifikatsprüfung überspringen",
+  "adminSsoSkipTlsHelp": "Nur für Labore und selbstsignierte Zertifikate.",
+  "adminSsoAuthorizationEndpoint": "Authorization-Endpunkt",
+  "adminSsoTokenEndpoint": "Token-Endpunkt",
+  "adminSsoDeviceFlow": "Device-Flow",
+  "adminSsoDeviceFlowYes": "Unterstützt",
+  "adminSsoDeviceFlowNo": "Von diesem Anbieter nicht veröffentlicht",
+  "adminSsoSigningKeys": "Veröffentlichte Signaturschlüssel",
+  "adminUsersArmSsoLink": "Single-Sign-on-Verknüpfung erlauben",
+  "adminUsersArmSsoLinkBody": "In den nächsten 24 Stunden verbindet sich ein Single-Sign-on-Versuch mit bestätigter Adresse {email} mit diesem Konto. Normalerweise verbinden Nutzende einen Anbieter selbst unter „Sicherheit\" — verwenden Sie dies nur, wenn eine Anmeldung gar nicht mehr möglich ist.",
+  "@adminUsersArmSsoLinkBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersArmSsoLinkConfirm": "Für 24 Stunden erlauben",
+  "adminUsersArmSsoLinkDone": "Verknüpfungsfenster für 24 Stunden geöffnet."
 }

@@ -21,9 +21,12 @@ import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/data/dtos/app_token_dtos.dart';
 import 'package:intellipilot/features/admin/data/dtos/security_dtos.dart';
+import 'package:intellipilot/features/admin/data/dtos/sso_admin_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/auth/data/dtos/auth_dtos.dart';
+import 'package:intellipilot/features/auth/data/dtos/sso_dtos.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
+import 'package:intellipilot/features/auth/domain/sso_repository.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/data/dtos/board_dtos.dart';
@@ -70,6 +73,8 @@ class DemoAuthRepository implements AuthRepository {
   @override
   Future<Result<AuthConfig, AppFailure>> authConfig() async {
     await _tick();
+    // No single-sign-on in the demo: there is no identity provider to talk to,
+    // and an SSO button that could only ever fail is worse than no button.
     return const Ok(
       AuthConfig(openRegistration: true, passwordResetEnabled: true),
     );
@@ -3465,6 +3470,55 @@ class DemoAdminRepository implements AdminRepository {
   );
 
   @override
+  Future<Result<PlatformSettings, AppFailure>> updateLoginPolicy({
+    required bool openRegistration,
+    required bool localPasswordLoginDisabled,
+  }) async {
+    await _tick();
+    _settings = _copySettings(openRegistration: openRegistration);
+    return Ok(_settings);
+  }
+
+  // ---- Single sign-on: nothing configured in the demo ----
+
+  static const _ssoUnavailable = UnknownFailure(
+    cause: 'single sign-on is not available in the demo',
+  );
+
+  @override
+  Future<Result<List<OidcProviderConfig>, AppFailure>>
+  listOidcProviders() async {
+    await _tick();
+    return const Ok(<OidcProviderConfig>[]);
+  }
+
+  @override
+  Future<Result<OidcProviderConfig, AppFailure>> createOidcProvider(
+    UpsertOidcProviderRequest req,
+  ) async => const Err(_ssoUnavailable);
+
+  @override
+  Future<Result<OidcProviderConfig, AppFailure>> updateOidcProvider(
+    String id,
+    UpsertOidcProviderRequest req,
+  ) async => const Err(_ssoUnavailable);
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteOidcProvider(String id) async =>
+      const Err(_ssoUnavailable);
+
+  @override
+  Future<Result<OidcTestResult, AppFailure>> testOidcProvider(
+    String id,
+  ) async => const Err(_ssoUnavailable);
+
+  @override
+  Future<Result<Unit, AppFailure>> setOidcLinkArmed(
+    String userId,
+    bool armed,
+  ) async => const Err(_ssoUnavailable);
+
+  @override
   Future<Result<LdapSettings, AppFailure>> getLdapSettings() async {
     await _tick();
     return Ok(_ldap);
@@ -3847,4 +3901,35 @@ class DemoDocsRepository implements DocsRepository {
     await _tick();
     return const Err(ForbiddenFailure());
   }
+}
+
+/// Single sign-on in demo mode: nothing is configured, so there is nothing to
+/// list and nothing to start. Every call answers as an install with no
+/// provider would, rather than pretending to reach an identity provider.
+class DemoSsoRepository implements SsoRepository {
+  DemoSsoRepository(DemoStore _);
+
+  static const _unavailable = UnknownFailure(
+    cause: 'single sign-on is not available in the demo',
+  );
+
+  @override
+  Future<Result<SsoDeviceStart, AppFailure>> startDeviceSignIn(String slug) =>
+      Future.value(const Err(_unavailable));
+
+  @override
+  Future<Result<SsoDeviceStart, AppFailure>> startDeviceLink(String slug) =>
+      Future.value(const Err(_unavailable));
+
+  @override
+  Future<Result<SsoDevicePoll, AppFailure>> pollDevice(String pollToken) =>
+      Future.value(const Err(_unavailable));
+
+  @override
+  Future<Result<List<SsoIdentity>, AppFailure>> listIdentities() =>
+      Future.value(const Ok(<SsoIdentity>[]));
+
+  @override
+  Future<Result<Unit, AppFailure>> unlinkIdentity(String id) =>
+      Future.value(const Err(_unavailable));
 }

@@ -65,4 +65,22 @@ class AdminSettingsCubit extends Cubit<AdminSettingsState> {
       },
     );
   }
+
+  /// Hide the local password form in favour of single sign-on (V025).
+  ///
+  /// The endpoint takes the whole settings object, so the current
+  /// `open_registration` is sent along unchanged rather than being reset by
+  /// omission.
+  Future<void> setLocalPasswordLoginDisabled(bool value) async {
+    final cur = state;
+    if (cur is! AdminSettingsLoaded) return;
+    final res = await _repo.updateLoginPolicy(
+      openRegistration: cur.settings.openRegistration,
+      localPasswordLoginDisabled: value,
+    );
+    res.when(
+      ok: (s) => emit(AdminSettingsLoaded(settings: s)),
+      err: (f) => emit(cur.copyWith(lastError: f)),
+    );
+  }
 }

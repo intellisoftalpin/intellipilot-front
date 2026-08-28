@@ -32,7 +32,9 @@ import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/admin/data/admin_repository_impl.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/auth/data/auth_repository_impl.dart';
+import 'package:intellipilot/features/auth/data/sso_repository_impl.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
+import 'package:intellipilot/features/auth/domain/sso_repository.dart';
 import 'package:intellipilot/features/backlog/data/backlog_repository_impl.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/board/data/board_repository_impl.dart';
@@ -221,6 +223,9 @@ Future<void> configureDependencies({
   );
   getIt.registerLazySingleton<MfaRepository>(
     () => MfaRepositoryImpl(getIt<ApiClient>()),
+  );
+  getIt.registerLazySingleton<SsoRepository>(
+    () => SsoRepositoryImpl(getIt<ApiClient>()),
   );
   getIt.registerLazySingleton<ProfileRepository>(
     () => ProfileRepositoryImpl(getIt<ApiClient>()),

@@ -1674,5 +1674,138 @@
   "accountsAddCancel": "Отмена",
   "accountsContinueAs": "Продолжить как",
   "accountsContinueAsHint": "Выберите аккаунт, в который вы уже вошли.",
-  "accountsOrSignIn": "или войдите ниже"
+  "accountsOrSignIn": "или войдите ниже",
+  "ssoSignInWith": "Войти через {provider}",
+  "@ssoSignInWith": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoOrDivider": "или",
+  "ssoAdministratorSignIn": "Вход администратора",
+  "ssoErrorEmailConflict": "Учётная запись с этим адресом уже существует. Войдите обычным способом и подключите единый вход в настройках безопасности.",
+  "ssoErrorEmailUnverified": "Ваш поставщик идентификации не подтвердил адрес электронной почты.",
+  "ssoErrorProvisioningDisabled": "Этот провайдер не может создавать учётные записи. Попросите администратора отправить приглашение.",
+  "ssoErrorAlreadyLinked": "Эта учётная запись провайдера уже связана с другим пользователем.",
+  "ssoErrorAccountBanned": "Эта учётная запись заблокирована.",
+  "ssoErrorAccountInactive": "Эта учётная запись отключена.",
+  "ssoErrorUnavailable": "Поставщик идентификации недоступен. Повторите попытку позже.",
+  "ssoErrorMisconfigured": "Единый вход настроен на этом сервере неверно. Обратитесь к администратору.",
+  "ssoErrorExpired": "Срок попытки входа истёк. Попробуйте ещё раз.",
+  "ssoErrorRefused": "Поставщик идентификации отклонил вход.",
+  "ssoErrorGeneric": "Единый вход не завершён. Попробуйте ещё раз.",
+  "ssoSignInDialogTitle": "Вход через {provider}",
+  "@ssoSignInDialogTitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoConnectDialogTitle": "Подключение {provider}",
+  "@ssoConnectDialogTitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoDeviceInstructions": "Откройте страницу ниже на любом устройстве и введите этот код.",
+  "ssoDeviceOpenThisPage": "Страница подтверждения",
+  "ssoDeviceOpenBrowser": "Открыть в браузере",
+  "ssoDeviceWaiting": "Ожидание завершения — осталось {remaining}",
+  "@ssoDeviceWaiting": {
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoDeviceExpired": "Срок действия кода истёк. Закройте и попробуйте снова.",
+  "securitySectionSso": "Единый вход",
+  "ssoNoneConnected": "Поставщики идентификации не подключены.",
+  "ssoConnectSubtitle": "Подключить этого провайдера к вашей учётной записи",
+  "ssoDisconnectAction": "Отключить",
+  "ssoDisconnectTitle": "Отключить провайдера",
+  "ssoDisconnectConfirm": "Вы больше не сможете входить через {provider}.",
+  "@ssoDisconnectConfirm": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoLinkedSnack": "Провайдер подключён.",
+  "ssoUnlinkedSnack": "Провайдер отключён.",
+  "adminSettingsSso": "Единый вход (OIDC)",
+  "adminSettingsSsoDesc": "Разрешить вход через поставщика OpenID Connect.",
+  "adminSettingsDisablePasswordLogin": "Отключить вход по паролю",
+  "adminSettingsDisablePasswordLoginDesc": "Скрывает форму пароля и запрещает вход по паролю. Суперадминистратор с локальным паролем всегда сможет войти, поэтому заблокировать себя нельзя.",
+  "adminSsoTitle": "Единый вход",
+  "adminSsoIntro": "Настройте провайдера, нажмите «Проверить», затем включите. До включения провайдер не появляется на странице входа.",
+  "adminSsoEmpty": "Поставщики идентификации ещё не настроены.",
+  "adminSsoAddProvider": "Добавить провайдера",
+  "adminSsoEditTitle": "Изменить провайдера",
+  "adminSsoSaved": "Провайдер сохранён.",
+  "adminSsoEnabled": "Включён",
+  "adminSsoDisabled": "Отключён",
+  "adminSsoRedirectUri": "Redirect URI (укажите у провайдера)",
+  "adminSsoBackchannelUri": "URI выхода по back-channel",
+  "adminSsoTest": "Проверить",
+  "adminSsoTestTitle": "Проверка подключения",
+  "adminSsoDeleteTitle": "Удалить провайдера",
+  "adminSsoDeleteConfirm": "Удаление {provider} также удалит все связанные учётные записи. Те, кто входит только этим способом, потеряют доступ.",
+  "@adminSsoDeleteConfirm": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "adminSsoFieldDisplayName": "Надпись на кнопке",
+  "adminSsoFieldSlug": "Ключ",
+  "adminSsoFieldSlugHelp": "Используется в URL входа. Строчные буквы, цифры и дефисы. Изменить позже нельзя.",
+  "adminSsoFieldIssuer": "URL издателя",
+  "adminSsoFieldIssuerHelp": "Должен точно совпадать с издателем, который публикует провайдер. Кнопка «Проверить» покажет найденное значение.",
+  "adminSsoFieldClientId": "Client ID",
+  "adminSsoFieldClientSecret": "Client secret",
+  "adminSsoFieldClientSecretHelp": "Оставьте пустым для публичного клиента, использующего только PKCE.",
+  "adminSsoFieldClientSecretStored": "Секрет сохранён. Оставьте пустым, чтобы сохранить его.",
+  "adminSsoFieldScopes": "Scopes",
+  "adminSsoFieldSuperadminGroup": "Группа суперадминистраторов",
+  "adminSsoFieldSuperadminGroupHelp": "Членство даёт права суперадминистратора, отсутствие — снимает их при каждом входе. Оставьте пустым, чтобы управлять правом здесь. Последний суперадминистратор никогда не понижается.",
+  "adminSsoClaimsSection": "Имена claim",
+  "adminSsoFieldClaimEmail": "Claim адреса",
+  "adminSsoFieldClaimUsername": "Claim имени пользователя",
+  "adminSsoFieldClaimDisplayName": "Claim отображаемого имени",
+  "adminSsoFieldClaimGroups": "Claim групп",
+  "adminSsoEnabledLabel": "Включено",
+  "adminSsoEnabledHelp": "Показывать этого провайдера на странице входа.",
+  "adminSsoJitLabel": "Создавать учётные записи при первом входе",
+  "adminSsoJitHelp": "Если выключено, войти смогут только те, у кого уже есть учётная запись или связанная личность.",
+  "adminSsoVerifiedEmailLabel": "Требовать подтверждённый адрес",
+  "adminSsoVerifiedEmailHelp": "Если выключить, вы доверяете провайдеру адрес, который он мог не проверять.",
+  "adminSsoDeviceFlowLabel": "Разрешить вход в приложениях",
+  "adminSsoDeviceFlowHelp": "Использует device code flow. Провайдер должен публиковать device authorization endpoint.",
+  "adminSsoSkipTlsLabel": "Пропускать проверку сертификата TLS",
+  "adminSsoSkipTlsHelp": "Только для тестовых и самоподписанных сертификатов.",
+  "adminSsoAuthorizationEndpoint": "Authorization endpoint",
+  "adminSsoTokenEndpoint": "Token endpoint",
+  "adminSsoDeviceFlow": "Device flow",
+  "adminSsoDeviceFlowYes": "Поддерживается",
+  "adminSsoDeviceFlowNo": "Не публикуется этим провайдером",
+  "adminSsoSigningKeys": "Опубликовано ключей подписи",
+  "adminUsersArmSsoLink": "Разрешить привязку единого входа",
+  "adminUsersArmSsoLinkBody": "В течение 24 часов попытка единого входа с подтверждённым адресом {email} будет привязана к этой учётной записи. Обычно пользователи подключают провайдера сами в разделе «Безопасность» — используйте это, только если войти невозможно.",
+  "@adminUsersArmSsoLinkBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersArmSsoLinkConfirm": "Разрешить на 24 часа",
+  "adminUsersArmSsoLinkDone": "Окно привязки открыто на 24 часа."
 }

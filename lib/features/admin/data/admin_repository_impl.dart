@@ -8,6 +8,7 @@ import 'package:intellipilot/core/result/result.dart';
 import 'package:intellipilot/features/admin/data/dtos/admin_dtos.dart';
 import 'package:intellipilot/features/admin/data/dtos/app_token_dtos.dart';
 import 'package:intellipilot/features/admin/data/dtos/security_dtos.dart';
+import 'package:intellipilot/features/admin/data/dtos/sso_admin_dtos.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 
@@ -297,6 +298,113 @@ class AdminRepositoryImpl implements AdminRepository {
       return Err(mapDioExceptionToFailure(e));
     } on Object catch (e) {
       return Err(UnknownFailure(cause: e));
+    }
+  }
+
+  @override
+  Future<Result<PlatformSettings, AppFailure>> updateLoginPolicy({
+    required bool openRegistration,
+    required bool localPasswordLoginDisabled,
+  }) async {
+    try {
+      final r = await _api.dio.patch<dynamic>(
+        '$_base/settings',
+        data: {
+          'open_registration': openRegistration,
+          'local_password_login_disabled': localPasswordLoginDisabled,
+        },
+      );
+      return Ok(PlatformSettings.fromJson(r.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
+    }
+  }
+
+  // ---- Single sign-on (OIDC) providers ----
+
+  @override
+  Future<Result<List<OidcProviderConfig>, AppFailure>>
+  listOidcProviders() async {
+    final res = await _api.get('$_base/oidc-providers');
+    return _mapOk(
+      res,
+      (r) => (r.data as List<dynamic>)
+          .whereType<Map<String, dynamic>>()
+          .map(OidcProviderConfig.fromJson)
+          .toList(),
+    );
+  }
+
+  @override
+  Future<Result<OidcProviderConfig, AppFailure>> createOidcProvider(
+    UpsertOidcProviderRequest req,
+  ) async {
+    final res = await _api.post('$_base/oidc-providers', body: req.toJson());
+    return _mapOk(
+      res,
+      (r) => OidcProviderConfig.fromJson(r.data as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  Future<Result<OidcProviderConfig, AppFailure>> updateOidcProvider(
+    String id,
+    UpsertOidcProviderRequest req,
+  ) async {
+    try {
+      final r = await _api.dio.put<dynamic>(
+        '$_base/oidc-providers/$id',
+        data: req.toJson(),
+      );
+      return Ok(OidcProviderConfig.fromJson(r.data as Map<String, dynamic>));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    } on Object catch (e) {
+      return Err(UnknownFailure(cause: e));
+    }
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> deleteOidcProvider(String id) async {
+    try {
+      await _api.dio.delete<dynamic>('$_base/oidc-providers/$id');
+      return const Ok(Unit.instance);
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
+  Future<Result<OidcTestResult, AppFailure>> testOidcProvider(
+    String id,
+  ) async {
+    final res = await _api.post('$_base/oidc-providers/$id/test');
+    return _mapOk(
+      res,
+      (r) => OidcTestResult.fromJson(r.data as Map<String, dynamic>),
+    );
+  }
+
+  @override
+  Future<Result<Unit, AppFailure>> setOidcLinkArmed(
+    String userId,
+    bool armed,
+  ) async {
+    final path = '$_base/users/$userId/oidc-link-arm';
+    if (armed) {
+      final res = await _api.post(path);
+      return res.when(
+        ok: (_) => const Ok<Unit, AppFailure>(Unit.instance),
+        err: Err.new,
+      );
+    }
+    try {
+      await _api.dio.delete<dynamic>(path);
+      return const Ok(Unit.instance);
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
     }
   }
 

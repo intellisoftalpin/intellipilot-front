@@ -1674,5 +1674,138 @@
   "accountsAddCancel": "Скасаваць",
   "accountsContinueAs": "Працягнуць як",
   "accountsContinueAsHint": "Абярыце акаўнт, у які вы ўжо ўвайшлі.",
-  "accountsOrSignIn": "або ўвайдзіце ніжэй"
+  "accountsOrSignIn": "або ўвайдзіце ніжэй",
+  "ssoSignInWith": "Увайсці праз {provider}",
+  "@ssoSignInWith": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoOrDivider": "або",
+  "ssoAdministratorSignIn": "Уваход адміністратара",
+  "ssoErrorEmailConflict": "Уліковы запіс з гэтым адрасам ужо існуе. Увайдзіце звычайным чынам і падлучыце адзіны ўваход у наладах бяспекі.",
+  "ssoErrorEmailUnverified": "Ваш пастаўшчык ідэнтыфікацыі не пацвердзіў адрас электроннай пошты.",
+  "ssoErrorProvisioningDisabled": "Гэты правайдар не можа ствараць уліковыя запісы. Папрасіце адміністратара даслаць запрашэнне.",
+  "ssoErrorAlreadyLinked": "Гэты ўліковы запіс правайдара ўжо звязаны з іншым карыстальнікам.",
+  "ssoErrorAccountBanned": "Гэты ўліковы запіс заблакаваны.",
+  "ssoErrorAccountInactive": "Гэты ўліковы запіс адключаны.",
+  "ssoErrorUnavailable": "Пастаўшчык ідэнтыфікацыі недаступны. Паўтарыце спробу пазней.",
+  "ssoErrorMisconfigured": "Адзіны ўваход наладжаны на гэтым серверы няправільна. Звярніцеся да адміністратара.",
+  "ssoErrorExpired": "Тэрмін спробы ўваходу скончыўся. Паспрабуйце яшчэ раз.",
+  "ssoErrorRefused": "Пастаўшчык ідэнтыфікацыі адхіліў уваход.",
+  "ssoErrorGeneric": "Адзіны ўваход не завершаны. Паспрабуйце яшчэ раз.",
+  "ssoSignInDialogTitle": "Уваход праз {provider}",
+  "@ssoSignInDialogTitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoConnectDialogTitle": "Падключэнне {provider}",
+  "@ssoConnectDialogTitle": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoDeviceInstructions": "Адкрыйце старонку ніжэй на любой прыладзе і ўвядзіце гэты код.",
+  "ssoDeviceOpenThisPage": "Старонка пацвярджэння",
+  "ssoDeviceOpenBrowser": "Адкрыць у браўзеры",
+  "ssoDeviceWaiting": "Чаканне завяршэння — засталося {remaining}",
+  "@ssoDeviceWaiting": {
+    "placeholders": {
+      "remaining": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoDeviceExpired": "Тэрмін дзеяння кода скончыўся. Зачыніце і паспрабуйце зноў.",
+  "securitySectionSso": "Адзіны ўваход",
+  "ssoNoneConnected": "Пастаўшчыкі ідэнтыфікацыі не падключаны.",
+  "ssoConnectSubtitle": "Падключыць гэтага правайдара да вашага ўліковага запісу",
+  "ssoDisconnectAction": "Адключыць",
+  "ssoDisconnectTitle": "Адключыць правайдара",
+  "ssoDisconnectConfirm": "Вы больш не зможаце ўваходзіць праз {provider}.",
+  "@ssoDisconnectConfirm": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "ssoLinkedSnack": "Правайдар падключаны.",
+  "ssoUnlinkedSnack": "Правайдар адключаны.",
+  "adminSettingsSso": "Адзіны ўваход (OIDC)",
+  "adminSettingsSsoDesc": "Дазволіць уваход праз пастаўшчыка OpenID Connect.",
+  "adminSettingsDisablePasswordLogin": "Адключыць уваход па паролі",
+  "adminSettingsDisablePasswordLoginDesc": "Хавае форму пароля і забараняе ўваход па паролі. Суперадміністратар з лакальным паролем заўсёды зможа ўвайсці, таму заблакаваць сябе немагчыма.",
+  "adminSsoTitle": "Адзіны ўваход",
+  "adminSsoIntro": "Наладзьце правайдара, націсніце «Праверыць», затым уключыце. Да ўключэння правайдар не з’яўляецца на старонцы ўваходу.",
+  "adminSsoEmpty": "Пастаўшчыкі ідэнтыфікацыі яшчэ не наладжаны.",
+  "adminSsoAddProvider": "Дадаць правайдара",
+  "adminSsoEditTitle": "Змяніць правайдара",
+  "adminSsoSaved": "Правайдар захаваны.",
+  "adminSsoEnabled": "Уключаны",
+  "adminSsoDisabled": "Адключаны",
+  "adminSsoRedirectUri": "Redirect URI (пазначце ў правайдара)",
+  "adminSsoBackchannelUri": "URI выхаду праз back-channel",
+  "adminSsoTest": "Праверыць",
+  "adminSsoTestTitle": "Праверка падлучэння",
+  "adminSsoDeleteTitle": "Выдаліць правайдара",
+  "adminSsoDeleteConfirm": "Выдаленне {provider} таксама выдаліць усе звязаныя ўліковыя запісы. Тыя, хто ўваходзіць толькі так, страцяць доступ.",
+  "@adminSsoDeleteConfirm": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
+  "adminSsoFieldDisplayName": "Надпіс на кнопцы",
+  "adminSsoFieldSlug": "Ключ",
+  "adminSsoFieldSlugHelp": "Выкарыстоўваецца ў URL уваходу. Малыя літары, лічбы і злучкі. Змяніць пазней немагчыма.",
+  "adminSsoFieldIssuer": "URL выдаўца",
+  "adminSsoFieldIssuerHelp": "Мусіць дакладна супадаць з выдаўцом, які публікуе правайдар. Кнопка «Праверыць» пакажа знойдзенае значэнне.",
+  "adminSsoFieldClientId": "Client ID",
+  "adminSsoFieldClientSecret": "Client secret",
+  "adminSsoFieldClientSecretHelp": "Пакіньце пустым для публічнага кліента, які выкарыстоўвае толькі PKCE.",
+  "adminSsoFieldClientSecretStored": "Сакрэт захаваны. Пакіньце пустым, каб захаваць яго.",
+  "adminSsoFieldScopes": "Scopes",
+  "adminSsoFieldSuperadminGroup": "Група суперадміністратараў",
+  "adminSsoFieldSuperadminGroupHelp": "Сяброўства дае правы суперадміністратара, адсутнасць — здымае іх пры кожным уваходзе. Пакіньце пустым, каб кіраваць правам тут. Апошні суперадміністратар ніколі не паніжаецца.",
+  "adminSsoClaimsSection": "Назвы claim",
+  "adminSsoFieldClaimEmail": "Claim адраса",
+  "adminSsoFieldClaimUsername": "Claim імя карыстальніка",
+  "adminSsoFieldClaimDisplayName": "Claim бачнага імя",
+  "adminSsoFieldClaimGroups": "Claim груп",
+  "adminSsoEnabledLabel": "Уключана",
+  "adminSsoEnabledHelp": "Паказваць гэтага правайдара на старонцы ўваходу.",
+  "adminSsoJitLabel": "Ствараць уліковыя запісы пры першым уваходзе",
+  "adminSsoJitHelp": "Калі выключана, увайсці змогуць толькі тыя, у каго ўжо ёсць уліковы запіс або звязаная асоба.",
+  "adminSsoVerifiedEmailLabel": "Патрабаваць пацверджаны адрас",
+  "adminSsoVerifiedEmailHelp": "Калі выключыць, вы давяраеце правайдару адрас, які ён мог не правяраць.",
+  "adminSsoDeviceFlowLabel": "Дазволіць уваход у праграмах",
+  "adminSsoDeviceFlowHelp": "Выкарыстоўвае device code flow. Правайдар мусіць публікаваць device authorization endpoint.",
+  "adminSsoSkipTlsLabel": "Прапускаць праверку сертыфіката TLS",
+  "adminSsoSkipTlsHelp": "Толькі для тэставых і самападпісаных сертыфікатаў.",
+  "adminSsoAuthorizationEndpoint": "Authorization endpoint",
+  "adminSsoTokenEndpoint": "Token endpoint",
+  "adminSsoDeviceFlow": "Device flow",
+  "adminSsoDeviceFlowYes": "Падтрымліваецца",
+  "adminSsoDeviceFlowNo": "Не публікуецца гэтым правайдарам",
+  "adminSsoSigningKeys": "Апублікавана ключоў подпісу",
+  "adminUsersArmSsoLink": "Дазволіць прывязку адзінага ўваходу",
+  "adminUsersArmSsoLinkBody": "На працягу 24 гадзін спроба адзінага ўваходу з пацверджаным адрасам {email} будзе прывязана да гэтага ўліковага запісу. Звычайна карыстальнікі падключаюць правайдара самі ў раздзеле «Бяспека» — выкарыстоўвайце гэта, толькі калі ўвайсці немагчыма.",
+  "@adminUsersArmSsoLinkBody": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "adminUsersArmSsoLinkConfirm": "Дазволіць на 24 гадзіны",
+  "adminUsersArmSsoLinkDone": "Акно прывязкі адкрыта на 24 гадзіны."
 }

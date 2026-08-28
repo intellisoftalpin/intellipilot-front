@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,6 +10,12 @@ import 'package:intellipilot/app/l10n/locale_cubit.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
+import 'package:intellipilot/core/network/api_config.dart';
+import 'package:intellipilot/core/ui/full_page_navigation.dart';
+import 'package:intellipilot/features/auth/data/dtos/sso_dtos.dart';
+import 'package:intellipilot/features/auth/domain/auth_repository.dart';
+import 'package:intellipilot/features/auth/domain/sso_repository.dart';
+import 'package:intellipilot/features/auth/presentation/sso_device_dialog.dart';
 import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
 import 'package:intellipilot/features/profile/data/dtos/personal_token_dtos.dart';
@@ -115,6 +122,8 @@ class SecurityPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
+                const _SsoSection(),
+                const SizedBox(height: 16),
                 const _PersonalTokenSection(),
               ],
             ),
@@ -161,8 +170,12 @@ class SecurityPage extends StatelessWidget {
   }
 }
 
-/// Password card + "change password" dialog. Local accounts only — LDAP users
-/// authenticate against the directory, so the section is hidden for them.
+/// Password card + "change password" dialog.
+///
+/// Local accounts only. An LDAP user's password lives in the directory and a
+/// single-sign-on account has none at all, so for both the section is hidden —
+/// the server refuses the endpoint for either, and offering a form that can
+/// only fail helps nobody.
 class _PasswordSection extends StatelessWidget {
   const _PasswordSection();
 
@@ -171,7 +184,8 @@ class _PasswordSection extends StatelessWidget {
     final t = AppLocalizations.of(context);
     return BlocBuilder<ProfileCubit, ProfileState>(
       builder: (context, profileState) {
-        if (profileState is! ProfileLoaded || profileState.profile.isLdap) {
+        if (profileState is! ProfileLoaded ||
+            profileState.profile.isExternallyAuthenticated) {
           return const SizedBox.shrink();
         }
         return BlocConsumer<PasswordChangeCubit, PasswordChangeState>(
@@ -573,6 +587,182 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
           child: Text(t.actionCancel),
         ),
         FilledButton(onPressed: _submit, child: Text(t.actionChangePassword)),
+      ],
+    );
+  }
+}
+
+/// Connected single-sign-on providers.
+///
+/// This is the self-service half of account linking. An SSO sign-in never
+/// links itself to an existing account by email — an identity provider can
+/// assert any address, and auto-linking on one would turn that into an account
+/// takeover. So the user proves both sides instead: they are signed in here,
+/// and they complete a flow at the provider. Nothing else establishes the
+/// binding.
+///
+/// The whole section stays hidden when the deployment has no provider
+/// configured, which is every install until an administrator sets one up.
+class _SsoSection extends StatefulWidget {
+  const _SsoSection();
+
+  @override
+  State<_SsoSection> createState() => _SsoSectionState();
+}
+
+class _SsoSectionState extends State<_SsoSection> {
+  final _repo = getIt<SsoRepository>();
+
+  List<SsoIdentity>? _identities;
+  List<SsoProvider> _providers = const [];
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final config = await getIt<AuthRepository>().authConfig();
+    final identities = await _repo.listIdentities();
+    if (!mounted) return;
+    setState(() {
+      _providers = config.valueOrNull?.ssoProviders ?? const [];
+      _identities = identities.valueOrNull ?? const [];
+    });
+  }
+
+  Future<void> _connect(SsoProvider provider) async {
+    final t = AppLocalizations.of(context);
+    if (kIsWeb) {
+      // Same round trip as signing in: leave the app, come back to the
+      // server's callback, which binds the identity and returns us here.
+      final base = getIt<ApiConfig>().baseUrl.replaceAll(RegExp(r'/+$'), '');
+      final back = Uri.encodeQueryComponent(Routes.security);
+      navigateWholePage(
+        '$base/api/v1/me/oidc/${provider.slug}/link/start?redirect_to=$back',
+      );
+      return;
+    }
+    final outcome = await showSsoDeviceDialog(
+      context,
+      provider: provider,
+      link: true,
+    );
+    if (!mounted) return;
+    if (outcome is SsoDeviceOutcomeLinked) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(t.ssoLinkedSnack)));
+      await _load();
+    } else if (outcome is SsoDeviceOutcomeAbandoned &&
+        outcome.failure != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(outcome.failure!.serverMessage ?? t.errUnknown)),
+      );
+    }
+  }
+
+  Future<void> _disconnect(SsoIdentity identity) async {
+    final t = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.ssoDisconnectTitle),
+        content: Text(t.ssoDisconnectConfirm(identity.providerDisplayName)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(t.actionCancel),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(t.ssoDisconnectAction),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _busy = true);
+    final res = await _repo.unlinkIdentity(identity.id);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    await res.when(
+      ok: (_) async {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(t.ssoUnlinkedSnack)));
+        await _load();
+      },
+      err: (f) async {
+        // The server refuses to leave an account with no way in at all.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(f.serverMessage ?? t.errUnknown)),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final identities = _identities;
+    if (_providers.isEmpty && (identities == null || identities.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+    final linkedSlugs = {
+      for (final i in identities ?? const <SsoIdentity>[]) i.providerSlug,
+    };
+    // Native clients can only link providers whose device flow is available.
+    final connectable = _providers
+        .where((p) => !linkedSlugs.contains(p.slug))
+        .where((p) => kIsWeb || p.deviceFlowEnabled)
+        .toList(growable: false);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          t.securitySectionSso,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        if (identities != null && identities.isEmpty && connectable.isEmpty)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.shield_outlined),
+              title: Text(t.ssoNoneConnected),
+            ),
+          ),
+        for (final identity in identities ?? const <SsoIdentity>[])
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.verified_user_outlined),
+              title: Text(identity.providerDisplayName),
+              subtitle: Text(
+                identity.emailAtLink.isEmpty
+                    ? identity.subject
+                    : identity.emailAtLink,
+              ),
+              trailing: TextButton(
+                onPressed: _busy
+                    ? null
+                    : () => unawaited(_disconnect(identity)),
+                child: Text(t.ssoDisconnectAction),
+              ),
+            ),
+          ),
+        for (final provider in connectable)
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.add_link),
+              title: Text(provider.displayName),
+              subtitle: Text(t.ssoConnectSubtitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _busy ? null : () => unawaited(_connect(provider)),
+            ),
+          ),
       ],
     );
   }

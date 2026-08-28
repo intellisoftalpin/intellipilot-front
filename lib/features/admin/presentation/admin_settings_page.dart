@@ -11,6 +11,7 @@ import 'package:intellipilot/features/admin/presentation/admin_geoip_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_ldap_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_notifications_page.dart';
 import 'package:intellipilot/features/admin/presentation/admin_short_links_page.dart';
+import 'package:intellipilot/features/admin/presentation/admin_sso_page.dart';
 import 'package:intellipilot/features/admin/presentation/cubits/admin_settings_cubit.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -79,6 +80,30 @@ class _SettingsView extends StatelessWidget {
                   ),
                 ),
               ),
+              ListTile(
+                leading: const Icon(Icons.shield_outlined),
+                title: Text(l10n.adminSettingsSso),
+                subtitle: Text(l10n.adminSettingsSsoDesc),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AdminSsoPage(),
+                  ),
+                ),
+              ),
+              SwitchListTile(
+                title: Text(l10n.adminSettingsDisablePasswordLogin),
+                // Says explicitly that a superadmin with a password still gets
+                // in: without that, this reads like a switch that can lock the
+                // operator out of their own deployment, and nobody would touch
+                // it.
+                subtitle: Text(l10n.adminSettingsDisablePasswordLoginDesc),
+                value: settings.localPasswordLoginDisabled,
+                onChanged: (v) => context
+                    .read<AdminSettingsCubit>()
+                    .setLocalPasswordLoginDisabled(v),
+              ),
+              const Divider(),
               ListTile(
                 leading: const Icon(Icons.link_outlined),
                 title: Text(l10n.adminShortLinksTitle),

@@ -1,3 +1,5 @@
+import 'package:intellipilot/features/auth/data/dtos/sso_dtos.dart';
+
 /// JSON DTOs for the auth endpoints. Hand-written rather than freezed/json:
 /// the surface is small and changes touch the API contract, so a single edit
 /// site is preferable to a codegen step here.
@@ -143,6 +145,8 @@ class AuthConfig {
     this.appMessage,
     this.hasCustomIcon = false,
     this.appIconUpdatedAt,
+    this.ssoProviders = const [],
+    this.localPasswordLoginDisabled = false,
   });
 
   factory AuthConfig.fromJson(Map<String, dynamic> json) => AuthConfig(
@@ -152,6 +156,22 @@ class AuthConfig {
     appMessage: json['app_message'] as String?,
     hasCustomIcon: json['has_custom_icon'] == true,
     appIconUpdatedAt: json['app_icon_updated_at'] as String?,
+    // Both default safely when absent, so a client built after V025 still
+    // works against a server from before it: no buttons, password form shown.
+    ssoProviders:
+        (json['sso_providers'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(SsoProvider.fromJson)
+            .toList()
+          ..sort((a, b) {
+            final byOrder = a.sortOrder.compareTo(b.sortOrder);
+            return byOrder != 0
+                ? byOrder
+                : a.displayName.toLowerCase().compareTo(
+                    b.displayName.toLowerCase(),
+                  );
+          }),
+    localPasswordLoginDisabled: json['local_password_login_disabled'] == true,
   );
 
   final bool openRegistration;
@@ -169,6 +189,18 @@ class AuthConfig {
   /// Raw RFC3339 timestamp of the last icon change — used only as an opaque
   /// cache-busting token on the icon URL.
   final String? appIconUpdatedAt;
+
+  /// Single sign-on buttons to offer, already in display order. Empty on every
+  /// install where no administrator has configured a provider.
+  final List<SsoProvider> ssoProviders;
+
+  /// Whether this deployment has switched the password form off in favour of
+  /// single sign-on.
+  ///
+  /// A hint for the UI only. The server refuses password logins independently,
+  /// and always lets a superadmin holding a local password through — which is
+  /// why the form is hidden behind a link rather than removed.
+  final bool localPasswordLoginDisabled;
 }
 
 class TwoFactorVerifyRequest {

@@ -254,6 +254,7 @@ class PlatformSettings {
     this.appMessage,
     this.hasCustomIcon = false,
     this.appIconUpdatedAt,
+    this.localPasswordLoginDisabled = false,
   });
 
   factory PlatformSettings.fromJson(Map<String, dynamic> json) {
@@ -265,8 +266,14 @@ class PlatformSettings {
       appMessage: json['app_message'] as String?,
       hasCustomIcon: json['has_custom_icon'] as bool? ?? false,
       appIconUpdatedAt: json['app_icon_updated_at'] as String?,
+      localPasswordLoginDisabled:
+          json['local_password_login_disabled'] as bool? ?? false,
     );
   }
+
+  /// Whether the password form is hidden in favour of single sign-on (V025).
+  /// A superadmin holding a local password can always sign in regardless.
+  final bool localPasswordLoginDisabled;
 
   final bool openRegistration;
   final DateTime updatedAt;

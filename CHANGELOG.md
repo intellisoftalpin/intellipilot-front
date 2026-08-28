@@ -4,6 +4,50 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.0] - 2026-08-28
+
+Single sign-on in the client. Backend companion release is 0.7.0. Nothing
+changes on an install without a configured identity provider: no buttons, the
+password form exactly as before.
+
+### Added
+- **Sign-in buttons on the login screen**, one per enabled provider. On web the
+  button leaves the app for the identity provider and returns to the server's
+  callback, which sets the session before handing control back. Desktop and
+  mobile use a device-code dialog instead — a code to type at the provider, a
+  copyable URL, an "open browser" button, and a countdown — because there is no
+  redirect for a native client to come back to.
+- **Connect / disconnect providers** under Profile → Security, beside passkeys.
+  This is the only self-service way to link an account: an SSO sign-in never
+  links itself by email, so the user proves both sides instead. Disconnecting
+  the last way into an account is refused by the server, and the reason is
+  shown.
+- **Admin → Settings → Single sign-on**: add, edit, test, enable and delete
+  providers. The redirect and back-channel-logout URIs are shown on each card
+  with a copy button, since they are what has to be pasted into the provider.
+- **Disable password sign-in** switch in admin settings, which states plainly
+  that a superadmin with a local password can always get in.
+- **Allow single sign-on linking** action on a user row — the 24-hour rescue
+  window for someone who cannot sign in to link a provider themselves.
+- The login screen renders the server's SSO failure reasons in full; the
+  email-collision case carries the actual instruction rather than a generic
+  error, because it is a dead end otherwise.
+
+### Changed
+- The auth-source tag in the admin user list now names three sources
+  (Local / LDAP / SSO) rather than two.
+- The password card on the Security page hides for any externally
+  authenticated account, not only LDAP ones — a single-sign-on account has no
+  local password to change.
+- When a deployment disables password sign-in, the form is hidden behind an
+  "Administrator sign-in" link rather than removed, so the break-glass account
+  can still reach it.
+
+### Notes
+- New dependency: `url_launcher`, for the device dialog's "open in browser"
+  button. A convenience only — the URL is always shown as selectable, copyable
+  text, so a platform where launching fails is still usable.
+
 ## [0.6.20] - 2026-07-31
 
 Second round of epic / issue detail work: performance, concurrency safety,

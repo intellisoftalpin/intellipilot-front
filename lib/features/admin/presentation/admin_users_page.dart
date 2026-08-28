@@ -115,6 +115,7 @@ class _UsersViewState extends State<_UsersView> {
                     onUnban: (u) => _unbanFlow(u, cubit),
                     onShowSessions: (u) => _showSessions(u, cubit),
                     onRevokeSessions: (u) => _revokeSessionsFlow(u, cubit),
+                    onArmSsoLink: _armSsoLinkFlow,
                   ),
               },
             ),
@@ -267,6 +268,48 @@ class _UsersViewState extends State<_UsersView> {
     );
   }
 
+  /// Open a one-shot window in which this user's next single-sign-on attempt
+  /// may link to their existing account.
+  ///
+  /// The rescue route. An SSO sign-in never links by email on its own — an
+  /// identity provider can assert any address, and auto-linking on one would
+  /// be an account takeover — so a user who already exists normally connects
+  /// the provider themselves from Security. This exists for the case where
+  /// they cannot: no password, not yet linked, locked out.
+  Future<void> _armSsoLinkFlow(AdminUserRow u) async {
+    final l10n = AppLocalizations.of(context);
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.adminUsersArmSsoLink),
+        content: Text(l10n.adminUsersArmSsoLinkBody(u.email)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.adminUsersCancel),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.adminUsersArmSsoLinkConfirm),
+          ),
+        ],
+      ),
+    );
+    if (!(confirm ?? false) || !mounted) return;
+    final res = await getIt<AdminRepository>().setOidcLinkArmed(u.id, true);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          res.when(
+            ok: (_) => l10n.adminUsersArmSsoLinkDone,
+            err: (f) => f.serverMessage ?? l10n.errUnknown,
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _confirmDelete(AdminUserRow u, AdminUsersCubit cubit) async {
     final l10n = AppLocalizations.of(context);
     final confirm = await showDialog<bool>(
@@ -371,6 +414,7 @@ class _UsersList extends StatelessWidget {
     required this.onUnban,
     required this.onShowSessions,
     required this.onRevokeSessions,
+    required this.onArmSsoLink,
     this.lastError,
   });
 
@@ -385,6 +429,7 @@ class _UsersList extends StatelessWidget {
   final void Function(AdminUserRow) onUnban;
   final void Function(AdminUserRow) onShowSessions;
   final void Function(AdminUserRow) onRevokeSessions;
+  final void Function(AdminUserRow) onArmSsoLink;
 
   @override
   Widget build(BuildContext context) {
@@ -428,6 +473,7 @@ class _UsersList extends StatelessWidget {
               onUnban: () => onUnban(items[i]),
               onShowSessions: () => onShowSessions(items[i]),
               onRevokeSessions: () => onRevokeSessions(items[i]),
+              onArmSsoLink: () => onArmSsoLink(items[i]),
             ),
             separatorBuilder: (_, _) => const Divider(height: 0),
             itemCount: items.length,
@@ -456,6 +502,7 @@ class _UserRow extends StatelessWidget {
     required this.onUnban,
     required this.onShowSessions,
     required this.onRevokeSessions,
+    required this.onArmSsoLink,
   });
 
   final AdminUserRow row;
@@ -471,6 +518,7 @@ class _UserRow extends StatelessWidget {
   final VoidCallback onUnban;
   final VoidCallback onShowSessions;
   final VoidCallback onRevokeSessions;
+  final VoidCallback onArmSsoLink;
 
   @override
   Widget build(BuildContext context) {
@@ -573,6 +621,7 @@ class _UserRow extends StatelessWidget {
               onBan: onBan,
               onUnban: onUnban,
               onRevokeSessions: onRevokeSessions,
+              onArmSsoLink: onArmSsoLink,
             ),
           ],
         ),
@@ -590,11 +639,24 @@ class _AuthSourceTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _MiniTag(
-      icon: user.isLdap ? Icons.dns_outlined : Icons.password_outlined,
-      label: user.isLdap ? 'LDAP' : 'Local',
-      color: user.isLdap ? Theme.of(context).colorScheme.tertiary : null,
-    );
+    final tertiary = Theme.of(context).colorScheme.tertiary;
+    // Three sources now, not two. Deliberately not localized: these are the
+    // protocol names an administrator matches against their own directory or
+    // identity-provider configuration, and translating them would make that
+    // harder, not easier.
+    return switch (user.authSource) {
+      'ldap' => _MiniTag(
+        icon: Icons.dns_outlined,
+        label: 'LDAP',
+        color: tertiary,
+      ),
+      'oidc' => _MiniTag(
+        icon: Icons.shield_outlined,
+        label: 'SSO',
+        color: tertiary,
+      ),
+      _ => const _MiniTag(icon: Icons.password_outlined, label: 'Local'),
+    };
   }
 }
 
@@ -632,6 +694,7 @@ class _RowMenu extends StatelessWidget {
     required this.onBan,
     required this.onUnban,
     required this.onRevokeSessions,
+    required this.onArmSsoLink,
   });
 
   final AdminUserRow row;
@@ -644,6 +707,7 @@ class _RowMenu extends StatelessWidget {
   final VoidCallback onBan;
   final VoidCallback onUnban;
   final VoidCallback onRevokeSessions;
+  final VoidCallback onArmSsoLink;
 
   @override
   Widget build(BuildContext context) {
@@ -657,6 +721,8 @@ class _RowMenu extends StatelessWidget {
             onResetTwoFactor();
           case 'revoke_sessions':
             onRevokeSessions();
+          case 'arm_sso_link':
+            onArmSsoLink();
           case 'ban':
             onBan();
           case 'unban':
@@ -753,6 +819,12 @@ class _RowMenu extends StatelessWidget {
         PopupMenuItem(
           value: 'reset',
           child: Text(l10n.adminUsersIssueReset),
+        ),
+        // The rescue route for a user who can no longer sign in and so cannot
+        // use the self-service link on their own Security page.
+        PopupMenuItem(
+          value: 'arm_sso_link',
+          child: Text(l10n.adminUsersArmSsoLink),
         ),
         PopupMenuItem(value: 'time', child: Text(l10n.ttAdminTimeMenu)),
         PopupMenuItem(
