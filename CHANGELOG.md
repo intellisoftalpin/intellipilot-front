@@ -4,6 +4,22 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.1] - 2026-09-22
+
+Re-release of 0.7.0, whose image was never published: the release's test job
+hung until the 6-hour runner limit and was cancelled. Backend companion release
+is still 0.7.0.
+
+### Fixed
+- **Login page no longer spins forever without a router.** Reading the
+  `?sso_error=` parameter went through `GoRouterState.of`, which loops endlessly
+  when no GoRouter is present (as in the widget tests) instead of throwing. It
+  now reads the URI through `GoRouter.maybeOf` and returns nothing without one.
+- **Test harness registers a single-sign-on repository.** The Security page
+  lists linked identities on open; tests now get a stub that reports none
+  instead of failing on an unregistered type.
+- Built-in version defaults brought in line with `pubspec.yaml`.
+
 ## [0.7.0] - 2026-08-28
 
 Single sign-on in the client. Backend companion release is 0.7.0. Nothing

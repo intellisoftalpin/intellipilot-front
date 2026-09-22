@@ -617,8 +617,22 @@ class _LoginViewState extends State<_LoginView>
     ];
   }
 
+  /// The `?sso_error=` the redirect flow came back with, if any.
+  ///
+  /// Tolerates the absence of a GoRouter for the same reason
+  /// [_isAddAccountMode] does — the widget tests pump this page inside a bare
+  /// Navigator — and reads the URI the same way. `GoRouterState.of` is not
+  /// merely unsafe here but actively hostile: with no router it walks the tree
+  /// in a `while (true)` loop that never terminates, spinning the isolate
+  /// rather than throwing.
   String? _ssoErrorCode(BuildContext context) {
-    final code = GoRouterState.of(context).uri.queryParameters['sso_error'];
+    final router = GoRouter.maybeOf(context);
+    if (router == null) return null;
+    final code = router
+        .routerDelegate
+        .currentConfiguration
+        .uri
+        .queryParameters['sso_error'];
     return (code == null || code.isEmpty) ? null : code;
   }
 

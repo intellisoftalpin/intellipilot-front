@@ -32,6 +32,7 @@ import 'package:intellipilot/features/activity/domain/activity_repository.dart';
 import 'package:intellipilot/features/admin/data/admin_repository_impl.dart';
 import 'package:intellipilot/features/admin/domain/admin_repository.dart';
 import 'package:intellipilot/features/auth/data/auth_repository_impl.dart';
+import 'package:intellipilot/features/auth/data/dtos/sso_dtos.dart';
 import 'package:intellipilot/features/auth/data/sso_repository_impl.dart';
 import 'package:intellipilot/features/auth/domain/auth_repository.dart';
 import 'package:intellipilot/features/auth/domain/sso_repository.dart';
@@ -358,6 +359,7 @@ Future<void> configureForTests({
   required AuthRepository authRepository,
   KeyValueStorage? draftsStorage,
   MfaRepository? mfaRepository,
+  SsoRepository? ssoRepository,
   PasskeyService? passkeyService,
   ProfileRepository? profileRepository,
   ProjectsRepository? projectsRepository,
@@ -414,6 +416,10 @@ Future<void> configureForTests({
     ..registerSingleton<CookieSetup>(CookieSetup.inMemory())
     ..registerSingleton<AuthRepository>(authRepository)
     ..registerSingleton<MfaRepository>(mfaRepository ?? _NoopMfaRepository())
+    // Registered unconditionally: the Security page renders a single-sign-on
+    // section, and an unregistered type would throw there rather than simply
+    // showing nothing.
+    ..registerSingleton<SsoRepository>(ssoRepository ?? _NoopSsoRepository())
     ..registerSingleton<PasskeyService>(
       passkeyService ?? const _StubPasskeyService(),
     )
@@ -504,6 +510,21 @@ class _NoopMfaRepository implements MfaRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('_NoopMfaRepository.${invocation.memberName}');
+}
+
+/// Answers as a deployment with no identity provider configured would.
+///
+/// Deliberately not a throwing `noSuchMethod` stub: the Security page lists
+/// linked identities on open, so a throw would turn "no single sign-on here"
+/// into a broken page in every test that renders it.
+class _NoopSsoRepository implements SsoRepository {
+  @override
+  Future<Result<List<SsoIdentity>, AppFailure>> listIdentities() =>
+      Future.value(const Ok(<SsoIdentity>[]));
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('_NoopSsoRepository.${invocation.memberName}');
 }
 
 class _StubPasskeyService implements PasskeyService {
