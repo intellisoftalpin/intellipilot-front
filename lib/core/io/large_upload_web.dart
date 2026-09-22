@@ -74,7 +74,9 @@ class _WebLargeUploader implements LargeUploader {
     final xhr = web.XMLHttpRequest()
       ..open('POST', url)
       ..withCredentials = withCredentials;
-    headers.forEach(xhr.setRequestHeader);
+    // A closure, not a tear-off: dart2js rejects tear-offs of external
+    // interop members.
+    headers.forEach((name, value) => xhr.setRequestHeader(name, value));
 
     if (onProgress != null) {
       xhr.upload.onprogress = (web.ProgressEvent e) {
