@@ -7,6 +7,7 @@ import 'package:intellipilot/app/l10n/locale_cubit.dart';
 import 'package:intellipilot/app/l10n/week_start_cubit.dart';
 import 'package:intellipilot/app/router/short_links.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
+import 'package:intellipilot/app/session/session_sync.dart';
 import 'package:intellipilot/app/theme/theme_cubit.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/io/file_downloader.dart';
@@ -335,6 +336,9 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<SessionBloc>(
     () => SessionBloc(
       repository: getIt<AuthRepository>(),
+      // Web tabs share one refresh cookie; this keeps them from refreshing
+      // over each other. Inert on desktop and mobile.
+      sync: SessionSync.platform(),
       // Cached board data must never survive the session that read it.
       // Desktop/mobile present the active account's own refresh token; web
       // passes null and keeps using its HttpOnly cookie.

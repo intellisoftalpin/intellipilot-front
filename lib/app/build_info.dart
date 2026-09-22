@@ -23,13 +23,13 @@ class BuildInfo {
   /// look years out of date.
   static const String version = String.fromEnvironment(
     'INTELLIPILOT_VERSION',
-    defaultValue: '0.7.2',
+    defaultValue: '0.7.3',
   );
 
   /// Build identifier (`+N` suffix in pubspec). Often a CI build number.
   static const String build = String.fromEnvironment(
     'INTELLIPILOT_BUILD',
-    defaultValue: '84',
+    defaultValue: '85',
   );
 
   /// Flavor — drives flavor-specific UI accents and API base resolution.

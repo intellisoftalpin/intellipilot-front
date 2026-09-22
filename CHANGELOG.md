@@ -4,6 +4,27 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.3] - 2026-09-22
+
+### Fixed
+- **Sessions no longer end after a few minutes, and a new tab no longer asks
+  you to sign in again.** Two refreshes presenting the same refresh token —
+  the proactive timer meeting a 401 after the laptop wakes or a background tab
+  is throttled, or two tabs refreshing at once — made the server treat the
+  second as token theft and sign the user out of every tab. Now:
+  - one refresh at a time per tab: startup, the timer and the 401 hook share a
+    single in-flight refresh;
+  - one refresh at a time across tabs (Web Locks API, where available), and a
+    tab that refreshes hands its new access token to the others over a
+    BroadcastChannel, so they adopt it instead of rotating the cookie again;
+  - a newly opened tab borrows an open tab's access token and does not touch
+    the refresh cookie at all;
+  - a `refresh_superseded` answer (from the matching backend) is retried
+    once after a short pause instead of ending the session;
+  - signing out in one tab signs out the others;
+  - proactive refreshes are jittered so tabs opened together don't refresh in
+    the same instant.
+
 ## [0.7.2] - 2026-09-22
 
 Meetings, customers on any issue, a global Create button, and working search.
