@@ -14,9 +14,11 @@ jobs:
   flutter:
     name: lint + test + build (web)
     runs-on: ubuntu-latest
+    # A hung test must fail, not idle until the 6-hour runner cap.
+    timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Read pinned Flutter version
         id: flutter-version

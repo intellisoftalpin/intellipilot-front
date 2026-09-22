@@ -30,6 +30,8 @@ const List<String> _categories = [
 /// in any working role (assignee / QA / reviewer — not reporter). Component
 /// and its dependent release filter live in the second row: picking a
 /// component reveals a release dropdown scoped to that component's releases.
+/// The customer filter loads the project's customers itself, so every list
+/// that shows this bar gets it without threading another list through.
 class WorkItemFilterBar extends StatefulWidget {
   const WorkItemFilterBar({
     required this.projectId,
@@ -64,7 +66,8 @@ class WorkItemFilterBar extends StatefulWidget {
 
   /// Dimension keys rendered as disabled chips showing their current value
   /// (the board's locked filters). Keys: 'status','type','priority','size',
-  /// 'assignee','epic','milestone','label','component','category','overdue'.
+  /// 'assignee','epic','milestone','label','component','category','customer',
+  /// 'overdue'.
   final Set<String> lockedDimensions;
 
   /// Dimension keys not rendered at all (e.g. the active swimlane dimension).
@@ -79,6 +82,10 @@ class _WorkItemFilterBarState extends State<WorkItemFilterBar> {
   List<ComponentReleaseLink> _componentReleases = const [];
   String? _releasesForComponent;
 
+  /// The project's customers, for the customer filter. Empty until loaded (and
+  /// for a project without customers, which then shows no customer filter).
+  List<Customer> _customers = const [];
+
   WorkItemFilter get filter => widget.filter;
   ValueChanged<WorkItemFilter> get onChanged => widget.onChanged;
 
@@ -89,12 +96,27 @@ class _WorkItemFilterBarState extends State<WorkItemFilterBar> {
   void initState() {
     super.initState();
     _syncReleases();
+    _loadCustomers();
   }
 
   @override
   void didUpdateWidget(WorkItemFilterBar old) {
     super.didUpdateWidget(old);
     _syncReleases();
+    if (old.projectId != widget.projectId) _loadCustomers();
+  }
+
+  void _loadCustomers() {
+    final pid = widget.projectId;
+    unawaited(
+      getIt<CatalogRepository>().listCustomers(pid).then((res) {
+        if (!mounted || widget.projectId != pid) return;
+        final list = [
+          ...?res.valueOrNull,
+        ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        setState(() => _customers = list);
+      }),
+    );
   }
 
   void _syncReleases() {
@@ -202,7 +224,7 @@ class _WorkItemFilterBarState extends State<WorkItemFilterBar> {
     ];
 
     // Row 2: the longer-tail planning dimensions — component with its
-    // dependent release filter, then epic, milestone, category.
+    // dependent release filter, then epic, milestone, category, customer.
     final row2 = <Widget>[
       if (!_hidden('component')) ...[
         _Dropdown(
@@ -258,6 +280,19 @@ class _WorkItemFilterBarState extends State<WorkItemFilterBar> {
           options: [for (final c in _categories) _Opt(c, _humanize(c))],
           enabled: !_locked('category'),
           onChanged: (v) => onChanged(filter.copyWith(category: v)),
+        ),
+      // A project without customers gets no customer filter: an empty list
+      // hides the dropdown (see [_Dropdown]), so no stray "none" option.
+      if (!_hidden('customer') && _customers.isNotEmpty)
+        _Dropdown(
+          hint: t.issueFieldCustomers,
+          value: filter.customerId,
+          options: [
+            _Opt('none', t.filterNoCustomer),
+            for (final c in _customers) _Opt(c.id, c.name),
+          ],
+          enabled: !_locked('customer'),
+          onChanged: (v) => onChanged(filter.copyWith(customerId: v)),
         ),
     ];
 

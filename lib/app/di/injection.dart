@@ -53,6 +53,9 @@ import 'package:intellipilot/features/issues_io/data/issues_io_repository_impl.d
 import 'package:intellipilot/features/issues_io/domain/issues_io_repository.dart';
 import 'package:intellipilot/features/links/data/links_repository_http.dart';
 import 'package:intellipilot/features/links/domain/links_repository.dart';
+import 'package:intellipilot/features/meetings/data/meetings_repository_impl.dart';
+import 'package:intellipilot/features/meetings/domain/meetings_repository.dart';
+import 'package:intellipilot/features/meetings/domain/project_access_cache.dart';
 import 'package:intellipilot/features/mfa/data/mfa_repository_impl.dart';
 import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
@@ -252,6 +255,12 @@ Future<void> configureDependencies({
   getIt.registerLazySingleton<BoardRepository>(
     () => BoardRepositoryImpl(getIt<ApiClient>()),
   );
+  getIt.registerLazySingleton<MeetingsRepository>(
+    () => MeetingsRepositoryImpl(
+      getIt<ApiClient>(),
+      tokenProvider: () => getIt<SessionBloc>().currentAccessToken,
+    ),
+  );
   getIt.registerLazySingleton<WikiRepository>(
     () => WikiRepositoryImpl(getIt<ApiClient>()),
   );
@@ -291,6 +300,12 @@ Future<void> configureDependencies({
       catalog: getIt<CatalogRepository>(),
       backlog: getIt<BacklogRepository>(),
       milestones: getIt<MilestonesRepository>(),
+    ),
+  );
+  getIt.registerLazySingleton<ProjectAccessCache>(
+    () => ProjectAccessCache(
+      profile: getIt<ProfileRepository>(),
+      projects: getIt<ProjectsRepository>(),
     ),
   );
   getIt.registerLazySingleton<ProjectEventsService>(
@@ -347,6 +362,9 @@ Future<void> configureDependencies({
         if (getIt.isRegistered<ProjectLookupsCache>()) {
           getIt<ProjectLookupsCache>().clear();
         }
+        if (getIt.isRegistered<ProjectAccessCache>()) {
+          getIt<ProjectAccessCache>().clear();
+        }
       },
     ),
   );
@@ -367,6 +385,7 @@ Future<void> configureForTests({
   BacklogRepository? backlogRepository,
   ActivityRepository? activityRepository,
   MilestonesRepository? milestonesRepository,
+  MeetingsRepository? meetingsRepository,
   BoardRepository? boardRepository,
   WikiRepository? wikiRepository,
   DocsRepository? docsRepository,
@@ -443,6 +462,15 @@ Future<void> configureForTests({
     )
     ..registerSingleton<BoardRepository>(
       boardRepository ?? _NoopBoardRepository(),
+    )
+    ..registerSingleton<MeetingsRepository>(
+      meetingsRepository ?? _NoopMeetingsRepository(),
+    )
+    ..registerLazySingleton<ProjectAccessCache>(
+      () => ProjectAccessCache(
+        profile: getIt<ProfileRepository>(),
+        projects: getIt<ProjectsRepository>(),
+      ),
     )
     ..registerSingleton<WikiRepository>(wikiRepository ?? _NoopWikiRepository())
     ..registerSingleton<DocsRepository>(docsRepository ?? _NoopDocsRepository())
@@ -584,6 +612,13 @@ class _NoopMilestonesRepository implements MilestonesRepository {
   );
 }
 
+class _NoopMeetingsRepository implements MeetingsRepository {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => throw UnimplementedError(
+    '_NoopMeetingsRepository.${invocation.memberName}',
+  );
+}
+
 class _NoopBoardRepository implements BoardRepository {
   @override
   dynamic noSuchMethod(Invocation invocation) =>
@@ -620,6 +655,7 @@ class _NoopSearchRepository implements SearchRepository {
   Future<Result<SearchResponse, AppFailure>> search(
     String query, {
     String? projectId,
+    String? boostProjectId,
     List<String>? types,
   }) async => const Ok<SearchResponse, AppFailure>(
     SearchResponse(results: [], fuzzy: false),

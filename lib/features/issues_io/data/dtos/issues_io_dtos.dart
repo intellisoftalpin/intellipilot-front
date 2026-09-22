@@ -32,6 +32,7 @@ class ImportPreview {
     required this.components,
     required this.unmatchedUsers,
     required this.warnings,
+    this.customers = const [],
   });
 
   factory ImportPreview.fromJson(Map<String, dynamic> json) {
@@ -49,6 +50,7 @@ class ImportPreview {
       statuses: matches('statuses'),
       priorities: matches('priorities'),
       components: matches('components'),
+      customers: matches('customers'),
       unmatchedUsers: strings('unmatched_users'),
       warnings: strings('warnings'),
     );
@@ -59,6 +61,10 @@ class ImportPreview {
   final List<ValueMatch> statuses;
   final List<ValueMatch> priorities;
   final List<ValueMatch> components;
+
+  /// Distinct customer names from the file's `Customers` column (IntelliPilot
+  /// exports only). Like components, they map to existing customers only.
+  final List<ValueMatch> customers;
   final List<String> unmatchedUsers;
   final List<String> warnings;
 }
@@ -86,6 +92,7 @@ class ImportMapping {
     this.statuses = const [],
     this.priorities = const [],
     this.components = const [],
+    this.customers = const [],
     this.users = const [],
   });
 
@@ -93,6 +100,7 @@ class ImportMapping {
   final List<ValueChoice> statuses;
   final List<ValueChoice> priorities;
   final List<ValueChoice> components;
+  final List<ValueChoice> customers;
   final List<ValueChoice> users;
 
   Map<String, dynamic> toJson() => {
@@ -100,6 +108,7 @@ class ImportMapping {
     'statuses': statuses.map((c) => c.toJson()).toList(),
     'priorities': priorities.map((c) => c.toJson()).toList(),
     'components': components.map((c) => c.toJson()).toList(),
+    'customers': customers.map((c) => c.toJson()).toList(),
     'users': users.map((c) => c.toJson()).toList(),
   };
 }

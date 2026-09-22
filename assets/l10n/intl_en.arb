@@ -2302,6 +2302,30 @@
   "@topCreateProject": {
     "description": "Top-bar create menu entry."
   },
+  "topCreateTooltip": "Create issue (C)",
+  "@topCreateTooltip": {
+    "description": "Tooltip of the top-bar Create button; C is its keyboard shortcut."
+  },
+  "issueCreateFieldProject": "Project",
+  "@issueCreateFieldProject": {
+    "description": "Project picker label in the create-issue dialog."
+  },
+  "issueCreateNoPermission": "You can't create issues in this project.",
+  "@issueCreateNoPermission": {
+    "description": "Shown in the create-issue dialog when the caller lacks issue.create in the picked project."
+  },
+  "issueCreateLoadFailed": "Couldn't load this project. Try again or pick another one.",
+  "@issueCreateLoadFailed": {
+    "description": "Shown in the create-issue dialog when the picked project's permissions or types fail to load."
+  },
+  "issueCreateNoProjects": "You have no projects to create issues in yet.",
+  "@issueCreateNoProjects": {
+    "description": "Shown in the create-issue dialog when the caller sees no projects."
+  },
+  "shortcutCreateIssueDescription": "Create an issue",
+  "@shortcutCreateIssueDescription": {
+    "description": "Shortcut description."
+  },
   "topMenuProfile": "Profile",
   "@topMenuProfile": {
     "description": "Top-bar avatar menu entry."
@@ -2654,6 +2678,10 @@
   "linkDuplicateError": "That link already exists.",
   "@linkDuplicateError": {
     "description": "Validation error for duplicate link."
+  },
+  "railOpenProjectMenu": "Open project menu",
+  "@railOpenProjectMenu": {
+    "description": "Tooltip on the top-bar button that opens the project navigation drawer on narrow screens."
   },
   "railCollapse": "Collapse menu",
   "@railCollapse": {
@@ -4761,5 +4789,345 @@
     }
   },
   "adminUsersArmSsoLinkConfirm": "Allow for 24 hours",
-  "adminUsersArmSsoLinkDone": "Linking window opened for 24 hours."
+  "adminUsersArmSsoLinkDone": "Linking window opened for 24 hours.",
+  "issueFieldCustomers": "Customers",
+  "@issueFieldCustomers": {
+    "description": "Label for the issue customers field and the customer filter."
+  },
+  "filterNoCustomer": "No customer",
+  "@filterNoCustomer": {
+    "description": "Customer filter option matching issues without any customer."
+  },
+  "panelCustomers": "CUSTOMERS",
+  "@panelCustomers": {
+    "description": "Title of the Customers panel on the issue detail page."
+  },
+  "customersNoneDefined": "This project has no customers yet. Add them in the project settings under Customers.",
+  "@customersNoneDefined": {
+    "description": "Shown in the customer picker when the project has no customers."
+  },
+  "railMeetings": "Meetings",
+  "@railMeetings": {
+    "description": "Project navigation entry for the meetings calendar."
+  },
+  "meetingsTitle": "Meetings",
+  "@meetingsTitle": {
+    "description": "Heading of the meetings dashboard."
+  },
+  "meetingsToday": "Today",
+  "@meetingsToday": {
+    "description": "Button that jumps the calendar to today."
+  },
+  "meetingsNew": "New meeting",
+  "@meetingsNew": {
+    "description": "Button that opens the create-meeting dialog."
+  },
+  "meetingsPrevMonth": "Previous month",
+  "@meetingsPrevMonth": {
+    "description": "Tooltip of the calendar's previous-month button."
+  },
+  "meetingsNextMonth": "Next month",
+  "@meetingsNextMonth": {
+    "description": "Tooltip of the calendar's next-month button."
+  },
+  "meetingsNoneOnDay": "No meetings on this day.",
+  "@meetingsNoneOnDay": {
+    "description": "Shown under the selected day when it has no meetings."
+  },
+  "meetingsAllDay": "All day",
+  "@meetingsAllDay": {
+    "description": "Time label of a meeting without a start time."
+  },
+  "meetingsLoadFailed": "Couldn't load meetings.",
+  "@meetingsLoadFailed": {
+    "description": "Shown when the calendar request fails."
+  },
+  "meetingsNoAccess": "You don't have access to this project's meetings.",
+  "@meetingsNoAccess": {
+    "description": "Shown on the meetings pages without meeting.view."
+  },
+  "meetingsCountOnDay": "{count, plural, =1{1 meeting} other{{count} meetings}}",
+  "@meetingsCountOnDay": {
+    "description": "Screen-reader count of meetings on a calendar day.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "meetingsPanelTitle": "Meetings",
+  "@meetingsPanelTitle": {
+    "description": "Title of the meetings panel on an issue or epic."
+  },
+  "meetingsPanelEmpty": "Not discussed in any meeting yet.",
+  "@meetingsPanelEmpty": {
+    "description": "Empty state of the meetings panel on an issue or epic."
+  },
+  "meetingCreateTitle": "New meeting",
+  "@meetingCreateTitle": {
+    "description": "Title of the create-meeting dialog."
+  },
+  "meetingEditTitle": "Edit meeting",
+  "@meetingEditTitle": {
+    "description": "Title of the edit-meeting dialog and tooltip of its button."
+  },
+  "meetingFieldTitle": "Title",
+  "@meetingFieldTitle": {
+    "description": "Meeting title field."
+  },
+  "meetingFieldDate": "Date",
+  "@meetingFieldDate": {
+    "description": "Meeting date field."
+  },
+  "meetingFieldStart": "Start time",
+  "@meetingFieldStart": {
+    "description": "Meeting start time field."
+  },
+  "meetingFieldEnd": "End time",
+  "@meetingFieldEnd": {
+    "description": "Meeting end time field."
+  },
+  "meetingFieldTimezone": "Time zone",
+  "@meetingFieldTimezone": {
+    "description": "Meeting time zone field."
+  },
+  "meetingFieldLocation": "Location or call link",
+  "@meetingFieldLocation": {
+    "description": "Meeting location field."
+  },
+  "meetingFieldDescription": "Agenda / notes",
+  "@meetingFieldDescription": {
+    "description": "Meeting description field."
+  },
+  "meetingClearTime": "Clear time",
+  "@meetingClearTime": {
+    "description": "Tooltip of the button clearing a time field."
+  },
+  "meetingTitleRequired": "Enter a title.",
+  "@meetingTitleRequired": {
+    "description": "Validation: missing title."
+  },
+  "meetingDateRequired": "Pick a date.",
+  "@meetingDateRequired": {
+    "description": "Validation: missing date."
+  },
+  "meetingEndNeedsStart": "Set a start time first.",
+  "@meetingEndNeedsStart": {
+    "description": "Validation: end time without a start time."
+  },
+  "meetingEndBeforeStart": "The end time must be after the start time, on the same day.",
+  "@meetingEndBeforeStart": {
+    "description": "Validation: end time not after start time."
+  },
+  "meetingDeleteTitle": "Delete meeting?",
+  "@meetingDeleteTitle": {
+    "description": "Title of the delete-meeting confirmation and tooltip of its button."
+  },
+  "meetingDeleteConfirm": "\"{title}\" and all its recordings and files will be deleted.",
+  "@meetingDeleteConfirm": {
+    "description": "Body of the delete-meeting confirmation.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "meetingDeleted": "This meeting has been deleted.",
+  "@meetingDeleted": {
+    "description": "Shown when the open meeting was deleted."
+  },
+  "meetingBackToCalendar": "Back to meetings",
+  "@meetingBackToCalendar": {
+    "description": "Back navigation from a meeting."
+  },
+  "meetingConflict": "Someone else changed this meeting. Their version is shown now — please redo your change.",
+  "@meetingConflict": {
+    "description": "Optimistic-concurrency conflict on a meeting."
+  },
+  "meetingErrForbidden": "You aren't allowed to do that.",
+  "@meetingErrForbidden": {
+    "description": "Generic permission error on a meeting action."
+  },
+  "meetingErrNotMedia": "That file isn't audio or video. Add it under Files instead.",
+  "@meetingErrNotMedia": {
+    "description": "Upload of a non-media file as a recording."
+  },
+  "meetingErrTooLarge": "The file is larger than the server allows.",
+  "@meetingErrTooLarge": {
+    "description": "Upload over the size limit."
+  },
+  "meetingErrUnsupportedFormat": "Unsupported format. Use .txt, .md, .vtt or .srt.",
+  "@meetingErrUnsupportedFormat": {
+    "description": "Transcript/summary import in an unsupported format."
+  },
+  "meetingErrEncoding": "The file isn't valid UTF-8 text.",
+  "@meetingErrEncoding": {
+    "description": "Transcript/summary import that is not UTF-8."
+  },
+  "meetingErrTimezone": "Unknown time zone.",
+  "@meetingErrTimezone": {
+    "description": "Server rejected the meeting's time zone."
+  },
+  "meetingErrMimeMismatch": "The file's content doesn't match its extension.",
+  "@meetingErrMimeMismatch": {
+    "description": "Upload whose content contradicts its extension."
+  },
+  "meetingTabSummary": "Summary",
+  "@meetingTabSummary": {
+    "description": "Meeting tab / artefact: the summary."
+  },
+  "meetingTabTranscript": "Transcript",
+  "@meetingTabTranscript": {
+    "description": "Meeting tab / artefact: the transcript."
+  },
+  "meetingTabRecordings": "Recordings",
+  "@meetingTabRecordings": {
+    "description": "Meeting tab: recordings."
+  },
+  "meetingTabFiles": "Files",
+  "@meetingTabFiles": {
+    "description": "Meeting tab: other files."
+  },
+  "meetingTabLinks": "Links",
+  "@meetingTabLinks": {
+    "description": "Meeting tab: participants, issues, epics, customers."
+  },
+  "meetingSummaryEmpty": "No summary yet.",
+  "@meetingSummaryEmpty": {
+    "description": "Empty summary."
+  },
+  "meetingTranscriptEmpty": "No transcript yet.",
+  "@meetingTranscriptEmpty": {
+    "description": "Empty transcript."
+  },
+  "meetingTranscriptPasteHint": "Paste or type the transcript",
+  "@meetingTranscriptPasteHint": {
+    "description": "Hint of the transcript editor."
+  },
+  "meetingImportFile": "Import file",
+  "@meetingImportFile": {
+    "description": "Button importing a transcript or summary file."
+  },
+  "meetingImportSummaryHint": "Replaces the summary with a .md or .txt file",
+  "@meetingImportSummaryHint": {
+    "description": "Tooltip of the summary import button."
+  },
+  "meetingImportTranscriptHint": "Replaces the transcript with a .txt, .vtt, .srt or .md file",
+  "@meetingImportTranscriptHint": {
+    "description": "Tooltip of the transcript import button."
+  },
+  "meetingTranscriptSearch": "Search transcript",
+  "@meetingTranscriptSearch": {
+    "description": "Transcript search field hint."
+  },
+  "meetingTranscriptMatches": "{current} of {total}",
+  "@meetingTranscriptMatches": {
+    "description": "Transcript search position.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "meetingTranscriptNoMatches": "No matches",
+  "@meetingTranscriptNoMatches": {
+    "description": "Transcript search found nothing."
+  },
+  "meetingTranscriptPrevious": "Previous match",
+  "@meetingTranscriptPrevious": {
+    "description": "Transcript search: previous."
+  },
+  "meetingTranscriptNext": "Next match",
+  "@meetingTranscriptNext": {
+    "description": "Transcript search: next."
+  },
+  "meetingRecordingsEmpty": "No recordings yet.",
+  "@meetingRecordingsEmpty": {
+    "description": "Empty recordings tab."
+  },
+  "meetingFilesEmpty": "No files yet.",
+  "@meetingFilesEmpty": {
+    "description": "Empty files tab."
+  },
+  "meetingUploadRecording": "Upload recording",
+  "@meetingUploadRecording": {
+    "description": "Button uploading an audio/video recording."
+  },
+  "meetingUploadFile": "Upload file",
+  "@meetingUploadFile": {
+    "description": "Button uploading another file."
+  },
+  "meetingUploadsUnsupported": "Uploading files is available in the web app.",
+  "@meetingUploadsUnsupported": {
+    "description": "Shown instead of upload buttons where uploads are not supported."
+  },
+  "meetingUploadCancel": "Cancel upload",
+  "@meetingUploadCancel": {
+    "description": "Tooltip cancelling a running upload."
+  },
+  "meetingUploadCancelled": "Upload cancelled",
+  "@meetingUploadCancelled": {
+    "description": "Status of a cancelled upload."
+  },
+  "meetingUploadDismiss": "Dismiss",
+  "@meetingUploadDismiss": {
+    "description": "Tooltip removing a finished upload row."
+  },
+  "meetingPlayerUnsupported": "This recording can't be played here — download it instead.",
+  "@meetingPlayerUnsupported": {
+    "description": "Recording in a format the player can't decode."
+  },
+  "meetingPlay": "Play",
+  "@meetingPlay": {
+    "description": "Play a recording."
+  },
+  "meetingPause": "Pause",
+  "@meetingPause": {
+    "description": "Pause a recording."
+  },
+  "meetingRecordingsCount": "{count, plural, =1{1 recording} other{{count} recordings}}",
+  "@meetingRecordingsCount": {
+    "description": "Recording count on a meeting row.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "meetingFilesCount": "{count, plural, =1{1 file} other{{count} files}}",
+  "@meetingFilesCount": {
+    "description": "File count on a meeting row.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "meetingParticipants": "Participants",
+  "@meetingParticipants": {
+    "description": "Links section: participants."
+  },
+  "meetingLinkedIssues": "Issues",
+  "@meetingLinkedIssues": {
+    "description": "Links section: issues."
+  },
+  "meetingLinkedEpics": "Epics",
+  "@meetingLinkedEpics": {
+    "description": "Links section: epics."
+  },
+  "meetingLinkedCustomers": "Customers",
+  "@meetingLinkedCustomers": {
+    "description": "Links section: customers."
+  },
+  "meetingLinkNone": "None",
+  "@meetingLinkNone": {
+    "description": "Empty link section / picker."
+  },
+  "meetingLinkSearch": "Search",
+  "@meetingLinkSearch": {
+    "description": "Search field of the link picker."
+  }
 }

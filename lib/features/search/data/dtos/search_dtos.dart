@@ -8,6 +8,8 @@ class SearchResult {
     required this.snippet,
     required this.rank,
     this.ref,
+    this.key,
+    this.keyMatch = false,
   });
 
   factory SearchResult.fromJson(Map<String, dynamic> j) => SearchResult(
@@ -15,19 +17,28 @@ class SearchResult {
     entityId: j['entity_id'] as String? ?? '',
     projectId: j['project_id'] as String? ?? '',
     ref: (j['ref'] as num?)?.toInt(),
+    key: j['key'] as String?,
+    keyMatch: j['key_match'] as bool? ?? false,
     title: j['title'] as String? ?? '',
     snippet: j['snippet'] as String? ?? '',
     rank: (j['rank'] as num?)?.toDouble() ?? 0,
   );
 
-  /// `issue` | `epic` | `wiki` | `comment`.
+  /// `issue` | `epic` | `wiki` | `comment` | `meeting`.
   final String entityType;
   final String entityId;
   final String projectId;
   final int? ref;
+
+  /// Rendered work-item key: `PS-1262` for issues, `PS-E-12` for epics.
+  /// Null for wiki pages, comments and meetings.
+  final String? key;
+
+  /// The hit matched the typed key exactly rather than the text.
+  final bool keyMatch;
   final String title;
 
-  /// HTML fragment with `<mark>` highlights around the match.
+  /// HTML fragment with `<b>` highlights around the match.
   final String snippet;
   final double rank;
 }

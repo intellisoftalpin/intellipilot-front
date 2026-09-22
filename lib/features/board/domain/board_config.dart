@@ -123,6 +123,7 @@ class BoardConfig {
     'label',
     'component',
     'category',
+    'customer',
     'overdue',
   };
 

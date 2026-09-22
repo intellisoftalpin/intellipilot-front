@@ -38,6 +38,7 @@ import 'package:intellipilot/features/catalog/presentation/widgets/size_badge.da
 import 'package:intellipilot/features/links/domain/links_repository.dart';
 import 'package:intellipilot/features/links/presentation/cubits/links_cubit.dart';
 import 'package:intellipilot/features/links/presentation/widgets/links_panel.dart';
+import 'package:intellipilot/features/meetings/presentation/widgets/linked_meetings_panel.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
@@ -1566,6 +1567,13 @@ class _RightColumn extends StatelessWidget {
   final VoidCallback? onClose;
   final bool compact;
 
+  /// "CUSTOMERS · 2" once there are any, like the sub-tasks panel's count.
+  String _customersTitle(AppLocalizations t) {
+    final entity = data.entity;
+    final n = entity is _IssueRec ? entity.issue.customerIds.length : 0;
+    return n == 0 ? t.panelCustomers : '${t.panelCustomers} · $n';
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
@@ -1605,6 +1613,21 @@ class _RightColumn extends StatelessWidget {
             onChanged: onChanged,
           ),
         ),
+        if (kind == EntityKind.issue) ...[
+          gap,
+          _Panel(
+            compact: compact,
+            icon: Icons.business_outlined,
+            panelId: 'customers',
+            title: _customersTitle(t),
+            child: _CustomersPanel(
+              data: data,
+              entityId: entityId,
+              projectId: projectId,
+              onChanged: onChanged,
+            ),
+          ),
+        ],
         // Links only exist between issues (the backend model is issue-scoped),
         // so epics don't get a permanently-empty panel with no add button.
         if (kind == EntityKind.issue) ...[
@@ -1639,6 +1662,22 @@ class _RightColumn extends StatelessWidget {
           title: t.panelAttachments,
           child: const AttachmentsView(shrinkWrap: true),
         ),
+        if (s is ProjectDetailLoaded && s.has(Permission.meetingView)) ...[
+          gap,
+          _Panel(
+            compact: compact,
+            icon: Icons.groups_outlined,
+            panelId: 'meetings',
+            initiallyExpanded: !compact,
+            title: t.meetingsPanelTitle,
+            child: LinkedMeetingsPanel(
+              projectId: projectId,
+              entityId: entityId,
+              isEpic: kind == EntityKind.epic,
+              onNavigate: onClose,
+            ),
+          ),
+        ],
         if (kind == EntityKind.issue) ...[
           gap,
           LogTimeSection(projectId: projectId, issueId: entityId),
@@ -1989,12 +2028,6 @@ class _DetailsTable extends StatelessWidget {
             ),
           ),
           _categoryRow(context, current: issue.category, canEdit: canEdit),
-          if (issue.category == IssueCategory.customerRequest.wire)
-            _customerRow(
-              context,
-              currentIds: issue.customerIds,
-              canEdit: canEdit,
-            ),
           _kvRowWith(
             context,
             t.ttStartDate,
@@ -2317,39 +2350,11 @@ class _DetailsTable extends StatelessWidget {
         for (final c in IssueCategory.values)
           _Candidate(id: c.wire, label: c.label),
       ],
+      // Customers are independent of the category: changing it never touches
+      // them (it used to clear them when leaving customer_request).
       onPicked: (id) => _patchEntity(
         _reporterOf(context),
-        issuePatch: () => id == IssueCategory.customerRequest.wire
-            ? UpdateIssueRequest(category: id)
-            // Leaving customer_request clears any linked customers.
-            : UpdateIssueRequest(category: id, customerIds: const []),
-      ),
-    );
-  }
-
-  Widget _customerRow(
-    BuildContext context, {
-    required List<String> currentIds,
-    required bool canEdit,
-  }) {
-    final all = data.customersById.values.toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
-    return _kvRowWith(
-      context,
-      'Customers',
-      _MultiSelectCell(
-        displayText: _customerList(currentIds, data.customersById),
-        candidates: [
-          for (final c in all) _MultiCandidate(id: c.id, label: c.name),
-        ],
-        selectedIds: currentIds,
-        title: AppLocalizations.of(context).permDomainCustomers,
-        emptyLabel: '—',
-        canEdit: canEdit,
-        onSaved: (next) => _patchEntity(
-          _reporterOf(context),
-          issuePatch: () => UpdateIssueRequest(customerIds: next),
-        ),
+        issuePatch: () => UpdateIssueRequest(category: id),
       ),
     );
   }
@@ -2457,8 +2462,6 @@ class _DetailsTable extends StatelessWidget {
   }
 
   String _labelList(List<String> ids, Map<String, Label> by) =>
-      ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
-  String _customerList(List<String> ids, Map<String, Customer> by) =>
       ids.isEmpty ? '—' : ids.map((id) => by[id]?.name ?? id).join(', ');
 
   /// Opens a date picker for the issue's start / due date and PATCHes the
@@ -4921,6 +4924,63 @@ Widget _tintedValue(
 // ---------------------------------------------------------------------------
 
 /// Shows the issue's watcher list with a watch/unwatch-self toggle.
+/// The issue's customers as removable chips plus an add button, which opens
+/// the project's customer list. Any issue may carry any number of customers,
+/// whatever its category. Read-only (a plain list) without modify permission.
+class _CustomersPanel extends StatelessWidget {
+  const _CustomersPanel({
+    required this.data,
+    required this.entityId,
+    required this.projectId,
+    required this.onChanged,
+  });
+  final _PageData data;
+  final String entityId;
+  final String projectId;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final entity = data.entity;
+    if (entity is! _IssueRec) return const SizedBox.shrink();
+    final canEdit = context.select<ProjectDetailCubit, bool>((c) {
+      final s = c.state;
+      return s is ProjectDetailLoaded &&
+          s.has(_modifyPermissionFor(EntityKind.issue));
+    });
+    final all = data.customersById.values.toList()
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final current = entity.issue.customerIds;
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: _MultiSelectCell(
+        displayText: current.isEmpty
+            ? '—'
+            : current
+                  .map((id) => data.customersById[id]?.name ?? id)
+                  .join(', '),
+        candidates: [
+          for (final c in all) _MultiCandidate(id: c.id, label: c.name),
+        ],
+        selectedIds: current,
+        title: t.issueFieldCustomers,
+        emptyLabel: t.customersNoneDefined,
+        canEdit: canEdit,
+        onSaved: (next) => _patchAndReport(
+          _reporterOf(context),
+          kind: EntityKind.issue,
+          projectId: projectId,
+          entityId: entityId,
+          etag: entity.etag,
+          onChanged: onChanged,
+          issuePatch: () => UpdateIssueRequest(customerIds: next),
+        ),
+      ),
+    );
+  }
+}
+
 class _WatchersPanel extends StatefulWidget {
   const _WatchersPanel({
     required this.projectId,

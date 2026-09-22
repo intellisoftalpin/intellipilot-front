@@ -5,6 +5,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/core/io/file_picker.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/issues_cubit.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
+import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/issues_io/data/dtos/issues_io_dtos.dart';
 import 'package:intellipilot/features/issues_io/domain/issues_io_repository.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
@@ -55,11 +56,15 @@ class _ImportDialogState extends State<_ImportDialog> {
   final Map<String, String> _statuses = {};
   final Map<String, String> _priorities = {};
   final Map<String, String> _components = {};
+  final Map<String, String> _customers = {};
   // Jira user string -> pilot user id (or _skip sentinel for unassigned).
   final Map<String, String> _users = {};
 
   // Existing project members, used to populate the Users mapping dropdowns.
   List<Membership> _members = const [];
+
+  // Existing project customers, for the Customers mapping dropdowns.
+  List<Customer> _projectCustomers = const [];
 
   // Final summary.
   ImportResult? _result;
@@ -82,8 +87,12 @@ class _ImportDialogState extends State<_ImportDialog> {
     final membersRes = await getIt<ProjectsRepository>().listMembers(
       widget.projectId,
     );
+    final customersRes = await getIt<CatalogRepository>().listCustomers(
+      widget.projectId,
+    );
     if (!mounted) return;
     _members = membersRes.valueOrNull ?? const <Membership>[];
+    _projectCustomers = customersRes.valueOrNull ?? const <Customer>[];
     res.when(
       ok: (p) => setState(() {
         _busy = false;
@@ -98,7 +107,7 @@ class _ImportDialogState extends State<_ImportDialog> {
   }
 
   /// Default each value to its auto-match, else "create" (categoricals) or
-  /// "skip" (components, which can only map to existing).
+  /// "skip" (components and customers, which can only map to existing).
   void _seedDefaults(ImportPreview p) {
     for (final v in p.types) {
       _types[v.value] = v.matchedId ?? _create;
@@ -111,6 +120,9 @@ class _ImportDialogState extends State<_ImportDialog> {
     }
     for (final v in p.components) {
       _components[v.value] = v.matchedId ?? _skip;
+    }
+    for (final v in p.customers) {
+      _customers[v.value] = v.matchedId ?? _skip;
     }
     for (final u in p.unmatchedUsers) {
       _users[u] = _skip;
@@ -132,6 +144,7 @@ class _ImportDialogState extends State<_ImportDialog> {
       statuses: choices(_statuses),
       priorities: choices(_priorities),
       components: choices(_components),
+      customers: choices(_customers),
       users: choices(_users),
     );
   }
@@ -232,6 +245,7 @@ class _ImportDialogState extends State<_ImportDialog> {
             true,
           ),
         if (p.components.isNotEmpty) _componentSection(t, p.components),
+        if (p.customers.isNotEmpty) _customerSection(t, p.customers),
         if (p.unmatchedUsers.isNotEmpty) _usersSection(t, p.unmatchedUsers),
         for (final w in p.warnings) ...[
           const SizedBox(height: 8),
@@ -311,6 +325,35 @@ class _ImportDialogState extends State<_ImportDialog> {
                 ),
               ],
               (sel) => setState(() => _components[v.value] = sel),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Customers map to an existing project customer or are skipped (left off
+  /// the imported issue) — customers are never created by an import.
+  Widget _customerSection(AppLocalizations t, List<ValueMatch> values) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            t.issueFieldCustomers,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          for (final v in values)
+            _row(
+              v.value,
+              _customers[v.value] ?? _skip,
+              [
+                DropdownMenuItem(value: _skip, child: Text(t.importSkip)),
+                ..._projectCustomers.map(
+                  (c) => DropdownMenuItem(value: c.id, child: Text(c.name)),
+                ),
+              ],
+              (sel) => setState(() => _customers[v.value] = sel),
             ),
         ],
       ),

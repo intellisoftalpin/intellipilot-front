@@ -18,6 +18,7 @@ import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
+import 'package:intellipilot/features/backlog/presentation/widgets/issue_edit_dialog.dart';
 import 'package:intellipilot/features/board/data/board_snapshot_cache.dart';
 import 'package:intellipilot/features/board/domain/board_config.dart';
 import 'package:intellipilot/features/board/domain/board_source.dart';
@@ -1121,10 +1122,7 @@ class _TaskColumn extends StatelessWidget {
     final t = AppLocalizations.of(context);
     final cubit = context.read<TaskBoardCubit>();
     final messenger = ScaffoldMessenger.of(context);
-    final input = await showDialog<_ColumnCreateInput>(
-      context: context,
-      builder: (_) => _ColumnCreateDialog(types: state.types),
-    );
+    final input = await showIssueEditDialog(context, types: state.types);
     if (input == null) return;
     final created = await cubit.createIssueInColumn(
       subject: input.subject,
@@ -1156,96 +1154,6 @@ class _TaskColumn extends StatelessWidget {
     );
     // Reflect whatever was edited in the sheet on the board.
     await cubit.refresh();
-  }
-}
-
-/// Result of the per-column create prompt.
-class _ColumnCreateInput {
-  const _ColumnCreateInput({required this.subject, this.typeId});
-  final String subject;
-  final String? typeId;
-}
-
-/// Minimal per-column issue prompt (subject + type). Owns its text
-/// controller so disposal happens with the dialog route, never while the
-/// closing animation still has the field mounted.
-class _ColumnCreateDialog extends StatefulWidget {
-  const _ColumnCreateDialog({required this.types});
-  final List<TaxonomyItem> types;
-
-  @override
-  State<_ColumnCreateDialog> createState() => _ColumnCreateDialogState();
-}
-
-class _ColumnCreateDialogState extends State<_ColumnCreateDialog> {
-  final _subject = TextEditingController();
-  String? _typeId;
-
-  @override
-  void dispose() {
-    _subject.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final subject = _subject.text.trim();
-    if (subject.isEmpty) return;
-    Navigator.of(context).pop(
-      _ColumnCreateInput(subject: subject, typeId: _typeId),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(t.actionNewIssue),
-      content: SizedBox(
-        width: 460,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            TextField(
-              controller: _subject,
-              autofocus: true,
-              decoration: InputDecoration(labelText: t.backlogFieldSubject),
-              onSubmitted: (_) => _submit(),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String?>(
-              initialValue: _typeId,
-              isExpanded: true,
-              decoration: InputDecoration(labelText: t.issueFieldType),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('—'),
-                ),
-                for (final item in widget.types)
-                  DropdownMenuItem<String?>(
-                    value: item.id,
-                    child: Text(
-                      item.emoji.isEmpty
-                          ? item.name
-                          : '${item.emoji} ${item.name}',
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-              ],
-              onChanged: (v) => setState(() => _typeId = v),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text(t.actionCancel),
-        ),
-        FilledButton(onPressed: _submit, child: Text(t.actionSave)),
-      ],
-    );
   }
 }
 

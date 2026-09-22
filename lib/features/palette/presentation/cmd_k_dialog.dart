@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
-import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/palette/data/dtos/palette_dtos.dart';
 import 'package:intellipilot/features/palette/presentation/cubits/palette_cubit.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
@@ -28,7 +27,6 @@ Future<void> openCmdKDialog(
       create: (_) {
         final c = PaletteCubit(
           projects: getIt<ProjectsRepository>(),
-          backlog: getIt<BacklogRepository>(),
           wiki: getIt<WikiRepository>(),
           search: getIt<SearchRepository>(),
           activeProjectId: activeProjectId,
@@ -103,6 +101,7 @@ class _CmdKState extends State<_CmdK> {
     ),
     'epic' => Routes.entityDetailFor(r.projectId, EntityKind.epic, r.entityId),
     'wiki' => Routes.wikiPageFor(r.projectId, r.entityId),
+    'meeting' => Routes.meetingFor(r.projectId, r.entityId),
     // Comments have no standalone page — land on the project as a fallback.
     _ => Routes.projectDetailFor(r.projectId),
   };
@@ -212,6 +211,7 @@ class _CmdKState extends State<_CmdK> {
           'issue' => Icons.bug_report_outlined,
           'epic' => Icons.bookmarks_outlined,
           'wiki' => Icons.article_outlined,
+          'meeting' => Icons.event_note_outlined,
           _ => Icons.comment_outlined,
         });
       case CommandResult():

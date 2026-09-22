@@ -64,6 +64,13 @@ enum Permission {
   docSourceModify('doc_source.modify', PermissionDomain.wiki),
   docSourceDelete('doc_source.delete', PermissionDomain.wiki),
 
+  // Meetings (minutes, recordings, transcripts). Deliberately not part of
+  // the stakeholder `.view` baseline — see [RolePresets.reader].
+  meetingView('meeting.view', PermissionDomain.meetings),
+  meetingCreate('meeting.create', PermissionDomain.meetings),
+  meetingModify('meeting.modify', PermissionDomain.meetings),
+  meetingDelete('meeting.delete', PermissionDomain.meetings),
+
   // Comments & attachments
   commentCreate('comment.create', PermissionDomain.commentsAndAttachments),
   commentModerate('comment.moderate', PermissionDomain.commentsAndAttachments),
@@ -136,6 +143,7 @@ enum PermissionDomain {
   issues,
   milestones,
   wiki,
+  meetings,
   commentsAndAttachments,
   timeTracking,
   taxonomy,
@@ -153,9 +161,12 @@ enum PermissionDomain {
 /// preset because that flag is enforced via a separate `is_admin` column —
 /// the UI only edits the permissions vector.
 abstract final class RolePresets {
-  /// All view permissions (the stakeholder baseline).
-  static Set<Permission> reader() =>
-      Permission.values.where((p) => p.wire.endsWith('.view')).toSet();
+  /// All view permissions (the stakeholder baseline) — except
+  /// `meeting.view`: meeting recordings and transcripts are for the team, and
+  /// the backend's stakeholder role leaves it out the same way.
+  static Set<Permission> reader() => Permission.values
+      .where((p) => p.wire.endsWith('.view') && p != Permission.meetingView)
+      .toSet();
 
   /// Developer: view everything, create/modify work items + comments/
   /// attachments. No delete, no project/member/role admin.
@@ -170,6 +181,9 @@ abstract final class RolePresets {
       Permission.milestoneModify,
       Permission.wikiCreate,
       Permission.wikiModify,
+      Permission.meetingView,
+      Permission.meetingCreate,
+      Permission.meetingModify,
       // Editing an external document is the same level of trust as editing a
       // wiki page; it still needs a personal write key at runtime.
       Permission.docSourceModify,
@@ -199,6 +213,7 @@ abstract final class RolePresets {
       Permission.issueDelete,
       Permission.milestoneDelete,
       Permission.wikiDelete,
+      Permission.meetingDelete,
       // Registering or removing a whole source is admin-level.
       Permission.docSourceCreate,
       Permission.docSourceDelete,

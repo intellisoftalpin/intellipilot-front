@@ -61,6 +61,15 @@ class Problem {
   final List<FieldError> errors;
   final Duration? retryAfter;
 
+  /// The server's machine-readable code (`not_media`, `invalid_times`, …) —
+  /// the last segment of [type], which the backend builds as
+  /// `https://intellipilot.dev/problems/<code>`. Null for `about:blank`.
+  String? get code {
+    final segments = Uri.tryParse(type)?.pathSegments ?? const <String>[];
+    final last = segments.isEmpty ? '' : segments.last;
+    return last.isEmpty || type == 'about:blank' ? null : last;
+  }
+
   @override
   String toString() => 'Problem($status $type — $title)';
 }

@@ -491,6 +491,7 @@ class _PermissionPicker extends StatelessWidget {
     PermissionDomain.issues => t.permDomainIssues,
     PermissionDomain.milestones => t.permDomainMilestones,
     PermissionDomain.wiki => t.permDomainWiki,
+    PermissionDomain.meetings => t.railMeetings,
     PermissionDomain.commentsAndAttachments => t.permDomainCommentsAttachments,
     PermissionDomain.timeTracking => t.ttTimeTracking,
     PermissionDomain.taxonomy => t.permDomainTaxonomy,

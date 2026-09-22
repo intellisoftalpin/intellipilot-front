@@ -19,6 +19,7 @@ import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/issues_cubit.dart';
+import 'package:intellipilot/features/backlog/presentation/issue_created_signal.dart';
 import 'package:intellipilot/features/backlog/presentation/widgets/issue_edit_dialog.dart';
 import 'package:intellipilot/features/catalog/data/dtos/catalog_dtos.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
@@ -155,6 +156,25 @@ class _IssuesViewState extends State<_IssuesView> {
   /// instead (so we never cram a two-pane layout onto a phone).
   String? _selectedId;
 
+  @override
+  void initState() {
+    super.initState();
+    issueCreatedSignal.addListener(_onIssueCreatedElsewhere);
+  }
+
+  @override
+  void dispose() {
+    issueCreatedSignal.removeListener(_onIssueCreatedElsewhere);
+    super.dispose();
+  }
+
+  /// The global Create flow made an issue here; no page awaited it, so pick
+  /// it up now.
+  void _onIssueCreatedElsewhere() {
+    if (issueCreatedSignal.value?.projectId != widget.projectId) return;
+    unawaited(context.read<IssuesCubit>().load());
+  }
+
   Future<void> _onSelect(BuildContext context, String id) async {
     setState(() => _selectedId = id);
     final cubit = context.read<IssuesCubit>();
@@ -271,11 +291,7 @@ class _IssuesViewState extends State<_IssuesView> {
     final cubit = context.read<IssuesCubit>();
     final s = cubit.state;
     if (s is! IssuesLoaded) return;
-    final body = await showIssueEditDialog(
-      context,
-      state: s,
-      projectId: widget.projectId,
-    );
+    final body = await showIssueEditDialog(context, types: s.types);
     if (body == null || !context.mounted) return;
     // Create with just subject + type, then drop the user straight into the
     // sidebar to fill in the rest (mirrors the epic create flow).
@@ -451,8 +467,7 @@ class _EmptyIssues extends StatelessWidget {
                 final cubit = context.read<IssuesCubit>();
                 final body = await showIssueEditDialog(
                   context,
-                  state: state,
-                  projectId: cubit.projectId,
+                  types: state.types,
                 );
                 if (body == null || !context.mounted) return;
                 final res = await getIt<BacklogRepository>().createIssue(

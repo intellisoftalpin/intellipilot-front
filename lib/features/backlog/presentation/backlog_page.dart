@@ -11,6 +11,7 @@ import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.
 import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/backlog/presentation/cubits/backlog_cubit.dart';
+import 'package:intellipilot/features/backlog/presentation/issue_created_signal.dart';
 import 'package:intellipilot/features/backlog/presentation/widgets/bulk_paste_dialog.dart';
 import 'package:intellipilot/features/backlog/presentation/widgets/epic_edit_dialog.dart';
 import 'package:intellipilot/features/backlog/presentation/widgets/user_story_edit_dialog.dart';
@@ -169,12 +170,21 @@ class _LoadedState extends State<_Loaded> {
   void initState() {
     super.initState();
     _searchCtrl.text = widget.state.search;
+    issueCreatedSignal.addListener(_onIssueCreatedElsewhere);
   }
 
   @override
   void dispose() {
+    issueCreatedSignal.removeListener(_onIssueCreatedElsewhere);
     _searchCtrl.dispose();
     super.dispose();
+  }
+
+  /// The global Create flow made an issue here; no page awaited it, so pick
+  /// it up now.
+  void _onIssueCreatedElsewhere() {
+    if (issueCreatedSignal.value?.projectId != widget.projectId) return;
+    unawaited(context.read<BacklogCubit>().load());
   }
 
   @override

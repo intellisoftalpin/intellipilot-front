@@ -4,6 +4,37 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.2] - 2026-09-22
+
+Meetings, customers on any issue, a global Create button, and working search.
+Backend companion release is 0.7.2.
+
+### Added
+- **Meetings** in the project menu: a month calendar with per-day markers and
+  the selected day's meetings; a meeting page with summary (markdown), a
+  searchable transcript, recordings with an in-app player (download fallback
+  for formats the platform can't play), files, and links to participants,
+  issues, epics and customers. Large uploads show progress and can be
+  cancelled; on web they stream from disk. Issues and epics show their
+  meetings. Uploading is web-only, as for other attachments.
+- **Global "+ Create"** in the top bar and the `c` shortcut: pick the project
+  (current one preselected), type and title, then the issue's detail panel
+  opens. The Issues page, board column "+" and global Create share one dialog.
+- **Customers panel** on every issue, and a customer filter on the Issues list
+  and the Board (lockable in board settings). Import maps a Customers column.
+- **Project menu on narrow screens** (< 600px) as a drawer from the top bar.
+
+### Fixed
+- **Command palette search** covers all projects with the current one ranked
+  first, finds issues by key in any spelling, labels hits `PS-1262` /
+  `PS-E-12`, and waits 250 ms after typing before searching.
+- **Changing an issue's category no longer deletes its customers.**
+- **Global keyboard shortcuts** (Cmd-K, `?`, `g p/s/b/w`) never fired because
+  the listener sat above the router's navigator; they work now.
+- **Top bar no longer overflows** between 360px and wide screens; items
+  collapse progressively.
+- **Project rail** shows a scrollbar when its items exceed the window.
+
 ## [0.7.1] - 2026-09-22
 
 Re-release of 0.7.0, whose image was never published: the release's test job

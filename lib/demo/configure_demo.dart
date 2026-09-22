@@ -11,6 +11,7 @@ import 'package:intellipilot/core/network/cookie_setup.dart';
 import 'package:intellipilot/core/network/server_endpoint.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/utils/uuid_gen.dart';
+import 'package:intellipilot/demo/demo_meetings_repository.dart';
 import 'package:intellipilot/demo/demo_repositories.dart';
 import 'package:intellipilot/demo/demo_store.dart';
 import 'package:intellipilot/features/activity/domain/activity_repository.dart';
@@ -22,6 +23,8 @@ import 'package:intellipilot/features/board/domain/board_repository.dart';
 import 'package:intellipilot/features/catalog/domain/catalog_repository.dart';
 import 'package:intellipilot/features/docs/domain/docs_repository.dart';
 import 'package:intellipilot/features/links/domain/links_repository.dart';
+import 'package:intellipilot/features/meetings/domain/meetings_repository.dart';
+import 'package:intellipilot/features/meetings/domain/project_access_cache.dart';
 import 'package:intellipilot/features/mfa/data/passkey_service.dart';
 import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
 import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
@@ -116,6 +119,13 @@ Future<void> configureDemoDependencies() async {
     )
     ..registerLazySingleton<MilestonesRepository>(
       () => DemoMilestonesRepository(store),
+    )
+    ..registerLazySingleton<MeetingsRepository>(DemoMeetingsRepository.new)
+    ..registerLazySingleton<ProjectAccessCache>(
+      () => ProjectAccessCache(
+        profile: getIt<ProfileRepository>(),
+        projects: getIt<ProjectsRepository>(),
+      ),
     )
     ..registerLazySingleton<BoardRepository>(() => DemoBoardRepository(store))
     ..registerLazySingleton<WikiRepository>(() => DemoWikiRepository(store))

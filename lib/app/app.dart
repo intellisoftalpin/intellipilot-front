@@ -85,6 +85,7 @@ class _IntelliPilotAppState extends State<IntelliPilotApp> {
                       // MaterialApp, so the notice is themed and localised.
                       return CompatibilityGate(
                         child: GlobalShortcutsShell(
+                          router: _router,
                           child: child ?? const SizedBox.shrink(),
                         ),
                       );

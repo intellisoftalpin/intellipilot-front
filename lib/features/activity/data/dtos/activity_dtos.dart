@@ -93,6 +93,7 @@ class Attachment {
     required this.sha256,
     required this.createdAt,
     this.uploaderId,
+    this.kind,
   });
 
   factory Attachment.fromJson(Map<String, dynamic> json) => Attachment(
@@ -107,6 +108,7 @@ class Attachment {
     sizeBytes: (json['size_bytes'] as num?)?.toInt() ?? 0,
     sha256: (json['sha256'] as String?) ?? '',
     createdAt: DateTime.parse(json['created_at'] as String),
+    kind: json['kind'] as String?,
   );
 
   final String id;
@@ -119,6 +121,10 @@ class Attachment {
   final int sizeBytes;
   final String sha256;
   final DateTime createdAt;
+
+  /// What a meeting file is to its meeting (`recording`, `transcript`,
+  /// `summary`, `other`); null on every other kind of attachment.
+  final String? kind;
 }
 
 /// Signed-URL envelope returned by

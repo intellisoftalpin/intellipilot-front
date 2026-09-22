@@ -28,7 +28,7 @@ jobs:
       build: ${{ steps.extract.outputs.build }}
       is_prerelease: ${{ steps.extract.outputs.is_prerelease }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - id: extract
         shell: bash
         run: |
@@ -73,8 +73,10 @@ jobs:
     name: lint + analyze + test
     needs: verify-tag
     runs-on: ubuntu-24.04
+    # A hung test must fail, not idle until the 6-hour runner cap.
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - id: flutter
         shell: bash
@@ -101,7 +103,7 @@ jobs:
       checksum: ${{ steps.pkg.outputs.checksum }}
       digest: ${{ steps.image.outputs.digest }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - id: flutter
         shell: bash

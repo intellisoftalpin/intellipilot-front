@@ -29,6 +29,8 @@ import 'package:intellipilot/features/connect/presentation/connect_page.dart';
 import 'package:intellipilot/features/docs/presentation/docs_page.dart';
 import 'package:intellipilot/features/docs/presentation/wiki_overview_page.dart';
 import 'package:intellipilot/features/home/presentation/home_page.dart';
+import 'package:intellipilot/features/meetings/presentation/meeting_page.dart';
+import 'package:intellipilot/features/meetings/presentation/meetings_page.dart';
 import 'package:intellipilot/features/mfa/presentation/mfa_verify_page.dart';
 import 'package:intellipilot/features/mfa/presentation/passkey_signin_page.dart';
 import 'package:intellipilot/features/mfa/presentation/passkeys_page.dart';
@@ -150,6 +152,10 @@ abstract class Routes {
   @Deprecated('Use projectBoardFor — Stories/Tasks toggle on the board')
   static String projectTaskBoardFor(String id) => projectBoardFor(id);
   static String projectMilestonesFor(String id) => '/projects/$id/milestones';
+
+  /// The meetings dashboard: a month calendar with each day's meetings. One
+  /// meeting's page is [meetingFor].
+  static String projectMeetingsFor(String id) => '/projects/$id/meetings';
   static String projectTimeFor(String id) => '/projects/$id/time';
   static String adminUserTimeFor(String id) => '/admin/users/$id/time';
   static String milestoneDetailFor(String projectId, String milestoneId) =>
@@ -164,6 +170,10 @@ abstract class Routes {
   static String wikiPagesFor(String id) => '/projects/$id/wiki/pages';
   static String wikiPageFor(String projectId, String pageId) =>
       '/projects/$projectId/wiki/$pageId';
+
+  /// A single meeting of a project.
+  static String meetingFor(String projectId, String meetingId) =>
+      '/projects/$projectId/meetings/$meetingId';
 
   /// One external documentation source, optionally at a specific document.
   static String docSourceFor(
@@ -420,6 +430,28 @@ GoRouter buildRouter({required SessionBloc session}) {
               builder: (_, pid, _) => MilestonesListPage(
                 projectId: pid,
                 openMilestoneId: state.pathParameters['milestoneId'],
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/projects/:id/meetings',
+            name: 'project_meetings',
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => MeetingsPage(projectId: pid),
+            ),
+          ),
+          GoRoute(
+            path: '/projects/:projectId/meetings/:meetingId',
+            name: 'meeting_detail',
+            builder: (context, state) => ShortLinkGate(
+              state: state,
+              builder: (_, pid, _) => MeetingPage(
+                // One page per meeting: going from one to another rebuilds
+                // it in place otherwise, keeping the first meeting's cubits.
+                key: ValueKey(state.pathParameters['meetingId']),
+                projectId: pid,
+                meetingId: state.pathParameters['meetingId']!,
               ),
             ),
           ),

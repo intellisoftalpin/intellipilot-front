@@ -12,6 +12,7 @@ class SearchRepositoryImpl implements SearchRepository {
   Future<Result<SearchResponse, AppFailure>> search(
     String query, {
     String? projectId,
+    String? boostProjectId,
     List<String>? types,
   }) async {
     final res = await _api.get(
@@ -19,6 +20,7 @@ class SearchRepositoryImpl implements SearchRepository {
       query: {
         'q': query,
         'project_id': ?projectId,
+        'boost_project_id': ?boostProjectId,
         'types': ?(types == null || types.isEmpty ? null : types.join(',')),
       },
     );

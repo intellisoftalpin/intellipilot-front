@@ -23,6 +23,7 @@ class WorkItemFilter {
     this.componentId,
     this.releaseId,
     this.category,
+    this.customerId,
     this.overdueOnly = false,
     this.myRole,
   });
@@ -42,6 +43,7 @@ class WorkItemFilter {
     componentId: j['component'] as String?,
     releaseId: j['release'] as String?,
     category: j['category'] as String?,
+    customerId: j['customer'] as String?,
     overdueOnly: j['overdue'] as bool? ?? false,
     myRole: j['my_role'] as String?,
   );
@@ -77,6 +79,10 @@ class WorkItemFilter {
   /// Only offered once a component is selected (dependent filter).
   final String? releaseId;
   final String? category;
+
+  /// Customer id, or `'none'` for issues without any customer. An issue may
+  /// have several customers; it matches when any of them is this one.
+  final String? customerId;
   final bool overdueOnly;
 
   /// Restricts to issues the current user holds one role on: a
@@ -101,6 +107,7 @@ class WorkItemFilter {
     Object? componentId = _keep,
     Object? releaseId = _keep,
     Object? category = _keep,
+    Object? customerId = _keep,
     bool? overdueOnly,
     Object? myRole = _keep,
   }) => WorkItemFilter(
@@ -124,6 +131,7 @@ class WorkItemFilter {
         : componentId as String?,
     releaseId: releaseId == _keep ? this.releaseId : releaseId as String?,
     category: category == _keep ? this.category : category as String?,
+    customerId: customerId == _keep ? this.customerId : customerId as String?,
     overdueOnly: overdueOnly ?? this.overdueOnly,
     myRole: myRole == _keep ? this.myRole : myRole as String?,
   );
@@ -143,6 +151,7 @@ class WorkItemFilter {
     if (componentId != null) 'component': componentId,
     if (releaseId != null) 'release': releaseId,
     if (category != null) 'category': category,
+    if (customerId != null) 'customer': customerId,
     if (overdueOnly) 'overdue': true,
     if (myRole != null) 'my_role': myRole,
   };
@@ -165,6 +174,7 @@ class WorkItemFilter {
       componentId != null ||
       releaseId != null ||
       category != null ||
+      customerId != null ||
       overdueOnly;
   // `myRole` is deliberately absent: on the My Issues board it is the board's
   // own baseline rather than a user-applied narrowing, and `isActive` gates
@@ -189,6 +199,12 @@ class WorkItemFilter {
     if (category != null && issue.category != category) return false;
     if (labelId != null && !issue.labels.contains(labelId)) return false;
     if (componentId != null && !issue.components.contains(componentId)) {
+      return false;
+    }
+    if (customerId == 'none' && issue.customerIds.isNotEmpty) return false;
+    if (customerId != null &&
+        customerId != 'none' &&
+        !issue.customerIds.contains(customerId)) {
       return false;
     }
     if (overdueOnly) {

@@ -3,7 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/app/session/session_bloc.dart';
+import 'package:intellipilot/features/backlog/presentation/global_issue_create.dart';
 import 'package:intellipilot/features/palette/presentation/cmd_k_dialog.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -34,6 +37,10 @@ final List<ShortcutDef> kShortcutRegistry = [
     descriptionKey: (t) => t.shortcutHelpDescription,
   ),
   ShortcutDef(
+    keys: 'c',
+    descriptionKey: (t) => t.shortcutCreateIssueDescription,
+  ),
+  ShortcutDef(
     keys: 'g p',
     descriptionKey: (t) => t.shortcutGoProjectsDescription,
   ),
@@ -55,8 +62,13 @@ final List<ShortcutDef> kShortcutRegistry = [
 /// gated on focused-text-field state so typing in a comment/title doesn't
 /// fire `g p` etc.
 class GlobalShortcutsShell extends StatefulWidget {
-  const GlobalShortcutsShell({required this.child, super.key});
+  const GlobalShortcutsShell({required this.child, this.router, super.key});
   final Widget child;
+
+  /// The app router. This shell sits in `MaterialApp.builder` — *above* the
+  /// router's Navigator — so its own context can neither show a dialog nor
+  /// read the current route; both come from the router instead.
+  final GoRouter? router;
 
   @override
   State<GlobalShortcutsShell> createState() => _GlobalShortcutsShellState();
@@ -112,6 +124,21 @@ class _GlobalShortcutsShellState extends State<GlobalShortcutsShell> {
       return true;
     }
 
+    // Plain `c` only: Cmd/Ctrl+C is copy, and must stay that. Signed-in only
+    // — the auth screens have nothing to create into.
+    final keyboard = HardwareKeyboard.instance;
+    if (!_awaitingChord &&
+        event.logicalKey == LogicalKeyboardKey.keyC &&
+        !keyboard.isMetaPressed &&
+        !keyboard.isControlPressed &&
+        !keyboard.isAltPressed &&
+        getIt<SessionBloc>().state is SessionAuthenticated) {
+      unawaited(
+        openGlobalIssueCreate(ctx, activeProjectId: _projectIdFromRoute(ctx)),
+      );
+      return true;
+    }
+
     // `g X` chord handling.
     if (_awaitingChord) {
       final age = DateTime.now().difference(_chordStart);
@@ -163,6 +190,10 @@ class _GlobalShortcutsShellState extends State<GlobalShortcutsShell> {
   }
 
   BuildContext? _navContext() {
+    final router = widget.router;
+    if (router != null) {
+      return router.routerDelegate.navigatorKey.currentContext;
+    }
     // Prefer the deepest Navigator context — that's the one carrying the
     // current route.
     final state = Navigator.maybeOf(context);
@@ -170,7 +201,11 @@ class _GlobalShortcutsShellState extends State<GlobalShortcutsShell> {
   }
 
   String? _projectIdFromRoute(BuildContext ctx) {
-    final uri = GoRouterState.of(ctx).uri;
+    // Not `GoRouterState.of`: from the root navigator's context there is no
+    // route state to find, and it searches for one without end.
+    final router = widget.router ?? GoRouter.maybeOf(ctx);
+    if (router == null) return null;
+    final uri = router.routerDelegate.currentConfiguration.uri;
     final segs = uri.pathSegments;
     final i = segs.indexOf('projects');
     if (i >= 0 && segs.length > i + 1) return segs[i + 1];
