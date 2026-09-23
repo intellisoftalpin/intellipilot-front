@@ -175,6 +175,30 @@ void main() {
       expect(res.isOk, true);
     });
 
+    test('refresh() and logout() never send an empty body', () async {
+      // A JSON content type with no body is rejected outright (400) by servers
+      // that declare the body optional, which silently killed every browser
+      // session. The cookie carries the token; the body just has to parse.
+      final seen = <RequestOptions>[];
+      final client = _client(
+        _StubAdapter((o) async {
+          seen.add(o);
+          return _ok(
+            '{"access_token":"new","token_type":"Bearer",'
+            '"expires_in":600}',
+          );
+        }),
+      );
+      final repo = AuthRepositoryImpl(client);
+      await repo.refresh();
+      await repo.logout();
+
+      expect(seen, hasLength(2));
+      for (final o in seen) {
+        expect(o.data, isNotNull, reason: '${o.path} sent no body');
+      }
+    });
+
     test('refresh() returns Ok with rotated token', () async {
       final client = _client(
         _StubAdapter(

@@ -39,15 +39,22 @@ class ProjectCountsCubit extends Cubit<ProjectCountsState> {
   }) : _repo = repo,
        _events = events,
        super(const ProjectCountsState()) {
+    final id = projectId;
+    if (id == null) return;
     // `watch` hands out a shared, ref-counted broadcast stream per project, so
     // listening here costs no extra connection when a board is already open.
-    _sub = _events?.watch(projectId).listen(_onEvent);
+    _sub = _events?.watch(id).listen(_onEvent);
     unawaited(refresh());
   }
 
   final ProjectsRepository _repo;
   final ProjectEventsService? _events;
-  final String projectId;
+
+  /// Null while the shell is still turning the URL's project ref into an id.
+  /// Both the counts endpoint and the event feed are addressed by id, so
+  /// there is nothing to ask for yet — the badges stay absent for that frame
+  /// rather than the cubit firing a request that can only 404.
+  final String? projectId;
 
   static const Duration _debounce = Duration(seconds: 4);
 
@@ -62,7 +69,9 @@ class ProjectCountsCubit extends Cubit<ProjectCountsState> {
   }
 
   Future<void> refresh() async {
-    final res = await _repo.getProjectCounts(projectId);
+    final id = projectId;
+    if (id == null) return;
+    final res = await _repo.getProjectCounts(id);
     final counts = res.valueOrNull;
     if (counts == null || isClosed) return;
     emit(ProjectCountsState(counts: counts));

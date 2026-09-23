@@ -4,6 +4,28 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.4] - 2026-09-23
+
+### Fixed
+- **Session renewal sends `{}` instead of an empty body.** The client sets a
+  JSON content type on every request; servers before 0.7.4 answer "JSON content
+  type, empty body" with 400, which broke every renewal and logged browser
+  users out within minutes and on every reload. Also fixes the app against an
+  un-upgraded server.
+- **The global "+ Create" button now preselects the project you are in.** The
+  shell only sees the URL's project segment, which short links canonicalise to
+  the project's *prefix* (`/projects/ps/board`), while the picker matches on
+  project id — so nothing was ever preselected, anywhere. The shell resolves
+  the segment once and hands the id to everything that calls the API, keeping
+  the short form for links.
+- **Command palette search works inside a project again.** It sent that same
+  prefix as `boost_project_id`, which the server — typing both project
+  parameters as ids — rejects with 400, failing the whole search: no results
+  at all while inside any project. The repository now drops a project value
+  that is not an id, so a slip costs ranking, never the search.
+- **Sidebar badge counts, live rail updates and the Meetings entry** were
+  addressed by that prefix too, and silently 404ed on every short URL.
+
 ## [0.7.3] - 2026-09-22
 
 ### Fixed

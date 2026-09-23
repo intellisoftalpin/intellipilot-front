@@ -84,55 +84,73 @@ class MainShell extends StatelessWidget {
         final showRail =
             scope != null && Breakpoints.of(context).isAtLeastMedium;
 
-        // Project-scoped layout: full-height rail on the left (toggle pinned
-        // at the top), and the top bar shows the current project's icon +
-        // name first — matching Jira's project sidebar.
-        if (showRail) {
-          return Scaffold(
-            body: Row(
-              children: [
-                // Keyed by project so switching projects starts a fresh
-                // count fetch and SSE subscription rather than showing the
-                // previous project's badges.
-                BlocProvider<ProjectCountsCubit>(
-                  key: ValueKey(scope),
-                  create: (_) => ProjectCountsCubit(
-                    repo: getIt<ProjectsRepository>(),
-                    projectId: scope,
-                    events: getIt<ProjectEventsService>(),
-                  ),
-                  child: _ProjectRail(
-                    projectId: scope,
-                    currentRoute: route,
-                  ),
-                ),
-                const VerticalDivider(width: 1),
-                Expanded(
-                  child: Column(
-                    children: [
-                      _TopBar(activeProjectId: scope, showBrandMark: false),
-                      Expanded(child: child),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
+        if (scope == null) {
+          return Scaffold(appBar: const _TopBar(), body: child);
         }
 
-        // Non-project routes (projects list, account, settings), and project
-        // routes on a phone-width window: single column with the brand mark on
-        // the top bar, no rail. Inside a project the rail's entries move into
-        // a drawer behind a menu button.
-        return Scaffold(
-          appBar: _TopBar(
-            activeProjectId: scope,
-            showProjectMenu: scope != null,
-          ),
-          drawer: scope == null
-              ? null
-              : _ProjectDrawer(projectId: scope, currentRoute: route),
-          body: child,
+        // The URL carries the project's *prefix* (`/projects/ps/issues`), not
+        // its id — [ShortLinkGate] rewrites every project URL to that short
+        // form. Everything below that talks to the API is addressed by id, so
+        // resolve once here and hand both down: the ref builds links, the id
+        // makes requests.
+        return _ProjectScope(
+          projectRef: scope,
+          builder: (context, projectId) {
+            // Project-scoped layout: full-height rail on the left (toggle
+            // pinned at the top), and the top bar shows the current project's
+            // icon + name first — matching Jira's project sidebar.
+            if (showRail) {
+              return Scaffold(
+                body: Row(
+                  children: [
+                    // Keyed by project so switching projects starts a fresh
+                    // count fetch and SSE subscription rather than showing the
+                    // previous project's badges. Keyed by the *id* too, so the
+                    // cubit is rebuilt (and finally fetches) once the ref
+                    // resolves.
+                    BlocProvider<ProjectCountsCubit>(
+                      key: ValueKey('$scope/$projectId'),
+                      create: (_) => ProjectCountsCubit(
+                        repo: getIt<ProjectsRepository>(),
+                        projectId: projectId,
+                        events: getIt<ProjectEventsService>(),
+                      ),
+                      child: _ProjectRail(
+                        projectRef: scope,
+                        projectId: projectId,
+                        currentRoute: route,
+                      ),
+                    ),
+                    const VerticalDivider(width: 1),
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _TopBar(
+                            activeProjectRef: scope,
+                            showBrandMark: false,
+                          ),
+                          Expanded(child: child),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            // Project routes on a phone-width window: single column with the
+            // brand mark on the top bar, no rail — the rail's entries move
+            // into a drawer behind a menu button.
+            return Scaffold(
+              appBar: _TopBar(activeProjectRef: scope, showProjectMenu: true),
+              drawer: _ProjectDrawer(
+                projectRef: scope,
+                projectId: projectId,
+                currentRoute: route,
+              ),
+              body: child,
+            );
+          },
         );
       },
     );
@@ -154,8 +172,13 @@ class MainShell extends StatelessWidget {
     return false;
   }
 
-  /// Extract the project id from `/projects/:id/...` paths. Returns null
+  /// Extract the project ref from `/projects/:ref/...` paths. Returns null
   /// for non-project routes (the projects list, account pages, etc.).
+  ///
+  /// The segment is whatever the URL holds: the project's issue prefix in the
+  /// canonical short form, or a UUID on a legacy deep link. It names the
+  /// project for link building; [_ProjectScope] turns it into the id that
+  /// the API needs.
   String? _projectScopeOf(String location) {
     final uri = Uri.tryParse(location);
     if (uri == null) return null;
@@ -166,13 +189,83 @@ class MainShell extends StatelessWidget {
   }
 }
 
+/// Turns the URL's project ref into the project id the API is addressed by,
+/// and rebuilds when it lands.
+///
+/// The shell lives outside the routes, so unlike a page (which gets its id
+/// from [ShortLinkGate]) it only ever sees the raw segment. Passing that
+/// segment on as an id is silent breakage: the counts endpoint and the event
+/// feed 404, and the search endpoint rejects the request outright.
+///
+/// [builder] is called with null for the frames before the answer arrives —
+/// callers skip their API work then rather than ask with a ref.
+class _ProjectScope extends StatefulWidget {
+  const _ProjectScope({required this.projectRef, required this.builder});
+
+  final String projectRef;
+  final Widget Function(BuildContext context, String? projectId) builder;
+
+  @override
+  State<_ProjectScope> createState() => _ProjectScopeState();
+}
+
+class _ProjectScopeState extends State<_ProjectScope> {
+  String? _projectId;
+
+  /// Guards against a slow answer for a project the user has already left.
+  int _generation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _adopt();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProjectScope oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.projectRef != widget.projectRef) _adopt();
+  }
+
+  /// Take the cached answer synchronously when there is one — a UUID ref, or
+  /// a prefix seen earlier this session — so switching between projects
+  /// doesn't blank the badges for a frame. Otherwise resolve.
+  void _adopt() {
+    final generation = ++_generation;
+    if (!getIt.isRegistered<ShortLinkResolver>()) {
+      _projectId = looksLikeUuid(widget.projectRef) ? widget.projectRef : null;
+      return;
+    }
+    final resolver = getIt<ShortLinkResolver>();
+    _projectId = resolver.cachedProjectId(widget.projectRef);
+    if (_projectId != null) return;
+    unawaited(_resolve(resolver, widget.projectRef, generation));
+  }
+
+  Future<void> _resolve(
+    ShortLinkResolver resolver,
+    String ref,
+    int generation,
+  ) async {
+    final id = await resolver.projectId(ref);
+    if (!mounted || generation != _generation || id == null) return;
+    setState(() => _projectId = id);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _projectId);
+}
+
 class _TopBar extends StatelessWidget implements PreferredSizeWidget {
   const _TopBar({
-    this.activeProjectId,
+    this.activeProjectRef,
     this.showBrandMark = true,
     this.showProjectMenu = false,
   });
-  final String? activeProjectId;
+
+  /// The URL's project segment (prefix or UUID), or null outside a project.
+  /// Search and Create resolve it to an id themselves.
+  final String? activeProjectRef;
 
   /// Leading button opening the project drawer — for project routes on a
   /// phone-width window, which have no rail.
@@ -255,12 +348,12 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                 const SizedBox(width: 8),
                 _SearchButton(
                   compact: !layout.searchChip,
-                  activeProjectId: activeProjectId,
+                  activeProjectRef: activeProjectRef,
                 ),
                 const SizedBox(width: 8),
                 _CreateButton(
                   compact: !layout.createLabel,
-                  activeProjectId: activeProjectId,
+                  activeProjectRef: activeProjectRef,
                 ),
                 const SizedBox(width: 8),
                 // Account switching is a main-screen affordance, not a menu
@@ -312,15 +405,15 @@ class _TopBarLayout {
 /// Top-bar "+ Create": a new issue in any project the caller can create in,
 /// the current one preselected. Same flow as the `c` shortcut.
 class _CreateButton extends StatelessWidget {
-  const _CreateButton({this.activeProjectId, this.compact = false});
-  final String? activeProjectId;
+  const _CreateButton({this.activeProjectRef, this.compact = false});
+  final String? activeProjectRef;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     void open() => unawaited(
-      openGlobalIssueCreate(context, activeProjectId: activeProjectId),
+      openGlobalIssueCreate(context, activeProjectRef: activeProjectRef),
     );
     if (compact) {
       return IconButton.filled(
@@ -396,8 +489,8 @@ class _NavLink extends StatelessWidget {
 }
 
 class _SearchButton extends StatelessWidget {
-  const _SearchButton({this.activeProjectId, this.compact = false});
-  final String? activeProjectId;
+  const _SearchButton({this.activeProjectRef, this.compact = false});
+  final String? activeProjectRef;
   final bool compact;
 
   @override
@@ -406,13 +499,13 @@ class _SearchButton extends StatelessWidget {
     if (compact) {
       return IconButton(
         onPressed: () =>
-            openCmdKDialog(context, activeProjectId: activeProjectId),
+            openCmdKDialog(context, activeProjectRef: activeProjectRef),
         icon: const Icon(Icons.search),
         tooltip: AppLocalizations.of(context).topNavSearchPlaceholder,
       );
     }
     return InkWell(
-      onTap: () => openCmdKDialog(context, activeProjectId: activeProjectId),
+      onTap: () => openCmdKDialog(context, activeProjectRef: activeProjectRef),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -586,8 +679,18 @@ class _AvatarMenuState extends State<_AvatarMenu> {
 /// slot — the preference is persisted in the UI Hive box keyed by
 /// `project_rail.expanded` so the layout sticks across reloads.
 class _ProjectRail extends StatefulWidget {
-  const _ProjectRail({required this.projectId, required this.currentRoute});
-  final String projectId;
+  const _ProjectRail({
+    required this.projectRef,
+    required this.projectId,
+    required this.currentRoute,
+  });
+
+  /// The URL's project segment — what links are built from.
+  final String projectRef;
+
+  /// The resolved project id, or null until it resolves — what the API is
+  /// asked with.
+  final String? projectId;
   final String currentRoute;
 
   @override
@@ -648,7 +751,7 @@ class _ProjectRailState extends State<_ProjectRail> {
                 height: 52,
                 child: _RailHeader(
                   expanded: expanded,
-                  projectId: widget.projectId,
+                  projectRef: widget.projectRef,
                   collapseTooltip: t.railCollapse,
                   expandTooltip: t.railExpand,
                   onToggle: _toggle,
@@ -658,6 +761,7 @@ class _ProjectRailState extends State<_ProjectRail> {
             // The rows scroll; the header does not.
             Expanded(
               child: _ProjectNavList(
+                projectRef: widget.projectRef,
                 projectId: widget.projectId,
                 currentRoute: widget.currentRoute,
                 expanded: expanded,
@@ -755,13 +859,19 @@ List<_NavEntry> _projectNavEntries(
 /// whenever it overflows — without one nothing hints that more rows sit below.
 class _ProjectNavList extends StatefulWidget {
   const _ProjectNavList({
+    required this.projectRef,
     required this.projectId,
     required this.currentRoute,
     required this.expanded,
     this.onNavigate,
   });
 
-  final String projectId;
+  /// The URL's project segment — what the rows' links are built from.
+  final String projectRef;
+
+  /// The resolved project id, or null until it resolves — what the
+  /// permission lookup behind the Meetings row is asked with.
+  final String? projectId;
   final String currentRoute;
 
   /// Labels shown; `false` is the icon-only collapsed rail.
@@ -798,6 +908,9 @@ class _ProjectNavListState extends State<_ProjectNavList> {
 
   Future<void> _resolveAccess() async {
     final projectId = widget.projectId;
+    // Nothing to ask with until the shell has resolved the ref; a rebuild
+    // with the id arrives and brings us back here.
+    if (projectId == null) return;
     if (!getIt.isRegistered<ProjectAccessCache>()) return;
     final access = await getIt<ProjectAccessCache>().access(projectId);
     if (!mounted || widget.projectId != projectId) return;
@@ -826,7 +939,7 @@ class _ProjectNavListState extends State<_ProjectNavList> {
     final counts = context.watch<ProjectCountsCubit>().state.counts;
     final entries = _projectNavEntries(
       t,
-      widget.projectId,
+      widget.projectRef,
       counts,
       showMeetings: _showMeetings,
     );
@@ -835,11 +948,11 @@ class _ProjectNavListState extends State<_ProjectNavList> {
     // The Boards section owns its own selection; when the user is on any board
     // route we suppress generic-row highlighting so Overview (a prefix of every
     // project path) doesn't also light up.
-    final onBoard = route.startsWith(Routes.projectBoardFor(widget.projectId));
+    final onBoard = route.startsWith(Routes.projectBoardFor(widget.projectRef));
     // The Wiki section owns its own selection too, for the same reason.
     final onWiki =
-        route.startsWith(Routes.projectWikiFor(widget.projectId)) ||
-        route.startsWith('/projects/${widget.projectId}/docs/');
+        route.startsWith(Routes.projectWikiFor(widget.projectRef)) ||
+        route.startsWith('/projects/${widget.projectRef}/docs/');
     final selected = onBoard || onWiki
         ? null
         : _selectedItemFor(route, entries.whereType<_RailItem>().toList());
@@ -868,13 +981,13 @@ class _ProjectNavListState extends State<_ProjectNavList> {
                     onTap: () => _go(entry.path),
                   ),
                   _BoardsEntry() => _BoardsRailSection(
-                    projectId: widget.projectId,
+                    projectId: widget.projectRef,
                     currentRoute: route,
                     railExpanded: expanded,
                     active: onBoard,
                   ),
                   _WikiEntry() => _WikiRailSection(
-                    projectId: widget.projectId,
+                    projectId: widget.projectRef,
                     currentRoute: route,
                     railExpanded: expanded,
                   ),
@@ -906,9 +1019,18 @@ class _ProjectNavListState extends State<_ProjectNavList> {
 /// It closes whenever the route changes, which covers the flat rows and the
 /// Boards/Wiki children alike — those navigate on their own.
 class _ProjectDrawer extends StatefulWidget {
-  const _ProjectDrawer({required this.projectId, required this.currentRoute});
+  const _ProjectDrawer({
+    required this.projectRef,
+    required this.projectId,
+    required this.currentRoute,
+  });
 
-  final String projectId;
+  /// The URL's project segment — what links are built from.
+  final String projectRef;
+
+  /// The resolved project id, or null until it resolves — what the API is
+  /// asked with.
+  final String? projectId;
   final String currentRoute;
 
   @override
@@ -935,6 +1057,7 @@ class _ProjectDrawerState extends State<_ProjectDrawer> {
     // Built only while the drawer is open, so the counts are fetched on
     // opening rather than kept live in the background.
     return BlocProvider<ProjectCountsCubit>(
+      key: ValueKey(widget.projectId),
       create: (_) => ProjectCountsCubit(
         repo: getIt<ProjectsRepository>(),
         projectId: widget.projectId,
@@ -960,7 +1083,7 @@ class _ProjectDrawerState extends State<_ProjectDrawer> {
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
-                        child: _ProjectName(projectId: widget.projectId),
+                        child: _ProjectName(projectRef: widget.projectRef),
                       ),
                     ),
                   ),
@@ -968,6 +1091,7 @@ class _ProjectDrawerState extends State<_ProjectDrawer> {
               ),
               Expanded(
                 child: _ProjectNavList(
+                  projectRef: widget.projectRef,
                   projectId: widget.projectId,
                   currentRoute: widget.currentRoute,
                   expanded: true,
@@ -1007,14 +1131,16 @@ class _RailItem extends _NavEntry {
 class _RailHeader extends StatelessWidget {
   const _RailHeader({
     required this.expanded,
-    required this.projectId,
+    required this.projectRef,
     required this.collapseTooltip,
     required this.expandTooltip,
     required this.onToggle,
   });
 
   final bool expanded;
-  final String projectId;
+
+  /// The URL's project segment; [_ProjectName] resolves it either way.
+  final String projectRef;
   final String collapseTooltip;
   final String expandTooltip;
   final VoidCallback onToggle;
@@ -1035,7 +1161,7 @@ class _RailHeader extends StatelessWidget {
             Icon(expanded ? Icons.menu_open : Icons.menu, size: 20, color: fg),
             if (expanded) ...[
               const SizedBox(width: 12),
-              Expanded(child: _ProjectName(projectId: projectId)),
+              Expanded(child: _ProjectName(projectRef: projectRef)),
             ],
           ],
         ),
@@ -1531,8 +1657,10 @@ class _BoardDot extends StatelessWidget {
 /// Reuses the same process-wide cache as the previous _ProjectHeader so
 /// navigating across the same project's sub-pages doesn't refetch.
 class _ProjectName extends StatefulWidget {
-  const _ProjectName({required this.projectId});
-  final String projectId;
+  const _ProjectName({required this.projectRef});
+
+  /// A UUID or a project prefix — whichever the URL carried.
+  final String projectRef;
 
   @override
   State<_ProjectName> createState() => _ProjectNameState();
@@ -1546,25 +1674,25 @@ class _ProjectNameState extends State<_ProjectName> {
   @override
   void initState() {
     super.initState();
-    _future = _resolve(widget.projectId);
+    _future = _resolve(widget.projectRef);
   }
 
   @override
   void didUpdateWidget(covariant _ProjectName oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.projectId != widget.projectId) {
-      _future = _resolve(widget.projectId);
+    if (oldWidget.projectRef != widget.projectRef) {
+      _future = _resolve(widget.projectRef);
     }
   }
 
-  static Future<Project?> _resolve(String id) {
-    return _cache.putIfAbsent(id, () {
+  static Future<Project?> _resolve(String ref) {
+    return _cache.putIfAbsent(ref, () {
       // The shell receives the raw URL segment — a UUID or, with short
       // links, the project prefix. Pick the matching lookup.
       final repo = getIt<ProjectsRepository>();
-      final res = looksLikeUuid(id)
-          ? repo.getProject(id)
-          : repo.getProjectByPrefix(id);
+      final res = looksLikeUuid(ref)
+          ? repo.getProject(ref)
+          : repo.getProjectByPrefix(ref);
       return res.then((r) => r.valueOrNull);
     });
   }

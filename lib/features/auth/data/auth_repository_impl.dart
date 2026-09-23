@@ -81,7 +81,16 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     final res = await _api.post(
       '$_basePath/refresh',
-      body: refreshToken == null ? null : {'refresh_token': refreshToken},
+      // `{}` rather than no body at all: the client sets a JSON content type
+      // on every request, and a server that declares an *optional* JSON body
+      // rejects "JSON content type, empty body" with 400 before it ever reads
+      // the cookie. Servers before 0.7.4 do exactly that, which made every
+      // browser session die with its 15-minute access token and turned each
+      // page reload into a sign-out. An empty object parses cleanly and leaves
+      // the cookie in charge.
+      body: refreshToken == null
+          ? const <String, dynamic>{}
+          : {'refresh_token': refreshToken},
     );
     return res.when(
       ok: (response) {
@@ -102,7 +111,11 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await _api.dio.post<dynamic>(
         '$_basePath/logout',
-        data: refreshToken == null ? null : {'refresh_token': refreshToken},
+        // Same reason as `refresh` above: never an empty body under a JSON
+        // content type.
+        data: refreshToken == null
+            ? const <String, dynamic>{}
+            : {'refresh_token': refreshToken},
       );
       return const Ok<Unit, AppFailure>(Unit.instance);
     } on DioException catch (e) {

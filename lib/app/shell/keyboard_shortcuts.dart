@@ -134,7 +134,7 @@ class _GlobalShortcutsShellState extends State<GlobalShortcutsShell> {
         !keyboard.isAltPressed &&
         getIt<SessionBloc>().state is SessionAuthenticated) {
       unawaited(
-        openGlobalIssueCreate(ctx, activeProjectId: _projectIdFromRoute(ctx)),
+        openGlobalIssueCreate(ctx, activeProjectRef: _projectRefFromRoute(ctx)),
       );
       return true;
     }
@@ -155,13 +155,13 @@ class _GlobalShortcutsShellState extends State<GlobalShortcutsShell> {
           ctx.go(Routes.settings);
           return true;
         case 'b':
-          final pid = _projectIdFromRoute(ctx);
+          final pid = _projectRefFromRoute(ctx);
           if (pid != null) {
             ctx.go(Routes.projectBoardFor(pid));
             return true;
           }
         case 'w':
-          final pid = _projectIdFromRoute(ctx);
+          final pid = _projectRefFromRoute(ctx);
           if (pid != null) {
             ctx.go(Routes.projectWikiFor(pid));
             return true;
@@ -200,7 +200,10 @@ class _GlobalShortcutsShellState extends State<GlobalShortcutsShell> {
     return state?.context;
   }
 
-  String? _projectIdFromRoute(BuildContext ctx) {
+  /// The URL's project segment: the project prefix under short links, a UUID
+  /// on a legacy deep link. Good for building links as-is; anything that
+  /// calls the API resolves it first (both dialogs above do).
+  String? _projectRefFromRoute(BuildContext ctx) {
     // Not `GoRouterState.of`: from the root navigator's context there is no
     // route state to find, and it searches for one without end.
     final router = widget.router ?? GoRouter.maybeOf(ctx);
@@ -213,7 +216,7 @@ class _GlobalShortcutsShellState extends State<GlobalShortcutsShell> {
   }
 
   Future<void> _openPalette(BuildContext ctx) {
-    return openCmdKDialog(ctx, activeProjectId: _projectIdFromRoute(ctx));
+    return openCmdKDialog(ctx, activeProjectRef: _projectRefFromRoute(ctx));
   }
 
   Future<void> _showHelp(BuildContext ctx) {

@@ -45,6 +45,28 @@ class ShortLinkResolver {
     return _remember(p.id, p.issuePrefix);
   }
 
+  /// The project id for [ref] without a round trip, or null when only a
+  /// fetch could tell. A UUID *is* the id; a prefix is known once anything
+  /// has resolved it this session.
+  ///
+  /// Lets callers that already hold a ref (the shell, which lives outside the
+  /// routes and only ever sees the URL segment) skip the null frame — and,
+  /// more importantly, never hand a prefix to an API that wants an id.
+  String? cachedProjectId(String ref) {
+    final raw = ref.trim();
+    if (looksLikeUuid(raw)) return raw;
+    return _projectIdByPrefix[raw.toLowerCase()];
+  }
+
+  /// The project id for a UUID or prefix [ref]; null when it resolves to
+  /// nothing the caller may see. Cheaper than [project] for a UUID, which
+  /// needs no fetch when the canonical prefix is not wanted.
+  Future<String?> projectId(String ref) async {
+    final cached = cachedProjectId(ref);
+    if (cached != null) return cached;
+    return (await project(ref))?.$1;
+  }
+
   (String, String) _remember(String id, String prefix) {
     final lower = prefix.toLowerCase();
     if (lower.isNotEmpty) {

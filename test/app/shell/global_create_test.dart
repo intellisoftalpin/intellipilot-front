@@ -112,7 +112,21 @@ class _Projects extends Fake implements ProjectsRepository {
 
   @override
   Future<Result<Project, AppFailure>> getProject(String id) async =>
-      const Err(NotFoundFailure());
+      switch (id) {
+        _alpha => Ok(_project(_alpha, 'Alpha', 'AL')),
+        _beta => Ok(_project(_beta, 'Beta', 'BE')),
+        _ => const Err(NotFoundFailure()),
+      };
+
+  /// Short project URLs (`/projects/al/issues`) carry the prefix, and this is
+  /// how the app turns one back into a project.
+  @override
+  Future<Result<Project, AppFailure>> getProjectByPrefix(String prefix) async =>
+      switch (prefix.toLowerCase()) {
+        'al' => Ok(_project(_alpha, 'Alpha', 'AL')),
+        'be' => Ok(_project(_beta, 'Beta', 'BE')),
+        _ => const Err(NotFoundFailure()),
+      };
 }
 
 class _Catalog extends Fake implements CatalogRepository {
@@ -307,6 +321,36 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Bug'), findsWidgets);
       expect(find.text('Story'), findsNothing);
+    });
+
+    testWidgets('preselects the current project on a SHORT project URL', (
+      tester,
+    ) async {
+      // What the address bar actually holds: ShortLinkGate rewrites every
+      // project URL to `/projects/<prefix>/...`, so the shell only ever sees
+      // the prefix. Preselection matches on project *id*, so the prefix has
+      // to be resolved on the way to the dialog.
+      await _pump(
+        tester,
+        size: const Size(1440, 900),
+        location: '/projects/al/issues',
+      );
+      await tester.tap(_createButton);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: _projectField, matching: find.text('Alpha · AL')),
+        findsOneWidget,
+      );
+
+      // And it is genuinely selected, not merely displayed: the type list is
+      // Alpha's, and Create works.
+      await tester.enterText(_subjectField, 'From a short URL');
+      await tester.pumpAndSettle();
+      expect(_submitButton(tester).onPressed, isNotNull);
+      await tester.tap(find.byKey(const ValueKey('issue-create-submit')));
+      await tester.pumpAndSettle();
+      expect(backlog.lastProjectId, _alpha);
     });
 
     testWidgets('Create stays disabled until there is a title', (

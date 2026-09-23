@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intellipilot/app/di/injection.dart';
+import 'package:intellipilot/app/router/short_links.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/activity/data/project_lookups_cache.dart';
 import 'package:intellipilot/features/activity/presentation/entity_detail_sheet.dart';
@@ -26,7 +27,7 @@ NavigatorState? _openOn;
 /// sheet — the same second step as creating from the Issues page or a board.
 Future<void> openGlobalIssueCreate(
   BuildContext context, {
-  String? activeProjectId,
+  String? activeProjectRef,
 }) async {
   if (_openOn?.mounted ?? false) return;
   final navigator = Navigator.of(context);
@@ -34,11 +35,18 @@ Future<void> openGlobalIssueCreate(
   try {
     final t = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.maybeOf(context);
+    // Callers hand over the URL's project segment — the project's prefix
+    // under short links (`/projects/ps/board`). The dialog preselects by id,
+    // so a prefix would silently match nothing and leave the picker empty.
+    final initialProjectId = activeProjectRef == null
+        ? null
+        : await getIt<ShortLinkResolver>().projectId(activeProjectRef);
+    if (!context.mounted) return;
     final result = await showIssueCreateWithProjectDialog(
       context,
       loadProjects: _loadProjects,
       loadTarget: loadIssueCreateTarget,
-      initialProjectId: activeProjectId,
+      initialProjectId: initialProjectId,
     );
     final projectId = result?.projectId;
     if (result == null || projectId == null) return;

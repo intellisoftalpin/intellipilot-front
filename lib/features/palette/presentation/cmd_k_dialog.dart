@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
+import 'package:intellipilot/app/router/short_links.dart';
 import 'package:intellipilot/features/activity/data/dtos/activity_dtos.dart';
 import 'package:intellipilot/features/palette/data/dtos/palette_dtos.dart';
 import 'package:intellipilot/features/palette/presentation/cubits/palette_cubit.dart';
@@ -14,12 +15,21 @@ import 'package:intellipilot/features/search/domain/search_repository.dart';
 import 'package:intellipilot/features/wiki/domain/wiki_repository.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
-/// Opens the Cmd-K palette modal. Caller passes the [activeProjectId] (or
-/// null when no project is open).
+/// Opens the Cmd-K palette modal. Caller passes [activeProjectRef] — the
+/// URL's project segment, which under short links is the project's prefix
+/// (`/projects/ps/board`) rather than its id — or null outside a project.
+///
+/// Resolved to an id before the cubit is built: the palette sends it to the
+/// search endpoint, whose project parameters are typed as ids and reject a
+/// prefix with 400 — which blanked search inside every project.
 Future<void> openCmdKDialog(
   BuildContext context, {
-  String? activeProjectId,
-}) {
+  String? activeProjectRef,
+}) async {
+  final activeProjectId = activeProjectRef == null
+      ? null
+      : await getIt<ShortLinkResolver>().projectId(activeProjectRef);
+  if (!context.mounted) return;
   return showDialog<void>(
     context: context,
     barrierColor: Colors.black54,
