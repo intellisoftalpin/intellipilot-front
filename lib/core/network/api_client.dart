@@ -23,6 +23,7 @@ class ApiClient {
     required ApiConfig config,
     required UuidGen uuidGen,
     required AccessTokenProvider tokenProvider,
+    FreshAccessTokenProvider? freshTokenProvider,
     Logger? logger,
     Dio? dio,
     CookieManager? cookieManager,
@@ -61,7 +62,7 @@ class ApiClient {
     _dio.interceptors
       ..add(RequestIdInterceptor(uuidGen))
       ..add(const ClientVersionInterceptor())
-      ..add(AuthInterceptor(tokenProvider))
+      ..add(AuthInterceptor(tokenProvider, freshTokenProvider))
       ..add(IdempotencyInterceptor(uuidGen))
       ..add(const EtagInterceptor());
     if (refreshHook != null) {

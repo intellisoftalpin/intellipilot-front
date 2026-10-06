@@ -1001,8 +1001,12 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
   final _fullName = TextEditingController();
   final _password = TextEditingController();
   bool _isSuperadmin = false;
+  bool _obscurePassword = true;
   bool _busy = false;
   String? _error;
+
+  bool get _canSubmit =>
+      _email.text.trim().isNotEmpty && _username.text.trim().isNotEmpty;
 
   @override
   void dispose() {
@@ -1056,6 +1060,8 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
         return l10n.adminUsersErrConflict;
       case ForbiddenFailure():
         return l10n.adminUsersErrForbidden;
+      case UnauthorizedFailure():
+        return l10n.adminUsersErrSession;
       case NetworkFailure():
         return l10n.adminUsersErrNetwork;
       case _:
@@ -1074,44 +1080,152 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    const gap = SizedBox(height: 16);
+
     return AlertDialog(
+      icon: Icon(Icons.person_add_alt_1_outlined, color: scheme.primary),
       title: Text(l10n.adminUsersCreateTitle),
-      content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _email,
-              decoration: InputDecoration(labelText: l10n.adminUsersEmail),
-            ),
-            TextField(
-              controller: _username,
-              decoration: InputDecoration(labelText: l10n.adminUsersUsername),
-            ),
-            TextField(
-              controller: _fullName,
-              decoration: InputDecoration(labelText: l10n.adminUsersFullName),
-            ),
-            TextField(
-              controller: _password,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: l10n.adminUsersPasswordHint,
-              ),
-            ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              title: Text(l10n.adminUsersSuperadmin),
-              value: _isSuperadmin,
-              onChanged: (v) => setState(() => _isSuperadmin = v),
-            ),
-            if (_error != null)
+      contentPadding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+      content: SizedBox(
+        width: 440,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                l10n.adminUsersCreateSubtitle,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
-          ],
+              const SizedBox(height: 24),
+              TextField(
+                controller: _email,
+                enabled: !_busy,
+                autofocus: true,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.alternate_email),
+                  labelText: l10n.adminUsersEmail,
+                ),
+              ),
+              gap,
+              TextField(
+                controller: _username,
+                enabled: !_busy,
+                textInputAction: TextInputAction.next,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.badge_outlined),
+                  labelText: l10n.adminUsersUsername,
+                ),
+              ),
+              gap,
+              TextField(
+                controller: _fullName,
+                enabled: !_busy,
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.words,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.person_outline),
+                  labelText: l10n.adminUsersFullName,
+                ),
+              ),
+              gap,
+              TextField(
+                controller: _password,
+                enabled: !_busy,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.newPassword],
+                onSubmitted: (_) {
+                  if (_canSubmit) unawaited(_submit());
+                },
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  labelText: l10n.adminUsersPasswordField,
+                  helperText: l10n.adminUsersPasswordHelper,
+                  suffixIcon: IconButton(
+                    tooltip: _obscurePassword
+                        ? l10n.adminUsersShowPassword
+                        : l10n.adminUsersHidePassword,
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+              ),
+              gap,
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: scheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: SwitchListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  secondary: Icon(
+                    Icons.admin_panel_settings_outlined,
+                    color: _isSuperadmin ? scheme.primary : null,
+                  ),
+                  title: Text(l10n.adminUsersSuperadmin),
+                  subtitle: Text(l10n.adminUsersSuperadminHelper),
+                  value: _isSuperadmin,
+                  onChanged: _busy
+                      ? null
+                      : (v) => setState(() => _isSuperadmin = v),
+                ),
+              ),
+              if (_error != null) ...[
+                gap,
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: scheme.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 20,
+                          color: scheme.onErrorContainer,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _error!,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: scheme.onErrorContainer,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
       actions: [
@@ -1119,14 +1233,15 @@ class _CreateUserDialogState extends State<_CreateUserDialog> {
           onPressed: _busy ? null : () => Navigator.of(context).pop(),
           child: Text(l10n.adminUsersCancel),
         ),
-        FilledButton(
-          onPressed: _busy ? null : _submit,
-          child: _busy
+        FilledButton.icon(
+          onPressed: _busy || !_canSubmit ? null : _submit,
+          icon: _busy
               ? const SizedBox.square(
-                  dimension: 18,
+                  dimension: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text(l10n.adminUsersCreate),
+              : const Icon(Icons.check),
+          label: Text(l10n.adminUsersCreate),
         ),
       ],
     );

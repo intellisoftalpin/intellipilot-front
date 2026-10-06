@@ -130,6 +130,19 @@ void main() {
       await bloc.close();
     });
 
+    test('a 401 after sign-out fails at once instead of waiting', () async {
+      final repo = FakeAuthRepository();
+      final bloc = _bloc(repo)
+        ..emit(const SessionUnauthenticated(reason: SessionEndReason.startup));
+
+      expect(
+        await bloc.refreshHook().timeout(const Duration(seconds: 1)),
+        RefreshOutcome.failed,
+      );
+      expect(repo.refreshCalls, 0);
+      await bloc.close();
+    });
+
     test('a plain 401 is not retried and signs out', () async {
       final repo = FakeAuthRepository(
         refreshHandler: () async =>
@@ -251,4 +264,47 @@ void main() {
     await Future.wait([a, b]);
     expect(order, ['a-start', 'a-end', 'b']);
   });
+
+  group('a tab that never releases the lock', () {
+    test('startup still signs in instead of spinning forever', () async {
+      final repo = FakeAuthRepository(
+        refreshHandler: () async => Ok(_tokens('fresh')),
+      );
+      final sync = ChannelSessionSync(
+        _Bus().join(),
+        PatientTabLock(
+          _FrozenHolderLocks(),
+          maxWait: const Duration(milliseconds: 20),
+        ),
+      );
+      final bloc = _bloc(repo, sync: sync)
+        ..add(const SessionStartupRequested());
+
+      final settled = await bloc.stream
+          .firstWhere((s) => s is! SessionUnknown)
+          .timeout(const Duration(seconds: 2));
+      expect((settled as SessionAuthenticated).accessToken, 'fresh');
+      expect(repo.refreshCalls, 1);
+      await bloc.close();
+      await sync.dispose();
+    });
+  });
+}
+
+/// The lock is held by a frozen background tab: a polite request is never
+/// granted; only stealing gets it.
+class _FrozenHolderLocks implements LockRequester {
+  @override
+  Future<bool> request(
+    Future<void> Function() onGranted, {
+    Future<void>? abandonWhen,
+    bool steal = false,
+  }) async {
+    if (!steal) {
+      await (abandonWhen ?? Completer<void>().future);
+      return false;
+    }
+    await onGranted();
+    return true;
+  }
 }

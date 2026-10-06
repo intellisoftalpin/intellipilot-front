@@ -25,13 +25,26 @@ class IntelliPilotApp extends StatefulWidget {
 class _IntelliPilotAppState extends State<IntelliPilotApp> {
   late final _router = buildRouter(session: getIt<SessionBloc>());
 
+  // Browsers pause the refresh timer in background tabs and while the device
+  // sleeps: renew on the way back, before the page's requests need a token.
+  late final AppLifecycleListener _lifecycle;
+
   @override
   void initState() {
     super.initState();
+    _lifecycle = AppLifecycleListener(
+      onResume: () => getIt<SessionBloc>().renewIfStale(),
+    );
     // Best-effort: fetch white-label branding from the public config endpoint.
     // The UI rebuilds with custom name/icon once it resolves; defaults hold
     // until then.
     unawaited(getIt<BrandingCubit>().load());
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
   }
 
   @override

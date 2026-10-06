@@ -242,7 +242,7 @@ const _publicRoutes = {
 GoRouter buildRouter({required SessionBloc session}) {
   return GoRouter(
     initialLocation: Routes.home,
-    refreshListenable: GoRouterRefreshStream(session.stream),
+    refreshListenable: GoRouterRefreshStream(session.routingChanges),
     redirect: (context, state) => _guard(session.state, state),
     routes: [
       // Authenticated routes share the app shell (top bar + project rail).

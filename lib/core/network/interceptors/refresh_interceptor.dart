@@ -5,6 +5,26 @@ import 'package:dio/dio.dart';
 /// Outcome of a refresh attempt run by [RefreshInterceptor]'s host.
 enum RefreshOutcome { refreshed, failed }
 
+/// Endpoints whose 401 is a genuine credential failure, not an expired token —
+/// and that must never wait for a renewal, the renewal itself among them.
+const _authPaths = <String>[
+  '/api/v1/auth/login',
+  '/api/v1/auth/register',
+  '/api/v1/auth/refresh',
+  '/api/v1/auth/logout',
+  '/api/v1/auth/password/reset/request',
+  '/api/v1/auth/password/reset/confirm',
+  '/api/v1/auth/2fa/verify',
+];
+
+/// Whether [path] is one of the session endpoints in [_authPaths].
+bool isAuthEndpoint(String path) {
+  for (final p in _authPaths) {
+    if (path == p || path.endsWith(p)) return true;
+  }
+  return false;
+}
+
 /// Refresh callback the interceptor invokes on 401. Implemented by the
 /// [SessionBloc] glue layer — when it returns [RefreshOutcome.refreshed], the
 /// interceptor retries the original request once with the (now-current) access
@@ -16,37 +36,34 @@ typedef RefreshHook = Future<RefreshOutcome> Function();
 /// rather than firing N parallel refresh calls (token-rotation contract on
 /// the backend would otherwise revoke our family on the first retry).
 ///
-/// Endpoints listed in [_skipPaths] never trigger a refresh — a 401 there is
+/// Endpoints listed in [_authPaths] never trigger a refresh — a 401 there is
 /// a genuine credential failure, not an expired-token race.
+///
+/// A request never waits longer than [maxWait] for the refresh: past that the
+/// original 401 surfaces and the caller shows an error, instead of a button
+/// spinning forever behind a renewal that is stuck somewhere else (a cross-tab
+/// lock held by a frozen tab, in 0.7.4). The refresh itself keeps running and
+/// still settles the session for later requests.
 class RefreshInterceptor extends Interceptor {
-  // Underscore on the field is preferred over `this.dio` in the public ctor.
-  // ignore: prefer_initializing_formals
-  RefreshInterceptor(this._refresh, {required Dio dio}) : _dio = dio;
+  RefreshInterceptor(
+    this._refresh, {
+    required Dio dio,
+    this.maxWait = const Duration(seconds: 20),
+    // Underscore on the field is preferred over `this.dio` in the public ctor.
+    // ignore: prefer_initializing_formals
+  }) : _dio = dio;
 
   final RefreshHook _refresh;
   final Dio _dio;
+  final Duration maxWait;
 
   Future<RefreshOutcome>? _inflight;
-
-  static const _skipPaths = <String>[
-    '/api/v1/auth/login',
-    '/api/v1/auth/register',
-    '/api/v1/auth/refresh',
-    '/api/v1/auth/logout',
-    '/api/v1/auth/password/reset/request',
-    '/api/v1/auth/password/reset/confirm',
-    '/api/v1/auth/2fa/verify',
-  ];
 
   static const _retryFlag = '__refresh_retried';
 
   bool _shouldSkip(RequestOptions options) {
     if (options.extra[_retryFlag] == true) return true;
-    final path = options.path;
-    for (final skip in _skipPaths) {
-      if (path == skip || path.endsWith(skip)) return true;
-    }
-    return false;
+    return isAuthEndpoint(options.path);
   }
 
   @override
@@ -60,7 +77,10 @@ class RefreshInterceptor extends Interceptor {
       return;
     }
 
-    final outcome = await (_inflight ??= _runRefresh());
+    final outcome = await (_inflight ??= _runRefresh()).timeout(
+      maxWait,
+      onTimeout: () => RefreshOutcome.failed,
+    );
 
     if (outcome != RefreshOutcome.refreshed) {
       handler.next(err);

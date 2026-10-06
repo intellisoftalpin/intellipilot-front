@@ -204,6 +204,7 @@ Future<void> configureDependencies({
       config: getIt<ApiConfig>(),
       uuidGen: getIt<UuidGen>(),
       tokenProvider: () => getIt<SessionBloc>().currentAccessToken,
+      freshTokenProvider: () => getIt<SessionBloc>().freshAccessToken(),
       logger: getIt<Logger>(),
       cookieManager: cookies.manager,
       refreshHook: () => getIt<SessionBloc>().refreshHook(),

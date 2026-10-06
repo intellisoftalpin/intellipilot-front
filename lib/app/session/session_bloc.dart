@@ -17,6 +17,25 @@ const _refreshLeadTime = Duration(seconds: 30);
 /// looping the refresh timer.
 const _refreshMinDelay = Duration(seconds: 5);
 
+/// A request about to go out with a token this close to expiry renews it
+/// first rather than collecting a 401.
+const _preflightMargin = Duration(seconds: 10);
+
+/// Longest a request waits for a renewal before going out with the token it
+/// has — matching [RefreshInterceptor.maxWait], so the two never stack up
+/// into an unbounded wait.
+const _preflightMaxWait = Duration(seconds: 20);
+
+/// Retry delays after a renewal failed for want of a network or a healthy
+/// server; the last one repeats.
+const _transientRetryDelays = [
+  Duration(seconds: 5),
+  Duration(seconds: 10),
+  Duration(seconds: 20),
+  Duration(seconds: 40),
+  Duration(seconds: 60),
+];
+
 // ---------------------------------------------------------------------------
 // States
 // ---------------------------------------------------------------------------
@@ -143,7 +162,13 @@ final class _SessionRefreshSucceeded extends SessionEvent {
 }
 
 final class _SessionRefreshFailed extends SessionEvent {
-  const _SessionRefreshFailed();
+  const _SessionRefreshFailed({required this.failure});
+
+  /// Why the renewal failed; decides whether the session ends.
+  final AppFailure failure;
+
+  @override
+  List<Object?> get props => [failure];
 }
 
 /// Another tab obtained a fresh access token.
@@ -256,6 +281,37 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final void Function(TokenResponse tokens)? onSessionEstablished;
   Timer? _refreshTimer;
 
+  /// Retries a renewal that failed for want of a network or a healthy server.
+  Timer? _retryTimer;
+  int _retryAttempt = 0;
+
+  /// When the access token held across a renewal expires — restored if the
+  /// renewal fails transiently, since the session itself is still alive.
+  DateTime? _heldExpiresAt;
+
+  /// Bumped whenever a session is newly established, so a sign-in or an
+  /// account switch can be told apart from the same user's token renewal.
+  int _identity = 0;
+
+  /// Which signed-in identity the current session belongs to; changes on
+  /// sign-in and account switch, never on a token renewal.
+  int get identity => _identity;
+
+  /// Session changes the router has to react to: signing in or out, an MFA
+  /// challenge, a newly established identity.
+  ///
+  /// A token renewal is none of these, yet it flips the state twice
+  /// (refreshing, then authenticated again). Refreshing the router on those
+  /// rebuilt every open page, and pages that load in `build` restarted their
+  /// loading — with the stale token, so it ran into a 401 of its own.
+  Stream<Object> get routingChanges => stream.map(_routingKey).distinct();
+
+  Object _routingKey(SessionState s) => switch (s) {
+    SessionAuthenticated() ||
+    SessionRefreshing() => (SessionAuthenticated, _identity),
+    _ => s.runtimeType,
+  };
+
   /// Hand a rotated refresh token to the account store before the previous one
   /// could ever be replayed. No-op on web, where the server rotates the cookie.
   void _persistRotated(TokenResponse tokens) {
@@ -273,19 +329,74 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     return null;
   }
 
+  /// Access token for an outgoing request, renewed first when the one held
+  /// has expired or a renewal is already running.
+  ///
+  /// Browsers pause the refresh timer in background tabs and while the device
+  /// sleeps, so the first requests after a wake-up would otherwise go out with
+  /// an expired token, each come back 401 and wait to be retried. Never waits
+  /// longer than [maxWait]: past that the request goes out with the token at
+  /// hand and the 401 path takes over.
+  Future<String?> freshAccessToken({
+    Duration maxWait = _preflightMaxWait,
+  }) async {
+    final s = state;
+    if (s is SessionAuthenticated) {
+      final expiring =
+          s.expiresAt.difference(DateTime.now()) < _preflightMargin;
+      // Backing off after a failed renewal: retrying for every request would
+      // hammer a server that is down. The retry timer and 401s still renew.
+      if (!expiring || _retryTimer != null) return s.accessToken;
+      add(const SessionRefreshRequested());
+    } else if (s is! SessionRefreshing) {
+      return currentAccessToken;
+    }
+    try {
+      await stream
+          .firstWhere(
+            (s) => s is! SessionRefreshing && s is! SessionUnknown,
+            // The bloc closed while we waited.
+            orElse: () => state,
+          )
+          .timeout(maxWait);
+    } on TimeoutException {
+      // Go out with what we have.
+    }
+    return currentAccessToken;
+  }
+
+  /// Renew now if the token is about to expire — called when the app comes
+  /// back to the foreground, where the refresh timer may not have run.
+  void renewIfStale() {
+    final s = state;
+    if (s is! SessionAuthenticated) return;
+    if (s.expiresAt.difference(DateTime.now()) < _refreshLeadTime) {
+      add(const SessionRefreshRequested());
+    }
+  }
+
   /// Hook the [RefreshInterceptor] calls on 401.
   Future<RefreshOutcome> refreshHook() async {
     // The server just refused the token we hold: never adopt it back from a
     // peer, or every request would 401 against it without ever refreshing.
     final s = state;
-    if (s is SessionAuthenticated) _markRejected(s.accessToken);
-    if (s is SessionRefreshing) _markRejected(s.staleAccessToken);
+    // Signed out: there is nothing to renew, [_onRefresh] ignores the request
+    // and the wait below would only end at the next sign-in.
+    if (s is SessionUnauthenticated) return RefreshOutcome.failed;
+    final rejected = switch (s) {
+      SessionAuthenticated(:final accessToken) => accessToken,
+      SessionRefreshing(:final staleAccessToken) => staleAccessToken,
+      _ => null,
+    };
+    if (rejected != null) _markRejected(rejected);
     add(const SessionRefreshRequested());
     // Wait until we leave the Refreshing state.
     final next = await stream.firstWhere(
       (s) => s is! SessionRefreshing && s is! SessionUnknown,
     );
-    return next is SessionAuthenticated
+    // A renewal that failed transiently keeps the session on the token the
+    // server just refused; retrying the request with it would only 401 again.
+    return next is SessionAuthenticated && next.accessToken != rejected
         ? RefreshOutcome.refreshed
         : RefreshOutcome.failed;
   }
@@ -327,6 +438,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   }
 
   void _onEstablished(SessionEstablished event, Emitter<SessionState> emit) {
+    _identity++;
     onSessionEstablished?.call(event.tokens);
     _announce(event.tokens);
     _scheduleRefresh(event.tokens.expiresIn);
@@ -352,12 +464,13 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     final stale = current is SessionAuthenticated
         ? current.accessToken
         : (current as SessionRefreshing).staleAccessToken;
+    if (current is SessionAuthenticated) _heldExpiresAt = current.expiresAt;
     emit(SessionRefreshing(staleAccessToken: stale));
 
     final result = await _refreshShared();
     result.when(
       ok: (tokens) => add(_SessionRefreshSucceeded(tokens)),
-      err: (_) => add(const _SessionRefreshFailed()),
+      err: (failure) => add(_SessionRefreshFailed(failure: failure)),
     );
   }
 
@@ -489,6 +602,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     _SessionRefreshSucceeded event,
     Emitter<SessionState> emit,
   ) {
+    _cancelRetry();
     _scheduleRefresh(event.tokens.expiresIn);
     emit(
       SessionAuthenticated(
@@ -502,6 +616,23 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     _SessionRefreshFailed event,
     Emitter<SessionState> emit,
   ) {
+    final s = state;
+    // No network yet (a device waking up), a server error or rate limiting
+    // says nothing about the session: keep it and try again shortly. Only an
+    // answer from the server that refuses the renewal ends it.
+    // Settled some other way meanwhile (a peer's token, a sign-out): leave it.
+    if (_isTransient(event.failure)) {
+      if (s is SessionRefreshing) {
+        _scheduleRetry();
+        emit(
+          SessionAuthenticated(
+            accessToken: s.staleAccessToken,
+            expiresAt: _heldExpiresAt ?? DateTime.now(),
+          ),
+        );
+      }
+      return;
+    }
     _cancelTimer();
     onSessionEnded?.call();
     emit(
@@ -533,6 +664,27 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   DateTime _expiresAt(int expiresInSecs) =>
       DateTime.now().add(Duration(seconds: expiresInSecs));
 
+  static bool _isTransient(AppFailure f) =>
+      f is NetworkFailure || f is ServerFailure || f is RateLimitedFailure;
+
+  void _scheduleRetry() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
+    _retryTimer?.cancel();
+    final i = math.min(_retryAttempt, _transientRetryDelays.length - 1);
+    _retryAttempt++;
+    _retryTimer = Timer(_transientRetryDelays[i], () {
+      _retryTimer = null;
+      add(const SessionRefreshRequested());
+    });
+  }
+
+  void _cancelRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _retryAttempt = 0;
+  }
+
   void _scheduleRefresh(int expiresInSecs) {
     _cancelTimer();
     final lead =
@@ -544,6 +696,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   void _cancelTimer() {
     _refreshTimer?.cancel();
     _refreshTimer = null;
+    _cancelRetry();
   }
 
   @override

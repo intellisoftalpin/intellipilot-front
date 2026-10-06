@@ -114,6 +114,76 @@ abstract interface class TabLock {
   Future<T> run<T>(Future<T> Function() body);
 }
 
+/// The raw cross-tab lock primitive — the Web Locks API on web.
+abstract interface class LockRequester {
+  /// Requests the lock and runs [onGranted] while holding it, completing once
+  /// the lock is released again with true.
+  ///
+  /// When [abandonWhen] completes before the lock is granted, the request is
+  /// withdrawn and this completes with false; after the grant it has no
+  /// effect. [steal] takes the lock away from whoever holds it instead of
+  /// queueing behind them.
+  Future<bool> request(
+    Future<void> Function() onGranted, {
+    Future<void>? abandonWhen,
+    bool steal = false,
+  });
+}
+
+/// A cross-tab lock that never waits forever.
+///
+/// Another tab can hold the lock without ever letting go: a background tab
+/// the browser froze mid-refresh keeps it for as long as it stays frozen.
+/// Queueing behind it indefinitely left every other tab — and every reload —
+/// on the startup spinner. So a request that is not granted within [maxWait]
+/// steals the lock and runs anyway. At worst that lets two refreshes overlap,
+/// which the server's rotation grace window absorbs; the alternative was a
+/// user locked out of the app until they found and closed the frozen tab.
+class PatientTabLock implements TabLock {
+  PatientTabLock(this._requester, {this.maxWait = const Duration(seconds: 5)});
+
+  final LockRequester _requester;
+  final Duration maxWait;
+
+  @override
+  Future<T> run<T>(Future<T> Function() body) async {
+    final done = Completer<T>();
+    // The body may fail before the caller gets `done.future` below; that is
+    // not an unhandled error — the caller still receives it.
+    unawaited(done.future.then<void>((_) {}, onError: (Object _) {}));
+    var started = false;
+
+    Future<void> hold() async {
+      if (started) return;
+      started = true;
+      try {
+        done.complete(await body());
+      } on Object catch (e, s) {
+        done.completeError(e, s);
+      }
+    }
+
+    final giveUp = Completer<void>();
+    final timer = Timer(maxWait, () {
+      if (!started) giveUp.complete();
+    });
+    try {
+      final granted = await _requester.request(
+        hold,
+        abandonWhen: giveUp.future,
+      );
+      if (!granted) await _requester.request(hold, steal: true);
+    } on Object {
+      // The lock itself failed (or was stolen from us mid-body, which the
+      // body survives): run unguarded rather than never.
+      if (!started) unawaited(hold());
+    } finally {
+      timer.cancel();
+    }
+    return done.future;
+  }
+}
+
 /// A lock that only serialises within this tab. The fallback where the Web
 /// Locks API is missing (insecure origins, old browsers); the server's grace
 /// window still keeps a cross-tab collision from signing anyone out.

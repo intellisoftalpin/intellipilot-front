@@ -1671,18 +1671,30 @@ class _ProjectNameState extends State<_ProjectName> {
 
   late Future<Project?> _future;
 
+  /// The last lookup came back empty; the next navigation asks again.
+  bool _failed = false;
+
   @override
   void initState() {
     super.initState();
-    _future = _resolve(widget.projectRef);
+    _load();
   }
 
   @override
   void didUpdateWidget(covariant _ProjectName oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.projectRef != widget.projectRef) {
-      _future = _resolve(widget.projectRef);
-    }
+    if (oldWidget.projectRef != widget.projectRef || _failed) _load();
+  }
+
+  void _load() {
+    _failed = false;
+    final ref = widget.projectRef;
+    _future = _resolve(ref);
+    unawaited(
+      _future.then((p) {
+        if (p == null && ref == widget.projectRef) _failed = true;
+      }),
+    );
   }
 
   static Future<Project?> _resolve(String ref) {
@@ -1693,7 +1705,13 @@ class _ProjectNameState extends State<_ProjectName> {
       final res = looksLikeUuid(ref)
           ? repo.getProject(ref)
           : repo.getProjectByPrefix(ref);
-      return res.then((r) => r.valueOrNull);
+      return res.then((r) {
+        // Remember only answers: a lookup that failed (a 401 that outlived
+        // its renewal, a dropped connection) is asked again next time
+        // instead of leaving the header blank for the rest of the session.
+        if (r.valueOrNull == null) unawaited(_cache.remove(ref));
+        return r.valueOrNull;
+      });
     });
   }
 

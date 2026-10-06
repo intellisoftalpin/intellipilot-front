@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intellipilot/core/network/interceptors/refresh_interceptor.dart';
@@ -95,6 +97,32 @@ void main() {
         );
         await Future<void>.delayed(const Duration(milliseconds: 5));
         expect(hookCalls, 0);
+      },
+    );
+
+    test(
+      'a refresh that never settles surfaces the 401 after maxWait',
+      () async {
+        final adapter = _StubAdapter([
+          (_) async => _json('{"title":"unauthorized"}', status: 401),
+        ]);
+        final dio = Dio()..httpClientAdapter = adapter;
+        dio.interceptors.add(
+          RefreshInterceptor(
+            // A renewal stuck behind a cross-tab lock nobody releases.
+            () => Completer<RefreshOutcome>().future,
+            dio: dio,
+            maxWait: const Duration(milliseconds: 50),
+          ),
+        );
+
+        await expectLater(
+          dio.post<dynamic>('/api/v1/admin/users'),
+          throwsA(
+            predicate<DioException>((e) => e.response?.statusCode == 401),
+          ),
+        );
+        expect(adapter.call, 1, reason: 'no retry without a refresh');
       },
     );
 

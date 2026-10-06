@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intellipilot/core/network/interceptors/auth_interceptor.dart';
@@ -14,9 +16,13 @@ class _FixedUuid implements UuidGen {
   String v4() => value;
 }
 
-RequestOptions _opts({String method = 'GET', Map<String, dynamic>? extra}) {
+RequestOptions _opts({
+  String method = 'GET',
+  String path = '/x',
+  Map<String, dynamic>? extra,
+}) {
   return RequestOptions(
-    path: '/x',
+    path: path,
     method: method,
     extra: extra ?? <String, dynamic>{},
   );
@@ -58,18 +64,51 @@ void main() {
   });
 
   group('AuthInterceptor', () {
-    test('attaches bearer token when present', () {
+    test('attaches bearer token when present', () async {
       final i = AuthInterceptor(() => 'tok');
       final h = _CaptureHandler();
-      i.onRequest(_opts(), h);
+      await i.onRequest(_opts(), h);
       expect(h.captured!.headers['Authorization'], 'Bearer tok');
     });
 
-    test('skips header when token is null or empty', () {
+    test('skips header when token is null or empty', () async {
       final i = AuthInterceptor(() => null);
       final h = _CaptureHandler();
-      i.onRequest(_opts(), h);
+      await i.onRequest(_opts(), h);
       expect(h.captured!.headers.containsKey('Authorization'), isFalse);
+    });
+
+    test('waits for a renewed token when one is on the way', () async {
+      final renewed = Completer<String?>();
+      final i = AuthInterceptor(() => 'stale', () => renewed.future);
+      final h = _CaptureHandler();
+      final sent = i.onRequest(_opts(), h);
+      await Future<void>.delayed(Duration.zero);
+      expect(h.captured, isNull, reason: 'held back until the renewal');
+
+      renewed.complete('fresh');
+      await sent;
+      expect(h.captured!.headers['Authorization'], 'Bearer fresh');
+    });
+
+    test('session endpoints never wait on a renewal', () async {
+      final i = AuthInterceptor(
+        () => 'stale',
+        () => Completer<String?>().future,
+      );
+      final h = _CaptureHandler();
+      await i.onRequest(_opts(path: '/api/v1/auth/refresh'), h);
+      expect(h.captured!.headers['Authorization'], 'Bearer stale');
+    });
+
+    test('a failing provider falls back to the token at hand', () async {
+      final i = AuthInterceptor(
+        () => 'stale',
+        () async => throw StateError(''),
+      );
+      final h = _CaptureHandler();
+      await i.onRequest(_opts(), h);
+      expect(h.captured!.headers['Authorization'], 'Bearer stale');
     });
   });
 

@@ -4,6 +4,61 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.7] - 2026-10-06
+
+### Fixed
+- **401 errors in the console, slow or missing pages after a tab or device
+  wakes up.** Browsers pause the token refresh timer in background tabs and
+  while the device sleeps, so the first requests after a wake-up went out
+  with an expired token and each came back 401 before being retried. A
+  request now waits for the renewal instead of sending an expired token, and
+  the app renews as soon as it returns to the foreground.
+- **Pages restarted their loading on every token renewal.** The router
+  rebuilt the open page whenever the session state changed, including the two
+  changes of a routine renewal, and Milestones, Backlog, Project settings and
+  the Wiki pages fetched the profile again each time. The router now reacts
+  only to sign-in, sign-out and account switches, and those pages load the
+  profile once.
+- **A dropped connection during a renewal signed the user out.** Network
+  errors, server errors and rate limiting now keep the session and retry
+  (5 s, 10 s, 20 s, 40 s, then every minute, and at once when the app comes
+  back to the foreground); only a refusal from the server ends it.
+- **The project name in the header could stay blank for the whole session**
+  after one failed lookup. Failed lookups are no longer cached; the next
+  navigation asks again.
+
+## [0.7.6] - 2026-09-23
+
+### Fixed
+- **Creating a user could spin forever (critical).** When the page's access
+  token had expired, the create request came back 401 and waited for a session
+  renewal that, on 0.7.4, was queued behind a cross-tab lock held by a frozen
+  tab (the 0.7.5 fix below). Nothing bounded that wait, so the dialog's button
+  spun with no request ever retried. Any request now waits at most 20 seconds
+  for a renewal; past that it fails with a visible error and the renewal still
+  finishes in the background. A 401 received while signed out no longer waits
+  for a sign-in that may never come.
+
+### Changed
+- Redesigned the Create user dialog: icon and explanation header, outlined
+  fields with icons, a password field with show/hide and a helper line instead
+  of a truncated label, a described superadmin option, Create enabled only once
+  email and username are filled, Enter submits, and errors shown in a tinted
+  panel. A failed session renewal gets its own message.
+
+## [0.7.5] - 2026-09-23
+
+### Fixed
+- **The app could hang on a spinner forever after a reload (critical).** Since
+  0.7.3, browser tabs take turns renewing the session through a shared lock
+  (the Web Locks API), and a tab waited for that lock with no time limit. A
+  tab that never let go, typically a background tab the browser had frozen,
+  left every other tab and every reload stuck before sign-in: no renewal was
+  sent, no login page appeared. A tab now waits at most 5 seconds and then
+  takes the lock over. If two renewals overlap as a result, the server's
+  0.7.3 grace window handles it. Regression tests cover a lock holder that
+  never releases.
+
 ## [0.7.4] - 2026-09-23
 
 ### Fixed

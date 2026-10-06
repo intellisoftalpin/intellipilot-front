@@ -24,7 +24,7 @@ SessionSync platformSessionSync() {
 TabLock _webLockOrLocal() {
   // `navigator.locks` exists only in secure contexts on current browsers.
   final navigator = web.window.navigator as JSObject;
-  if (navigator.has('locks')) return _WebTabLock();
+  if (navigator.has('locks')) return PatientTabLock(_WebLockRequester());
   return LocalTabLock();
 }
 
@@ -61,30 +61,43 @@ class _BroadcastTabChannel implements TabChannel {
   }
 }
 
-class _WebTabLock implements TabLock {
+class _WebLockRequester implements LockRequester {
   @override
-  Future<T> run<T>(Future<T> Function() body) {
-    final done = Completer<T>();
+  Future<bool> request(
+    Future<void> Function() onGranted, {
+    Future<void>? abandonWhen,
+    bool steal = false,
+  }) async {
+    final options = web.LockOptions();
+    web.AbortController? abort;
+    if (steal) {
+      options.steal = true;
+    } else if (abandonWhen != null) {
+      final controller = abort = web.AbortController();
+      options.signal = controller.signal;
+      unawaited(abandonWhen.then((_) => controller.abort()));
+    }
 
     // The lock is held until the promise this callback returns settles, so
     // the body's whole lifetime runs inside it.
     Future<JSAny?> hold() async {
-      try {
-        done.complete(await body());
-      } on Object catch (e, s) {
-        done.completeError(e, s);
-      }
+      await onGranted();
       return null;
     }
 
+    // A closure, never a tear-off: dart2js rejects tear-offs of external
+    // interop members.
     JSPromise<JSAny?> granted(JSAny? lock) => hold().toJS;
 
     try {
-      web.window.navigator.locks.request(_lockName, granted.toJS);
+      await web.window.navigator.locks
+          .request(_lockName, options, granted.toJS)
+          .toDart;
+      return true;
     } on Object {
-      // The lock request itself failed; run unguarded rather than never.
-      return body();
+      // Withdrawn before the grant: the caller decides what comes next.
+      if (abort?.signal.aborted ?? false) return false;
+      rethrow;
     }
-    return done.future;
   }
 }

@@ -21,7 +21,7 @@ import 'package:intellipilot/features/catalog/presentation/widgets/repositories_
 import 'package:intellipilot/features/catalog/presentation/widgets/taxonomy_tab.dart';
 import 'package:intellipilot/features/docs/presentation/widgets/doc_sources_tab.dart';
 import 'package:intellipilot/features/profile/data/dtos/profile_dtos.dart';
-import 'package:intellipilot/features/profile/domain/profile_repository.dart';
+import 'package:intellipilot/features/profile/presentation/widgets/profile_gate.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
@@ -43,24 +43,9 @@ class ProjectSettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final repo = getIt<ProjectsRepository>();
-    return FutureBuilder<UserProfile?>(
-      future: getIt<ProfileRepository>().getProfile().then(
-        (r) => r.valueOrNull,
-      ),
-      builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-        final profile = snap.data;
-        if (profile == null) {
-          return Scaffold(
-            body: Center(
-              child: Text(AppLocalizations.of(context).errUnknown),
-            ),
-          );
-        }
+    return ProfileGate(
+      key: ValueKey(projectId),
+      builder: (context, profile) {
         return MultiBlocProvider(
           providers: [
             BlocProvider<ProjectDetailCubit>(
