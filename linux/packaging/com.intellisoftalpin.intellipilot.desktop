@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=IntelliPilot
+GenericName=Project Management
+Comment=Plan, track and ship projects with IntelliPilot
+Exec=intellipilot %U
+Icon=com.intellisoftalpin.intellipilot
+Terminal=false
+Categories=Office;ProjectManagement;
+Keywords=project;issues;board;backlog;milestones;
+StartupWMClass=com.intellisoftalpin.intellipilot
+StartupNotify=true

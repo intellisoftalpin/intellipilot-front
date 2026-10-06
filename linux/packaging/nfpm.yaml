@@ -1,0 +1,60 @@
+# .deb and .rpm for the Linux desktop app, built by scripts/build-linux.sh.
+#
+# Paths are relative to the repository root. The script exports VERSION
+# (pubspec version without the build number), RELEASE (the build number) and
+# ARCH (amd64 or arm64; nfpm names them x86_64 / aarch64 for rpm).
+name: intellipilot
+arch: ${ARCH}
+platform: linux
+version: ${VERSION}
+release: ${RELEASE}
+section: misc
+priority: optional
+maintainer: IntelliSoftAlpin eG
+vendor: IntelliSoftAlpin eG
+homepage: https://intellisoftalpin.com
+license: MIT
+description: |-
+  IntelliPilot desktop client.
+  Self-hosted project management: backlog, boards, milestones, wiki,
+  timesheets and meetings, connected to your IntelliPilot server.
+
+# Only what the bundle links outside itself. The tokens go to the desktop
+# keyring through libsecret.
+overrides:
+  deb:
+    depends:
+      - libgtk-3-0
+      - libsecret-1-0
+  rpm:
+    depends:
+      - gtk3
+      - libsecret
+
+contents:
+  - src: build/linux-package/bundle
+    dst: /opt/intellipilot
+    type: tree
+  - src: /opt/intellipilot/intellipilot
+    dst: /usr/bin/intellipilot
+    type: symlink
+  - src: linux/packaging/com.intellisoftalpin.intellipilot.desktop
+    dst: /usr/share/applications/com.intellisoftalpin.intellipilot.desktop
+    file_info:
+      mode: 0644
+  - src: linux/packaging/icons/48.png
+    dst: /usr/share/icons/hicolor/48x48/apps/com.intellisoftalpin.intellipilot.png
+    file_info:
+      mode: 0644
+  - src: linux/packaging/icons/128.png
+    dst: /usr/share/icons/hicolor/128x128/apps/com.intellisoftalpin.intellipilot.png
+    file_info:
+      mode: 0644
+  - src: linux/packaging/icons/256.png
+    dst: /usr/share/icons/hicolor/256x256/apps/com.intellisoftalpin.intellipilot.png
+    file_info:
+      mode: 0644
+  - src: linux/packaging/icons/512.png
+    dst: /usr/share/icons/hicolor/512x512/apps/com.intellisoftalpin.intellipilot.png
+    file_info:
+      mode: 0644

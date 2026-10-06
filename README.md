@@ -131,6 +131,33 @@ is wired in, so deploy it behind a server that rewrites unknown paths to
 `index.html` (any SPA host works — Caddy, Netlify, Vercel, GitHub Pages
 with the 404-fallback trick, etc.).
 
+### Desktop (Linux)
+
+```sh
+./scripts/build-linux.sh
+```
+
+Builds a release for the machine's architecture and packages it as
+`dist/intellipilot_<version>-<build>_<amd64|arm64>.deb` and
+`dist/intellipilot-<version>-<build>.<x86_64|aarch64>.rpm` with
+[nfpm](https://nfpm.goreleaser.com) (taken from `PATH`, or run through Go at
+the pinned version). Needs the Flutter Linux toolchain: `clang cmake
+ninja-build pkg-config` plus the GTK 3 and libsecret development headers
+(`libgtk-3-dev libsecret-1-dev` / `gtk3-devel libsecret-devel`).
+
+The packages install the app under `/opt/intellipilot`, an `intellipilot`
+command, a launcher entry and icons, and depend only on GTK 3 and libsecret
+(sign-in tokens live in the desktop keyring). They need glibc 2.39 or newer:
+Ubuntu 24.04+, Debian 13+, Fedora 40+, RHEL 10.
+
+```sh
+sudo dnf install ./dist/intellipilot-*.x86_64.rpm     # Fedora / RHEL
+sudo apt install ./dist/intellipilot_*_amd64.deb      # Debian / Ubuntu
+```
+
+Every `v*` tag builds both architectures in CI (`release.yaml`) and attaches
+the packages, with checksums, to the GitHub release.
+
 ## Project layout
 
 ```

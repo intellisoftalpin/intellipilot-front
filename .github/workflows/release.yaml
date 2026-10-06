@@ -205,14 +205,112 @@ jobs:
           subject-digest: ${{ steps.image.outputs.digest }}
           push-to-registry: true
 
+  release-linux:
+    name: build Linux desktop packages (${{ matrix.arch }})
+    needs: [verify-tag, test]
+    # Flutter does not cross-compile Linux desktop: one native runner per
+    # architecture. The runner's glibc (2.39) is the oldest the packages run on.
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Linux build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config \
+            libgtk-3-dev liblzma-dev libstdc++-12-dev libsecret-1-dev
+
+      - id: flutter
+        shell: bash
+        run: |
+          version=$(jq -r .flutter .fvmrc)
+          echo "channel=$version" >> "$GITHUB_OUTPUT"
+
+      - if: matrix.arch == 'amd64'
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ steps.flutter.outputs.channel }}
+          cache: true
+
+      # Flutter publishes no Linux arm64 SDK archive; the SDK runs from a git
+      # checkout and fetches its arm64 engine artifacts itself.
+      - if: matrix.arch == 'arm64'
+        name: Flutter from git (arm64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 -b "${{ steps.flutter.outputs.channel }}" \
+            https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      # super_native_extensions is Rust, built by cargokit when no precompiled
+      # binary matches.
+      - name: Rust toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v cargo >/dev/null 2>&1; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          fi
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: false
+
+      - name: build + package
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter --version
+          ./scripts/build-linux.sh
+          ( cd dist && for f in *.deb *.rpm; do sha256sum "$f" > "$f.sha256"; done )
+          ls -la dist
+
+      - name: attest package provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/*.deb
+            dist/*.rpm
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: linux-${{ matrix.arch }}
+          path: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.sha256
+          if-no-files-found: error
+          retention-days: 7
+
   release:
     name: create GitHub Release
-    needs: [verify-tag, release-bundle]
+    needs: [verify-tag, release-bundle, release-linux]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v8
         with:
           name: web-bundle
+          path: dist
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: linux-*
+          merge-multiple: true
           path: dist
 
       - name: list assets
@@ -229,3 +327,7 @@ jobs:
           files: |
             dist/*.tar.gz
             dist/*.tar.gz.sha256
+            dist/*.deb
+            dist/*.deb.sha256
+            dist/*.rpm
+            dist/*.rpm.sha256

@@ -10,6 +10,11 @@
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
+  // Whether GTK draws the window frame itself (a header bar), which keeps
+  // the shadow and the resize edges once the app hides that header bar.
+  gboolean client_side_frame;
+  // Tells Dart how the desktop lays out the window buttons.
+  FlMethodChannel* window_channel;
 };
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
@@ -17,6 +22,29 @@ G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 // Called when first Flutter frame received.
 static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
+}
+
+// Answers `intellipilot/window` calls. `decoration` returns the desktop's
+// window-button layout (GtkSettings:gtk-decoration-layout, e.g.
+// "appmenu:close") so the app can draw the same buttons in its own top bar.
+static void window_method_cb(FlMethodChannel* channel, FlMethodCall* call,
+                             gpointer user_data) {
+  MyApplication* self = MY_APPLICATION(user_data);
+  g_autoptr(FlMethodResponse) response = nullptr;
+  if (g_strcmp0(fl_method_call_get_name(call), "decoration") == 0) {
+    g_autofree gchar* layout = nullptr;
+    g_object_get(gtk_settings_get_default(), "gtk-decoration-layout", &layout,
+                 nullptr);
+    g_autoptr(FlValue) result = fl_value_new_map();
+    fl_value_set_string_take(result, "layout",
+                             fl_value_new_string(layout ? layout : ""));
+    fl_value_set_string_take(result, "clientSideFrame",
+                             fl_value_new_bool(self->client_side_frame));
+    response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+  } else {
+    response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+  }
+  fl_method_call_respond(call, response, nullptr);
 }
 
 // Implements GApplication::activate.
@@ -42,17 +70,37 @@ static void my_application_activate(GApplication* application) {
     }
   }
 #endif
+  self->client_side_frame = use_header_bar;
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "intellipilot");
+    gtk_header_bar_set_title(header_bar, "IntelliPilot");
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "intellipilot");
+    gtk_window_set_title(window, "IntelliPilot");
   }
 
-  gtk_window_set_default_size(window, 1280, 720);
+  gtk_window_set_default_size(window, 1280, 800);
+  // Below this the project rail and the boards stop fitting side by side.
+  GdkGeometry hints = {};
+  hints.min_width = 900;
+  hints.min_height = 600;
+  gtk_window_set_geometry_hints(window, nullptr, &hints, GDK_HINT_MIN_SIZE);
+
+  // Installed packages put the icon in the theme under the application id,
+  // which is also what desktops match the window against. A bare bundle (a
+  // local build, an unpacked archive) carries its own copy next to the data.
+  gtk_window_set_icon_name(window, APPLICATION_ID);
+  g_autofree gchar* exe = g_file_read_link("/proc/self/exe", nullptr);
+  if (exe != nullptr) {
+    g_autofree gchar* dir = g_path_get_dirname(exe);
+    g_autofree gchar* icon =
+        g_build_filename(dir, "data", "app_icon.png", nullptr);
+    if (g_file_test(icon, G_FILE_TEST_EXISTS)) {
+      gtk_window_set_icon_from_file(window, icon, nullptr);
+    }
+  }
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
@@ -74,6 +122,13 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+
+  g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+  self->window_channel = fl_method_channel_new(
+      fl_engine_get_binary_messenger(fl_view_get_engine(view)),
+      "intellipilot/window", FL_METHOD_CODEC(codec));
+  fl_method_channel_set_method_call_handler(self->window_channel,
+                                            window_method_cb, self, nullptr);
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
@@ -121,6 +176,7 @@ static void my_application_shutdown(GApplication* application) {
 static void my_application_dispose(GObject* object) {
   MyApplication* self = MY_APPLICATION(object);
   g_clear_pointer(&self->dart_entrypoint_arguments, g_strfreev);
+  g_clear_object(&self->window_channel);
   G_OBJECT_CLASS(my_application_parent_class)->dispose(object);
 }
 

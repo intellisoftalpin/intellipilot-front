@@ -6,6 +6,8 @@
 .DS_Store
 .atom/
 .build/
+# Desktop packages (scripts/build-linux.sh)
+/dist/
 .buildlog/
 .history
 .svn/

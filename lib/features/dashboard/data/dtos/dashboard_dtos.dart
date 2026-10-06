@@ -40,25 +40,40 @@ class NamedCount {
   final int count;
 }
 
+/// One of the user's projects on the home dashboard. The server sends every
+/// project they are a member of, those they work in most first.
 class ProjectBucket {
   const ProjectBucket({
     required this.projectId,
     required this.slug,
     required this.name,
-    required this.openCount,
+    this.issuePrefix = '',
+    this.color = '',
+    this.iconImageKind = 'none',
+    this.iconImageUpdatedAt,
   });
 
   factory ProjectBucket.fromJson(Map<String, dynamic> json) => ProjectBucket(
     projectId: json['project_id'] as String? ?? '',
     slug: json['slug'] as String? ?? '',
     name: json['name'] as String? ?? '',
-    openCount: (json['open_count'] as num?)?.toInt() ?? 0,
+    issuePrefix: json['issue_prefix'] as String? ?? '',
+    color: json['color'] as String? ?? '',
+    iconImageKind: json['icon_image_kind'] as String? ?? 'none',
+    iconImageUpdatedAt: json['icon_image_updated_at'] != null
+        ? DateTime.tryParse(json['icon_image_updated_at'] as String)
+        : null,
   );
 
   final String projectId;
   final String slug;
   final String name;
-  final int openCount;
+  final String issuePrefix;
+  final String color;
+  final String iconImageKind;
+  final DateTime? iconImageUpdatedAt;
+
+  bool get hasIcon => iconImageKind == 'image';
 }
 
 class AttentionItem {

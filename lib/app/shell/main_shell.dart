@@ -11,6 +11,7 @@ import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/router/short_links.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
+import 'package:intellipilot/app/window/window_chrome.dart';
 import 'package:intellipilot/core/network/sse/project_events_service.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/breakpoints.dart';
@@ -283,90 +284,99 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface,
-      shape: Border(
-        bottom: BorderSide(color: theme.colorScheme.outlineVariant),
-      ),
-      child: SizedBox(
-        height: 52,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final t = AppLocalizations.of(context);
-            final layout = _TopBarLayout.forWidth(constraints.maxWidth);
-            return Row(
-              children: [
-                SizedBox(width: showProjectMenu ? 4 : 12),
-                if (showProjectMenu)
-                  IconButton(
-                    onPressed: () => Scaffold.of(context).openDrawer(),
-                    icon: const Icon(Icons.menu),
-                    tooltip: t.railOpenProjectMenu,
+    // On Linux desktop this bar is the window's title bar: it carries the
+    // window buttons and moves the window from its empty parts.
+    return TitleBarClaim(
+      child: Material(
+        color: theme.colorScheme.surface,
+        shape: Border(
+          bottom: BorderSide(color: theme.colorScheme.outlineVariant),
+        ),
+        child: SizedBox(
+          height: 52,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final t = AppLocalizations.of(context);
+              final layout = _TopBarLayout.forWidth(constraints.maxWidth);
+              return Stack(
+                children: [
+                  const Positioned.fill(child: WindowDragArea()),
+                  Row(
+                    children: [
+                      const WindowControls.left(),
+                      SizedBox(width: showProjectMenu ? 4 : 12),
+                      if (showProjectMenu)
+                        IconButton(
+                          onPressed: () => Scaffold.of(context).openDrawer(),
+                          icon: const Icon(Icons.menu),
+                          tooltip: t.railOpenProjectMenu,
+                        ),
+                      if (showBrandMark)
+                        _BrandMark(
+                          compact: !layout.brandName,
+                          onTap: () => context.go(Routes.home),
+                        ),
+                      // Takes all the free space, so it doubles as the spacer that
+                      // pushes the actions to the right. The links scroll rather
+                      // than overflow if a long translation still doesn't fit.
+                      Expanded(
+                        child: layout.navLinks
+                            ? Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      if (showBrandMark)
+                                        const SizedBox(width: 16),
+                                      _NavLink(
+                                        label: t.navDashboard,
+                                        onTap: () => context.go(Routes.home),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      _NavLink(
+                                        label: t.topNavProjects,
+                                        onTap: () =>
+                                            context.go(Routes.projects),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      _NavLink(
+                                        label: t.ttNavTimesheet,
+                                        onTap: () =>
+                                            context.go(Routes.timesheet),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                      const SizedBox(width: 8),
+                      _SearchButton(
+                        compact: !layout.searchChip,
+                        activeProjectRef: activeProjectRef,
+                      ),
+                      const SizedBox(width: 8),
+                      _CreateButton(
+                        compact: !layout.createLabel,
+                        activeProjectRef: activeProjectRef,
+                      ),
+                      const SizedBox(width: 8),
+                      // Account switching is a main-screen affordance, not a menu
+                      // entry: with two instances open you need to see which one you
+                      // are on. Renders nothing on web or with a single account, and
+                      // fits inside the bar's fixed 52px.
+                      AccountSwitcherMenu(compact: !layout.searchChip),
+                      const SizedBox(width: 4),
+                      const _AvatarMenu(),
+                      const SizedBox(width: 12),
+                      const WindowControls.right(),
+                    ],
                   ),
-                if (showBrandMark)
-                  _BrandMark(
-                    compact: !layout.brandName,
-                    onTap: () => context.go(Routes.home),
-                  ),
-                // Takes all the free space, so it doubles as the spacer that
-                // pushes the actions to the right. The links scroll rather
-                // than overflow if a long translation still doesn't fit.
-                Expanded(
-                  child: layout.navLinks
-                      ? Align(
-                          alignment: AlignmentDirectional.centerStart,
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: [
-                                if (showBrandMark) const SizedBox(width: 16),
-                                _NavLink(
-                                  label: t.navDashboard,
-                                  onTap: () => context.go(Routes.home),
-                                ),
-                                const SizedBox(width: 4),
-                                _NavLink(
-                                  label: t.topNavProjects,
-                                  onTap: () => context.go(Routes.projects),
-                                ),
-                                const SizedBox(width: 4),
-                                _NavLink(
-                                  label: t.ttNavTimesheet,
-                                  onTap: () => context.go(Routes.timesheet),
-                                ),
-                                const SizedBox(width: 4),
-                                _NavLink(
-                                  label: t.topNavSettings,
-                                  onTap: () => context.go(Routes.settings),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                const SizedBox(width: 8),
-                _SearchButton(
-                  compact: !layout.searchChip,
-                  activeProjectRef: activeProjectRef,
-                ),
-                const SizedBox(width: 8),
-                _CreateButton(
-                  compact: !layout.createLabel,
-                  activeProjectRef: activeProjectRef,
-                ),
-                const SizedBox(width: 8),
-                // Account switching is a main-screen affordance, not a menu
-                // entry: with two instances open you need to see which one you
-                // are on. Renders nothing on web or with a single account, and
-                // fits inside the bar's fixed 52px.
-                AccountSwitcherMenu(compact: !layout.searchChip),
-                const SizedBox(width: 4),
-                const _AvatarMenu(),
-                const SizedBox(width: 12),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

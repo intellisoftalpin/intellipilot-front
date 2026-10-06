@@ -2274,10 +2274,6 @@
   "@topNavProjects": {
     "description": "Top app-bar nav link."
   },
-  "topNavSettings": "Settings",
-  "@topNavSettings": {
-    "description": "Top app-bar nav link."
-  },
   "topNavSearchPlaceholder": "Search projects, pages, #123…",
   "@topNavSearchPlaceholder": {
     "description": "Search-trigger placeholder copy on the top bar."
@@ -3842,16 +3838,6 @@
   "dashNoWork": "No issues",
   "@dashNoWork": {
     "description": "Empty state for a status breakdown chart."
-  },
-  "dashOpenCount": "{count} open",
-  "@dashOpenCount": {
-    "description": "Open-issue count on a project card.",
-    "placeholders": {
-      "count": {
-        "type": "int",
-        "example": "4"
-      }
-    }
   },
   "dashDue": "Due {date}",
   "@dashDue": {

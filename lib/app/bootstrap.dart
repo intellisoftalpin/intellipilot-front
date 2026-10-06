@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intellipilot/app/app.dart';
 import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
+import 'package:intellipilot/app/window/desktop_window.dart';
 import 'package:intellipilot/core/network/server_endpoint.dart';
 import 'package:intellipilot/core/storage/hive_boxes.dart';
 import 'package:intellipilot/core/ui/path_strategy.dart';
@@ -82,6 +83,9 @@ Future<void> bootstrap() async {
           unawaited(getIt<CompatibilityCubit>().check());
         }
       }
+
+      // Linux desktop: the app draws its own title bar from here on.
+      await DesktopWindow.init();
 
       runApp(const IntelliPilotApp());
     },

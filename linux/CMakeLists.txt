@@ -121,6 +121,18 @@ install(CODE "
 install(DIRECTORY "${PROJECT_BUILD_DIR}/${FLUTTER_ASSET_DIR_NAME}"
   DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" COMPONENT Runtime)
 
+# Window icon for a bare bundle; installed packages also put it in the theme.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/packaging/icons/256.png"
+  DESTINATION "${INSTALL_BUNDLE_DATA_DIR}" RENAME "app_icon.png"
+  COMPONENT Runtime)
+
+# `jni` comes in through path_provider_android and ships its native library on
+# every platform. Nothing loads it on Linux, but it links libjvm, which would
+# make packaging tools and users believe the app needs Java.
+install(CODE "
+  file(REMOVE \"${INSTALL_BUNDLE_LIB_DIR}/libdartjni.so\")
+  " COMPONENT Runtime)
+
 # Install the AOT library on non-Debug builds only.
 if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
   install(FILES "${AOT_LIBRARY}" DESTINATION "${INSTALL_BUNDLE_LIB_DIR}"

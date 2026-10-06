@@ -4,6 +4,29 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.8] - 2026-10-06
+
+### Added
+- **Linux desktop packages.** `scripts/build-linux.sh` builds the app and
+  packages it as `.deb` and `.rpm` (installed under `/opt/intellipilot`, with
+  an `intellipilot` command, a launcher entry and icons; needs glibc 2.39+:
+  Ubuntu 24.04+, Debian 13+, Fedora 40+, RHEL 10). Every release tag builds
+  them for x86_64 and arm64 in CI and attaches them to the GitHub release.
+- **The Linux app draws its own title bar.** GTK's title bar is gone; the
+  window buttons sit in the app's top bar, laid out the way the desktop lays
+  them out (GNOME: a close button on the right). The bar's empty space moves
+  the window, double-click maximizes it.
+
+### Changed
+- **Dashboard: projects in a column on the right**, each card with the
+  project icon and name and no task count. It lists every project you are a
+  member of, those you are involved in most first (needs the 0.7.8 server).
+  Narrow windows keep the projects below the rest.
+- **Settings left the top navigation**; it stays in the account menu.
+- **The login screen no longer animates.** The drifting background and the
+  floating logo repainted the whole window every frame, which made the screen
+  sluggish where rendering runs on the CPU; the form now appears at once.
+
 ## [0.7.7] - 2026-10-06
 
 ### Fixed

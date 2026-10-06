@@ -30,14 +30,6 @@ import 'package:reactive_forms/reactive_forms.dart';
 /// Width at/above which the two-pane "split hero" layout is shown.
 const double _kWideBreakpoint = 840;
 
-/// Whether to run the continuous (looping) background/logo animations.
-///
-/// Suppressed under the widget-test binding, where an always-scheduled frame
-/// would make `pumpAndSettle` time out. One-shot and implicit animations are
-/// unaffected. In the real app the binding is a [WidgetsFlutterBinding].
-final bool _kContinuousAnimations =
-    WidgetsBinding.instance is WidgetsFlutterBinding;
-
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
 
@@ -60,10 +52,8 @@ class _LoginView extends StatefulWidget {
   State<_LoginView> createState() => _LoginViewState();
 }
 
-class _LoginViewState extends State<_LoginView>
-    with SingleTickerProviderStateMixin {
+class _LoginViewState extends State<_LoginView> {
   late final FormGroup _form;
-  late final AnimationController _entrance;
 
   /// Public auth configuration, for the single-sign-on buttons and whether the
   /// password form is offered. Fetched here rather than read from
@@ -85,14 +75,6 @@ class _LoginViewState extends State<_LoginView>
     _form = FormGroup({
       'email': FormControl<String>(validators: AuthValidators.loginIdentifier),
       'password': FormControl<String>(validators: AuthValidators.password),
-    });
-    _entrance = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-    // Kick off the staggered entrance after the first frame.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _entrance.forward();
     });
   }
 
@@ -131,12 +113,6 @@ class _LoginViewState extends State<_LoginView>
     }
   }
 
-  @override
-  void dispose() {
-    _entrance.dispose();
-    super.dispose();
-  }
-
   void _submit() {
     if (!_form.valid) {
       _form.markAllAsTouched();
@@ -150,36 +126,9 @@ class _LoginViewState extends State<_LoginView>
     );
   }
 
-  /// Fade + slide-up entrance for [child], staggered by [order]. A no-op when
-  /// the OS requests reduced motion.
-  Widget _entranceItem(int order, bool reduceMotion, Widget child) {
-    if (reduceMotion) return child;
-    final start = (order * 0.09).clamp(0.0, 0.5);
-    final anim = CurvedAnimation(
-      parent: _entrance,
-      curve: Interval(
-        start,
-        (start + 0.5).clamp(0.0, 1.0),
-        curve: Curves.easeOutCubic,
-      ),
-    );
-    return FadeTransition(
-      opacity: anim,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.08),
-          end: Offset.zero,
-        ).animate(anim),
-        child: child,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
-    final reduceMotion = MediaQuery.of(context).disableAnimations;
-    if (reduceMotion) _entrance.value = 1;
     return BlocBuilder<BrandingCubit, Branding>(
       bloc: getIt<BrandingCubit>(),
       builder: (context, branding) {
@@ -199,9 +148,7 @@ class _LoginViewState extends State<_LoginView>
             },
             child: Stack(
               children: [
-                Positioned.fill(
-                  child: _AnimatedBlobBackground(reduceMotion: reduceMotion),
-                ),
+                const Positioned.fill(child: _BlobBackground()),
                 Positioned.fill(
                   child: ReactiveForm(
                     formGroup: _form,
@@ -215,14 +162,12 @@ class _LoginViewState extends State<_LoginView>
                                   t,
                                   branding,
                                   title,
-                                  reduceMotion,
                                 )
                               : _narrowLayout(
                                   context,
                                   t,
                                   branding,
                                   title,
-                                  reduceMotion,
                                 );
                         },
                       ),
@@ -243,7 +188,6 @@ class _LoginViewState extends State<_LoginView>
     AppLocalizations t,
     Branding branding,
     String title,
-    bool reduceMotion,
   ) {
     final theme = Theme.of(context);
     return Row(
@@ -255,34 +199,22 @@ class _LoginViewState extends State<_LoginView>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _entranceItem(
-                    0,
-                    reduceMotion,
-                    _FloatingLogo(size: 104, reduceMotion: reduceMotion),
-                  ),
+                  const BrandLogo(size: 104, borderRadius: 20),
                   const SizedBox(height: 28),
-                  _entranceItem(
-                    1,
-                    reduceMotion,
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                      ),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _entranceItem(
-                    2,
-                    reduceMotion,
-                    Text(
-                      t.loginSubtitle,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
+                  Text(
+                    t.loginSubtitle,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -309,18 +241,14 @@ class _LoginViewState extends State<_LoginView>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _entranceItem(
-                    2,
-                    reduceMotion,
-                    Text(
-                      t.actionSignIn,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                  Text(
+                    t.actionSignIn,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 24),
-                  ..._formChildren(context, t, branding, reduceMotion),
+                  ..._formChildren(context, t, branding),
                   const SizedBox(height: 24),
                   const _LoginFooter(),
                 ],
@@ -338,68 +266,59 @@ class _LoginViewState extends State<_LoginView>
     AppLocalizations t,
     Branding branding,
     String title,
-    bool reduceMotion,
   ) {
     final theme = Theme.of(context);
     return _ScrollableCenter(
       maxWidth: 440,
-      child: _entranceItem(
-        0,
-        reduceMotion,
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface.withValues(alpha: 0.92),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: theme.colorScheme.outlineVariant),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.12),
-                blurRadius: 28,
-                offset: const Offset(0, 12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 28,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Center(child: BrandLogo(size: 84, borderRadius: 20)),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w800,
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: _FloatingLogo(size: 84, reduceMotion: reduceMotion),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              t.loginSubtitle,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                t.loginSubtitle,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ..._formChildren(context, t, branding, reduceMotion),
-              const SizedBox(height: 16),
-              const _LoginFooter(),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+            ..._formChildren(context, t, branding),
+            const SizedBox(height: 16),
+            const _LoginFooter(),
+          ],
         ),
       ),
     );
   }
 
-  /// The shared form fields (email, password, actions). Each row is wrapped in
-  /// the staggered entrance so it cascades in on open.
+  /// The shared form fields (email, password, actions).
   List<Widget> _formChildren(
     BuildContext context,
     AppLocalizations t,
     Branding branding,
-    bool reduceMotion,
   ) {
     final addingAccount = _isAddAccountMode(context);
     return [
@@ -429,11 +348,7 @@ class _LoginViewState extends State<_LoginView>
       // still work, and re-typing a password is the long way round.
       const SignedInAccounts(),
       if (branding.appMessage != null) ...[
-        _entranceItem(
-          3,
-          reduceMotion,
-          _AuthInfoBanner(text: branding.appMessage!),
-        ),
+        _AuthInfoBanner(text: branding.appMessage!),
         const SizedBox(height: 16),
       ],
       // A failure from the redirect flow comes back as a query parameter,
@@ -446,86 +361,66 @@ class _LoginViewState extends State<_LoginView>
       // Sign-in buttons first: on a deployment with single sign-on they are
       // the intended route, and burying them under the form they replace would
       // be an odd thing to do.
-      ..._ssoChildren(context, t, reduceMotion),
+      ..._ssoChildren(context, t),
       if (!_showPasswordForm) ...[
-        _entranceItem(
-          6,
-          reduceMotion,
-          Center(
-            child: TextButton(
-              onPressed: () => setState(() => _passwordFormRevealed = true),
-              child: Text(t.ssoAdministratorSignIn),
-            ),
+        Center(
+          child: TextButton(
+            onPressed: () => setState(() => _passwordFormRevealed = true),
+            child: Text(t.ssoAdministratorSignIn),
           ),
         ),
         const SizedBox(height: 4),
-        _entranceItem(6, reduceMotion, const _RegisterLink()),
+        const _RegisterLink(),
       ],
       if (_showPasswordForm) ...[
         // Stable keys: the rows above these fields can appear asynchronously
         // (branding banner), and keyless fields would then be re-matched to each
         // other's element/state by position, cross-binding the two controls.
-        _entranceItem(
-          3,
-          reduceMotion,
-          _GlowField(
-            key: const ValueKey('login-email-field'),
-            child: ReactiveTextField<String>(
-              formControlName: 'email',
-              autofillHints: const [AutofillHints.username],
-              decoration: InputDecoration(
-                labelText: t.fieldEmailOrUsername,
-                prefixIcon: const Icon(Icons.person_outline),
-              ),
-              validationMessages: {
-                ValidationMessage.required: (_) => t.errFieldRequired,
-                ValidationMessage.maxLength: (_) => t.errTooLong,
-              },
+        _GlowField(
+          key: const ValueKey('login-email-field'),
+          child: ReactiveTextField<String>(
+            formControlName: 'email',
+            autofillHints: const [AutofillHints.username],
+            decoration: InputDecoration(
+              labelText: t.fieldEmailOrUsername,
+              prefixIcon: const Icon(Icons.person_outline),
             ),
+            validationMessages: {
+              ValidationMessage.required: (_) => t.errFieldRequired,
+              ValidationMessage.maxLength: (_) => t.errTooLong,
+            },
           ),
         ),
         const SizedBox(height: 12),
-        _entranceItem(
-          4,
-          reduceMotion,
-          _GlowField(
-            key: const ValueKey('login-password-field'),
-            child: ReactiveTextField<String>(
-              formControlName: 'password',
-              obscureText: true,
-              autofillHints: const [AutofillHints.password],
-              decoration: InputDecoration(
-                labelText: t.fieldPassword,
-                prefixIcon: const Icon(Icons.lock_outline),
-              ),
-              validationMessages: {
-                ValidationMessage.required: (_) => t.errFieldRequired,
-                ValidationMessage.minLength: (_) => t.errPasswordMinLength,
-              },
+        _GlowField(
+          key: const ValueKey('login-password-field'),
+          child: ReactiveTextField<String>(
+            formControlName: 'password',
+            obscureText: true,
+            autofillHints: const [AutofillHints.password],
+            decoration: InputDecoration(
+              labelText: t.fieldPassword,
+              prefixIcon: const Icon(Icons.lock_outline),
             ),
+            validationMessages: {
+              ValidationMessage.required: (_) => t.errFieldRequired,
+              ValidationMessage.minLength: (_) => t.errPasswordMinLength,
+            },
           ),
         ),
-        _entranceItem(
-          4,
-          reduceMotion,
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () => context.goNamed('forgot_password'),
-              child: Text(t.linkForgotPassword),
-            ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () => context.goNamed('forgot_password'),
+            child: Text(t.linkForgotPassword),
           ),
         ),
         const SizedBox(height: 8),
-        _entranceItem(
-          5,
-          reduceMotion,
-          BlocBuilder<LoginCubit, LoginState>(
-            builder: (context, state) => _SubmitButton(
-              busy: state is LoginSubmitting,
-              label: t.actionSignIn,
-              onPressed: _submit,
-            ),
+        BlocBuilder<LoginCubit, LoginState>(
+          builder: (context, state) => _SubmitButton(
+            busy: state is LoginSubmitting,
+            label: t.actionSignIn,
+            onPressed: _submit,
           ),
         ),
         const SizedBox(height: 16),
@@ -541,17 +436,13 @@ class _LoginViewState extends State<_LoginView>
           },
         ),
         const SizedBox(height: 8),
-        _entranceItem(
-          6,
-          reduceMotion,
-          TextButton.icon(
-            icon: const Icon(Icons.fingerprint, size: 18),
-            onPressed: () => context.goNamed('passkey_sign_in'),
-            label: Text(t.linkSignInWithPasskey),
-          ),
+        TextButton.icon(
+          icon: const Icon(Icons.fingerprint, size: 18),
+          onPressed: () => context.goNamed('passkey_sign_in'),
+          label: Text(t.linkSignInWithPasskey),
         ),
         const SizedBox(height: 4),
-        _entranceItem(6, reduceMotion, const _RegisterLink()),
+        const _RegisterLink(),
       ],
     ];
   }
@@ -589,29 +480,24 @@ class _LoginViewState extends State<_LoginView>
   List<Widget> _ssoChildren(
     BuildContext context,
     AppLocalizations t,
-    bool reduceMotion,
   ) {
     final usable = _usableProviders;
     if (usable.isEmpty) return const [];
     return [
       for (final p in usable) ...[
-        _entranceItem(
-          3,
-          reduceMotion,
-          OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
-            ),
-            icon: const Icon(Icons.shield_outlined, size: 18),
-            label: Text(t.ssoSignInWith(p.displayName)),
-            onPressed: () => unawaited(_startSso(p)),
+        OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
           ),
+          icon: const Icon(Icons.shield_outlined, size: 18),
+          label: Text(t.ssoSignInWith(p.displayName)),
+          onPressed: () => unawaited(_startSso(p)),
         ),
         const SizedBox(height: 8),
       ],
       if (_showPasswordForm) ...[
         const SizedBox(height: 4),
-        _entranceItem(3, reduceMotion, _OrDivider(label: t.ssoOrDivider)),
+        _OrDivider(label: t.ssoOrDivider),
         const SizedBox(height: 12),
       ],
     ];
@@ -704,38 +590,13 @@ class _ScrollableCenter extends StatelessWidget {
   }
 }
 
-/// Slowly drifting, theme-coloured radial "blobs". CPU-cheap: three filled
-/// radial gradients on a single slow loop, isolated in a [RepaintBoundary] and
-/// with no backdrop blur. Renders statically when reduced motion is requested.
-class _AnimatedBlobBackground extends StatefulWidget {
-  const _AnimatedBlobBackground({required this.reduceMotion});
-  final bool reduceMotion;
-
-  @override
-  State<_AnimatedBlobBackground> createState() =>
-      _AnimatedBlobBackgroundState();
-}
-
-class _AnimatedBlobBackgroundState extends State<_AnimatedBlobBackground>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
-  bool get _animate => !widget.reduceMotion && _kContinuousAnimations;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 24),
-    );
-    if (_animate) _c.repeat();
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
+/// Theme-coloured radial "blobs" behind the form, painted once.
+///
+/// They used to drift on an endless loop, which repainted the whole window
+/// every frame for as long as the screen was open — slow wherever the
+/// renderer runs on the CPU (web CanvasKit, software GL on Linux).
+class _BlobBackground extends StatelessWidget {
+  const _BlobBackground();
 
   @override
   Widget build(BuildContext context) {
@@ -747,17 +608,11 @@ class _AnimatedBlobBackgroundState extends State<_AnimatedBlobBackground>
       scheme.tertiary.withValues(alpha: a * 0.9),
       scheme.secondary.withValues(alpha: a * 0.8),
     ];
-    final painter = _BlobPainter(t: _animate ? _c.value : 0.12, colors: colors);
     return RepaintBoundary(
-      child: _animate
-          ? AnimatedBuilder(
-              animation: _c,
-              builder: (context, _) => CustomPaint(
-                painter: _BlobPainter(t: _c.value, colors: colors),
-                size: Size.infinite,
-              ),
-            )
-          : CustomPaint(painter: painter, size: Size.infinite),
+      child: CustomPaint(
+        painter: _BlobPainter(t: 0.12, colors: colors),
+        size: Size.infinite,
+      ),
     );
   }
 }
@@ -795,56 +650,6 @@ class _BlobPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BlobPainter old) => old.t != t || old.colors != colors;
-}
-
-/// The app logo with a gentle, continuous "float" (tiny vertical bob + scale).
-/// Static when reduced motion is requested.
-class _FloatingLogo extends StatefulWidget {
-  const _FloatingLogo({required this.size, required this.reduceMotion});
-  final double size;
-  final bool reduceMotion;
-
-  @override
-  State<_FloatingLogo> createState() => _FloatingLogoState();
-}
-
-class _FloatingLogoState extends State<_FloatingLogo>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
-  bool get _animate => !widget.reduceMotion && _kContinuousAnimations;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3600),
-    );
-    if (_animate) _c.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final logo = BrandLogo(size: widget.size, borderRadius: 20);
-    if (!_animate) return logo;
-    return AnimatedBuilder(
-      animation: CurvedAnimation(parent: _c, curve: Curves.easeInOut),
-      builder: (context, child) {
-        final v = Curves.easeInOut.transform(_c.value);
-        return Transform.translate(
-          offset: Offset(0, -3 + v * 6),
-          child: Transform.scale(scale: 1.0 + v * 0.03, child: child),
-        );
-      },
-      child: logo,
-    );
-  }
 }
 
 /// Wraps an input field with a soft accent glow while any descendant is focused.

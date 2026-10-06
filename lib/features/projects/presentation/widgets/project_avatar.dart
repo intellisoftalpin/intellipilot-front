@@ -7,20 +7,44 @@ import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 /// Circular project marker: the uploaded icon image when set, otherwise the
 /// issue-key prefix initials on the project's color.
 class ProjectAvatar extends StatelessWidget {
-  const ProjectAvatar({required this.project, this.size = 40, super.key});
+  ProjectAvatar({required Project project, this.size = 40, super.key})
+    : projectId = project.id,
+      name = project.name,
+      issuePrefix = project.issuePrefix,
+      color = project.color,
+      hasIcon = project.hasIcon,
+      iconImageUpdatedAt = project.iconImageUpdatedAt;
 
-  final Project project;
+  /// From the icon fields alone, for lists that do not carry a full
+  /// [Project] — the home dashboard's projects, for one.
+  const ProjectAvatar.fromParts({
+    required this.projectId,
+    required this.name,
+    required this.issuePrefix,
+    required this.color,
+    required this.hasIcon,
+    this.iconImageUpdatedAt,
+    this.size = 40,
+    super.key,
+  });
+
+  final String projectId;
+  final String name;
+  final String issuePrefix;
+  final String color;
+  final bool hasIcon;
+  final DateTime? iconImageUpdatedAt;
   final double size;
 
   @override
   Widget build(BuildContext context) {
-    if (project.hasIcon) {
+    if (hasIcon) {
       final base = getIt<ApiConfig>().baseUrl;
       final token = getIt<SessionBloc>().currentAccessToken;
       final v = Uri.encodeQueryComponent(
-        project.iconImageUpdatedAt?.toIso8601String() ?? '',
+        iconImageUpdatedAt?.toIso8601String() ?? '',
       );
-      final url = '$base/api/v1/projects/${project.id}/icon?v=$v';
+      final url = '$base/api/v1/projects/$projectId/icon?v=$v';
       return ClipOval(
         child: Image.network(
           url,
@@ -37,17 +61,16 @@ class ProjectAvatar extends StatelessWidget {
   }
 
   Widget _initials(BuildContext context) {
-    final color =
-        _parseColor(project.color) ?? Theme.of(context).colorScheme.primary;
+    final fill = _parseColor(color) ?? Theme.of(context).colorScheme.primary;
     return Container(
       width: size,
       height: size,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
       child: Text(
         _initialsText(),
         style: TextStyle(
-          color: _onColor(color),
+          color: _onColor(fill),
           fontWeight: FontWeight.w700,
           fontSize: size * 0.38,
           letterSpacing: 0.5,
@@ -57,9 +80,9 @@ class ProjectAvatar extends StatelessWidget {
   }
 
   String _initialsText() {
-    final p = project.issuePrefix.trim();
+    final p = issuePrefix.trim();
     if (p.isNotEmpty) return p.length <= 3 ? p : p.substring(0, 3);
-    final n = project.name.trim();
+    final n = name.trim();
     return n.isEmpty ? '?' : n.substring(0, 1).toUpperCase();
   }
 }

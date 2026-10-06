@@ -13,6 +13,7 @@ import 'package:intellipilot/features/dashboard/domain/dashboard_repository.dart
 import 'package:intellipilot/features/dashboard/presentation/cubits/global_dashboard_cubit.dart';
 import 'package:intellipilot/features/dashboard/presentation/widgets/dashboard_widgets.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
+import 'package:intellipilot/features/projects/presentation/widgets/project_avatar.dart';
 import 'package:intellipilot/features/timesheet/presentation/widgets/timesheet_warning_card.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
@@ -73,6 +74,9 @@ class _GlobalDashboardView extends StatelessWidget {
   }
 }
 
+/// From this width the projects move into a column of their own.
+const double _kTwoColumnWidth = 1000;
+
 class _Loaded extends StatelessWidget {
   const _Loaded({required this.data});
 
@@ -81,70 +85,101 @@ class _Loaded extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1100),
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            const _Greeting(),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
+    final main = <Widget>[
+      const _Greeting(),
+      const SizedBox(height: 16),
+      Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          KpiTile(
+            label: l10n.dashKpiAssigned,
+            value: '${data.assignedTotal}',
+            icon: Icons.assignment_ind_outlined,
+          ),
+          KpiTile(
+            label: l10n.dashKpiOverdue,
+            value: '${data.overdue}',
+            icon: Icons.warning_amber_outlined,
+            tone: data.overdue > 0 ? Theme.of(context).colorScheme.error : null,
+          ),
+          KpiTile(
+            label: l10n.dashKpiDueSoon,
+            value: '${data.dueSoon}',
+            icon: Icons.event_outlined,
+          ),
+          KpiTile(
+            label: l10n.dashKpiVacation,
+            value: _days(data.vacationDaysLeft),
+            icon: Icons.beach_access_outlined,
+          ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      const TimesheetWarningCard(),
+      const SizedBox(height: 16),
+      DashboardSection(
+        title: l10n.dashAttentionTitle,
+        icon: Icons.priority_high_outlined,
+        child: _AttentionList(items: data.attention),
+      ),
+      const SizedBox(height: 16),
+      DashboardSection(
+        title: l10n.dashMyWorkTitle,
+        icon: Icons.donut_large_outlined,
+        child: StatusBarChart(
+          buckets: data.byStatus,
+          emptyLabel: l10n.dashNoWork,
+        ),
+      ),
+    ];
+    final projects = DashboardSection(
+      title: l10n.dashMyProjectsTitle,
+      icon: Icons.folder_outlined,
+      child: _ProjectList(projects: data.byProject),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _kTwoColumnWidth) {
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1100),
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                children: [...main, const SizedBox(height: 16), projects],
+              ),
+            ),
+          );
+        }
+        // Each column scrolls on its own: a long project list must not push
+        // the user's work out of view, nor the other way round.
+        return Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1400),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                KpiTile(
-                  label: l10n.dashKpiAssigned,
-                  value: '${data.assignedTotal}',
-                  icon: Icons.assignment_ind_outlined,
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 12, 24),
+                    children: main,
+                  ),
                 ),
-                KpiTile(
-                  label: l10n.dashKpiOverdue,
-                  value: '${data.overdue}',
-                  icon: Icons.warning_amber_outlined,
-                  tone: data.overdue > 0
-                      ? Theme.of(context).colorScheme.error
-                      : null,
-                ),
-                KpiTile(
-                  label: l10n.dashKpiDueSoon,
-                  value: '${data.dueSoon}',
-                  icon: Icons.event_outlined,
-                ),
-                KpiTile(
-                  label: l10n.dashKpiVacation,
-                  value: _days(data.vacationDaysLeft),
-                  icon: Icons.beach_access_outlined,
+                SizedBox(
+                  width: 300,
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(12, 24, 24, 24),
+                    children: [projects],
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            const TimesheetWarningCard(),
-            const SizedBox(height: 16),
-            DashboardSection(
-              title: l10n.dashAttentionTitle,
-              icon: Icons.priority_high_outlined,
-              child: _AttentionList(items: data.attention),
-            ),
-            const SizedBox(height: 16),
-            DashboardSection(
-              title: l10n.dashMyWorkTitle,
-              icon: Icons.donut_large_outlined,
-              child: StatusBarChart(
-                buckets: data.byStatus,
-                emptyLabel: l10n.dashNoWork,
-              ),
-            ),
-            const SizedBox(height: 16),
-            DashboardSection(
-              title: l10n.dashMyProjectsTitle,
-              icon: Icons.folder_outlined,
-              child: _ProjectGrid(projects: data.byProject),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -227,8 +262,10 @@ class _AttentionList extends StatelessWidget {
   }
 }
 
-class _ProjectGrid extends StatelessWidget {
-  const _ProjectGrid({required this.projects});
+/// The user's projects, one card each: icon and name. Their order — the
+/// projects the user works in most first — comes from the server.
+class _ProjectList extends StatelessWidget {
+  const _ProjectList({required this.projects});
 
   final List<ProjectBucket> projects;
 
@@ -244,42 +281,44 @@ class _ProjectGrid extends StatelessWidget {
         ),
       );
     }
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final p in projects)
-          SizedBox(
-            width: 220,
-            child: Card(
-              margin: EdgeInsets.zero,
-              child: InkWell(
-                onTap: () => context.go(Routes.projectDetailFor(p.projectId)),
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
+        for (final (i, p) in projects.indexed) ...[
+          if (i > 0) const SizedBox(height: 8),
+          Card(
+            margin: EdgeInsets.zero,
+            child: InkWell(
+              onTap: () => context.go(Routes.projectDetailFor(p.projectId)),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    ProjectAvatar.fromParts(
+                      projectId: p.projectId,
+                      name: p.name,
+                      issuePrefix: p.issuePrefix,
+                      color: p.color,
+                      hasIcon: p.hasIcon,
+                      iconImageUpdatedAt: p.iconImageUpdatedAt,
+                      size: 32,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
                         p.name,
                         style: theme.textTheme.titleSmall,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.dashOpenCount(p.openCount),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
+        ],
       ],
     );
   }
