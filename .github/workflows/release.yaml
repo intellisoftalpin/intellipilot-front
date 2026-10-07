@@ -277,7 +277,7 @@ jobs:
           set -euo pipefail
           flutter --version
           ./scripts/build-linux.sh
-          ( cd dist && for f in *.deb *.rpm; do sha256sum "$f" > "$f.sha256"; done )
+          ( cd dist && for f in *.deb *.rpm *.pkg.tar.zst; do sha256sum "$f" > "$f.sha256"; done )
           ls -la dist
 
       - name: attest package provenance
@@ -286,6 +286,7 @@ jobs:
           subject-path: |
             dist/*.deb
             dist/*.rpm
+            dist/*.pkg.tar.zst
 
       - uses: actions/upload-artifact@v7
         with:
@@ -293,6 +294,7 @@ jobs:
           path: |
             dist/*.deb
             dist/*.rpm
+            dist/*.pkg.tar.zst
             dist/*.sha256
           if-no-files-found: error
           retention-days: 7
@@ -331,3 +333,5 @@ jobs:
             dist/*.deb.sha256
             dist/*.rpm
             dist/*.rpm.sha256
+            dist/*.pkg.tar.zst
+            dist/*.pkg.tar.zst.sha256

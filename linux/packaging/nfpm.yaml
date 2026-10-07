@@ -1,8 +1,8 @@
-# .deb and .rpm for the Linux desktop app, built by scripts/build-linux.sh.
+# .deb, .rpm and Arch .pkg.tar.zst for the Linux desktop app, built by scripts/build-linux.sh.
 #
 # Paths are relative to the repository root. The script exports VERSION
 # (pubspec version without the build number), RELEASE (the build number) and
-# ARCH (amd64 or arm64; nfpm names them x86_64 / aarch64 for rpm).
+# ARCH (amd64 or arm64; nfpm names them x86_64 / aarch64 for rpm and Arch).
 name: intellipilot
 arch: ${ARCH}
 platform: linux
@@ -30,6 +30,13 @@ overrides:
     depends:
       - gtk3
       - libsecret
+  archlinux:
+    depends:
+      - gtk3
+      - libsecret
+
+archlinux:
+  packager: IntelliSoftAlpin eG
 
 contents:
   - src: build/linux-package/bundle

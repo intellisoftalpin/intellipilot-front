@@ -4,6 +4,15 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.9] - 2026-10-07
+
+### Added
+- **Arch Linux package.** `scripts/build-linux.sh` also builds
+  `intellipilot-<version>-<build>-<x86_64|aarch64>.pkg.tar.zst` (depends on
+  `gtk3` and `libsecret`; install with `pacman -U`), and every release tag
+  attaches it for x86_64 and aarch64 (Arch Linux ARM) next to the `.deb` and
+  `.rpm`.
+
 ## [0.7.8] - 2026-10-06
 
 ### Added

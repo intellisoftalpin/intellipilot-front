@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Build the IntelliPilot Linux desktop app and package it as .deb and .rpm.
+# Build the IntelliPilot Linux desktop app and package it as .deb, .rpm and
+# an Arch Linux .pkg.tar.zst.
 #
 # Builds for the machine it runs on (x86_64 or aarch64): Flutter does not
 # cross-compile Linux desktop, so the release workflow runs this once per
@@ -12,6 +13,7 @@
 # Output (in dist/):
 #   intellipilot_<version>-<build>_<amd64|arm64>.deb
 #   intellipilot-<version>-<build>.<x86_64|aarch64>.rpm
+#   intellipilot-<version>-<build>-<x86_64|aarch64>.pkg.tar.zst
 #
 # Requires the Flutter Linux toolchain (clang, cmake, ninja, pkg-config,
 # GTK 3 and libsecret development headers) and either nfpm on PATH or Go,
@@ -96,6 +98,7 @@ fi
 mkdir -p dist
 nfpm_cmd package --config linux/packaging/nfpm.yaml --packager deb --target dist/
 nfpm_cmd package --config linux/packaging/nfpm.yaml --packager rpm --target dist/
+nfpm_cmd package --config linux/packaging/nfpm.yaml --packager archlinux --target dist/
 
 echo "✓ Packages:"
-ls -1 dist/*"${VERSION}"*.deb dist/*"${VERSION}"*.rpm
+ls -1 dist/*"${VERSION}"*.deb dist/*"${VERSION}"*.rpm dist/*"${VERSION}"*.pkg.tar.zst
