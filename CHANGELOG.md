@@ -4,6 +4,12 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.11] - 2026-10-07
+
+### Fixed
+- The built-in version fallback was left at 0.7.9 in 0.7.10, so CI failed and
+  0.7.10 was never published. Its changes ship in this release.
+
 ## [0.7.10] - 2026-10-07
 
 ### Added
