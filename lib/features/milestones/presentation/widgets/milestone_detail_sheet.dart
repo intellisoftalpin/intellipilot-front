@@ -32,16 +32,19 @@ class MilestoneSheetResult {
 /// deliberately the same gesture, width curve and transition as the issue/epic
 /// detail sheet, so "click a thing, it opens on the right" holds everywhere.
 ///
-/// Requires an ancestor [ProjectDetailCubit] for permissions.
+/// Permissions come from [projectCubit] when given — the cross-project page
+/// has no single project above it — and otherwise from an ancestor
+/// [ProjectDetailCubit].
 Future<MilestoneSheetResult> showMilestoneDetailSheet(
   BuildContext context, {
   required String projectId,
   required String milestoneId,
+  ProjectDetailCubit? projectCubit,
 }) async {
   final key = detailSheetKey('milestone', milestoneId);
   if (DetailSheetStack.contains(key)) return MilestoneSheetResult.none;
 
-  final projectCubit = context.read<ProjectDetailCubit>();
+  final cubit = projectCubit ?? context.read<ProjectDetailCubit>();
   final depth = DetailSheetStack.depth;
   DetailSheetStack.push(key);
   final MilestoneSheetResult? result;
@@ -67,7 +70,7 @@ Future<MilestoneSheetResult> showMilestoneDetailSheet(
               height: double.infinity,
               child: MultiBlocProvider(
                 providers: [
-                  BlocProvider<ProjectDetailCubit>.value(value: projectCubit),
+                  BlocProvider<ProjectDetailCubit>.value(value: cubit),
                   BlocProvider<MilestoneDetailCubit>(
                     create: (_) {
                       final c = MilestoneDetailCubit(
@@ -166,6 +169,7 @@ class _EditorState extends State<_Editor> {
     text: widget.state.milestone.description,
   );
   late DateTime? _start = widget.state.milestone.startDate;
+  late DateTime? _actualStart = widget.state.milestone.actualStartDate;
   late DateTime? _end = widget.state.milestone.endDate;
   late DateTime? _actualEnd = widget.state.milestone.actualEndDate;
   late DateTime? _business = widget.state.milestone.businessReleaseDate;
@@ -199,6 +203,7 @@ class _EditorState extends State<_Editor> {
       _name.text.trim() != _m.name ||
       _description.text != _m.description ||
       _start != _m.startDate ||
+      _actualStart != _m.actualStartDate ||
       _end != _m.endDate ||
       _actualEnd != _m.actualEndDate ||
       _business != _m.businessReleaseDate;
@@ -246,10 +251,17 @@ class _EditorState extends State<_Editor> {
               ),
               const SizedBox(height: 16),
               _DateRow(
-                label: t.milestoneFieldStart,
+                label: t.milestoneFieldStartPlanned,
                 value: _start,
                 enabled: canModify,
                 onPick: (d) => setState(() => _start = d),
+              ),
+              _DateRow(
+                label: t.milestoneFieldStartActual,
+                helper: t.milestoneActualStartHint,
+                value: _actualStart,
+                enabled: canModify,
+                onPick: (d) => setState(() => _actualStart = d),
               ),
               _DateRow(
                 label: t.milestoneFieldEndPlanned,
@@ -350,6 +362,7 @@ class _EditorState extends State<_Editor> {
       _name.text = _m.name;
       _description.text = _m.description;
       _start = _m.startDate;
+      _actualStart = _m.actualStartDate;
       _end = _m.endDate;
       _actualEnd = _m.actualEndDate;
       _business = _m.businessReleaseDate;
@@ -373,6 +386,9 @@ class _EditorState extends State<_Editor> {
         startDate: _start == _m.startDate
             ? UpdateMilestoneRequest.absent
             : _start,
+        actualStartDate: _actualStart == _m.actualStartDate
+            ? UpdateMilestoneRequest.absent
+            : _actualStart,
         endDate: _end == _m.endDate ? UpdateMilestoneRequest.absent : _end,
         actualEndDate: _actualEnd == _m.actualEndDate
             ? UpdateMilestoneRequest.absent

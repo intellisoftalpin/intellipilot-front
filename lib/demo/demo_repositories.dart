@@ -2464,6 +2464,65 @@ class DemoMilestonesRepository implements MilestonesRepository {
   }
 
   @override
+  Future<Result<MilestonePage, AppFailure>> listPage(
+    String projectId, {
+    required MilestoneStateFilter state,
+  }) async {
+    await _tick();
+    final mine = _s.milestones.where((m) => m.projectId == projectId);
+    return Ok(
+      MilestonePage(
+        milestones: mine.where((m) => _matches(m, state)).toList()
+          ..sort((a, b) => a.order.compareTo(b.order)),
+        completedCount: mine.where((m) => m.closed).length,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<MilestoneOverviewPage, AppFailure>> listAll({
+    required MilestoneStateFilter state,
+  }) async {
+    await _tick();
+    final projects = {for (final p in _s.projects) p.id: p};
+    final out = <MilestoneOverview>[];
+    for (final m in _s.milestones) {
+      final p = projects[m.projectId];
+      if (p == null || !_matches(m, state)) continue;
+      final epics = _s.epics.where((e) => e.milestoneId == m.id);
+      out.add(
+        MilestoneOverview(
+          milestone: m,
+          project: MilestoneProjectRef(
+            id: p.id,
+            name: p.name,
+            prefix: p.issuePrefix,
+            color: p.color,
+          ),
+          taskTotal: epics.fold(0, (n, e) => n + e.taskTotal),
+          taskClosed: epics.fold(0, (n, e) => n + e.taskClosed),
+          epicCount: epics.length,
+        ),
+      );
+    }
+    return Ok(
+      MilestoneOverviewPage(
+        items: out,
+        completedCount: _s.milestones
+            .where((m) => m.closed && projects.containsKey(m.projectId))
+            .length,
+      ),
+    );
+  }
+
+  static bool _matches(Milestone m, MilestoneStateFilter state) =>
+      switch (state) {
+        MilestoneStateFilter.open => !m.closed,
+        MilestoneStateFilter.completed => m.closed,
+        MilestoneStateFilter.all => true,
+      };
+
+  @override
   Future<Result<Milestone, AppFailure>> get(String projectId, String id) async {
     await _tick();
     final m = _s.milestones
@@ -2489,6 +2548,7 @@ class DemoMilestonesRepository implements MilestonesRepository {
       slug: body.slug ?? body.name.toLowerCase().replaceAll(' ', '-'),
       description: body.description,
       startDate: body.startDate,
+      actualStartDate: body.actualStartDate,
       endDate: body.endDate,
       businessReleaseDate: body.businessReleaseDate,
       closed: false,
@@ -2530,7 +2590,9 @@ class DemoMilestonesRepository implements MilestonesRepository {
       slug: cur.slug,
       description: (patch['description'] as String?) ?? cur.description,
       startDate: date('start_date', cur.startDate),
+      actualStartDate: date('actual_start_date', cur.actualStartDate),
       endDate: end,
+      actualEndDate: date('actual_end_date', cur.actualEndDate),
       // Mirrors the backend rule: no technical release, no business release.
       businessReleaseDate: end == null
           ? null
@@ -2578,7 +2640,9 @@ class DemoMilestonesRepository implements MilestonesRepository {
       slug: cur.slug,
       description: cur.description,
       startDate: cur.startDate,
+      actualStartDate: cur.actualStartDate,
       endDate: cur.endDate,
+      actualEndDate: cur.actualEndDate,
       businessReleaseDate: cur.businessReleaseDate,
       closed: completed,
       closedAt: completed ? DateTime.now().toUtc() : null,

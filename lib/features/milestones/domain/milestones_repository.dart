@@ -5,6 +5,17 @@ import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 
 abstract interface class MilestonesRepository {
   Future<Result<List<Milestone>, AppFailure>> list(String projectId);
+
+  /// A project's milestones narrowed by [state], with the completed count.
+  Future<Result<MilestonePage, AppFailure>> listPage(
+    String projectId, {
+    required MilestoneStateFilter state,
+  });
+
+  /// Milestones across every project the user may see them in.
+  Future<Result<MilestoneOverviewPage, AppFailure>> listAll({
+    required MilestoneStateFilter state,
+  });
   Future<Result<Milestone, AppFailure>> get(String projectId, String id);
   Future<Result<Milestone, AppFailure>> create(
     String projectId,

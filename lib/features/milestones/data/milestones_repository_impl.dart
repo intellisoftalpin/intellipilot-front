@@ -31,6 +31,59 @@ class MilestonesRepositoryImpl implements MilestonesRepository {
   }
 
   @override
+  Future<Result<MilestonePage, AppFailure>> listPage(
+    String projectId, {
+    required MilestoneStateFilter state,
+  }) async {
+    final res = await _api.get(
+      '$_base/$projectId/milestones',
+      query: {'state': state.wire},
+    );
+    return res.when(
+      ok: (r) {
+        final body = r.data as Map<String, dynamic>;
+        final raw = body['milestones'] as List<dynamic>? ?? const [];
+        return Ok(
+          MilestonePage(
+            milestones: raw
+                .map((e) => Milestone.fromJson(e as Map<String, dynamic>))
+                .toList(),
+            completedCount: (body['completed_count'] as num?)?.toInt() ?? 0,
+          ),
+        );
+      },
+      err: Err.new,
+    );
+  }
+
+  @override
+  Future<Result<MilestoneOverviewPage, AppFailure>> listAll({
+    required MilestoneStateFilter state,
+  }) async {
+    final res = await _api.get(
+      '/api/v1/milestones',
+      query: {'state': state.wire},
+    );
+    return res.when(
+      ok: (r) {
+        final body = r.data as Map<String, dynamic>;
+        final raw = body['milestones'] as List<dynamic>? ?? const [];
+        return Ok(
+          MilestoneOverviewPage(
+            items: raw
+                .map(
+                  (e) => MilestoneOverview.fromJson(e as Map<String, dynamic>),
+                )
+                .toList(),
+            completedCount: (body['completed_count'] as num?)?.toInt() ?? 0,
+          ),
+        );
+      },
+      err: Err.new,
+    );
+  }
+
+  @override
   Future<Result<Milestone, AppFailure>> get(
     String projectId,
     String id,

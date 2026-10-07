@@ -15,6 +15,7 @@ class Milestone {
     required this.modifiedAt,
     this.description = '',
     this.startDate,
+    this.actualStartDate,
     this.endDate,
     this.actualEndDate,
     this.businessReleaseDate,
@@ -30,6 +31,7 @@ class Milestone {
         slug: (json['slug'] as String?) ?? '',
         description: (json['description'] as String?) ?? '',
         startDate: _date(json['start_date']),
+        actualStartDate: _date(json['actual_start_date']),
         endDate: _date(json['end_date']),
         actualEndDate: _date(json['actual_end_date']),
         businessReleaseDate: _date(json['business_release_date']),
@@ -50,7 +52,26 @@ class Milestone {
   /// Markdown notes. Empty when unset.
   final String description;
 
+  /// The planned start.
   final DateTime? startDate;
+
+  /// When work actually began, once recorded (by hand only). The gap against
+  /// [startDate] is the late — or early — start.
+  final DateTime? actualStartDate;
+
+  /// The start that really happened: the actual date when recorded,
+  /// otherwise the plan. The gantt bar starts here.
+  DateTime? get effectiveStartDate => actualStartDate ?? startDate;
+
+  /// Days the start came late (positive) or early (negative), or null when
+  /// there is no recorded actual start or nothing to compare it against.
+  int? get startSlipDays {
+    final planned = startDate;
+    final actual = actualStartDate;
+    if (planned == null || actual == null) return null;
+    final days = actual.difference(planned).inDays;
+    return days == 0 ? null : days;
+  }
 
   /// The planned technical release date.
   final DateTime? endDate;
@@ -114,6 +135,7 @@ class CreateMilestoneRequest {
     this.slug,
     this.description = '',
     this.startDate,
+    this.actualStartDate,
     this.endDate,
     this.businessReleaseDate,
   });
@@ -121,6 +143,7 @@ class CreateMilestoneRequest {
   final String? slug;
   final String description;
   final DateTime? startDate;
+  final DateTime? actualStartDate;
   final DateTime? endDate;
   final DateTime? businessReleaseDate;
 
@@ -129,6 +152,7 @@ class CreateMilestoneRequest {
     if (slug != null && slug!.isNotEmpty) 'slug': slug,
     if (description.isNotEmpty) 'description': description,
     if (startDate != null) 'start_date': isoDate(startDate!),
+    if (actualStartDate != null) 'actual_start_date': isoDate(actualStartDate!),
     if (endDate != null) 'end_date': isoDate(endDate!),
     if (businessReleaseDate != null)
       'business_release_date': isoDate(businessReleaseDate!),
@@ -144,6 +168,7 @@ class UpdateMilestoneRequest {
     this.name,
     this.description,
     this.startDate = absent,
+    this.actualStartDate = absent,
     this.endDate = absent,
     this.actualEndDate = absent,
     this.businessReleaseDate = absent,
@@ -155,6 +180,9 @@ class UpdateMilestoneRequest {
   final String? name;
   final String? description;
   final Object? startDate;
+
+  /// When work actually began. `null` clears it.
+  final Object? actualStartDate;
   final Object? endDate;
 
   /// When the milestone actually finished. `null` clears it.
@@ -165,6 +193,7 @@ class UpdateMilestoneRequest {
     if (name != null) 'name': name,
     if (description != null) 'description': description,
     ..._dateField('start_date', startDate),
+    ..._dateField('actual_start_date', actualStartDate),
     ..._dateField('end_date', endDate),
     ..._dateField('actual_end_date', actualEndDate),
     ..._dateField('business_release_date', businessReleaseDate),
@@ -177,6 +206,95 @@ class UpdateMilestoneRequest {
 
   /// Whether this patch would change anything at all.
   bool get isEmpty => toJson().isEmpty;
+}
+
+/// Which milestones a listing asks for. Completed ones are fetched only when
+/// the user expands their band.
+enum MilestoneStateFilter {
+  open('open'),
+  completed('completed'),
+  all('all');
+
+  const MilestoneStateFilter(this.wire);
+  final String wire;
+}
+
+/// One page of a project's milestones plus the number of completed ones,
+/// which the collapsed "Completed" band shows before they are loaded.
+class MilestonePage {
+  const MilestonePage({required this.milestones, required this.completedCount});
+  final List<Milestone> milestones;
+  final int completedCount;
+}
+
+/// The project a milestone belongs to, as the cross-project listing reports
+/// it: just enough to label and colour a timeline row.
+class MilestoneProjectRef {
+  const MilestoneProjectRef({
+    required this.id,
+    required this.name,
+    required this.prefix,
+    required this.color,
+  });
+
+  factory MilestoneProjectRef.fromJson(Map<String, dynamic> json) =>
+      MilestoneProjectRef(
+        id: json['id'] as String,
+        name: (json['name'] as String?) ?? '',
+        prefix: (json['prefix'] as String?) ?? '',
+        color: (json['color'] as String?) ?? '',
+      );
+
+  final String id;
+  final String name;
+
+  /// Issue-key prefix (`PS`), shown as the row's project chip.
+  final String prefix;
+
+  /// Project card colour (hex), or '' when none.
+  final String color;
+}
+
+/// A milestone from `GET /api/v1/milestones`: the milestone itself, its
+/// project, and the roll-ups the per-project page computes from epics.
+class MilestoneOverview {
+  const MilestoneOverview({
+    required this.milestone,
+    required this.project,
+    required this.taskTotal,
+    required this.taskClosed,
+    required this.epicCount,
+  });
+
+  factory MilestoneOverview.fromJson(Map<String, dynamic> json) =>
+      MilestoneOverview(
+        milestone: Milestone.fromJson(json),
+        project: MilestoneProjectRef.fromJson(
+          (json['project'] as Map<String, dynamic>?) ?? const {},
+        ),
+        taskTotal: (json['task_total'] as num?)?.toInt() ?? 0,
+        taskClosed: (json['task_closed'] as num?)?.toInt() ?? 0,
+        epicCount: (json['epic_count'] as num?)?.toInt() ?? 0,
+      );
+
+  final Milestone milestone;
+  final MilestoneProjectRef project;
+  final int taskTotal;
+  final int taskClosed;
+  final int epicCount;
+
+  /// Same rule as the per-project ring: `null` with nothing to measure.
+  double? get progress => taskTotal <= 0 ? null : taskClosed / taskTotal;
+}
+
+/// The cross-project listing plus the completed count across those projects.
+class MilestoneOverviewPage {
+  const MilestoneOverviewPage({
+    required this.items,
+    required this.completedCount,
+  });
+  final List<MilestoneOverview> items;
+  final int completedCount;
 }
 
 class MilestoneStats {

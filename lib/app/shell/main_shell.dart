@@ -341,6 +341,12 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                                       ),
                                       const SizedBox(width: 4),
                                       _NavLink(
+                                        label: t.topNavMilestones,
+                                        onTap: () =>
+                                            context.go(Routes.milestones),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      _NavLink(
                                         label: t.ttNavTimesheet,
                                         onTap: () =>
                                             context.go(Routes.timesheet),

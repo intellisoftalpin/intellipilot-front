@@ -283,5 +283,86 @@ void main() {
       );
       expect(adapter.lastRequest?.data, {'name': 'Renamed'});
     });
+
+    test('actual start: parsed, sent on create, cleared with null', () async {
+      final adapter = _Adapter(
+        (_) async => _ok(
+          _milestoneJson.replaceFirst(
+            '"start_date":"2026-05-01",',
+            '"start_date":"2026-05-01","actual_start_date":"2026-05-04",',
+          ),
+        ),
+      );
+      final repo = MilestonesRepositoryImpl(_client(adapter));
+      final m = (await repo.get('p1', 'm1')).valueOrNull!;
+      expect(m.startDate, DateTime(2026, 5));
+      expect(m.actualStartDate, DateTime(2026, 5, 4));
+      expect(m.effectiveStartDate, DateTime(2026, 5, 4));
+      expect(m.startSlipDays, 3);
+
+      await repo.create(
+        'p1',
+        CreateMilestoneRequest(
+          name: 'Sprint 1',
+          actualStartDate: DateTime.utc(2026, 5, 4),
+        ),
+      );
+      expect(adapter.lastRequest?.data, {
+        'name': 'Sprint 1',
+        'actual_start_date': '2026-05-04',
+      });
+
+      await repo.update(
+        'p1',
+        'm1',
+        body: const UpdateMilestoneRequest(actualStartDate: null),
+        etag: '"m1:1"',
+      );
+      expect(adapter.lastRequest?.data, {'actual_start_date': null});
+    });
+
+    test(
+      'listPage passes the state filter and reads completed_count',
+      () async {
+        final adapter = _Adapter(
+          (_) async =>
+              _ok('{"milestones":[$_milestoneJson],"completed_count":4}'),
+        );
+        final repo = MilestonesRepositoryImpl(_client(adapter));
+        final page = (await repo.listPage(
+          'p1',
+          state: MilestoneStateFilter.open,
+        )).valueOrNull!;
+        expect(adapter.lastRequest?.path, '/api/v1/projects/p1/milestones');
+        expect(adapter.lastRequest?.queryParameters, {'state': 'open'});
+        expect(page.milestones.single.name, 'Sprint 1');
+        expect(page.completedCount, 4);
+      },
+    );
+
+    test('listAll reads project, roll-ups and completed_count', () async {
+      final row = _milestoneJson.replaceFirst(
+        '{',
+        '{"project":{"id":"p1","name":"Pass","prefix":"PS",'
+            '"color":"#0079bc"},"task_total":4,"task_closed":3,'
+            '"epic_count":2,',
+      );
+      final adapter = _Adapter(
+        (_) async => _ok('{"milestones":[$row],"completed_count":2}'),
+      );
+      final repo = MilestonesRepositoryImpl(_client(adapter));
+      final page = (await repo.listAll(
+        state: MilestoneStateFilter.completed,
+      )).valueOrNull!;
+      expect(adapter.lastRequest?.path, '/api/v1/milestones');
+      expect(adapter.lastRequest?.queryParameters, {'state': 'completed'});
+      expect(page.completedCount, 2);
+      final o = page.items.single;
+      expect(o.project.prefix, 'PS');
+      expect(o.project.color, '#0079bc');
+      expect(o.progress, 0.75);
+      expect(o.epicCount, 2);
+      expect(o.milestone.name, 'Sprint 1');
+    });
   });
 }

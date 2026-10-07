@@ -37,6 +37,7 @@ import 'package:intellipilot/features/mfa/presentation/passkeys_page.dart';
 import 'package:intellipilot/features/mfa/presentation/recovery_codes_page.dart';
 import 'package:intellipilot/features/mfa/presentation/security_page.dart';
 import 'package:intellipilot/features/mfa/presentation/totp_setup_page.dart';
+import 'package:intellipilot/features/milestones/presentation/all_milestones_page.dart';
 import 'package:intellipilot/features/milestones/presentation/milestones_list_page.dart';
 import 'package:intellipilot/features/profile/presentation/account_page.dart';
 import 'package:intellipilot/features/profile/presentation/profile_page.dart';
@@ -95,6 +96,9 @@ abstract class Routes {
   static const account = '/me/account';
   static const projects = '/projects';
   static const timesheet = '/me/timesheet';
+
+  /// Milestones across every project the user may see them in.
+  static const milestones = '/milestones';
   static const acceptInvitation = '/i';
   // Platform-admin (V011) — only superadmins should reach these; the
   // backend gates the API with 403, and the SPA hides the nav entry for
@@ -296,6 +300,11 @@ GoRouter buildRouter({required SessionBloc session}) {
             path: Routes.projects,
             name: 'projects',
             builder: (context, state) => const ProjectsListPage(),
+          ),
+          GoRoute(
+            path: Routes.milestones,
+            name: 'milestones',
+            builder: (context, state) => const AllMilestonesPage(),
           ),
           GoRoute(
             path: Routes.timesheet,

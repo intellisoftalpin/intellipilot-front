@@ -7,6 +7,10 @@ import 'package:intellipilot/features/backlog/data/dtos/backlog_dtos.dart';
 import 'package:intellipilot/features/backlog/domain/backlog_repository.dart';
 import 'package:intellipilot/features/milestones/data/dtos/milestone_dtos.dart';
 import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
+import 'package:intellipilot/features/milestones/presentation/widgets/milestone_gantt.dart';
+
+export 'package:intellipilot/features/milestones/presentation/widgets/milestone_gantt.dart'
+    show effectiveRange, isAtRisk;
 
 sealed class MilestonesListState extends Equatable {
   const MilestonesListState();
@@ -26,24 +30,40 @@ class MilestonesListLoaded extends MilestonesListState {
   const MilestonesListLoaded({
     required this.milestones,
     required this.epics,
+    required this.completedCount,
+    this.completedExpanded = false,
+    this.completedLoading = false,
     this.busy = false,
   });
 
+  /// The open milestones, plus the completed ones once the user expanded
+  /// their band — they are not fetched before that.
   final List<Milestone> milestones;
 
   /// Every epic in the project. A milestone's readiness is rolled up from the
   /// epics pointing at it, so one fetch covers every card on the page.
   final List<Epic> epics;
 
+  /// How many completed milestones exist, loaded or not.
+  final int completedCount;
+  final bool completedExpanded;
+  final bool completedLoading;
+
   final bool busy;
 
   MilestonesListLoaded copyWith({
     List<Milestone>? milestones,
     List<Epic>? epics,
+    int? completedCount,
+    bool? completedExpanded,
+    bool? completedLoading,
     bool? busy,
   }) => MilestonesListLoaded(
     milestones: milestones ?? this.milestones,
     epics: epics ?? this.epics,
+    completedCount: completedCount ?? this.completedCount,
+    completedExpanded: completedExpanded ?? this.completedExpanded,
+    completedLoading: completedLoading ?? this.completedLoading,
     busy: busy ?? this.busy,
   );
 
@@ -51,14 +71,13 @@ class MilestonesListLoaded extends MilestonesListState {
     milestones.where((m) => !m.closed).toList(),
   );
 
-  /// Completed milestones, ordered exactly like the in-progress column so the
-  /// two read the same way: earliest end date first.
+  /// Completed milestones loaded so far, ordered exactly like the in-progress
+  /// ones so the two read the same way: earliest end date first.
   List<Milestone> get completed =>
       _byEndDate(milestones.where((m) => m.closed).toList());
 
-  /// Completed issues over total across a milestone's epics; `null` when the
-  /// milestone has no measurable work yet.
-  double? progressFor(String milestoneId) {
+  /// Done and total issues across a milestone's epics.
+  ({int closed, int total}) tasksFor(String milestoneId) {
     var total = 0;
     var closed = 0;
     for (final e in epics) {
@@ -66,14 +85,28 @@ class MilestonesListLoaded extends MilestonesListState {
       total += e.taskTotal;
       closed += e.taskClosed;
     }
-    return total <= 0 ? null : closed / total;
+    return (closed: closed, total: total);
+  }
+
+  /// Completed issues over total across a milestone's epics; `null` when the
+  /// milestone has no measurable work yet.
+  double? progressFor(String milestoneId) {
+    final t = tasksFor(milestoneId);
+    return t.total <= 0 ? null : t.closed / t.total;
   }
 
   int epicCountFor(String milestoneId) =>
       epics.where((e) => e.milestoneId == milestoneId).length;
 
   @override
-  List<Object?> get props => [milestones, epics, busy];
+  List<Object?> get props => [
+    milestones,
+    epics,
+    completedCount,
+    completedExpanded,
+    completedLoading,
+    busy,
+  ];
 }
 
 /// Nearest deadline first, so what is due next sits on top. Keyed on the end
@@ -82,23 +115,6 @@ class MilestonesListLoaded extends MilestonesListState {
 List<Milestone> _byEndDate(List<Milestone> items) =>
     items
       ..sort((a, b) => effectiveRange(a).end.compareTo(effectiveRange(b).end));
-
-/// Effective schedule of a milestone for display: a missing start defaults to
-/// today, a missing end to start + 7 days. [estimated] marks defaulted values
-/// so views can render them as tentative.
-({DateTime start, DateTime end, bool estimated}) effectiveRange(Milestone m) {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
-  final start = m.startDate ?? today;
-  // The bar runs to what actually happened when that is known, so a slip
-  // lengthens it rather than leaving the chart showing the plan.
-  final end = m.effectiveEndDate ?? start.add(const Duration(days: 7));
-  return (
-    start: start,
-    end: end.isBefore(start) ? start : end,
-    estimated: m.startDate == null || m.effectiveEndDate == null,
-  );
-}
 
 class MilestonesListCubit extends Cubit<MilestonesListState> {
   MilestonesListCubit({
@@ -113,11 +129,20 @@ class MilestonesListCubit extends Cubit<MilestonesListState> {
   final BacklogRepository _backlog;
   final String projectId;
 
+  /// Load the open milestones — and the completed ones too when their band is
+  /// already expanded, so a reload after an edit keeps what the user sees.
   Future<void> load() async {
-    if (!isClosed) emit(const MilestonesListLoading());
-    final res = await _repo.list(projectId);
-    final items = res.valueOrNull;
-    if (items == null) {
+    final prev = state;
+    final expanded = prev is MilestonesListLoaded && prev.completedExpanded;
+    if (prev is! MilestonesListLoaded && !isClosed) {
+      emit(const MilestonesListLoading());
+    }
+    final res = await _repo.listPage(
+      projectId,
+      state: expanded ? MilestoneStateFilter.all : MilestoneStateFilter.open,
+    );
+    final page = res.valueOrNull;
+    if (page == null) {
       if (!isClosed) emit(const MilestonesListFailed());
       return;
     }
@@ -125,11 +150,51 @@ class MilestonesListCubit extends Cubit<MilestonesListState> {
     if (!isClosed) {
       emit(
         MilestonesListLoaded(
-          milestones: items,
+          milestones: page.milestones,
           epics: epics.valueOrNull ?? const [],
+          completedCount: page.completedCount,
+          completedExpanded: expanded,
         ),
       );
     }
+  }
+
+  /// Expand or collapse the completed band, fetching its milestones the first
+  /// time it opens.
+  Future<void> toggleCompleted() async {
+    final s = state;
+    if (s is! MilestonesListLoaded) return;
+    if (s.completedExpanded) {
+      emit(s.copyWith(completedExpanded: false));
+      return;
+    }
+    if (s.completed.length >= s.completedCount) {
+      emit(s.copyWith(completedExpanded: true));
+      return;
+    }
+    emit(s.copyWith(completedExpanded: true, completedLoading: true));
+    final res = await _repo.listPage(
+      projectId,
+      state: MilestoneStateFilter.completed,
+    );
+    if (isClosed) return;
+    final cur = state;
+    if (cur is! MilestonesListLoaded) return;
+    final page = res.valueOrNull;
+    if (page == null) {
+      emit(cur.copyWith(completedExpanded: false, completedLoading: false));
+      return;
+    }
+    emit(
+      cur.copyWith(
+        milestones: [
+          ...cur.milestones.where((m) => !m.closed),
+          ...page.milestones,
+        ],
+        completedCount: page.completedCount,
+        completedLoading: false,
+      ),
+    );
   }
 
   Future<bool> create(CreateMilestoneRequest body) async {
@@ -152,10 +217,14 @@ class MilestonesListCubit extends Cubit<MilestonesListState> {
   void forget(String id) {
     final s = state;
     if (s is! MilestonesListLoaded) return;
+    final gone = s.milestones.where((x) => x.id == id).firstOrNull;
     if (!isClosed) {
       emit(
         s.copyWith(
           milestones: s.milestones.where((x) => x.id != id).toList(),
+          completedCount: (gone?.closed ?? false)
+              ? s.completedCount - 1
+              : s.completedCount,
         ),
       );
     }

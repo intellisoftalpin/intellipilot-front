@@ -4,6 +4,36 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.10] - 2026-10-07
+
+### Added
+- **Milestones in the top navigation.** A cross-project timeline of every
+  milestone you may see, each row in its project's colour with a prefix chip.
+  View only — no creating — but a row opens the usual detail sidebar,
+  editable where your project role allows. Rows are chronological by default,
+  or grouped by project.
+- **Planned and actual start date** in the milestone sidebar, next to the
+  planned and actual end. Row labels show both ranges; actual dates are
+  coloured orange when late and green when early.
+
+### Changed
+- **The timeline is the default milestones view** (a board choice you made
+  earlier is kept). It opens centred on today, a Today button re-centres it,
+  zooming keeps the centre date in place, and the date header stays put while
+  rows scroll.
+- **Completed milestones start collapsed** as "Completed (N)" — on the
+  timeline and on the board — and are only loaded when expanded.
+- **New bar design.** Bars take the project colour with the done fraction
+  filled in; late and early starts/ends are striped orange/green; the business
+  release is a thin blue tail ending in a diamond; estimated dates get a
+  dashed outline and overdue milestones a red one. A legend explains it.
+- **Progress ring** is larger and its label always fits inside; a full ring
+  shows a check mark.
+
+### Fixed
+- Demo mode no longer drops a milestone's actual end date when it is edited
+  or completed.
+
 ## [0.7.9] - 2026-10-07
 
 ### Added

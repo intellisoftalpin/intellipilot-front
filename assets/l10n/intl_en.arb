@@ -4370,6 +4370,42 @@
   "milestoneActualShort": "Actual",
   "milestoneSlipLate": "Finished late",
   "milestoneSlipEarly": "Finished early",
+  "milestoneFieldStartPlanned": "Planned start date",
+  "milestoneFieldStartActual": "Actual start date",
+  "milestoneActualStartHint": "When work really began. Set by hand.",
+  "milestoneStartLate": "Started late",
+  "milestoneStartEarly": "Started early",
+  "topNavMilestones": "Milestones",
+  "milestonesOrderChronological": "Chronological",
+  "milestonesOrderByProject": "By project",
+  "milestonesToday": "Today",
+  "milestonesJumpToToday": "Scroll to today",
+  "milestoneCompletedBand": "Completed ({count})",
+  "@milestoneCompletedBand": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "milestoneShowCompleted": "Show completed milestones",
+  "milestoneHideCompleted": "Hide completed milestones",
+  "milestoneLegendLate": "Late",
+  "milestoneLegendEarly": "Early",
+  "milestoneLegendOverdue": "Overdue",
+  "milestoneLegendDone": "Done",
+  "milestonesAllEmpty": "There are no milestones in your projects yet.",
+  "milestoneTooltipTasks": "{done} of {total} tasks done",
+  "@milestoneTooltipTasks": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "panelComponentVersions": "Components & versions",
   "detailNoComponentsYet": "Add a component to record the version it ships the fix in.",
   "detailComponentNoRelease": "No release linked",
