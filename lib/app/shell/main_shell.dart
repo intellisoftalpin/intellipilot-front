@@ -33,6 +33,7 @@ import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_counts_cubit.dart';
+import 'package:intellipilot/features/projects/presentation/widgets/join_project.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
 
 /// App-wide chrome wrapping the routed page. Adds:
@@ -130,7 +131,12 @@ class MainShell extends StatelessWidget {
                             activeProjectRef: scope,
                             showBrandMark: false,
                           ),
-                          Expanded(child: child),
+                          Expanded(
+                            child: ReadOnlyProjectBanner(
+                              projectId: projectId,
+                              child: child,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -149,7 +155,7 @@ class MainShell extends StatelessWidget {
                 projectId: projectId,
                 currentRoute: route,
               ),
-              body: child,
+              body: ReadOnlyProjectBanner(projectId: projectId, child: child),
             );
           },
         );

@@ -278,6 +278,22 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
   }
 
   @override
+  Future<Result<Unit, AppFailure>> joinProject(
+    String projectId, {
+    required String roleSlug,
+  }) async {
+    try {
+      await _api.dio.post<dynamic>(
+        '$_basePath/$projectId/join',
+        data: {'role': roleSlug},
+      );
+      return const Ok<Unit, AppFailure>(Unit.instance);
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
+  }
+
+  @override
   Future<Result<Unit, AppFailure>> removeMember(
     String projectId,
     String userId,

@@ -79,6 +79,12 @@ abstract interface class ProjectsRepository {
     String? identifier,
   });
 
+  /// A superadmin adds himself to a project he reads but is not a member of.
+  Future<Result<Unit, AppFailure>> joinProject(
+    String projectId, {
+    required String roleSlug,
+  });
+
   // ---- invitations ----
   Future<Result<List<Invitation>, AppFailure>> listInvitations(
     String projectId,

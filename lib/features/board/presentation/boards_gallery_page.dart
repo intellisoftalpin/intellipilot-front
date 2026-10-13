@@ -90,6 +90,7 @@ class _BoardsGalleryPageState extends State<BoardsGalleryPage> {
               repo: getIt<ProjectsRepository>(),
               projectId: widget.projectId,
               currentUserId: profile?.id ?? '',
+              isSuperadmin: profile?.isSuperadmin ?? false,
             );
             unawaited(c.load());
             return c;

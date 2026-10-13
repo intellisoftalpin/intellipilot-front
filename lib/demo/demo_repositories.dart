@@ -719,6 +719,15 @@ class DemoProjectsRepository implements ProjectsRepository {
   }
 
   @override
+  Future<Result<Unit, AppFailure>> joinProject(
+    String projectId, {
+    required String roleSlug,
+  }) async {
+    if (!_s.currentUser.isSuperadmin) return const Err(ForbiddenFailure());
+    return addMember(projectId, roleSlug: roleSlug, userId: _s.currentUser.id);
+  }
+
+  @override
   Future<Result<List<Invitation>, AppFailure>> listInvitations(
     String projectId,
   ) async {

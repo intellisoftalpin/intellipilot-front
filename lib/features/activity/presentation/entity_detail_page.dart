@@ -292,6 +292,7 @@ class _EntityDetailPageState extends State<EntityDetailPage> {
               repo: getIt<ProjectsRepository>(),
               projectId: widget.projectId,
               currentUserId: data.profile.id,
+              isSuperadmin: data.profile.isSuperadmin,
             );
             unawaited(c.load());
             return c;

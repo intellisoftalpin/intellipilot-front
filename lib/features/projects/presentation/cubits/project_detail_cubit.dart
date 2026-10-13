@@ -1,10 +1,15 @@
 // Underscore-prefixed fields are clearer than `{required this._repo}` in
 // the public constructor — silence the lint at file scope.
 // ignore_for_file: prefer_initializing_formals
+import 'dart:async';
+
 import 'package:equatable/equatable.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/core/error/app_failure.dart';
 import 'package:intellipilot/core/result/result.dart';
+import 'package:intellipilot/features/meetings/domain/project_access_cache.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/permission.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
@@ -24,6 +29,8 @@ final class ProjectDetailLoaded extends ProjectDetailState {
     required this.project,
     required this.myPermissions,
     required this.isAdmin,
+    this.readAll = false,
+    this.isMember = true,
   });
   final Project project;
   final Set<Permission> myPermissions;
@@ -32,7 +39,18 @@ final class ProjectDetailLoaded extends ProjectDetailState {
   /// permission, including future ones).
   final bool isAdmin;
 
-  bool has(Permission p) => isAdmin || myPermissions.contains(p);
+  /// Platform superadmin: holds every read permission on top of his role.
+  final bool readAll;
+
+  /// Caller belongs to the project.
+  final bool isMember;
+
+  /// A superadmin reading a project he is not a member of — he may add
+  /// himself, and nothing else.
+  bool get canJoin => readAll && !isMember;
+
+  bool has(Permission p) =>
+      isAdmin || myPermissions.contains(p) || (readAll && p.isRead);
 
   /// True if the caller holds any of [perms] (or is an admin). Used to decide
   /// whether to surface a management UI gated by a group of create/modify/
@@ -40,7 +58,13 @@ final class ProjectDetailLoaded extends ProjectDetailState {
   bool hasAny(Iterable<Permission> perms) => isAdmin || perms.any(has);
 
   @override
-  List<Object?> get props => [project.id, myPermissions, isAdmin];
+  List<Object?> get props => [
+    project.id,
+    myPermissions,
+    isAdmin,
+    readAll,
+    isMember,
+  ];
 }
 
 final class ProjectDetailFailed extends ProjectDetailState {
@@ -55,12 +79,58 @@ class ProjectDetailCubit extends Cubit<ProjectDetailState> {
     required ProjectsRepository repo,
     required this.projectId,
     required this.currentUserId,
+    this.isSuperadmin = false,
+    Listenable? accessChanges,
   }) : _repo = repo,
-       super(const ProjectDetailLoading());
+       _accessChanges =
+           accessChanges ??
+           (getIt.isRegistered<ProjectAccessCache>()
+               ? getIt<ProjectAccessCache>()
+               : null),
+       super(const ProjectDetailLoading()) {
+    _accessChanges?.addListener(_onAccessChanged);
+  }
 
   final ProjectsRepository _repo;
   final String projectId;
   final String currentUserId;
+
+  /// Platform superadmin: reads every project, writes only as a member.
+  final bool isSuperadmin;
+
+  /// Fires when someone's membership changed — a superadmin joining from the
+  /// banner or the Members tab — so every open page picks up its new rights.
+  final Listenable? _accessChanges;
+
+  void _onAccessChanged() => unawaited(refreshAccess());
+
+  /// Re-resolve the caller's permissions without blanking the page.
+  Future<void> refreshAccess() async {
+    if (state is! ProjectDetailLoaded) return;
+    final access = await resolveProjectAccess(
+      _repo,
+      projectId: projectId,
+      userId: currentUserId,
+      isSuperadmin: isSuperadmin,
+    );
+    final s = state;
+    if (isClosed || s is! ProjectDetailLoaded) return;
+    emit(
+      ProjectDetailLoaded(
+        project: s.project,
+        myPermissions: access.permissions,
+        isAdmin: access.isAdmin,
+        readAll: access.readAll,
+        isMember: access.isMember,
+      ),
+    );
+  }
+
+  @override
+  Future<void> close() {
+    _accessChanges?.removeListener(_onAccessChanged);
+    return super.close();
+  }
 
   Future<void> load() async {
     emit(const ProjectDetailLoading());
@@ -76,6 +146,7 @@ class ProjectDetailCubit extends Cubit<ProjectDetailState> {
       _repo,
       projectId: projectId,
       userId: currentUserId,
+      isSuperadmin: isSuperadmin,
     );
 
     emit(
@@ -83,6 +154,8 @@ class ProjectDetailCubit extends Cubit<ProjectDetailState> {
         project: project,
         myPermissions: access.permissions,
         isAdmin: access.isAdmin,
+        readAll: access.readAll,
+        isMember: access.isMember,
       ),
     );
   }
@@ -95,15 +168,23 @@ class ProjectDetailCubit extends Cubit<ProjectDetailState> {
           project: updated,
           myPermissions: s.myPermissions,
           isAdmin: s.isAdmin,
+          readAll: s.readAll,
+          isMember: s.isMember,
         ),
       );
     }
   }
 }
 
-/// The caller's permissions inside one project, as their role grants them.
+/// The caller's permissions inside one project, as their role grants them
+/// (plus every read for a platform superadmin).
 class ProjectAccess {
-  const ProjectAccess({required this.permissions, required this.isAdmin});
+  const ProjectAccess({
+    required this.permissions,
+    required this.isAdmin,
+    this.readAll = false,
+    this.isMember = false,
+  });
 
   /// No membership, or the roster could not be read.
   static const ProjectAccess none = ProjectAccess(
@@ -116,11 +197,19 @@ class ProjectAccess {
   /// Role has `is_admin = true` — implicit holder of every permission.
   final bool isAdmin;
 
-  bool has(Permission p) => isAdmin || permissions.contains(p);
+  /// Platform superadmin: holds every read permission on top of the role.
+  final bool readAll;
+
+  /// The caller belongs to the project.
+  final bool isMember;
+
+  bool has(Permission p) =>
+      isAdmin || permissions.contains(p) || (readAll && p.isRead);
 }
 
 /// Resolve [userId]'s role permissions in [projectId] from the member and
-/// role lists.
+/// role lists. A superadmin ([isSuperadmin]) additionally reads everything —
+/// member or not — but writes only as his role allows, as the backend does.
 ///
 /// Degrades to [ProjectAccess.none] rather than failing: someone without
 /// `member.view` can still view the project (`project.view` is enough), so an
@@ -129,6 +218,7 @@ Future<ProjectAccess> resolveProjectAccess(
   ProjectsRepository repo, {
   required String projectId,
   required String userId,
+  bool isSuperadmin = false,
 }) async {
   final results = await Future.wait<dynamic>([
     repo.listMembers(projectId),
@@ -141,11 +231,13 @@ Future<ProjectAccess> resolveProjectAccess(
       (results[1] as Result<List<Role>, AppFailure>).valueOrNull ??
       const <Role>[];
   final mine = members.where((m) => m.userId == userId).firstOrNull;
-  if (mine == null) return ProjectAccess.none;
-  final role = roles.where((r) => r.id == mine.roleId).firstOrNull;
-  if (role == null) return ProjectAccess.none;
+  final role = mine == null
+      ? null
+      : roles.where((r) => r.id == mine.roleId).firstOrNull;
   return ProjectAccess(
-    permissions: Set.of(role.permissions),
-    isAdmin: role.isAdmin,
+    permissions: role == null ? <Permission>{} : Set.of(role.permissions),
+    isAdmin: role?.isAdmin ?? false,
+    readAll: isSuperadmin,
+    isMember: mine != null,
   );
 }

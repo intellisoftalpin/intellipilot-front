@@ -798,6 +798,22 @@
   "@membersInviteBody": {
     "description": "Body copy of the invite card."
   },
+  "joinProjectBody": "You're a superadmin but not a member of this project, so you can only read it. Join to make changes.",
+  "@joinProjectBody": {
+    "description": "Body of the Join card a non-member superadmin sees on the Members tab."
+  },
+  "joinProjectBanner": "Read-only — you're not a member of this project.",
+  "@joinProjectBanner": {
+    "description": "Banner over project pages for a superadmin who is not a member."
+  },
+  "actionJoinProject": "Join project",
+  "@actionJoinProject": {
+    "description": "Button/dialog title: superadmin adds himself to the project."
+  },
+  "joinProjectFailed": "Could not join the project.",
+  "@joinProjectFailed": {
+    "description": "Snackbar when joining a project fails."
+  },
   "membersLoadFailed": "Couldn't load members.",
   "@membersLoadFailed": {
     "description": "GET /members failed."

@@ -74,6 +74,7 @@ class EpicsPage extends StatelessWidget {
                     repo: getIt<ProjectsRepository>(),
                     projectId: projectId,
                     currentUserId: profile.id,
+                    isSuperadmin: profile.isSuperadmin,
                   );
                   unawaited(c.load());
                   return c;

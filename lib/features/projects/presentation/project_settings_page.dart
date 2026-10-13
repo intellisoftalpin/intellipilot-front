@@ -30,6 +30,7 @@ import 'package:intellipilot/features/projects/presentation/cubits/members_cubit
 import 'package:intellipilot/features/projects/presentation/cubits/project_detail_cubit.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/project_settings_cubit.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/roles_cubit.dart';
+import 'package:intellipilot/features/projects/presentation/widgets/join_project.dart';
 import 'package:intellipilot/features/projects/presentation/widgets/permission_gate.dart';
 import 'package:intellipilot/features/projects/presentation/widgets/project_avatar.dart';
 import 'package:intellipilot/features/projects/presentation/widgets/role_editor.dart';
@@ -54,6 +55,7 @@ class ProjectSettingsPage extends StatelessWidget {
                   repo: repo,
                   projectId: projectId,
                   currentUserId: profile.id,
+                  isSuperadmin: profile.isSuperadmin,
                 );
                 unawaited(c.load());
                 return c;
@@ -433,6 +435,7 @@ class _MembersTab extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            JoinProjectCard(roles: m.roles),
             const PermissionGate(
               permission: Permission.memberAdd,
               child: _InviteCard(),

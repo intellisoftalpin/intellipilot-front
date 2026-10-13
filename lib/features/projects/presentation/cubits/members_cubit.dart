@@ -134,4 +134,20 @@ class MembersCubit extends Cubit<MembersState> {
     await load();
     return null;
   }
+
+  /// Superadmin joins the project himself with [roleSlug]. Returns the
+  /// failure on error, or `null` on success.
+  Future<AppFailure?> join(String roleSlug) async {
+    final s = state;
+    if (s is MembersLoaded) emit(s.copyWith(busy: true, lastError: null));
+    final res = await _repo.joinProject(projectId, roleSlug: roleSlug);
+    if (res.isErr) {
+      if (s is MembersLoaded) {
+        emit(s.copyWith(busy: false, lastError: res.failureOrNull));
+      }
+      return res.failureOrNull;
+    }
+    await load();
+    return null;
+  }
 }

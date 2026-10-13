@@ -4,6 +4,20 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.12] - 2026-10-13
+
+### Changed
+- **A superadmin who is not a member of a project only reads it**, matching
+  the backend: project pages show him everything but offer no edit, create,
+  add or delete controls. As a member he gets his role's rights plus every
+  read. Meetings follow the same rule instead of granting him everything.
+
+### Added
+- **Join a project as superadmin.** A "Join project" card on Settings ›
+  Members and a read-only banner with a Join button over every project page,
+  both opening a role picker with the admin role preselected. Open pages pick
+  up the new rights right after joining, without a reload.
+
 ## [0.7.11] - 2026-10-07
 
 ### Fixed

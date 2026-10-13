@@ -127,6 +127,11 @@ enum Permission {
   final String wire;
   final PermissionDomain domain;
 
+  /// Only reads: every `.view`, plus the team-wide timesheet read. A platform
+  /// superadmin holds these in every project, member or not; writes still
+  /// come from his role. Mirrors `Permission::is_read` in the backend.
+  bool get isRead => this == timeViewAll || wire.endsWith('.view');
+
   static Permission? fromWire(String wire) {
     for (final p in Permission.values) {
       if (p.wire == wire) return p;

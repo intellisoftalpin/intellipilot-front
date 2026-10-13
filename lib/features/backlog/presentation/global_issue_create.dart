@@ -91,6 +91,7 @@ Future<IssueCreateTarget?> loadIssueCreateTarget(String projectId) async {
     getIt<ProjectsRepository>(),
     projectId: projectId,
     userId: profile.id,
+    isSuperadmin: profile.isSuperadmin,
   );
   final typesFuture = getIt<CatalogRepository>().listTaxonomy(
     projectId,

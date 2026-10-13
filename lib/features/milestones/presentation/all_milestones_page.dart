@@ -30,7 +30,10 @@ class AllMilestonesPage extends StatelessWidget {
           unawaited(c.load());
           return c;
         },
-        child: _AllMilestonesView(userId: profile.id),
+        child: _AllMilestonesView(
+          userId: profile.id,
+          isSuperadmin: profile.isSuperadmin,
+        ),
       ),
     );
   }
@@ -63,8 +66,9 @@ class _Prefs {
 }
 
 class _AllMilestonesView extends StatefulWidget {
-  const _AllMilestonesView({required this.userId});
+  const _AllMilestonesView({required this.userId, required this.isSuperadmin});
   final String userId;
+  final bool isSuperadmin;
 
   @override
   State<_AllMilestonesView> createState() => _AllMilestonesViewState();
@@ -90,6 +94,7 @@ class _AllMilestonesViewState extends State<_AllMilestonesView> {
       repo: getIt<ProjectsRepository>(),
       projectId: e.milestone.projectId,
       currentUserId: widget.userId,
+      isSuperadmin: widget.isSuperadmin,
     );
     unawaited(project.load());
     try {
