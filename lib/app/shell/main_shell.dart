@@ -10,6 +10,7 @@ import 'package:intellipilot/app/di/injection.dart';
 import 'package:intellipilot/app/router/app_router.dart';
 import 'package:intellipilot/app/router/short_links.dart';
 import 'package:intellipilot/app/session/session_bloc.dart';
+import 'package:intellipilot/app/shell/projects_nav_menu.dart';
 import 'package:intellipilot/app/theme/app_theme.dart';
 import 'package:intellipilot/app/window/window_chrome.dart';
 import 'package:intellipilot/core/network/sse/project_events_service.dart';
@@ -340,10 +341,8 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                                         onTap: () => context.go(Routes.home),
                                       ),
                                       const SizedBox(width: 4),
-                                      _NavLink(
+                                      ProjectsNavMenu(
                                         label: t.topNavProjects,
-                                        onTap: () =>
-                                            context.go(Routes.projects),
                                       ),
                                       const SizedBox(width: 4),
                                       _NavLink(

@@ -1918,5 +1918,14 @@
   "meetingLinkedEpics": "Эпики",
   "meetingLinkedCustomers": "Клиенты",
   "meetingLinkNone": "Нет",
-  "meetingLinkSearch": "Поиск"
+  "meetingLinkSearch": "Поиск",
+  "projectsStarred": "Избранные",
+  "projectsAll": "Все проекты",
+  "projectsCount": "{count, plural, one{{count} проект} few{{count} проекта} many{{count} проектов} other{{count} проекта}}",
+  "projectFavoriteAdd": "Добавить в избранное",
+  "projectFavoriteRemove": "Убрать из избранного",
+  "projectFavoritesFull": "Не более {max} избранных",
+  "projectFavoriteSaveFailed": "Не удалось обновить избранное.",
+  "projectsMenuViewAll": "Все проекты",
+  "projectsMenuEmpty": "Проектов пока нет"
 }

@@ -4,6 +4,23 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.14] - 2026-10-14
+
+### Added
+- **Favorite projects.** Star up to 4 projects; they are listed first on the
+  projects screen and in the projects menu. Stored on the server, so they
+  follow you across devices.
+- **Projects menu on hover.** Hovering "Projects" in the top bar opens a
+  dropdown: starred projects, then all others, then "View all projects" and
+  "New project". A click still opens the projects screen.
+
+### Changed
+- **Projects screen redesigned** as a card grid (one to four columns by
+  width) with a Starred and an All projects section. Each card shows the
+  project's color band and icon, name, key, description, visibility, a
+  favorite star and quick links to Issues, Board and Settings. Title, count,
+  search and "New project" moved into a page header.
+
 ## [0.7.12] - 2026-10-13
 
 ### Changed

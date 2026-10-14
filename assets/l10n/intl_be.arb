@@ -1918,5 +1918,14 @@
   "meetingLinkedEpics": "Эпікі",
   "meetingLinkedCustomers": "Кліенты",
   "meetingLinkNone": "Няма",
-  "meetingLinkSearch": "Пошук"
+  "meetingLinkSearch": "Пошук",
+  "projectsStarred": "Абраныя",
+  "projectsAll": "Усе праекты",
+  "projectsCount": "{count, plural, one{{count} праект} few{{count} праекты} many{{count} праектаў} other{{count} праекта}}",
+  "projectFavoriteAdd": "Дадаць у абранае",
+  "projectFavoriteRemove": "Прыбраць з абранага",
+  "projectFavoritesFull": "Не больш за {max} абраных",
+  "projectFavoriteSaveFailed": "Не ўдалося абнавіць абранае.",
+  "projectsMenuViewAll": "Усе праекты",
+  "projectsMenuEmpty": "Праектаў пакуль няма"
 }

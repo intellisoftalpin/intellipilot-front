@@ -10,6 +10,12 @@ import 'package:intellipilot/features/projects/domain/projects_repository.dart';
 
 const _basePath = '/api/v1/projects';
 const _acceptPath = '/api/v1/invitations/accept';
+const _favoritesPath = '/api/v1/me/project-favorites';
+
+List<String> _favoriteIds(dynamic data) =>
+    ((data as Map<String, dynamic>)['project_ids'] as List<dynamic>? ??
+            const [])
+        .cast<String>();
 
 class ProjectsRepositoryImpl implements ProjectsRepository {
   ProjectsRepositoryImpl(this._api);
@@ -28,6 +34,27 @@ class ProjectsRepositoryImpl implements ProjectsRepository {
       },
       err: Err.new,
     );
+  }
+
+  @override
+  Future<Result<List<String>, AppFailure>> listFavoriteProjectIds() async {
+    final res = await _api.get(_favoritesPath);
+    return res.when(ok: (r) => Ok(_favoriteIds(r.data)), err: Err.new);
+  }
+
+  @override
+  Future<Result<List<String>, AppFailure>> setFavoriteProjectIds(
+    List<String> ids,
+  ) async {
+    try {
+      final response = await _api.dio.put<dynamic>(
+        _favoritesPath,
+        data: {'project_ids': ids},
+      );
+      return Ok(_favoriteIds(response.data));
+    } on DioException catch (e) {
+      return Err(mapDioExceptionToFailure(e));
+    }
   }
 
   @override

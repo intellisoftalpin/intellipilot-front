@@ -1,31 +1,43 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intellipilot/app/di/injection.dart';
-import 'package:intellipilot/app/router/app_router.dart';
-import 'package:intellipilot/core/ui/breadcrumb_bar.dart';
-import 'package:intellipilot/core/ui/issue_chips.dart';
-import 'package:intellipilot/features/catalog/presentation/widgets/color_swatch_picker.dart';
 import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
+import 'package:intellipilot/features/projects/presentation/cubits/project_favorites_cubit.dart';
 import 'package:intellipilot/features/projects/presentation/cubits/projects_list_cubit.dart';
-import 'package:intellipilot/features/projects/presentation/widgets/project_avatar.dart';
+import 'package:intellipilot/features/projects/presentation/widgets/create_project_dialog.dart';
+import 'package:intellipilot/features/projects/presentation/widgets/project_card.dart';
 import 'package:intellipilot/l10n/generated/app_localizations.dart';
+
+/// Widest the card grid grows; past it the page centers.
+const _maxContentWidth = 1360.0;
+
+/// Narrowest a card gets before the grid drops a column.
+const _minCardWidth = 280.0;
+const _maxColumns = 4;
+const _gap = 16.0;
 
 class ProjectsListPage extends StatelessWidget {
   const ProjectsListPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<ProjectsListCubit>(
-      create: (_) {
-        final c = ProjectsListCubit(getIt<ProjectsRepository>());
-        unawaited(c.load());
-        return c;
-      },
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<ProjectsListCubit>(
+          create: (_) {
+            final c = ProjectsListCubit(getIt<ProjectsRepository>());
+            unawaited(c.load());
+            unawaited(getIt<ProjectFavoritesCubit>().load());
+            return c;
+          },
+        ),
+        BlocProvider<ProjectFavoritesCubit>.value(
+          value: getIt<ProjectFavoritesCubit>(),
+        ),
+      ],
       child: const _ProjectsListView(),
     );
   }
@@ -38,44 +50,32 @@ class _ProjectsListView extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: BreadcrumbBar(
-          crumbs: [Crumb(label: t.projectsTitle)],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: t.settingsTitle,
-            onPressed: () => context.go(Routes.settings),
+      body: MultiBlocListener(
+        listeners: [
+          BlocListener<ProjectsListCubit, ProjectsListState>(
+            listenWhen: (prev, next) =>
+                next is ProjectsListLoaded && next.lastError != null,
+            listener: (context, state) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(t.projectCreateFailed)),
+              );
+            },
+          ),
+          BlocListener<ProjectFavoritesCubit, ProjectFavoritesState>(
+            listenWhen: (prev, next) => next.saveFailed > prev.saveFailed,
+            listener: (context, state) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(t.projectFavoriteSaveFailed)),
+              );
+            },
           ),
         ],
-      ),
-      floatingActionButton: BlocBuilder<ProjectsListCubit, ProjectsListState>(
-        builder: (context, state) {
-          if (state is! ProjectsListLoaded) return const SizedBox.shrink();
-          return FloatingActionButton.extended(
-            icon: const Icon(Icons.add),
-            label: Text(t.actionNewProject),
-            onPressed: () => _showCreateDialog(context),
-          );
-        },
-      ),
-      body: BlocConsumer<ProjectsListCubit, ProjectsListState>(
-        listenWhen: (prev, next) =>
-            next is ProjectsListLoaded && next.lastError != null,
-        listener: (context, state) {
-          if (state is ProjectsListLoaded && state.lastError != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(t.projectCreateFailed)),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state is ProjectsListLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (state is ProjectsListLoadFailed) {
-            return Center(
+        child: BlocBuilder<ProjectsListCubit, ProjectsListState>(
+          builder: (context, state) => switch (state) {
+            ProjectsListLoading() => const Center(
+              child: CircularProgressIndicator(),
+            ),
+            ProjectsListLoadFailed() => Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -87,13 +87,10 @@ class _ProjectsListView extends StatelessWidget {
                   ),
                 ],
               ),
-            );
-          }
-          if (state is ProjectsListLoaded) {
-            return _Loaded(state: state);
-          }
-          return const SizedBox.shrink();
-        },
+            ),
+            ProjectsListLoaded() => _Loaded(state: state),
+          },
+        ),
       ),
     );
   }
@@ -122,101 +119,218 @@ class _LoadedState extends State<_Loaded> {
     super.dispose();
   }
 
+  void _create() => unawaited(
+    showCreateProjectDialog(
+      context,
+      create: context.read<ProjectsListCubit>().create,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context);
+    final favorites = context.watch<ProjectFavoritesCubit>().state;
     final visible = widget.state.visible;
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 720),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: TextField(
-                controller: _search,
-                decoration: InputDecoration(
-                  hintText: t.projectsSearchHint,
-                  prefixIcon: const Icon(Icons.search),
-                  border: const OutlineInputBorder(),
-                  isDense: true,
+    // Starred in the order they were starred; the rest keep the server order.
+    final byId = {for (final p in visible) p.id: p};
+    final starred = [
+      for (final id in favorites.ids) ?byId[id],
+    ];
+    final others = [
+      for (final p in visible)
+        if (!favorites.contains(p.id)) p,
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final side = width > _maxContentWidth + 48
+            ? (width - _maxContentWidth) / 2
+            : (width < 600 ? 16.0 : 24.0);
+        final padding = EdgeInsets.symmetric(horizontal: side);
+        final columns = ((width - 2 * side + _gap) ~/ (_minCardWidth + _gap))
+            .clamp(1, _maxColumns);
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: padding.copyWith(top: 28, bottom: 8),
+              sliver: SliverToBoxAdapter(
+                child: _Header(
+                  count: widget.state.projects.length,
+                  search: _search,
+                  onSearch: (v) =>
+                      context.read<ProjectsListCubit>().setSearch(v),
+                  onCreate: _create,
                 ),
-                onChanged: (v) =>
-                    context.read<ProjectsListCubit>().setSearch(v),
               ),
             ),
-            Expanded(
-              child: visible.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Text(
-                          widget.state.search.isEmpty
-                              ? t.projectsEmpty
-                              : t.projectsNoMatch,
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: visible.length,
-                      itemBuilder: (context, i) {
-                        final p = visible[i];
-                        final accent = projectColorOrPrimary(context, p.color);
-                        return Card(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 4,
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              border: Border(
-                                left: BorderSide(color: accent, width: 4),
-                              ),
-                            ),
-                            child: ListTile(
-                              leading: ProjectAvatar(project: p),
-                              title: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      p.name,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  IssueKeyChip(
-                                    text: p.issuePrefix.isEmpty
-                                        ? p.slug
-                                        : p.issuePrefix,
-                                  ),
-                                ],
-                              ),
-                              subtitle: p.description.isEmpty
-                                  ? null
-                                  : Padding(
-                                      padding: const EdgeInsets.only(top: 2),
-                                      child: Text(
-                                        p.description,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                              trailing: const Icon(Icons.chevron_right),
-                              onTap: () => context.go(
-                                Routes.projectDetailFor(p.id),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+            if (visible.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: _Empty(
+                  searching: widget.state.search.isNotEmpty,
+                  onCreate: _create,
+                ),
+              )
+            else ...[
+              if (starred.isNotEmpty) ...[
+                _SectionTitle(
+                  padding: padding,
+                  icon: Icons.star_rounded,
+                  label: t.projectsStarred,
+                ),
+                _Grid(
+                  padding: padding,
+                  columns: columns,
+                  projects: starred,
+                  favorites: favorites,
+                ),
+              ],
+              if (others.isNotEmpty) ...[
+                if (starred.isNotEmpty)
+                  _SectionTitle(
+                    padding: padding,
+                    icon: Icons.folder_outlined,
+                    label: t.projectsAll,
+                  )
+                else
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                _Grid(
+                  padding: padding,
+                  columns: columns,
+                  projects: others,
+                  favorites: favorites,
+                ),
+              ],
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Title, project count, search, and the "New project" button. Stacks on a
+/// narrow window.
+class _Header extends StatelessWidget {
+  const _Header({
+    required this.count,
+    required this.search,
+    required this.onSearch,
+    required this.onCreate,
+  });
+
+  final int count;
+  final TextEditingController search;
+  final ValueChanged<String> onSearch;
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          t.projectsTitle,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          t.projectsCount(count),
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+    final field = TextField(
+      controller: search,
+      decoration: InputDecoration(
+        hintText: t.projectsSearchHint,
+        prefixIcon: const Icon(Icons.search, size: 20),
+        filled: true,
+        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.5,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        isDense: true,
+      ),
+      onChanged: onSearch,
+    );
+    final create = FilledButton.icon(
+      onPressed: onCreate,
+      icon: const Icon(Icons.add, size: 18),
+      label: Text(t.actionNewProject),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 640) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: title),
+                  create,
+                ],
+              ),
+              const SizedBox(height: 16),
+              field,
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: title),
+            SizedBox(width: 300, child: field),
+            const SizedBox(width: 12),
+            create,
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({
+    required this.padding,
+    required this.icon,
+    required this.label,
+  });
+
+  final EdgeInsets padding;
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = theme.colorScheme.onSurfaceVariant;
+    return SliverPadding(
+      padding: padding.copyWith(top: 24, bottom: 12),
+      sliver: SliverToBoxAdapter(
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(width: 8),
+            Text(
+              label.toUpperCase(),
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.8,
+              ),
             ),
           ],
         ),
@@ -225,126 +339,84 @@ class _LoadedState extends State<_Loaded> {
   }
 }
 
-Future<void> _showCreateDialog(BuildContext context) async {
-  final t = AppLocalizations.of(context);
-  final nameController = TextEditingController();
-  final descController = TextEditingController();
-  final prefixController = TextEditingController();
-  var visibility = ProjectVisibility.private;
-  String? color;
-  final cubit = context.read<ProjectsListCubit>();
+class _Grid extends StatelessWidget {
+  const _Grid({
+    required this.padding,
+    required this.columns,
+    required this.projects,
+    required this.favorites,
+  });
 
-  final created = await showDialog<Project?>(
-    context: context,
-    builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setState) {
-        return AlertDialog(
-          title: Text(t.actionNewProject),
-          content: SizedBox(
-            width: 420,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  controller: nameController,
-                  autofocus: true,
-                  decoration: InputDecoration(labelText: t.projectFieldName),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: descController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    labelText: t.projectFieldDescription,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<ProjectVisibility>(
-                  initialValue: visibility,
-                  decoration: InputDecoration(
-                    labelText: t.projectFieldVisibility,
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: ProjectVisibility.private,
-                      child: Text(t.projectVisibilityPrivate),
-                    ),
-                    DropdownMenuItem(
-                      value: ProjectVisibility.internal,
-                      child: Text(t.projectVisibilityInternal),
-                    ),
-                    DropdownMenuItem(
-                      value: ProjectVisibility.publicReadonly,
-                      child: Text(t.projectVisibilityPublicReadonly),
-                    ),
-                  ],
-                  onChanged: (v) =>
-                      setState(() => visibility = v ?? visibility),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: prefixController,
-                  textCapitalization: TextCapitalization.characters,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp('[A-Za-z]')),
-                    LengthLimitingTextInputFormatter(3),
-                    TextInputFormatter.withFunction(
-                      (_, n) => n.copyWith(text: n.text.toUpperCase()),
-                    ),
-                  ],
-                  decoration: InputDecoration(
-                    labelText: t.projectFieldPrefix,
-                    helperText: t.projectFieldPrefixOptional,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    t.projectFieldColor,
-                    style: Theme.of(ctx).textTheme.labelLarge,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ColorSwatchPicker(
-                  selectedHex: color ?? '',
-                  onChanged: (hex) => setState(() => color = hex),
-                ),
-              ],
+  final EdgeInsets padding;
+  final int columns;
+  final List<Project> projects;
+  final ProjectFavoritesState favorites;
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<ProjectFavoritesCubit>();
+    return SliverPadding(
+      padding: padding,
+      sliver: SliverGrid.builder(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          mainAxisExtent: projectCardHeight,
+          crossAxisSpacing: _gap,
+          mainAxisSpacing: _gap,
+        ),
+        itemCount: projects.length,
+        itemBuilder: (context, i) {
+          final p = projects[i];
+          return ProjectCard(
+            key: ValueKey(p.id),
+            project: p,
+            favorite: favorites.contains(p.id),
+            canFavorite: !favorites.isFull,
+            onToggleFavorite: () => unawaited(cubit.toggle(p.id)),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _Empty extends StatelessWidget {
+  const _Empty({required this.searching, required this.onCreate});
+  final bool searching;
+  final VoidCallback onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              searching ? Icons.search_off : Icons.folder_open_outlined,
+              size: 56,
+              color: theme.colorScheme.outline,
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(null),
-              child: Text(t.actionCancel),
+            const SizedBox(height: 16),
+            Text(
+              searching ? t.projectsNoMatch : t.projectsEmpty,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge,
             ),
-            FilledButton(
-              onPressed: () async {
-                final name = nameController.text.trim();
-                if (name.isEmpty) return;
-                final prefix = prefixController.text.trim().toUpperCase();
-                // A typed prefix must be 2–3 letters; blank = auto-derive.
-                if (prefix.isNotEmpty && prefix.length < 2) return;
-                final created = await cubit.create(
-                  CreateProjectRequest(
-                    name: name,
-                    description: descController.text.trim(),
-                    visibility: visibility,
-                    issuePrefix: prefix.isEmpty ? null : prefix,
-                    color: color,
-                  ),
-                );
-                if (ctx.mounted) Navigator.of(ctx).pop(created);
-              },
-              child: Text(t.actionCreate),
-            ),
+            if (!searching) ...[
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: onCreate,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(t.actionNewProject),
+              ),
+            ],
           ],
-        );
-      },
-    ),
-  );
-  if (created != null && context.mounted) {
-    context.go(Routes.projectDetailFor(created.id));
+        ),
+      ),
+    );
   }
 }

@@ -30,6 +30,7 @@ import 'package:intellipilot/features/mfa/domain/mfa_repository.dart';
 import 'package:intellipilot/features/milestones/domain/milestones_repository.dart';
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
+import 'package:intellipilot/features/projects/presentation/cubits/project_favorites_cubit.dart';
 import 'package:intellipilot/features/wiki/domain/wiki_repository.dart';
 import 'package:logger/logger.dart';
 
@@ -126,6 +127,9 @@ Future<void> configureDemoDependencies() async {
         profile: getIt<ProfileRepository>(),
         projects: getIt<ProjectsRepository>(),
       ),
+    )
+    ..registerLazySingleton<ProjectFavoritesCubit>(
+      () => ProjectFavoritesCubit(getIt<ProjectsRepository>()),
     )
     ..registerLazySingleton<BoardRepository>(() => DemoBoardRepository(store))
     ..registerLazySingleton<WikiRepository>(() => DemoWikiRepository(store))

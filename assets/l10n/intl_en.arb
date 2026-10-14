@@ -5172,5 +5172,51 @@
   "meetingLinkSearch": "Search",
   "@meetingLinkSearch": {
     "description": "Search field of the link picker."
+  },
+  "projectsStarred": "Starred",
+  "@projectsStarred": {
+    "description": "Section of starred projects on the projects screen and in the projects menu."
+  },
+  "projectsAll": "All projects",
+  "@projectsAll": {
+    "description": "Section listing every other project."
+  },
+  "projectsCount": "{count, plural, =1{1 project} other{{count} projects}}",
+  "@projectsCount": {
+    "description": "Project count next to the projects screen title.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "projectFavoriteAdd": "Add to favorites",
+  "@projectFavoriteAdd": {
+    "description": "Tooltip of an empty star on a project."
+  },
+  "projectFavoriteRemove": "Remove from favorites",
+  "@projectFavoriteRemove": {
+    "description": "Tooltip of a filled star on a project."
+  },
+  "projectFavoritesFull": "Up to {max} favorites",
+  "@projectFavoritesFull": {
+    "description": "Tooltip of a disabled star when the favorites cap is reached.",
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "projectFavoriteSaveFailed": "Couldn't update favorites.",
+  "@projectFavoriteSaveFailed": {
+    "description": "PUT /me/project-favorites failed."
+  },
+  "projectsMenuViewAll": "View all projects",
+  "@projectsMenuViewAll": {
+    "description": "Projects menu entry opening the projects screen."
+  },
+  "projectsMenuEmpty": "No projects yet",
+  "@projectsMenuEmpty": {
+    "description": "Projects menu when the user has no project."
   }
 }

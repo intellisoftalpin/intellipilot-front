@@ -8,6 +8,9 @@ import 'package:intellipilot/features/projects/data/dtos/project_dtos.dart';
 /// `/projects`, `/projects/:id/{roles,members,invitations}`,
 /// `/invitations/accept`. Keeps the call surface in one place so cubits don't
 /// each take three DI dependencies.
+/// The most projects one user can star; the server enforces the same cap.
+const maxFavoriteProjects = 4;
+
 abstract interface class ProjectsRepository {
   // ---- projects ----
   Future<Result<List<Project>, AppFailure>> listProjects();
@@ -22,6 +25,15 @@ abstract interface class ProjectsRepository {
     UpdateProjectRequest body,
   );
   Future<Result<Unit, AppFailure>> deleteProject(String id);
+
+  // ---- favorites ----
+  /// The caller's starred project ids, in the order they were starred.
+  Future<Result<List<String>, AppFailure>> listFavoriteProjectIds();
+
+  /// Replace the caller's starred projects (at most [maxFavoriteProjects]).
+  Future<Result<List<String>, AppFailure>> setFavoriteProjectIds(
+    List<String> ids,
+  );
 
   /// Active-object counts for the project rail badges.
   Future<Result<ProjectCounts, AppFailure>> getProjectCounts(String projectId);

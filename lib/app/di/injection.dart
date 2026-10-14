@@ -66,6 +66,7 @@ import 'package:intellipilot/features/profile/data/profile_repository_impl.dart'
 import 'package:intellipilot/features/profile/domain/profile_repository.dart';
 import 'package:intellipilot/features/projects/data/projects_repository_impl.dart';
 import 'package:intellipilot/features/projects/domain/projects_repository.dart';
+import 'package:intellipilot/features/projects/presentation/cubits/project_favorites_cubit.dart';
 import 'package:intellipilot/features/search/data/dtos/search_dtos.dart';
 import 'package:intellipilot/features/search/data/search_repository_impl.dart';
 import 'package:intellipilot/features/search/domain/search_repository.dart';
@@ -310,6 +311,9 @@ Future<void> configureDependencies({
       projects: getIt<ProjectsRepository>(),
     ),
   );
+  getIt.registerLazySingleton<ProjectFavoritesCubit>(
+    () => ProjectFavoritesCubit(getIt<ProjectsRepository>()),
+  );
   getIt.registerLazySingleton<ProjectEventsService>(
     () => ProjectEventsService(
       baseUrl: () => getIt<ApiConfig>().baseUrl,
@@ -369,6 +373,9 @@ Future<void> configureDependencies({
         }
         if (getIt.isRegistered<ProjectAccessCache>()) {
           getIt<ProjectAccessCache>().clear();
+        }
+        if (getIt.isRegistered<ProjectFavoritesCubit>()) {
+          getIt<ProjectFavoritesCubit>().clear();
         }
       },
     ),
@@ -476,6 +483,9 @@ Future<void> configureForTests({
         profile: getIt<ProfileRepository>(),
         projects: getIt<ProjectsRepository>(),
       ),
+    )
+    ..registerLazySingleton<ProjectFavoritesCubit>(
+      () => ProjectFavoritesCubit(getIt<ProjectsRepository>()),
     )
     ..registerSingleton<WikiRepository>(wikiRepository ?? _NoopWikiRepository())
     ..registerSingleton<DocsRepository>(docsRepository ?? _NoopDocsRepository())

@@ -339,6 +339,24 @@ class DemoProjectsRepository implements ProjectsRepository {
     return Ok(List.unmodifiable(_s.projects));
   }
 
+  /// Starred projects; in memory only, like the rest of the demo.
+  List<String> _favorites = const [];
+
+  @override
+  Future<Result<List<String>, AppFailure>> listFavoriteProjectIds() async {
+    await _tick();
+    return Ok(List.unmodifiable(_favorites));
+  }
+
+  @override
+  Future<Result<List<String>, AppFailure>> setFavoriteProjectIds(
+    List<String> ids,
+  ) async {
+    await _tick();
+    _favorites = List.unmodifiable(ids);
+    return Ok(_favorites);
+  }
+
   @override
   Future<Result<Project, AppFailure>> getProject(String id) async {
     await _tick();

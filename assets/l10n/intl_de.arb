@@ -1918,5 +1918,14 @@
   "meetingLinkedEpics": "Epics",
   "meetingLinkedCustomers": "Kunden",
   "meetingLinkNone": "Keine",
-  "meetingLinkSearch": "Suchen"
+  "meetingLinkSearch": "Suchen",
+  "projectsStarred": "Favoriten",
+  "projectsAll": "Alle Projekte",
+  "projectsCount": "{count, plural, =1{1 Projekt} other{{count} Projekte}}",
+  "projectFavoriteAdd": "Zu Favoriten hinzufügen",
+  "projectFavoriteRemove": "Aus Favoriten entfernen",
+  "projectFavoritesFull": "Höchstens {max} Favoriten",
+  "projectFavoriteSaveFailed": "Favoriten konnten nicht gespeichert werden.",
+  "projectsMenuViewAll": "Alle Projekte anzeigen",
+  "projectsMenuEmpty": "Noch keine Projekte"
 }

@@ -24,6 +24,10 @@ class _EmptyProjects extends Fake implements ProjectsRepository {
   @override
   Future<Result<List<Project>, AppFailure>> listProjects() async =>
       const Ok([]);
+
+  @override
+  Future<Result<List<String>, AppFailure>> listFavoriteProjectIds() async =>
+      const Ok([]);
 }
 
 const _first = Account(
