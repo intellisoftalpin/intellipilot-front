@@ -132,6 +132,15 @@ enum Permission {
   /// come from his role. Mirrors `Permission::is_read` in the backend.
   bool get isRead => this == timeViewAll || wire.endsWith('.view');
 
+  /// What a platform superadmin holds in every project on top of his role:
+  /// every read plus managing members (add or invite, change a role,
+  /// remove). Mirrors `Permission::is_superadmin_grant` in the backend.
+  bool get isSuperadminGrant =>
+      isRead ||
+      this == memberAdd ||
+      this == memberModifyRole ||
+      this == memberRemove;
+
   static Permission? fromWire(String wire) {
     for (final p in Permission.values) {
       if (p.wire == wire) return p;

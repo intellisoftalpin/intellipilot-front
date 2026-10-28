@@ -39,18 +39,19 @@ final class ProjectDetailLoaded extends ProjectDetailState {
   /// permission, including future ones).
   final bool isAdmin;
 
-  /// Platform superadmin: holds every read permission on top of his role.
+  /// Platform superadmin: holds every read and member-management permission
+  /// on top of his role.
   final bool readAll;
 
   /// Caller belongs to the project.
   final bool isMember;
 
   /// A superadmin reading a project he is not a member of — he may add
-  /// himself, and nothing else.
+  /// himself or manage its members, and nothing else.
   bool get canJoin => readAll && !isMember;
 
   bool has(Permission p) =>
-      isAdmin || myPermissions.contains(p) || (readAll && p.isRead);
+      isAdmin || myPermissions.contains(p) || (readAll && p.isSuperadminGrant);
 
   /// True if the caller holds any of [perms] (or is an admin). Used to decide
   /// whether to surface a management UI gated by a group of create/modify/
@@ -197,19 +198,21 @@ class ProjectAccess {
   /// Role has `is_admin = true` — implicit holder of every permission.
   final bool isAdmin;
 
-  /// Platform superadmin: holds every read permission on top of the role.
+  /// Platform superadmin: holds every read and member-management permission
+  /// on top of the role.
   final bool readAll;
 
   /// The caller belongs to the project.
   final bool isMember;
 
   bool has(Permission p) =>
-      isAdmin || permissions.contains(p) || (readAll && p.isRead);
+      isAdmin || permissions.contains(p) || (readAll && p.isSuperadminGrant);
 }
 
 /// Resolve [userId]'s role permissions in [projectId] from the member and
-/// role lists. A superadmin ([isSuperadmin]) additionally reads everything —
-/// member or not — but writes only as his role allows, as the backend does.
+/// role lists. A superadmin ([isSuperadmin]) additionally reads everything and
+/// manages members — member or not — but otherwise writes only as his role
+/// allows, as the backend does.
 ///
 /// Degrades to [ProjectAccess.none] rather than failing: someone without
 /// `member.view` can still view the project (`project.view` is enough), so an

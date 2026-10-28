@@ -23,7 +23,7 @@ class BuildInfo {
   /// look years out of date.
   static const String version = String.fromEnvironment(
     'INTELLIPILOT_VERSION',
-    defaultValue: '0.7.14',
+    defaultValue: '0.7.17',
   );
 
   /// Build identifier (`+N` suffix in pubspec). Often a CI build number.

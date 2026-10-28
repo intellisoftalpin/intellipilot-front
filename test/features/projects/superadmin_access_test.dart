@@ -164,9 +164,26 @@ void main() {
     });
   });
 
+  group('Permission.isSuperadminGrant', () {
+    test('is every read plus member management, nothing else', () {
+      expect(
+        Permission.values
+            .where((p) => p.isSuperadminGrant)
+            .map((p) => p.wire)
+            .toSet(),
+        {
+          ...Permission.values.where((p) => p.isRead).map((p) => p.wire),
+          'member.add',
+          'member.modify_role',
+          'member.remove',
+        },
+      );
+    });
+  });
+
   group('resolveProjectAccess', () {
     test(
-      'a non-member superadmin reads everything and writes nothing',
+      'a non-member superadmin reads everything and manages only members',
       () async {
         final access = await resolveProjectAccess(
           _Projects(),
@@ -178,7 +195,10 @@ void main() {
         expect(access.readAll, isTrue);
         expect(access.has(Permission.meetingView), isTrue);
         expect(access.has(Permission.timeViewAll), isTrue);
-        expect(access.has(Permission.memberAdd), isFalse);
+        expect(access.has(Permission.memberAdd), isTrue);
+        expect(access.has(Permission.memberModifyRole), isTrue);
+        expect(access.has(Permission.memberRemove), isTrue);
+        expect(access.has(Permission.roleCreate), isFalse);
         expect(access.has(Permission.projectModify), isFalse);
         expect(access.has(Permission.issueCreate), isFalse);
       },
@@ -226,7 +246,8 @@ void main() {
         var s = cubit.state as ProjectDetailLoaded;
         expect(s.canJoin, isTrue);
         expect(s.has(Permission.memberView), isTrue);
-        expect(s.has(Permission.memberAdd), isFalse);
+        expect(s.has(Permission.memberAdd), isTrue);
+        expect(s.has(Permission.projectModify), isFalse);
 
         // Someone else's join (the banner, the Members tab) announces the
         // change; the cubit picks up the new rights without a reload.
@@ -236,7 +257,7 @@ void main() {
         s = cubit.state as ProjectDetailLoaded;
         expect(s.canJoin, isFalse);
         expect(s.isMember, isTrue);
-        expect(s.has(Permission.memberAdd), isTrue);
+        expect(s.has(Permission.projectModify), isTrue);
       },
     );
 

@@ -798,7 +798,7 @@
   "@membersInviteBody": {
     "description": "Body copy of the invite card."
   },
-  "joinProjectBody": "You're a superadmin but not a member of this project, so you can only read it. Join to make changes.",
+  "joinProjectBody": "You're a superadmin but not a member of this project: you can read it and manage its members. Join to make other changes.",
   "@joinProjectBody": {
     "description": "Body of the Join card a non-member superadmin sees on the Members tab."
   },

@@ -198,7 +198,7 @@
   "projectSaveFailed": "Projekt konnte nicht gespeichert werden.",
   "membersTitle": "Mitglieder",
   "membersInviteBody": "Lade eine Person per E-Mail ein; sie erhält einen Einmal-Link, um mit einer gewählten Rolle beizutreten.",
-  "joinProjectBody": "Du bist Superadmin, aber kein Mitglied dieses Projekts, und kannst es daher nur lesen. Tritt bei, um Änderungen vorzunehmen.",
+  "joinProjectBody": "Du bist Superadmin, aber kein Mitglied dieses Projekts: Du kannst es lesen und seine Mitglieder verwalten. Tritt bei, um weitere Änderungen vorzunehmen.",
   "joinProjectBanner": "Nur lesen — du bist kein Mitglied dieses Projekts.",
   "actionJoinProject": "Projekt beitreten",
   "joinProjectFailed": "Beitritt zum Projekt fehlgeschlagen.",

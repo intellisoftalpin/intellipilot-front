@@ -4,6 +4,17 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.17] - 2026-10-28
+
+### Changed
+- **A superadmin manages the members of every project without joining it,**
+  matching backend 0.7.17. On Settings › Members of a project he is not in,
+  he gets the Invite and Add member cards and can change a member's role or
+  remove a member. The rest of the project stays read-only until he joins;
+  the Join card on the Members tab now says so.
+- Version aligned with the backend and the MCP server: all three release as
+  0.7.17 (0.7.15 and 0.7.16 are skipped here).
+
 ## [0.7.14] - 2026-10-14
 
 ### Added
