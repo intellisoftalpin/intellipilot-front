@@ -4,6 +4,14 @@ All notable changes to the IntelliPilot frontend are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to Semantic Versioning.
 
+## [0.7.18] - 2026-10-28
+
+### Fixed
+- 0.7.17 was never published: the built-in build-number fallback was left
+  at 95 while `pubspec.yaml` said 96, so CI failed. Its changes (a
+  superadmin manages the members of every project) ship in this release.
+- Version aligned with the backend and the MCP server at 0.7.18.
+
 ## [0.7.17] - 2026-10-28
 
 ### Changed
